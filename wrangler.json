@@ -1,16 +1,20 @@
 {
-  "compatibility_date": "2025-04-01",
-  "main": "src/index.ts",
-  "name": "walk-to-mordor",
-  "upload_source_maps": true,
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_id": "c6d64a7e-7ae6-40d3-b26d-2e1e2277ff8f",
-      "database_name": "walk-to-mordor"
-    }
-  ],
-  "observability": {
-    "enabled": true
-  }
+	"compatibility_date": "2025-04-01",
+	"main": "src/index.ts",
+	"name": "walk-to-mordor",
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "walk-to-mordor",
+			"database_id": "7411c32e-f4f5-4fc6-ab39-c403416f048c"
+		}
+	],
+	"observability": {
+		"enabled": true
+	},
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	}
 }
