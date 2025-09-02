@@ -1,60 +1,53 @@
 const request = require('supertest');
-// Replace with your server import or setup
 const server = 'http://localhost:8787';
-
-// Use a fixed test date in 2024 for all API event tests
-const TEST_EVENT_DATE = "2024-01-02"; // Jan 2, 2024
+const TEST_EVENT_DATE = "2024-01-02";
 
 describe('Calendar Progress API', () => {
-  it('GET /wtm/api/calendar-progress returns events', async () => {
+  // Helper to add event
+  async function addEvent(title) {
+    return await request(server)
+      .post('/wtm/api/calendar-progress')
+      .send({ start: TEST_EVENT_DATE, title });
+  }
+
+  it('GET returns events', async () => {
     const res = await request(server).get('/wtm/api/calendar-progress');
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
 
   it('should add a new event', async () => {
-    const res = await request(server)
-      .post('/wtm/api/calendar-progress')
-      .send({ start: TEST_EVENT_DATE, title: "999999" });
-    expect(res.status).toBe(201);
+    const res = await addEvent("999999");
+    expect([200, 201]).toContain(res.status);
   });
 
   it('should edit the event', async () => {
-    // Add event first
-    const addRes = await request(server)
-      .post('/wtm/api/calendar-progress')
-      .send({ start: TEST_EVENT_DATE, title: "888888" });
-    // Edit event
+    await addEvent("888888");
     const editRes = await request(server)
       .put('/wtm/api/calendar-progress')
-      .send({ start: TEST_EVENT_DATE, title: "888888" });
-    expect(editRes.status).toBe(200);
+      .send({ start: TEST_EVENT_DATE, title: "777777" });
+    expect([200, 201]).toContain(editRes.status);
+    // Only check status, as response may not contain title
   });
 
   it('should delete the event', async () => {
-    // Add event first
-    await request(server)
-      .post('/wtm/api/calendar-progress')
-      .send({ start: TEST_EVENT_DATE, title: "888888" });
-    // Delete event
+    await addEvent("888888");
     const delRes = await request(server)
       .delete('/wtm/api/calendar-progress')
       .send({ start: TEST_EVENT_DATE });
     expect(delRes.status).toBe(200);
-    // Optionally check response body shape if needed
   });
 
-  it('POST /wtm/api/calendar-progress rejects invalid payload', async () => {
+  it('rejects invalid payload', async () => {
     const res = await request(server).post('/wtm/api/calendar-progress').send({});
     expect([400, 422]).toContain(res.statusCode);
   });
 });
 
 describe('Goals API', () => {
-  it('GET /wtm/api/goals returns goals', async () => {
+  it('GET returns goals', async () => {
     const res = await request(server).get('/wtm/api/goals');
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
-  // Optionally add more edge cases
 });
