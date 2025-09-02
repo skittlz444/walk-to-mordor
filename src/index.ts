@@ -24,7 +24,10 @@ export default {
 
     // CRUD for calendar events
     if (url.pathname === "/wtm/api/calendar-progress" && method === "POST") {
-      const { start, title } = body;
+      const { start, title } = body || {};
+      if (!start || typeof title === 'undefined') {
+        return new Response('Invalid payload', { status: 400 });
+      }
       await env.DB.prepare(
         "INSERT INTO progress (date, distance) VALUES (?, ?)"
       )
@@ -32,7 +35,10 @@ export default {
         .run();
       return new Response("Created", { status: 201 });
     } else if (url.pathname === "/wtm/api/calendar-progress" && method === "PUT") {
-      const { start, title } = body;
+      const { start, title } = body || {};
+      if (!start || typeof title === 'undefined') {
+        return new Response('Invalid payload', { status: 400 });
+      }
       await env.DB.prepare(
         "UPDATE progress SET distance = ? WHERE date = ?"
       )
@@ -40,7 +46,10 @@ export default {
         .run();
       return new Response("Updated", { status: 200 });
     } else if (url.pathname === "/wtm/api/calendar-progress" && method === "DELETE") {
-      const { start } = body;
+      const { start } = body || {};
+      if (!start) {
+        return new Response('Invalid payload', { status: 400 });
+      }
       console.log("Deleting date:", start);
       await env.DB.prepare("DELETE FROM progress WHERE date = ?")
         .bind(start)

@@ -22,7 +22,10 @@
   "devDependencies": {
     "pnpm": "^10.15.1",
     "typescript": "5.8.3",
-    "wrangler": "^4.33.1"
+    "wrangler": "^4.33.1",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4",
+    "@playwright/test": "^1.44.0"
   },
   "scripts": {
     "cf-typegen": "wrangler types",
@@ -30,7 +33,9 @@
     "deploy": "wrangler deploy",
     "dev": "pnpm seedLocalD1 && wrangler dev",
     "predeploy": "wrangler d1 migrations apply DB --remote",
-    "seedLocalD1": "wrangler d1 migrations apply DB --local"
+    "seedLocalD1": "wrangler d1 migrations apply DB --local",
+    "test:api": "jest tests/api.test.js",
+    "test:ui": "playwright test tests/ui.spec.js"
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.4.0"
