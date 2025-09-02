@@ -22,9 +22,9 @@ export function renderHtml(totalDistance?: number) {
           }
         </style>
       </head>
-      <body style="background-color:black;">
+      <body style="background-color:black;margin:0;">
       <header style="width:100vw;position:relative;z-index:2;text-align:center;margin:0;padding:2em 0 1em 0;">
-        <h1 style="font-size:2.2em;max-width:90vw;word-break:break-word;color:#FFD700;font-weight:bold;text-shadow:2px 2px 8px #333;margin:0;">Total distance travelled</h1>
+        <h1 style="font-size:2.2em;max-width:100vw;word-break:break-word;color:#FFD700;font-weight:bold;text-shadow:2px 2px 8px #333;margin:0;">Total distance travelled</h1>
         <div id="total-distance-value" style="font-size:1.7em;color:#fff;font-weight:bold;letter-spacing:2px;margin-top:0.5em;word-break:break-word;">${totalDistance ?? 0} km</div>
         <div id="last-goal" style="margin:1em auto 0 auto;text-align:center;max-width:90vw;">
         </div>
@@ -32,8 +32,8 @@ export function renderHtml(totalDistance?: number) {
       <section id="goals-section" style="width:100vw;max-width:700px;margin:0 auto 2em auto;text-align:center;">
         <div id="goals-list" style="margin:1em auto 0 auto;"></div>
       </section>
-      <div id="eventcalendar-container" style="position:fixed;bottom:0;left:0;width:100vw;z-index:1;background:rgba(0,0,0,0.95);box-shadow:0 -2px 16px #222;padding-top:1.2em;padding-bottom:1.2em;">
-        <div id="eventcalendar"></div>
+      <div id="eventcalendar-container" style="position:fixed;bottom:0;left:0;width:100vw;z-index:1;background:rgba(0,0,0,0.95);box-shadow:0 -2px 16px #222;">
+        <div id="eventcalendar" style="padding-bottom:0.5em;"></div>
       </div>
       <div id="popup" style="display:none;"></div>
         <script>
@@ -235,7 +235,6 @@ export function renderHtml(totalDistance?: number) {
                   const completed = goals.filter(g => Number(currentDistance) >= g.distance);
                   const upcoming = goals.filter(g => Number(currentDistance) < g.distance);
                   const lastCompleted = completed.slice(-3);
-                  const nextUpcoming = upcoming.slice(0, 15);
                   let html = '';
                   // Show last reached goal just under total distance
                   if (completed.length) {
@@ -260,37 +259,65 @@ export function renderHtml(totalDistance?: number) {
                   } else {
                     document.getElementById('last-goal').innerHTML = '';
                   }
-                  if (lastCompleted.length) {
+                  // Completed goals: show last 3 by default, all on expand
+                  if (completed.length) {
                     html += '<div style="margin-bottom:1em;">' +
-          '<button id="toggle-completed" style="background:#333;color:#fff;border:none;padding:0.3em 0.7em;border-radius:6px;cursor:pointer;font-size:0.9em;min-width:90px;">Show/Hide Completed</button>' +
-          '<ul id="completed-goals" style="list-style:none;padding:0;margin:1em 0;">' +
-          lastCompleted.map(function(g) {
-            return '<li style="margin:0.5em 0;text-decoration:line-through;color:#888;font-size:1em;word-break:break-word;">' +
-              (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
-              g.title +
-              ' <span style="font-size:0.9em;color:#FFD700;">' + g.distance.toFixed(2) + ' km</span></li>';
-          }).join('') +
-          '</ul>' +
-        '</div>';
+                      '<div style="display:flex;justify-content:center;gap:0.7em;margin-bottom:0.5em;">' +
+                        '<button id="toggle-completed-visibility" style="background:#333;color:#fff;border:none;padding:0.3em 0.7em;border-radius:6px;cursor:pointer;font-size:0.9em;min-width:90px;">Hide Completed</button>' +
+                        '<button id="toggle-completed" style="background:#333;color:#fff;border:none;padding:0.3em 0.7em;border-radius:6px;cursor:pointer;font-size:0.9em;min-width:90px;">Show All Completed</button>' +
+                      '</div>' +
+                      '<div id="completed-goals-wrapper">' +
+                        '<ul id="completed-goals" style="list-style:none;padding:0;margin:1em 0;">' +
+                        lastCompleted.map(function(g) {
+                          return '<li style="margin:0.5em 0;text-decoration:line-through;color:#888;font-size:1em;word-break:break-word;">' +
+                            (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
+                            g.title +
+                            ' <span style="font-size:0.9em;color:#FFD700;">' + g.distance.toFixed(2) + ' km</span></li>';
+                        }).join('') +
+                        '</ul>' +
+                        '<ul id="all-completed-goals" style="list-style:none;padding:0;margin:1em 0;display:none;">' +
+                        completed.map(function(g) {
+                          return '<li style="margin:0.5em 0;text-decoration:line-through;color:#888;font-size:1em;word-break:break-word;">' +
+                            (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
+                            g.title +
+                            ' <span style="font-size:0.9em;color:#FFD700;">' + g.distance.toFixed(2) + ' km</span></li>';
+                        }).join('') +
+                        '</ul>' +
+                      '</div>' +
+                    '</div>';
                   }
+                  // Upcoming goals: show all
                   html += '<ul style="list-style:none;padding:0;margin:0;">' +
-        nextUpcoming.map(function(g) {
-          return '<li style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;">' +
-            (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
-            '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + g.title + '</span>' +
-            '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + g.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (g.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
-          '</li>';
-        }).join('') +
-        '</ul>';
+                    upcoming.map(function(g) {
+                      return '<li style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;">' +
+                        (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
+                        '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + g.title + '</span>' +
+                        '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + g.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (g.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
+                      '</li>';
+                    }).join('') +
+                    '</ul>';
                   document.getElementById('goals-list').innerHTML = html;
                   // Collapse/expand completed goals
-                  var btn = document.getElementById('toggle-completed');
+                  var completedVisibilityBtn = document.getElementById('toggle-completed-visibility');
+                  var completedWrapper = document.getElementById('completed-goals-wrapper');
+                  var completedToggleBtn = document.getElementById('toggle-completed');
                   var completedList = document.getElementById('completed-goals');
-                  if (btn && completedList) {
-                    var shown = true;
-                    btn.onclick = function() {
-                      shown = !shown;
-                      completedList.style.display = shown ? 'block' : 'none';
+                  var allCompletedList = document.getElementById('all-completed-goals');
+                  if (completedVisibilityBtn && completedWrapper) {
+                    var completedVisible = true;
+                    completedVisibilityBtn.onclick = function() {
+                      completedVisible = !completedVisible;
+                      completedWrapper.style.display = completedVisible ? 'block' : 'none';
+                      completedVisibilityBtn.textContent = completedVisible ? 'Hide Completed' : 'Show Completed';
+                    };
+                  }
+                  if (completedToggleBtn && completedList && allCompletedList) {
+                    var showingAll = false;
+                    completedToggleBtn.onclick = function() {
+                      showingAll = !showingAll;
+                      completedList.style.display = showingAll ? 'none' : 'block';
+                      allCompletedList.style.display = showingAll ? 'block' : 'none';
+                      completedToggleBtn.textContent = showingAll ? 'Show Last 3 Completed' : 'Show All Completed';
                     };
                   }
                 });
