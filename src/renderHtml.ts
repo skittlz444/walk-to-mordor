@@ -133,7 +133,7 @@ export function renderHtml(totalDistance?: number) {
                 '<div style="padding:1em;">' +
                 '<label style="color:white;">Date: ' + selectedDate + '</label><br>' +
                 '<label style="color:white;">Distance (km):</label>' +
-                '<input id="distance-input" type="text" value="' + distanceValue + '" style="width:100%;margin-bottom:1em;" />' +
+                '<input id="distance-input" type="number" step="any" min="0" value="' + distanceValue + '" style="width:100%;margin-bottom:1em;" />' +
                 '</div>';
 
               const buttons = [
