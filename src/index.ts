@@ -55,6 +55,12 @@ export default {
       return new Response(JSON.stringify(calendarData), {
         headers: { "content-type": "application/json" },
       });
+    } else if (url.pathname === "/wtm/api/goals") {
+      const { results } = await env.DB.prepare("SELECT * FROM goals").all();
+      // Return all goals as array of {distance, title, special}
+      return new Response(JSON.stringify(results), {
+        headers: { "content-type": "application/json" },
+      });
     }
 
     // Render main HTML page
