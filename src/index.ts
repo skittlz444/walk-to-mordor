@@ -24,7 +24,7 @@ export default {
 
     // CRUD for calendar events
     if (url.pathname === "/wtm/api/calendar-progress" && method === "POST") {
-      const { start, title } = body as { start: string; title: string };
+      const { start, title } = body;
       await env.DB.prepare(
         "INSERT INTO progress (date, distance) VALUES (?, ?)"
       )
@@ -32,7 +32,7 @@ export default {
         .run();
       return new Response("Created", { status: 201 });
     } else if (url.pathname === "/wtm/api/calendar-progress" && method === "PUT") {
-      const { start, title } = body as { start: string; title: string };
+      const { start, title } = body;
       await env.DB.prepare(
         "UPDATE progress SET distance = ? WHERE date = ?"
       )
@@ -40,7 +40,7 @@ export default {
         .run();
       return new Response("Updated", { status: 200 });
     } else if (url.pathname === "/wtm/api/calendar-progress" && method === "DELETE") {
-      const { start } = body as { start: string };
+      const { start } = body;
       console.log("Deleting date:", start);
       await env.DB.prepare("DELETE FROM progress WHERE date = ?")
         .bind(start)
@@ -48,12 +48,10 @@ export default {
       return new Response("Deleted", { status: 200 });
     } else if (url.pathname === "/wtm/api/calendar-progress") {
       const { results } = await env.DB.prepare("SELECT * FROM progress").all();
-      const calendarData = (results as Array<{ date: string; distance: number }>).map(
-        (row) => ({
-          start: row.date,
-          title: row.distance.toString(),
-        })
-      );
+      const calendarData = (results as Array<{ date: string; distance: number }>).map(row => ({
+        start: row.date,
+        title: row.distance.toString(),
+      }));
       return new Response(JSON.stringify(calendarData), {
         headers: { "content-type": "application/json" },
       });

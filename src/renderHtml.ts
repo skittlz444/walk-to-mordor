@@ -123,18 +123,22 @@ export function renderHtml(totalDistance?: number) {
               const selectedDate = formatDate(popupDate);
               // Find existing event for this date
               const existingEvent = events.find(ev => formatDate(ev.start) === selectedDate);
-              const distanceValue = existingEvent ? existingEvent.title : (event ? event.title : '');
+              let distanceValue = '';
+              if (existingEvent) {
+                distanceValue = existingEvent.title.replace(/\\s*km$/, '');
+              } else if (event && event.title) {
+                distanceValue = event.title.replace(/\\s*km$/, '');
+              }
 
-              // Set isEdit to true if there is an existing event for this date
               isEdit = !!existingEvent;
               popupEvent = existingEvent || event;
 
               document.getElementById('popup').innerHTML =
-                '<div style="padding:1em;">' +
-                '<label style="color:white;">Date: ' + selectedDate + '</label><br>' +
-                '<label style="color:white;">Distance (km):</label>' +
-                '<input id="distance-input" type="number" step="any" min="0" value="' + distanceValue + '" style="width:100%;margin-bottom:1em;" />' +
-                '</div>';
+                \`<div style="padding:1em;">
+                  <label style="color:white;">Date: \${selectedDate}</label><br>
+                  <label style="color:white;">Distance (km):</label>
+                  <input id="distance-input" type="number" step="any" min="0" value="\${distanceValue}" style="width:100%;margin-bottom:1em;" />
+                </div>\`;
 
               const buttons = [
                 'cancel',
@@ -150,10 +154,7 @@ export function renderHtml(totalDistance?: number) {
                         body: JSON.stringify({ start: selectedDate, title: distance })
                       }).then(updateCalendarAndTotal);
                     } else {
-                      events.push({
-                        start: selectedDate,
-                        title: distance
-                      });
+                      events.push({ start: selectedDate, title: distance });
                       fetch('/wtm/api/calendar-progress', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -211,10 +212,12 @@ export function renderHtml(totalDistance?: number) {
               mobiscroll.getJson(
                 '/wtm/api/calendar-progress',
                 function (fetchedEvents) {
-                  events = fetchedEvents;
+                  events = fetchedEvents.map(ev => ({
+                    ...ev,
+                    title: ev.title ? \`\${ev.title} km\` : ''
+                  }));
                   eventcalendar.setOptions({ data: events });
-                  // Update total distance, rounded to 2 decimal places
-                  const total = events.reduce((acc, ev) => acc + Number(ev.title), 0);
+                  const total = events.reduce((acc, ev) => acc + Number(ev.title.replace(/\\s*km$/, '')), 0);
                   document.querySelector('header').textContent = \`Total distance: \${total.toFixed(2)} km\`;
                 },
                 'json'
