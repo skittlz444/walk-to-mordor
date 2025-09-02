@@ -16,5 +16,8 @@
 	"assets": {
 		"directory": "./public",
 		"binding": "ASSETS"
-	}
+	},
+  "routes": [
+    { "pattern": "*haydencarson.com/wtm", "zone_name": "haydencarson.com" }
+  ]
 }
