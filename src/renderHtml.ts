@@ -64,7 +64,7 @@ export function renderHtml(totalDistance?: number) {
                       if (isEdit) {
                         popupEvent.title = distance;
                         // Persist edit
-                        fetch('/api/calendar-progress', {
+                        fetch('/wtm/api/calendar-progress', {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ start: popupEvent.start, title: distance })
@@ -75,7 +75,7 @@ export function renderHtml(totalDistance?: number) {
                           title: distance
                         });
                         // Persist add
-                        fetch('/api/calendar-progress', {
+                        fetch('/wtm/api/calendar-progress', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ start: popupDate, title: distance })
@@ -91,7 +91,7 @@ export function renderHtml(totalDistance?: number) {
                       if (isEdit) {
                         events = events.filter(ev => ev !== popupEvent);
                         // Persist delete
-                        fetch('/api/calendar-progress', {
+                        fetch('/wtm/api/calendar-progress', {
                           method: 'DELETE',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ start: popupEvent.start })
@@ -144,7 +144,7 @@ export function renderHtml(totalDistance?: number) {
                     const distance = document.getElementById('distance-input').value;
                     if (isEdit) {
                       popupEvent.title = distance;
-                      fetch('/api/calendar-progress', {
+                      fetch('/wtm/api/calendar-progress', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ start: selectedDate, title: distance })
@@ -154,7 +154,7 @@ export function renderHtml(totalDistance?: number) {
                         start: selectedDate,
                         title: distance
                       });
-                      fetch('/api/calendar-progress', {
+                      fetch('/wtm/api/calendar-progress', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ start: selectedDate, title: distance })
@@ -170,7 +170,7 @@ export function renderHtml(totalDistance?: number) {
                   text: 'Delete',
                   handler: function () {
                     events = events.filter(ev => formatDate(ev.start) !== selectedDate);
-                    fetch('/api/calendar-progress', {
+                    fetch('/wtm/api/calendar-progress', {
                       method: 'DELETE',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ start: selectedDate })
@@ -209,7 +209,7 @@ export function renderHtml(totalDistance?: number) {
 
             function updateCalendarAndTotal() {
               mobiscroll.getJson(
-                '/api/calendar-progress',
+                '/wtm/api/calendar-progress',
                 function (fetchedEvents) {
                   events = fetchedEvents;
                   eventcalendar.setOptions({ data: events });
