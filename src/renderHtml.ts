@@ -6,8 +6,8 @@ export function renderHtml(totalDistance?: number) {
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Walk to Mordor</title>
-        <link href="css/mobiscroll.javascript.min.css" rel="stylesheet" />
-        <script src="js/mobiscroll.javascript.min.js"></script>
+        <link href="wtm/css/mobiscroll.javascript.min.css" rel="stylesheet" />
+        <script src="wtm/js/mobiscroll.javascript.min.js"></script>
       </head>
       <body style="background-color:black;">
         <div id="eventcalendar"></div>
