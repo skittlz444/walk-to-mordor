@@ -19,6 +19,7 @@ mobiscrollReady(function() {
   let events = [];
   let eventcalendar;
   let popup;
+  let goalPopup;
   let popupEvent;
   let popupDate;
   let isEdit = false;
@@ -92,6 +93,34 @@ mobiscrollReady(function() {
     popup.open();
   }
 
+  function showGoalPopup(goal, currentDistance) {
+    const isCompleted = Number(currentDistance) >= goal.distance;
+    const distanceStyle = isCompleted ? 'text-decoration: line-through; color: #888;' : 'color: #FFD700;';
+    const distanceToGo = isCompleted ? 0 : goal.distance - Number(currentDistance);
+    
+    document.getElementById('goal-popup').innerHTML =
+      `<div style="padding: 1.5em; max-width: 400px;">
+        ${goal.special ? `<div style="color: #FFD700; font-size: 1.4em; font-weight: bold; margin-bottom: 0.5em; text-align: center;">${goal.special}</div>` : ''}
+        <div style="color: #fff; font-size: 1.2em; font-weight: bold; margin-bottom: 0.8em; text-align: center;">${goal.title}</div>
+        <div style="${distanceStyle} font-size: 1.1em; margin-bottom: 0.5em; text-align: center;">${goal.distance.toFixed(2)} km</div>
+        ${!isCompleted ? `<div style="color: #aaa; font-size: 1em; margin-bottom: 1em; text-align: center;">${distanceToGo.toFixed(2)} km to go</div>` : ''}
+        ${goal.description ? `<div style="color: #ccc; font-size: 1em; line-height: 1.4; text-align: justify;">${goal.description}</div>` : ''}
+      </div>`;
+    
+    goalPopup.open();
+  }
+
+  function makeGoalClickable(element, goal, currentDistance) {
+    if (element) {
+      element.style.cursor = 'pointer';
+      element.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showGoalPopup(goal, currentDistance);
+      });
+    }
+  }
+
   function renderGoals(currentDistance) {
     fetch('/wtm/api/goals')
       .then(res => res.json())
@@ -111,15 +140,23 @@ mobiscrollReady(function() {
             }
           }
           document.getElementById('last-goal').innerHTML =
-            '<span style="display:block;color:#888;font-size:1.1em;text-align:center;margin-bottom:0.5em;">' +
+            '<span style="display:block;color:#888;font-size:1.1em;text-align:center;margin-bottom:0.5em;cursor:pointer;" class="goal-header-main">' +
             (lastGoal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + lastGoal.special + '</span>' : '') +
             lastGoal.title +
             ' <span style="text-decoration:line-through;color:#888;font-size:1em;">(' + lastGoal.distance.toFixed(2) + ' km)</span>' +
             '</span>' +
             (lastSpecial && lastSpecial !== lastGoal ?
-              '<span style="display:block;color:#aaa;font-size:1.25em;font-weight:bold;text-align:center;margin-top:0.3em;">' + lastSpecial.special +
+              '<span style="display:block;color:#aaa;font-size:1.25em;font-weight:bold;text-align:center;margin-top:0.3em;cursor:pointer;" class="goal-header-special">' + lastSpecial.special +
               ' <span style="text-decoration:line-through;color:#888;font-size:1em;">(' + lastSpecial.distance.toFixed(2) + ' km)</span></span>'
               : '');
+          
+          // Make header goals clickable
+          queueMicrotask(() => {
+            const headerMain = document.querySelector('.goal-header-main');
+            const headerSpecial = document.querySelector('.goal-header-special');
+            if (headerMain) makeGoalClickable(headerMain, lastGoal, currentDistance);
+            if (headerSpecial && lastSpecial) makeGoalClickable(headerSpecial, lastSpecial, currentDistance);
+          });
         } else {
           document.getElementById('last-goal').innerHTML = '';
         }
@@ -131,16 +168,16 @@ mobiscrollReady(function() {
             '</div>' +
             '<div id="completed-goals-wrapper">' +
               '<ul id="completed-goals" style="list-style:none;padding:0;margin:1em 0;">' +
-              lastCompleted.map(function(g) {
-                return '<li style="margin:0.5em 0;text-decoration:line-through;color:#888;font-size:1em;word-break:break-word;">' +
+              lastCompleted.map(function(g, index) {
+                return '<li style="margin:0.5em 0;text-decoration:line-through;color:#888;font-size:1em;word-break:break-word;cursor:pointer;" class="completed-goal" data-goal-index="' + index + '">' +
                   (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
                   g.title +
                   ' <span style="font-size:0.9em;color:#FFD700;">' + g.distance.toFixed(2) + ' km</span></li>';
               }).join('') +
               '</ul>' +
               '<ul id="all-completed-goals" style="list-style:none;padding:0;margin:1em 0;display:none;">' +
-              completed.map(function(g) {
-                return '<li style="margin:0.5em 0;text-decoration:line-through;color:#888;font-size:1em;word-break:break-word;">' +
+              completed.map(function(g, index) {
+                return '<li style="margin:0.5em 0;text-decoration:line-through;color:#888;font-size:1em;word-break:break-word;cursor:pointer;" class="all-completed-goal" data-goal-index="' + index + '">' +
                   (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
                   g.title +
                   ' <span style="font-size:0.9em;color:#FFD700;">' + g.distance.toFixed(2) + ' km</span></li>';
@@ -150,8 +187,8 @@ mobiscrollReady(function() {
           '</div>';
         }
         html += '<ul style="list-style:none;padding:0;margin:0;">' +
-          upcoming.map(function(g) {
-            return '<li style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;">' +
+          upcoming.map(function(g, index) {
+            return '<li style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal" data-goal-index="' + index + '">' +
               (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
               '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + g.title + '</span>' +
               '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + g.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (g.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
@@ -181,6 +218,24 @@ mobiscrollReady(function() {
             completedToggleBtn.textContent = showingAll ? 'Show Last 3 Completed' : 'Show All Completed';
           };
         }
+
+        // Add click listeners for goals
+        queueMicrotask(() => {
+          // Completed goals (last 3)
+          document.querySelectorAll('.completed-goal').forEach((element, index) => {
+            makeGoalClickable(element, lastCompleted[index], currentDistance);
+          });
+
+          // All completed goals
+          document.querySelectorAll('.all-completed-goal').forEach((element, index) => {
+            makeGoalClickable(element, completed[index], currentDistance);
+          });
+
+          // Upcoming goals
+          document.querySelectorAll('.upcoming-goal').forEach((element, index) => {
+            makeGoalClickable(element, upcoming[index], currentDistance);
+          });
+        });
       });
   }
 
@@ -282,6 +337,19 @@ mobiscrollReady(function() {
     onOpen: function () {
       document.getElementById('distance-input').focus();
     }
+  });
+
+  goalPopup = mobiscroll.popup('#goal-popup', {
+    display: 'center',
+    themeVariant: 'dark',
+    buttons: [
+      {
+        text: 'Close',
+        handler: function () {
+          goalPopup.close();
+        }
+      }
+    ]
   });
 
   document.querySelectorAll('.md-view-change').forEach(function (elm) {
