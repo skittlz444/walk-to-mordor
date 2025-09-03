@@ -25,7 +25,7 @@ test.describe('Walk to Mordor UI', () => {
   // Clean up any test events after each test
   test.afterEach(async ({ page }) => {
     await page.goto('http://localhost:8787');
-    await page.waitForTimeout(500); // Give time for page to load
+    await page.waitForLoadState('networkidle'); // Wait for page to finish loading
     
     // Clean up specific test values
     for (const value of ['999999 km', '888888 km', '777777 km']) {
