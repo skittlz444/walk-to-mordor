@@ -235,7 +235,7 @@ mobiscrollReady(function() {
           document.querySelectorAll('.upcoming-goal').forEach((element, index) => {
             makeGoalClickable(element, upcoming[index], currentDistance);
           });
-        }, 0);
+        });
       });
   }
 
