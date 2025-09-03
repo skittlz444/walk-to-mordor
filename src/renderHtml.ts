@@ -24,6 +24,7 @@ export function renderHtml(totalDistance?: number) {
         <div id="eventcalendar"></div>
       </div>
       <div id="popup"></div>
+      <div id="goal-popup"></div>
       </body>
     </html>
 `;
