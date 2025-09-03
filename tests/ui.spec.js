@@ -32,8 +32,8 @@ test.describe('Walk to Mordor UI', () => {
       const eventLabel = page.locator('.mbsc-calendar-label-text', { hasText: value });
       while (await eventLabel.count() > 0) {
         await eventLabel.first().click();
-        await page.waitForTimeout(100); // Wait for popup to open
         const deleteButton = page.locator('text=Delete');
+        await expect(deleteButton).toBeVisible({ timeout: 2000 }); // Wait for popup to open
         if (await deleteButton.count() > 0) {
           await deleteButton.click();
           await page.waitForTimeout(100); // Wait for deletion to complete
@@ -66,7 +66,7 @@ test.describe('Walk to Mordor UI', () => {
 
   test('Can add and delete a new event', async ({ page }) => {
     await page.goto('http://localhost:8787');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     const cell = await selectNextWeekCell(page);
     await cell.click();
     await page.fill('#distance-input', '999999');
@@ -81,7 +81,7 @@ test.describe('Walk to Mordor UI', () => {
 
   test('Can edit and delete an event', async ({ page }) => {
     await page.goto('http://localhost:8787');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     const cell = await selectNextWeekCell(page);
     await cell.click();
     await page.fill('#distance-input', '888888');
@@ -122,7 +122,7 @@ test.describe('Walk to Mordor UI', () => {
 
   test('Goal popup opens for upcoming goals and shows correct content', async ({ page }) => {
     await page.goto('http://localhost:8787');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     // Wait for goals to load and find the first visible upcoming goal
     await expect(page.locator('#goals-list')).toBeVisible();
@@ -151,7 +151,7 @@ test.describe('Walk to Mordor UI', () => {
 
   test('Goal popup opens for completed goals and shows strikethrough distance', async ({ page }) => {
     await page.goto('http://localhost:8787');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     // Add some distance to ensure we have completed goals
     const cell = await selectNextWeekCell(page);
@@ -188,7 +188,7 @@ test.describe('Walk to Mordor UI', () => {
 
   test('Goal popup opens from header goals', async ({ page }) => {
     await page.goto('http://localhost:8787');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     // Check if there's already a header goal visible without adding distance
     const headerGoal = page.locator('.goal-header-main').first();
@@ -242,7 +242,7 @@ test.describe('Walk to Mordor UI', () => {
 
   test('Goal popup displays special milestone and description', async ({ page }) => {
     await page.goto('http://localhost:8787');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     // Check if there are upcoming goals available
     await expect(page.locator('#goals-list')).toBeVisible();
@@ -297,7 +297,7 @@ test.describe('Walk to Mordor UI', () => {
 
   test('Goal popup shows distance information correctly', async ({ page }) => {
     await page.goto('http://localhost:8787');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     // Test any available goal without adding distance first
     await expect(page.locator('#goals-list')).toBeVisible();

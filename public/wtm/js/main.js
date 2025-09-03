@@ -151,12 +151,12 @@ mobiscrollReady(function() {
               : '');
           
           // Make header goals clickable
-          setTimeout(() => {
+          queueMicrotask(() => {
             const headerMain = document.querySelector('.goal-header-main');
             const headerSpecial = document.querySelector('.goal-header-special');
             if (headerMain) makeGoalClickable(headerMain, lastGoal, currentDistance);
             if (headerSpecial && lastSpecial) makeGoalClickable(headerSpecial, lastSpecial, currentDistance);
-          }, 0);
+          });
         } else {
           document.getElementById('last-goal').innerHTML = '';
         }
@@ -220,7 +220,7 @@ mobiscrollReady(function() {
         }
 
         // Add click listeners for goals
-        setTimeout(() => {
+        queueMicrotask(() => {
           // Completed goals (last 3)
           document.querySelectorAll('.completed-goal').forEach((element, index) => {
             makeGoalClickable(element, lastCompleted[index], currentDistance);
