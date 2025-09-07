@@ -14,6 +14,17 @@ const TEST_VALUES = [
   '5432109'  // Test value 5: for additional tests
 ];
 
+// Test date patterns used in API and UI tests
+const TEST_DATES = [
+  '2024-01-02', // API test date
+  '2024-01-03', // API test date  
+  '2024-01-04', // API test date
+  '2024-01-05', // API test date
+  '2024-01-06', // API test date
+  '2025-09-14', // UI test date (far future)
+  '2099-12-31'  // Edge case test date
+];
+
 /**
  * Comprehensive cleanup function that removes all test data
  * @param {string} baseUrl - The base URL of the application (default: http://localhost:8787)
@@ -56,9 +67,8 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
         // 5. Very large distances (over 1 million - clearly test data)
         if (distance >= 1000000) isTestData = true;
         
-        // 6. Specific test dates from API tests
-        const testDates = ['2024-01-02', '2024-01-03', '2024-01-04', '2024-01-05', '2024-01-06', '2099-12-31'];
-        if (testDates.includes(dateStr)) isTestData = true;
+        // 6. Specific test dates from API and UI tests
+        if (TEST_DATES.includes(dateStr)) isTestData = true;
       }
       
       // API returns distance as 'title' field, not 'distance'
@@ -93,6 +103,7 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
 // Export for use in test files
 module.exports = {
   TEST_VALUES,
+  TEST_DATES,
   cleanupAllTestData
 };
 
