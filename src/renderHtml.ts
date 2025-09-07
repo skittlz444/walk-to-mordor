@@ -6,10 +6,44 @@ export function renderHtml(totalDistance?: number) {
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Walk to Mordor</title>
+        
+        <!-- PWA Meta Tags -->
+        <meta name="description" content="Track your walking progress on the journey to Mordor" />
+        <meta name="theme-color" content="#0f3460" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Walk to Mordor" />
+        
+        <!-- Web App Manifest -->
+        <link rel="manifest" href="wtm/manifest.json" />
+        
+        <!-- Favicon and App Icons -->
+        <link rel="icon" type="image/svg+xml" href="wtm/icons/icon.svg" />
+        <link rel="apple-touch-icon" href="wtm/icons/icon-192x192.png" />
+        
+        <!-- Stylesheets -->
         <link href="wtm/css/mobiscroll.javascript.min.css" rel="stylesheet" />
         <link href="wtm/css/main.css" rel="stylesheet" />
+        
+        <!-- Scripts -->
         <script src="wtm/js/mobiscroll.javascript.min.js" defer></script>
         <script src="wtm/js/main.js" defer></script>
+        
+        <!-- Service Worker Registration -->
+        <script>
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+              navigator.serviceWorker.register('wtm/sw.js')
+                .then((registration) => {
+                  console.log('SW registered: ', registration);
+                })
+                .catch((registrationError) => {
+                  console.log('SW registration failed: ', registrationError);
+                });
+            });
+          }
+        </script>
       </head>
       <body>
       <header>

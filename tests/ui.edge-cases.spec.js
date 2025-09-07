@@ -1,6 +1,8 @@
 const { test, expect } = require('@playwright/test');
+const { TEST_VALUES, cleanupAllTestData } = require('./helpers/cleanup');
 
-test.describe('Walk to Mordor UI', () => {
+test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
+
   // Helper to get timestamp for first day of next week
   async function getNextWeekTimestamp(page) {
     return await page.evaluate(() => {
@@ -22,81 +24,22 @@ test.describe('Walk to Mordor UI', () => {
     return cell;
   }
 
-  // Clean up any test events after each test
+  // Clean up before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    try {
+      await cleanupAllTestData();
+    } catch (error) {
+      // Silently ignore cleanup warnings
+    }
+  });
+
+  // Clean up after each test, regardless of pass/fail
   test.afterEach(async ({ page }) => {
-    await page.goto('http://localhost:8787');
-    await page.waitForLoadState('networkidle'); // Wait for page to finish loading
-    
-    // Clean up specific test values
-    for (const value of ['999999 km', '888888 km', '777777 km']) {
-      const eventLabel = page.locator('.mbsc-calendar-label-text', { hasText: value });
-      while (await eventLabel.count() > 0) {
-        await eventLabel.first().click();
-        const deleteButton = page.locator('text=Delete');
-        await expect(deleteButton).toBeVisible({ timeout: 2000 }); // Wait for popup to open
-        if (await deleteButton.count() > 0) {
-          await deleteButton.click();
-          await page.waitForTimeout(100); // Wait for deletion to complete
-        }
-        await expect(eventLabel).not.toBeVisible();
-      }
+    try {
+      await cleanupAllTestData();
+    } catch (error) {
+      // Silently ignore cleanup warnings
     }
-    
-    // Also clean up any high value test entries that might be left behind
-    const highValueEvents = page.locator('.mbsc-calendar-label-text').filter({ hasText: /^(999999|888888|777777|999998|888887|777776)\s*km$/ });
-    while (await highValueEvents.count() > 0) {
-      await highValueEvents.first().click();
-      await page.waitForTimeout(100);
-      const deleteButton = page.locator('text=Delete');
-      if (await deleteButton.count() > 0) {
-        await deleteButton.click();
-        await page.waitForTimeout(100);
-      }
-    }
-  });
-
-  test('Calendar renders and is interactable', async ({ page }) => {
-    await page.goto('http://localhost:8787');
-    await expect(page.locator('#eventcalendar')).toBeVisible();
-    await page.waitForTimeout(500);
-    const cell = await selectNextWeekCell(page);
-    await cell.click();
-    await expect(page.locator('#popup')).toBeVisible();
-  });
-
-  test('Can add and delete a new event', async ({ page }) => {
-    await page.goto('http://localhost:8787');
-    await page.waitForLoadState('networkidle');
-    const cell = await selectNextWeekCell(page);
-    await cell.click();
-    await page.fill('#distance-input', '999999');
-    await page.click('text=Add');
-    await page.waitForTimeout(100);
-    const eventLabel = page.locator('.mbsc-calendar-label-text', { hasText: '999999 km' });
-    await expect(eventLabel).toBeVisible();
-    await cell.click();
-    await page.click('text=Delete');
-    await expect(eventLabel).not.toBeVisible();
-  });
-
-  test('Can edit and delete an event', async ({ page }) => {
-    await page.goto('http://localhost:8787');
-    await page.waitForLoadState('networkidle');
-    const cell = await selectNextWeekCell(page);
-    await cell.click();
-    await page.fill('#distance-input', '888888');
-    await page.click('text=Add');
-    await page.waitForTimeout(100);
-    let eventLabel = page.locator('.mbsc-calendar-label-text', { hasText: '888888 km' });
-    await eventLabel.first().click();
-    await page.fill('#distance-input', '777777');
-    await page.click('text=Save');
-    await page.waitForTimeout(100);
-    eventLabel = page.locator('.mbsc-calendar-label-text', { hasText: '777777 km' });
-    await expect(eventLabel).toBeVisible();
-    await eventLabel.first().click();
-    await page.click('text=Delete');
-    await expect(eventLabel).not.toBeVisible();
   });
 
   test('Goals section renders and controls work', async ({ page }) => {
@@ -112,7 +55,7 @@ test.describe('Walk to Mordor UI', () => {
     await expect(page.locator('#completed-goals')).toBeVisible();
   });
 
-  test('UI is responsive', async ({ page }) => {
+  test('UI is responsive on specific viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('http://localhost:8787');
     await expect(page.locator('header')).toBeVisible();
@@ -156,7 +99,7 @@ test.describe('Walk to Mordor UI', () => {
     // Add some distance to ensure we have completed goals
     const cell = await selectNextWeekCell(page);
     await cell.click();
-    await page.fill('#distance-input', '999999');
+    await page.fill('#distance-input', TEST_VALUES[0]); // Use 9876543
     await page.click('text=Add');
     await page.waitForTimeout(100);
     
@@ -174,10 +117,8 @@ test.describe('Walk to Mordor UI', () => {
     const closeButton = page.locator('text=Close').last();
     await expect(closeButton).toBeVisible();
     
-    // Check that distance has strikethrough styling (completed goal)
-    const popupContent = page.locator('#goal-popup');
-    
     // Check that distance is displayed but no "km to go" for completed goals
+    const popupContent = page.locator('#goal-popup');
     await expect(popupContent).toContainText('km');
     await expect(popupContent).not.toContainText('km to go');
     
@@ -214,7 +155,7 @@ test.describe('Walk to Mordor UI', () => {
       // Add some distance to ensure we have a last goal in header
       const cell = await selectNextWeekCell(page);
       await cell.click();
-      await page.fill('#distance-input', '888888');
+      await page.fill('#distance-input', TEST_VALUES[1]); // Use 8765432
       await page.click('text=Add');
       await page.waitForTimeout(100);
       
@@ -345,5 +286,106 @@ test.describe('Walk to Mordor UI', () => {
         await expect(page.locator('#goal-popup')).toBeHidden();
       }
     }
+  });
+
+  test('Page handles different screen sizes', async ({ page }) => {
+    await page.goto('http://localhost:8787');
+    await page.waitForLoadState('networkidle');
+    
+    // Test various screen sizes
+    const viewports = [
+      { width: 320, height: 568 }, // iPhone SE
+      { width: 375, height: 667 }, // iPhone 8
+      { width: 768, height: 1024 }, // iPad
+      { width: 1200, height: 800 }  // Desktop
+    ];
+    
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await expect(page.locator('.mbsc-calendar')).toBeVisible();
+    }
+  });
+
+  test('API error handling works correctly', async ({ page }) => {
+    // Test API with invalid data
+    const response = await page.request.post('http://localhost:8787/wtm/api/calendar-progress', {
+      data: { start: 'invalid-date', title: 'test' }
+    });
+    expect(response.status()).toBe(400);
+    
+    const errorData = await response.json();
+    expect(errorData.error).toBeDefined();
+  });
+
+  test('API validates required fields', async ({ page }) => {
+    // Test missing required fields
+    const response = await page.request.post('http://localhost:8787/wtm/api/calendar-progress', {
+      data: {}
+    });
+    expect([400, 422]).toContain(response.status());
+  });
+
+  test('Page loads without JavaScript errors', async ({ page }) => {
+    const jsErrors = [];
+    page.on('pageerror', error => jsErrors.push(error));
+    
+    await page.goto('http://localhost:8787');
+    await page.waitForLoadState('networkidle');
+    
+    // Verify no JavaScript errors occurred
+    expect(jsErrors).toHaveLength(0);
+  });
+
+  test('Network requests complete successfully', async ({ page }) => {
+    const failedRequests = [];
+    page.on('requestfailed', request => failedRequests.push(request));
+    
+    await page.goto('http://localhost:8787');
+    await page.waitForLoadState('networkidle');
+    
+    // Verify no network requests failed
+    expect(failedRequests).toHaveLength(0);
+  });
+
+  test('Calendar navigation performance', async ({ page }) => {
+    await page.goto('http://localhost:8787');
+    await page.waitForLoadState('networkidle');
+    
+    const nextButton = page.locator('[aria-label="Next page"]');
+    await expect(nextButton).toBeVisible();
+    
+    // Test rapid navigation clicks
+    for (let i = 0; i < 3; i++) {
+      await nextButton.click();
+      await page.waitForTimeout(100);
+    }
+    
+    // Calendar should still be functional
+    await expect(page.locator('.mbsc-calendar')).toBeVisible();
+  });
+
+  test('Browser back/forward navigation', async ({ page }) => {
+    await page.goto('http://localhost:8787');
+    await page.waitForLoadState('networkidle');
+    
+    // Navigate to a different page if possible
+    await page.goBack();
+    await page.goForward();
+    
+    // Should return to the application
+    await expect(page.locator('.mbsc-calendar')).toBeVisible();
+  });
+
+  test('Page accessibility basics', async ({ page }) => {
+    await page.goto('http://localhost:8787');
+    await page.waitForLoadState('networkidle');
+    
+    // Check for basic accessibility elements
+    const title = await page.title();
+    expect(title).toBeTruthy();
+    
+    // Check for navigation landmarks
+    const navigation = page.locator('[aria-label*="page"], [aria-label*="Next"], [aria-label*="Previous"]');
+    await expect(navigation.first()).toBeVisible();
   });
 });

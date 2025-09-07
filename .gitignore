@@ -181,3 +181,10 @@ build/
 
 # Turbo output
 .turbo/
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+/playwright-report
+/test-results
