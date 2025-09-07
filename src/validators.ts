@@ -25,13 +25,16 @@ export function isValidDateFormat(dateString: string): boolean {
          date.getDate() === day;
 }
 
+// Reasonable upper limit for distance values
+const MAX_DISTANCE_VALUE = 999999999;
+
 // Helper function to validate distance value
 export function isValidDistance(value: any): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string' && value.trim() === '') return false;
   
   const num = Number(value);
-  return !isNaN(num) && isFinite(num) && num >= 0 && num <= 999999999; // Reasonable upper limit
+  return !isNaN(num) && isFinite(num) && num >= 0 && num <= MAX_DISTANCE_VALUE;
 }
 
 // Helper function to safely parse JSON
