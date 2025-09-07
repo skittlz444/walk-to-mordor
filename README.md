@@ -124,5 +124,30 @@ A live public deployment of this template is available at [https://d1-template.t
    ```
 4. Deploy the project!
    ```bash
-   npx wrangler deploy
+   npm run deploy
    ```
+   
+   This will automatically run the build process to update the service worker cache version before deploying.
+
+## Build Process
+
+The project includes an automated build process that updates the service worker cache name with the current build timestamp. This ensures that each deployment gets a fresh cache and prevents cache conflicts between versions.
+
+### Build Commands
+
+- **`npm run build`** - Updates service worker cache version to current timestamp
+- **`npm run deploy`** - Runs build process and deploys to Cloudflare
+- **`npm run build:sw`** - Manually update service worker cache version
+- **`npm run build:sw:reset`** - Reset service worker to development placeholder
+
+### Cache Versioning
+
+The service worker cache name uses the format: `walk-to-mordor-YYYYMMDD-HHMMSS`
+
+Example: `walk-to-mordor-20250907-162757`
+
+This ensures:
+- Fresh cache for each deployment
+- No conflicts between development and production
+- Automatic cache invalidation on updates
+- Better cache management across versions
