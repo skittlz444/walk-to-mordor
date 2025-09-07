@@ -22,9 +22,17 @@ const mockIsValidMethod = jest.mocked(isValidMethod);
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
   let mockRequest: any;
+  let originalConsoleError: typeof console.error;
+  let originalConsoleLog: typeof console.log;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Suppress console outputs during tests to reduce noise from expected scenarios
+    originalConsoleError = console.error;
+    originalConsoleLog = console.log;
+    console.error = jest.fn();
+    console.log = jest.fn();
     
     // Setup default mock returns
     mockRenderHtml.mockReturnValue('<html>Mock HTML</html>');
@@ -53,6 +61,12 @@ describe('Cloudflare Worker Index', () => {
       url: 'https://example.com/',
       method: 'GET'
     };
+  });
+
+  afterEach(() => {
+    // Restore console methods after each test
+    console.error = originalConsoleError;
+    console.log = originalConsoleLog;
   });
 
   it('should call renderHtml for main page', async () => {
