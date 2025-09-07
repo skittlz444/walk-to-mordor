@@ -29,7 +29,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     try {
       await cleanupAllTestData();
     } catch (error) {
-      console.log('Pre-test cleanup warning:', error.message);
+      // Silently ignore cleanup warnings
     }
   });
 
@@ -38,7 +38,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     try {
       await cleanupAllTestData();
     } catch (error) {
-      console.log('Post-test cleanup warning:', error.message);
+      // Silently ignore cleanup warnings
     }
   });
 

@@ -22,8 +22,6 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
   try {
     const apiContext = await request.newContext();
     
-    console.log('🧹 Starting comprehensive test data cleanup...');
-    
     // Get all events
     const response = await apiContext.get(`${baseUrl}/wtm/api/calendar-progress`);
     if (!response.ok()) {
@@ -31,7 +29,6 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
     }
     
     const events = await response.json();
-    console.log(`📊 Found ${events.length} total events`);
     
     let cleanedCount = 0;
     
@@ -72,29 +69,23 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
           });
           
           if (deleteResponse.ok()) {
-            console.log(`✅ Cleaned up test event: ${event.title} km on ${event.start}`);
             cleanedCount++;
-          } else {
-            console.log(`❌ Failed to delete event ${event.title}: ${deleteResponse.status()}`);
           }
         } catch (deleteError) {
-          console.log(`❌ Error deleting event ${event.title}:`, deleteError.message);
+          // Silently continue with cleanup even if individual deletions fail
         }
       }
     }
     
     await apiContext.dispose();
     
-    if (cleanedCount > 0) {
-      console.log(`✨ Cleanup complete! Removed ${cleanedCount} test events`);
-    } else {
-      console.log('✨ No test data found - database is clean!');
-    }
-    
     return cleanedCount;
     
   } catch (error) {
-    console.error('❌ Cleanup failed:', error.message);
+    // Only log errors when running standalone
+    if (require.main === module) {
+      console.error('❌ Cleanup failed:', error.message);
+    }
     throw error;
   }
 }
@@ -109,6 +100,7 @@ module.exports = {
 if (require.main === module) {
   cleanupAllTestData()
     .then((count) => {
+      console.log(`✨ Cleanup complete! Removed ${count} test events`);
       process.exit(0);
     })
     .catch((error) => {
