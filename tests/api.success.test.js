@@ -1,15 +1,18 @@
 const request = require('supertest');
+const { TEST_VALUES, cleanupAllTestData } = require('./helpers/cleanup');
+
 const server = 'http://localhost:8787';
 const TEST_EVENT_DATE = "2024-01-02";
 
 describe('Calendar Progress API - Success Flows', () => {
-  // Track all test dates used in tests for cleanup
-  const testDates = [
-    TEST_EVENT_DATE,
-    "2024-01-03", 
-    "2024-01-04",
-    "2024-01-05"
-  ];
+  // Enhanced cleanup using our centralized system
+  beforeAll(async () => {
+    await cleanupAllTestData();
+  });
+
+  afterAll(async () => {
+    await cleanupAllTestData();
+  });
 
   // Helper to add event
   async function addEvent(title, date = TEST_EVENT_DATE) {
@@ -17,72 +20,6 @@ describe('Calendar Progress API - Success Flows', () => {
       .post('/wtm/api/calendar-progress')
       .send({ start: date, title });
   }
-
-  // Helper to delete event (ignores errors if not found)
-  async function deleteEvent(date) {
-    try {
-      const res = await request(server)
-        .delete('/wtm/api/calendar-progress')
-        .send({ start: date });
-      // Only log if in verbose mode
-      if (process.env.VERBOSE_TESTS && res.status === 200) {
-        console.log(`Cleaned up test data for date: ${date}`);
-      }
-    } catch (error) {
-      // Ignore errors - the event might not exist
-    }
-  }
-
-  // Comprehensive cleanup function
-  async function cleanupAllTestData() {
-    if (process.env.VERBOSE_TESTS) {
-      console.log('Starting test data cleanup...');
-    }
-    
-    // Get all current progress entries
-    const getAllRes = await request(server).get('/wtm/api/calendar-progress');
-    if (getAllRes.status === 200 && Array.isArray(getAllRes.body)) {
-      const testEntries = getAllRes.body.filter(entry => {
-        // Clean up entries that match our test patterns
-        const date = entry.start;
-        const distance = parseFloat(entry.title);
-        
-        return testDates.includes(date) || 
-               distance >= 999999 || // Large test values
-               distance === 15.5 ||  // Decimal test value
-               distance === 0;       // Zero test value
-      });
-      
-      if (process.env.VERBOSE_TESTS && testEntries.length > 0) {
-        console.log(`Found ${testEntries.length} test entries to clean up`);
-      }
-      
-      for (const entry of testEntries) {
-        await deleteEvent(entry.start);
-      }
-    }
-    
-    if (process.env.VERBOSE_TESTS) {
-      console.log('Test data cleanup completed');
-    }
-  }
-
-  // Clean up any test data before all tests
-  beforeAll(async () => {
-    await cleanupAllTestData();
-  });
-
-  // Clean up any test data after each test  
-  afterEach(async () => {
-    for (const date of testDates) {
-      await deleteEvent(date);
-    }
-  });
-
-  // Final comprehensive cleanup after all tests
-  afterAll(async () => {
-    await cleanupAllTestData();
-  });
 
   it('GET returns events', async () => {
     const res = await request(server).get('/wtm/api/calendar-progress');
@@ -105,10 +42,11 @@ describe('Calendar Progress API - Success Flows', () => {
   });
 
   it('should delete the event', async () => {
-    await addEvent("888888");
+    const uniqueDeleteDate = "2024-01-06"; // Use unique date for delete test
+    await addEvent("888888", uniqueDeleteDate);
     const delRes = await request(server)
       .delete('/wtm/api/calendar-progress')
-      .send({ start: TEST_EVENT_DATE });
+      .send({ start: uniqueDeleteDate });
     expect(delRes.status).toBe(200);
   });
 

@@ -1,6 +1,8 @@
 const { test, expect } = require('@playwright/test');
+const { TEST_VALUES, cleanupAllTestData } = require('./helpers/cleanup');
 
 test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
+
   // Helper to get timestamp for first day of next week
   async function getNextWeekTimestamp(page) {
     return await page.evaluate(() => {
@@ -22,22 +24,21 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     return cell;
   }
 
-  // Clean up any test events after each test
+  // Clean up before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    try {
+      await cleanupAllTestData();
+    } catch (error) {
+      console.log('Pre-test cleanup warning:', error.message);
+    }
+  });
+
+  // Clean up after each test, regardless of pass/fail
   test.afterEach(async ({ page }) => {
-    await page.goto('http://localhost:8787');
-    await page.waitForLoadState('networkidle');
-    
-    // Clean up specific test values
-    for (const value of ['999999 km', '888888 km', '777777 km']) {
-      const eventLabel = page.locator('.mbsc-calendar-label-text', { hasText: value });
-      while (await eventLabel.count() > 0) {
-        await eventLabel.first().click();
-        const deleteButton = page.locator('text=Delete');
-        if (await deleteButton.count() > 0) {
-          await deleteButton.click();
-          await page.waitForTimeout(100);
-        }
-      }
+    try {
+      await cleanupAllTestData();
+    } catch (error) {
+      console.log('Post-test cleanup warning:', error.message);
     }
   });
 
@@ -98,7 +99,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     // Add some distance to ensure we have completed goals
     const cell = await selectNextWeekCell(page);
     await cell.click();
-    await page.fill('#distance-input', '999999');
+    await page.fill('#distance-input', TEST_VALUES[0]); // Use 9876543
     await page.click('text=Add');
     await page.waitForTimeout(100);
     
@@ -154,7 +155,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       // Add some distance to ensure we have a last goal in header
       const cell = await selectNextWeekCell(page);
       await cell.click();
-      await page.fill('#distance-input', '888888');
+      await page.fill('#distance-input', TEST_VALUES[1]); // Use 8765432
       await page.click('text=Add');
       await page.waitForTimeout(100);
       

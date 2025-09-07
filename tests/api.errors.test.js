@@ -1,34 +1,17 @@
 const request = require('supertest');
+const { TEST_VALUES, cleanupAllTestData } = require('./helpers/cleanup');
+
 const server = 'http://localhost:8787';
 const TEST_EVENT_DATE = "2024-01-02";
 
 describe('Calendar Progress API - Error Handling & Edge Cases', () => {
-  // Track all test dates used in tests for cleanup
-  const testDates = [
-    TEST_EVENT_DATE,
-    "2024-01-05", // For duplicate entry test
-    "2099-12-31"  // Used in some error tests
-  ];
+  // Enhanced cleanup using our centralized system
+  beforeAll(async () => {
+    await cleanupAllTestData();
+  });
 
-  // Helper to delete event (ignores errors if not found)
-  async function deleteEvent(date) {
-    try {
-      const res = await request(server)
-        .delete('/wtm/api/calendar-progress')
-        .send({ start: date });
-      if (process.env.VERBOSE_TESTS && res.status === 200) {
-        console.log(`Cleaned up test data for date: ${date}`);
-      }
-    } catch (error) {
-      // Ignore errors - the event might not exist
-    }
-  }
-
-  // Clean up any test data after each test  
-  afterEach(async () => {
-    for (const date of testDates) {
-      await deleteEvent(date);
-    }
+  afterAll(async () => {
+    await cleanupAllTestData();
   });
 
   describe('Error Handling', () => {
@@ -198,8 +181,7 @@ describe('Calendar Progress API - Error Handling & Edge Cases', () => {
       expect(duplicateRes.status).toBe(409);
       expect(duplicateRes.body.error).toContain('already exists');
       
-      // Clean up the test entry
-      await deleteEvent(uniqueTestDate);
+      // No manual cleanup needed - handled by centralized cleanup system
     });
   });
 });
