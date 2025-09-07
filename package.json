@@ -37,17 +37,35 @@
     "dev": "pnpm seedLocalD1 && wrangler dev",
     "predeploy": "wrangler d1 migrations apply DB --remote",
     "seedLocalD1": "wrangler d1 migrations apply DB --local",
-    "test": "npm run test:unit && npm run test:api",
-    "test:all": "npm run test:unit && npm run test:api && npm run test:ui",
-    "test:unit": "jest --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js",
-    "test:unit:watch": "jest --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js --watch",
-    "test:api": "jest tests/api.test.js --coverage=false",
-    "test:ui": "playwright test tests/ui.spec.js",
+    
+    "test": "npm run test:unit && npm run test:api && npm run test:ui",
+    "test:all": "npm run test:unit && npm run test:api:all && npm run test:ui:all",
+    "test:quick": "npm run test:api:success && npm run test:ui:success",
+    
+    "test:unit": "jest --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js tests/api.success.test.js tests/api.errors.test.js tests/ui.success.spec.js tests/ui.edge-cases.spec.js",
+    "test:unit:watch": "jest --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js tests/api.success.test.js tests/api.errors.test.js tests/ui.success.spec.js tests/ui.edge-cases.spec.js --watch",
+    
+    "test:api": "npm run test:api:all",
+    "test:api:success": "jest tests/api.success.test.js --coverage=false",
+    "test:api:errors": "jest tests/api.errors.test.js --coverage=false",
+    "test:api:all": "npm run test:api:success && npm run test:api:errors",
+    
+    "test:ui": "npm run test:ui:all",
+    "test:ui:success": "playwright test tests/ui.success.spec.js --reporter=list",
+    "test:ui:edge-cases": "playwright test tests/ui.edge-cases.spec.js --reporter=list",
+    "test:ui:all": "npm run test:ui:success && npm run test:ui:edge-cases",
+    "test:ui:headed": "playwright test tests/ui.success.spec.js tests/ui.edge-cases.spec.js --headed",
+    "test:ui:report": "playwright show-report",
+    
+    "test:success": "npm run test:api:success && npm run test:ui:success",
+    "test:errors": "npm run test:api:errors && npm run test:ui:edge-cases",
+    
     "test:coverage": "jest --coverage",
     "test:coverage:watch": "jest --coverage --watch",
-    "test:watch": "jest --watch --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js",
+    "test:watch": "jest --watch --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js tests/api.success.test.js tests/api.errors.test.js tests/ui.success.spec.js tests/ui.edge-cases.spec.js",
     "coverage:report": "jest --coverage --coverageReporters=html && echo 'Coverage report generated in coverage/lcov-report/index.html'",
-    "coverage:check": "jest --coverage --passWithNoTests"
+    "coverage:check": "jest --coverage --passWithNoTests",
+    "coverage:ui": "playwright test tests/ui.success.spec.js tests/ui.edge-cases.spec.js --reporter=json --output=test-results/ui-coverage.json"
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.4.0"
