@@ -30,7 +30,7 @@ jobs:
         run: npm run test:unit
         
       - name: Generate coverage report
-        run: npm run test:coverage
+        run: npm run test:coverage:unit
         
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -39,7 +39,7 @@ jobs:
           path: coverage/
           retention-days: 7
 
-  # API integration tests - runs after unit tests pass
+  # API integration tests - runs with local dev server
   api-tests:
     name: API Integration Tests
     runs-on: ubuntu-latest
@@ -67,18 +67,30 @@ jobs:
         
       - name: Start Cloudflare Workers dev server
         run: |
-          echo "Starting Cloudflare Workers dev server..."
-          npm run dev &
+          echo "Starting Cloudflare Workers dev server in background..."
+          timeout 300 npm run dev &
+          DEV_PID=$!
+          echo "DEV_PID=$DEV_PID" >> $GITHUB_ENV
           
           # Wait for server to be ready
           echo "Waiting for dev server to start..."
-          timeout 60 bash -c 'until curl -f http://localhost:8787/wtm/ > /dev/null 2>&1; do sleep 2; done'
-          echo "Dev server is ready!"
+          timeout 90 bash -c 'until curl -f http://localhost:8787/wtm/ > /dev/null 2>&1; do echo "Waiting for server..."; sleep 3; done'
+          echo "✅ Dev server is ready!"
         
       - name: Run API tests
         run: npm run test:api:all
+        
+      - name: Stop dev server
+        if: always()
+        run: |
+          if [ ! -z "$DEV_PID" ]; then
+            echo "Stopping dev server (PID: $DEV_PID)"
+            kill $DEV_PID 2>/dev/null || true
+            # Kill any remaining wrangler processes
+            pkill -f "wrangler" || true
+          fi
 
-  # UI end-to-end tests - runs after unit tests pass
+  # UI end-to-end tests - runs with Playwright's built-in dev server
   ui-tests:
     name: UI End-to-End Tests
     runs-on: ubuntu-latest
