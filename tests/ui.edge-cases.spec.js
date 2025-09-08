@@ -67,7 +67,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const calendarExists = await calendar.count() > 0;
     if (calendarExists) {
       // Calendar exists but may be hidden on mobile - this is expected behavior
-      console.log('Calendar element found but may be hidden on mobile viewport');
     }
     
     await expect(page.locator('#goals-list')).toBeVisible();
@@ -137,7 +136,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     
     // For Mobile Firefox, skip this specific test to avoid timeout issues
     if (viewport && viewport.width < 768 && userAgent.includes('Firefox')) {
-      console.log('Skipping completed goals test on Mobile Firefox due to viewport constraints');
       return;
     }
     
@@ -160,7 +158,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         }
       } catch (error) {
         // Calendar operations failed, continue with existing goals
-        console.log('Calendar operations failed on this viewport, using existing goals');
       }
     }
     
@@ -469,7 +466,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     // Check viewport size and skip calendar tests on small mobile screens
     const viewport = page.viewportSize();
     if (viewport && viewport.width < 768) {
-      console.log('Skipping calendar navigation test on mobile viewport');
       return;
     }
     
