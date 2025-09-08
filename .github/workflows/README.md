@@ -6,7 +6,9 @@ This directory contains GitHub Actions workflows that automatically run comprehe
 
 ### 1. `pr-tests.yml` - Main PR Testing Workflow
 
-**Trigger**: Automatically runs on PR creation, updates, and synchronization
+**Trigger**: Automatically runs on:
+- All branch pushes 
+- PR creation, updates, and synchronization (targeting any branch)
 
 **Jobs**:
 - **Unit Tests & Coverage** - Fast feedback with unit tests and code coverage
@@ -35,7 +37,10 @@ This directory contains GitHub Actions workflows that automatically run comprehe
 
 ### 3. `pr-tests-enhanced.yml` - Advanced Deployment Detection
 
-**Trigger**: PR events + deployment status events
+**Trigger**: Automatically runs on:
+- All branch pushes
+- PR creation, updates, and synchronization (targeting any branch)  
+- Deployment status events
 
 **Features**:
 - ✅ Automatic detection of Cloudflare deployments
@@ -78,7 +83,11 @@ The workflows run all test types as defined in the project:
 ## Usage
 
 ### Automatic PR Testing
-The main workflow (`pr-tests.yml`) runs automatically on every PR. No manual intervention required.
+The main workflows (`pr-tests.yml` and `pr-tests-enhanced.yml`) run automatically on:
+- Every push to any branch
+- Every PR creation, update, or synchronization (regardless of target branch)
+
+No manual intervention required.
 
 ### Manual Deployed Testing
 To test against a specific deployed URL:
