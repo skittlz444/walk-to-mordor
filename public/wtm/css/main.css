@@ -72,11 +72,12 @@ h1 {
 
 .goal-popup-scrollable .mbsc-popup-body {
   padding: 0 !important;
-  overflow: scroll !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
 .goal-popup-scrollable .mbsc-popup-wrapper {
-  overflow: scroll !important;
+  overflow: visible !important;
 }
 
 /* Custom scrollbar styling for WebKit browsers */

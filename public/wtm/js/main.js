@@ -100,7 +100,7 @@ mobiscrollReady(function() {
     
     // Create the popup content with a placeholder for the image
     document.getElementById('goal-popup').innerHTML =
-      `<div style="max-height: 70vh; overflow-y: auto; overflow-x: hidden; padding: 1.5em; max-width: 400px; -webkit-overflow-scrolling: touch;">
+      `<div style="padding: 1.5em; max-width: 400px;">
         ${goal.special ? `<div style="color: #FFD700; font-size: 1.4em; font-weight: bold; margin-bottom: 0.5em; text-align: center;">${goal.special}</div>` : ''}
         <div style="color: #fff; font-size: 1.2em; font-weight: bold; margin-bottom: 0.8em; text-align: center;">${goal.title}</div>
         <div style="${distanceStyle} font-size: 1.1em; margin-bottom: 0.5em; text-align: center;">${goal.distance.toFixed(2)} km</div>
