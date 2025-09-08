@@ -29,8 +29,8 @@ function updateCacheVersion() {
       return;
     }
     
-    // Replace placeholder with actual timestamp
-    swContent = swContent.replace(BUILD_TIMESTAMP_PLACEHOLDER, timestamp);
+    // Replace all occurrences of placeholder with actual timestamp
+    swContent = swContent.replaceAll(BUILD_TIMESTAMP_PLACEHOLDER, timestamp);
     
     // Write back to file
     fs.writeFileSync(SW_PATH, swContent, 'utf8');

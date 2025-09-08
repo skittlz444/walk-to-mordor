@@ -56,9 +56,35 @@ afterAll(async () => {
 ## Test Structure
 
 ### Test Types
-1. **Unit Tests** - Test individual functions and modules in isolation (35 tests)
+1. **Unit Tests** - Test individual functions and modules in isolation (51 tests)
 2. **API Tests** - Test API endpoints with real Cloudflare Workers environment (27 tests)
 3. **UI Tests** - End-to-end browser testing with Playwright (60 tests)
+4. **Build Tests** - Test build scripts and cache version management (16 tests)
+
+### Cache Version Testing
+
+The cache version tests ensure build script reliability for the automated cache versioning system:
+
+#### Update Cache Version Tests (`updateCacheVersion`)
+- **Placeholder Replacement**: Replaces `{{BUILD_TIMESTAMP}}` placeholders with actual timestamps
+- **Timestamp Format**: Validates timestamp format (YYYYMMDD-HHMMSS)
+- **Consistency**: Ensures both `BUILD_TIMESTAMP` constant and `CACHE_NAME` are updated with same timestamp
+- **Command Line**: Tests command-line execution for build process integration
+- **Uniqueness**: Verifies unique timestamps on sequential calls
+
+#### Reset Cache Version Tests (`resetCacheVersion`)
+- **Development Reset**: Restores development placeholders for clean development state
+- **Idempotency**: Tests idempotent behavior (safe to call multiple times)
+- **Completeness**: Validates both timestamp and cache name resets
+- **Error Handling**: Handles missing patterns gracefully
+
+#### Integration & Error Handling
+- **Update/Reset Cycles**: Complete update/reset cycles work correctly
+- **File System Errors**: Graceful handling of file system error scenarios
+- **Missing Placeholders**: Appropriate warnings when placeholders not found
+- **Cache Name Validation**: Ensures cache names follow expected patterns
+
+The cache versioning system ensures each deployment gets a fresh cache by using build-time timestamps in the format: `walk-to-mordor-YYYYMMDD-HHMMSS`
 
 ### Test Files
 
@@ -66,6 +92,7 @@ afterAll(async () => {
 - `tests/validators.test.ts` - Validation functions (22 tests)
 - `tests/renderHtml.test.ts` - HTML rendering (8 tests)
 - `tests/index.test.ts` - Main handler logic (32 tests)
+- `tests/cache-version.test.js` - Cache version management scripts (16 tests)
 
 #### API Integration Tests  
 - `tests/api.success.test.js` - Success flows and happy path scenarios (8 tests)
@@ -95,7 +122,7 @@ afterAll(async () => {
 
 ### All Tests
 ```bash
-npm test                    # Runs unit tests (65) + API tests (27) + UI tests (60) = 152 tests
+npm test                    # Runs unit tests (81) + API tests (27) + UI tests (60) = 168 tests
 npm run test:all           # Alternative command for complete test suite
 ```
 

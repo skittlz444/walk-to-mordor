@@ -98,12 +98,30 @@ mobiscrollReady(function() {
     const distanceStyle = isCompleted ? 'text-decoration: line-through; color: #888;' : 'color: #FFD700;';
     const distanceToGo = isCompleted ? 0 : goal.distance - Number(currentDistance);
     
+    // Create the popup content with a placeholder for the image
     document.getElementById('goal-popup').innerHTML =
       `<div style="padding: 1.5em; max-width: 400px;">
         ${goal.special ? `<div style="color: #FFD700; font-size: 1.4em; font-weight: bold; margin-bottom: 0.5em; text-align: center;">${goal.special}</div>` : ''}
         <div style="color: #fff; font-size: 1.2em; font-weight: bold; margin-bottom: 0.8em; text-align: center;">${goal.title}</div>
         <div style="${distanceStyle} font-size: 1.1em; margin-bottom: 0.5em; text-align: center;">${goal.distance.toFixed(2)} km</div>
         ${!isCompleted ? `<div style="color: #aaa; font-size: 1em; margin-bottom: 1em; text-align: center;">${distanceToGo.toFixed(2)} km to go</div>` : ''}
+        <div id="goal-image-container" style="margin-bottom: 1em; text-align: center;">
+          ${goal.id ? `
+            <div style="position: relative; display: inline-block; max-width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+              <img id="goal-thumb-image" 
+                   src="/wtm/img/thumbs/${goal.id}-thumb.jpg" 
+                   alt="Goal image" 
+                   style="width: 100%; max-width: 350px; height: auto; filter: blur(2px); transition: filter 0.3s ease;"
+                   onerror="this.onerror=null;this.src='/wtm/img/thumbs/0-thumb.jpg';">
+              <img id="goal-highres-image" 
+                   src="/wtm/img/highres/${goal.id}.jpg" 
+                   alt="Goal image" 
+                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s ease;"
+                   onload="this.style.opacity = '1'; document.getElementById('goal-thumb-image').style.filter = 'none';"
+                   onerror="this.onerror=null;this.src='/wtm/img/highres/0.jpg';">
+            </div>
+          ` : ''}
+        </div>
         ${goal.description ? `<div style="color: #ccc; font-size: 1em; line-height: 1.4; text-align: justify;">${goal.description}</div>` : ''}
       </div>`;
     
@@ -342,6 +360,9 @@ mobiscrollReady(function() {
   goalPopup = mobiscroll.popup('#goal-popup', {
     display: 'center',
     themeVariant: 'dark',
+    scrollLock: false,
+    cssClass: 'goal-popup-scrollable',
+    contentPadding: false,
     buttons: [
       {
         text: 'Close',

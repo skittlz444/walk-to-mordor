@@ -64,11 +64,24 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
         // 4. Decimal test values (like 15.5)
         if (distance === 15.5) isTestData = true;
         
-        // 5. Very large distances (over 1 million - clearly test data)
+        // 5. Random test data patterns - NEW UI SUCCESS TESTS
+        // Large random numbers in the 100,000-999,999 range used by generateRandomTestDistance()
+        if (distance >= 100000 && distance <= 999999) isTestData = true;
+        
+        // 6. Very large distances (over 1 million - clearly test data)
         if (distance >= 1000000) isTestData = true;
         
-        // 6. Specific test dates from API and UI tests
+        // 7. Specific test dates from API and UI tests
         if (TEST_DATES.includes(dateStr)) isTestData = true;
+        
+        // 8. Events with timestamp suffixes (our new pattern for uniqueness)
+        if (event.title && event.title.toString().includes('_')) {
+          const parts = event.title.toString().split('_');
+          if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            // Format: distance_timestamp
+            isTestData = true;
+          }
+        }
       }
       
       // API returns distance as 'title' field, not 'distance'
