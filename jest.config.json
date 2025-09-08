@@ -11,6 +11,8 @@
   ],
   "collectCoverageFrom": [
     "src/**/*.{js,ts}",
+    "public/wtm/js/update-cache-version.js",
+    "public/wtm/js/reset-cache-version.js",
     "!src/**/*.d.ts",
     "!src/**/node_modules/**",
     "!coverage/**"
@@ -25,8 +27,11 @@
   },
   "testMatch": [
     "**/tests/**/*.test.js",
-    "**/tests/**/*.test.ts",
-    "**/__tests__/**/*.js"
+    "**/tests/**/*.test.ts"
+  ],
+  "testPathIgnorePatterns": [
+    "tests/ui.success.spec.js",
+    "tests/ui.edge-cases.spec.js"
   ],
   "verbose": true,
   "setupFilesAfterEnv": [],
