@@ -8,7 +8,7 @@ This directory contains GitHub Actions workflows that automatically run comprehe
 
 **Trigger**: Automatically runs on:
 - PR creation, updates, and synchronization (targeting any branch)
-- Configured to prevent duplicate runs with explicit branch targeting
+- Configured with concurrency controls to prevent duplicate workflow runs
 
 **Jobs**:
 - **Unit Tests & Coverage** - Fast feedback with unit tests and code coverage
@@ -59,7 +59,8 @@ The workflows run all test types as defined in the project:
 ### Automatic PR Testing
 The workflow (`pr-tests.yml`) runs automatically on:
 - Every PR creation, update, or synchronization (targeting any branch)
-- Uses explicit branch targeting (`branches: ['**']`) to prevent duplicate workflow runs
+- Uses concurrency controls (`concurrency.group`) to ensure only one workflow runs per PR at a time
+- Automatically cancels in-progress workflows when new commits are pushed to the same PR
 
 No manual intervention required. All tests run against the local development server.
 

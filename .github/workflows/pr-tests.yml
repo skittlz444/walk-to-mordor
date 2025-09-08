@@ -6,6 +6,11 @@ on:
     branches: ['**']
     types: [opened, synchronize, reopened]
 
+# Ensure only one workflow runs at a time per PR
+concurrency:
+  group: pr-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: '22'
 
