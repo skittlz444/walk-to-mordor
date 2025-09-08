@@ -84,7 +84,6 @@ The workflows run all test types as defined in the project:
 
 ### Automatic PR Testing
 The main workflows (`pr-tests.yml` and `pr-tests-enhanced.yml`) run automatically on:
-- Every push to any branch
 - Every PR creation, update, or synchronization (regardless of target branch)
 
 No manual intervention required.
