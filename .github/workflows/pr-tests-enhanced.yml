@@ -9,7 +9,7 @@ on:
   deployment_status: {}
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
 
 jobs:
   # Fast feedback - Unit tests and code coverage
