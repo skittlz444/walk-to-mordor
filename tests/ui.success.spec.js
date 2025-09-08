@@ -293,7 +293,8 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
       }
     }
 
-    expect(eventVerified).toBe(true);    // Delete the event
+    // Delete the event
+    expect(eventVerified).toBe(true);
     const deleted = await deleteTestEvent(page, testDistance);
     expect(deleted).toBe(true);
   });
