@@ -3,6 +3,7 @@ name: PR Tests
 on:
   # Run on pull requests targeting any branch
   pull_request:
+    branches: ['**']
     types: [opened, synchronize, reopened]
 
 env:
