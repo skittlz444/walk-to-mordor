@@ -191,3 +191,4 @@ coverage/
 /public/wtm/img/highres_backup
 /public/wtm/img/thumbs_backup
 /public/wtm/img/png
+test-results/.last-run.json
