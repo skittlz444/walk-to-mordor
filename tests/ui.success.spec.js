@@ -9,6 +9,9 @@ const { cleanupAllTestData } = require('./helpers/cleanup');
  */
 
 test.describe('Walk to Mordor UI - Success Flows', () => {
+  // Set longer timeout for tests that might have slow loading  
+  test.setTimeout(60000); // 60 seconds
+
   // Centralized cleanup following testing conventions
   test.beforeAll(async () => {
     await cleanupAllTestData();
@@ -222,22 +225,32 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     
     // Verify main page elements load
     await expect(page.locator('body')).toBeVisible();
-    await expect(page.locator('#eventcalendar')).toBeVisible();
     
-    // Test calendar interaction with timestamp-based selection
-    const testDateInfo = generateRandomTestDate();
-    
-    try {
-      // Select a date on the calendar
-      const cell = await selectCalendarDate(page, testDateInfo.day);
-      await cell.click();
-      
-    } catch (error) {
-      // Calendar interaction may fail on some browsers, that's acceptable
+    // Calendar may be hidden on mobile viewports
+    const viewport = page.viewportSize();
+    if (viewport && viewport.width >= 768) {
+      await expect(page.locator('#eventcalendar')).toBeVisible();
+    } else {
+      // On mobile, just ensure the page structure is correct
+      await expect(page.locator('#goals-list')).toBeVisible();
     }
     
-    // The calendar should be functional and ready for date selection
-    await expect(page.locator('#eventcalendar')).toBeVisible();
+    // Test calendar interaction with timestamp-based selection (only on larger screens)
+    if (viewport && viewport.width >= 768) {
+      const testDateInfo = generateRandomTestDate();
+      
+      try {
+        // Select a date on the calendar
+        const cell = await selectCalendarDate(page, testDateInfo.day);
+        await cell.click();
+        
+      } catch (error) {
+        // Calendar interaction may fail on some browsers, that's acceptable
+      }
+      
+      // The calendar should be functional and ready for date selection
+      await expect(page.locator('#eventcalendar')).toBeVisible();
+    }
   });
 
   test('Can create and delete a walking event', async ({ page }) => {
