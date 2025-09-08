@@ -4,9 +4,10 @@ This directory contains GitHub Actions workflows that automatically run comprehe
 
 ## Workflows Overview
 
-### 1. `pr-tests.yml` - Main PR Testing Workflow
+### `pr-tests.yml` - PR Testing Workflow
 
-**Trigger**: Automatically runs on PR creation, updates, and synchronization
+**Trigger**: Automatically runs on:
+- PR creation, updates, and synchronization (targeting any branch)
 
 **Jobs**:
 - **Unit Tests & Coverage** - Fast feedback with unit tests and code coverage
@@ -21,27 +22,7 @@ This directory contains GitHub Actions workflows that automatically run comprehe
 - ✅ Runs all 152 tests (65 unit + 27 API + 60 UI)
 - ✅ Uploads test artifacts (Playwright reports, coverage)
 - ✅ Proper cleanup of background processes
-
-### 2. `pr-tests-deployed.yml` - Deployed URL Testing
-
-**Trigger**: Manual trigger or repository dispatch event
-
-**Purpose**: Tests API and UI against a deployed Cloudflare Workers URL
-
-**Use Cases**:
-- Testing against staging/preview deployments
-- Post-deployment validation
-- Manual testing against specific deployed versions
-
-### 3. `pr-tests-enhanced.yml` - Advanced Deployment Detection
-
-**Trigger**: PR events + deployment status events
-
-**Features**:
-- ✅ Automatic detection of Cloudflare deployments
-- ✅ Waits for deployment completion before running integration tests
-- ✅ Falls back gracefully if no deployment is found
-- ✅ Tests against both local dev server AND deployed URL
+- ✅ Tests run against local development server only (no deployed URL testing)
 
 ## Test Coverage
 
@@ -65,10 +46,7 @@ The workflows run all test types as defined in the project:
 ## Configuration
 
 ### Environment Variables
-- `NODE_VERSION`: Node.js version (default: '18')
-
-### Secrets (if using deployed testing)
-- `CLOUDFLARE_API_TOKEN`: For accessing Cloudflare APIs during testing
+- `NODE_VERSION`: Node.js version (default: '22')
 
 ### Artifacts Generated
 - **Coverage Reports**: HTML and LCOV format coverage reports
@@ -78,28 +56,11 @@ The workflows run all test types as defined in the project:
 ## Usage
 
 ### Automatic PR Testing
-The main workflow (`pr-tests.yml`) runs automatically on every PR. No manual intervention required.
+The workflow (`pr-tests.yml`) runs automatically on:
+- Every PR creation, update, or synchronization (targeting any branch)
+- Automatically cancels in-progress workflows when new commits are pushed to the same PR
 
-### Manual Deployed Testing
-To test against a specific deployed URL:
-
-```bash
-# Via GitHub CLI
-gh workflow run pr-tests-deployed.yml -f deployment_url=https://your-app.pages.dev
-
-# Via GitHub API
-curl -X POST \
-  -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/owner/repo/actions/workflows/pr-tests-deployed.yml/dispatches \
-  -d '{"ref":"main","inputs":{"deployment_url":"https://your-app.pages.dev"}}'
-```
-
-### Integration with Cloudflare Pages
-For automatic deployment detection, ensure your Cloudflare Pages integration:
-1. Creates deployment statuses
-2. Uses standard naming conventions (includes "cloudflare" or "pages")
-3. Sets proper target URLs in deployment statuses
+No manual intervention required. All tests run against the local development server.
 
 ## Troubleshooting
 
@@ -109,11 +70,6 @@ For automatic deployment detection, ensure your Cloudflare Pages integration:
 - Check that the dev server started properly
 - Verify D1 database setup completed
 - Look for port conflicts (8787)
-
-**Deployment detection fails**:
-- Verify Cloudflare integration is properly configured
-- Check that deployment creates proper GitHub statuses
-- Review the deployment detection logic in the enhanced workflow
 
 **Coverage reports missing**:
 - Ensure `npm run test:coverage:unit` works locally
@@ -138,6 +94,3 @@ Modify the `needs` dependency in job definitions:
 job-name:
   needs: [prerequisite-job]
 ```
-
-### Custom Deployment Detection
-Modify the deployment detection script in `pr-tests-enhanced.yml` to match your specific deployment setup.
