@@ -64,3 +64,36 @@ h1 {
 #eventcalendar {
   padding-bottom: 0.5em;
 }
+
+/* Goal popup scrolling styles */
+.goal-popup-scrollable .mbsc-popup-content {
+  max-height: 90vh !important;
+}
+
+.goal-popup-scrollable .mbsc-popup-body {
+  padding: 0 !important;
+  overflow: scroll !important;
+}
+
+.goal-popup-scrollable .mbsc-popup-wrapper {
+  overflow: scroll !important;
+}
+
+/* Custom scrollbar styling for WebKit browsers */
+.goal-popup-scrollable ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.goal-popup-scrollable ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.goal-popup-scrollable ::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.5);
+  border-radius: 4px;
+}
+
+.goal-popup-scrollable ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.7);
+}
