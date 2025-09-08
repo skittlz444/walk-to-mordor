@@ -151,3 +151,7 @@ This ensures:
 - No conflicts between development and production
 - Automatic cache invalidation on updates
 - Better cache management across versions
+
+## Testing & CI/CD
+
+The project includes comprehensive GitHub Actions workflows for automated testing on pull requests. The PR workflow includes unit tests, API integration tests, and UI end-to-end tests to ensure code quality and reliability.

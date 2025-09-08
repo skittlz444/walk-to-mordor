@@ -1,12 +1,12 @@
 name: PR Tests
 
 on:
+  # Run on pull requests targeting any branch
   pull_request:
-    branches: [ main ]
     types: [opened, synchronize, reopened]
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
 
 jobs:
   # Fast feedback - Unit tests and code coverage
