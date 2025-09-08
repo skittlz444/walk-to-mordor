@@ -62,6 +62,7 @@
     "test:errors": "npm run test:api:errors && npm run test:ui:edge-cases",
     
     "test:coverage": "jest --coverage",
+    "test:coverage:unit": "jest --coverage --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js tests/api.success.test.js tests/api.errors.test.js tests/ui.success.spec.js tests/ui.edge-cases.spec.js",
     "test:coverage:watch": "jest --coverage --watch",
     "test:watch": "jest --watch --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js tests/api.success.test.js tests/api.errors.test.js tests/ui.success.spec.js tests/ui.edge-cases.spec.js",
     "coverage:report": "jest --coverage --coverageReporters=html && echo 'Coverage report generated in coverage/lcov-report/index.html'",
