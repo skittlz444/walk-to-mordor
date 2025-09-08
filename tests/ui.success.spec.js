@@ -90,7 +90,8 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
       
       throw new Error(`Could not select any calendar date after trying timestamp and fallback approaches`);
     }
-  }  /**
+  }  
+  /**
    * Create a new walking event with random test data
    */
   async function createTestEvent(page, distance, dateInfo) {

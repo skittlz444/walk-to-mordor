@@ -49,5 +49,3 @@ if (require.main === module) {
 }
 
 module.exports = { updateCacheVersion };
-
-module.exports = { updateCacheVersion };
