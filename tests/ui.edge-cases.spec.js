@@ -388,4 +388,184 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const navigation = page.locator('[aria-label*="page"], [aria-label*="Next"], [aria-label*="Previous"]');
     await expect(navigation.first()).toBeVisible();
   });
+
+  // Goal Image Loading Edge Cases & Advanced Features
+  async function openFirstAvailableGoalPopup(page) {
+    await page.goto('http://localhost:8787');
+    await page.waitForLoadState('networkidle');
+    
+    // Wait for goals to load
+    await expect(page.locator('#goals-list')).toBeVisible();
+    
+    // Check if there are upcoming goals available first
+    const upcomingGoals = page.locator('.upcoming-goal');
+    if (await upcomingGoals.count() > 0) {
+      const upcomingGoal = upcomingGoals.first();
+      await expect(upcomingGoal).toBeVisible();
+      await upcomingGoal.click();
+    } else {
+      // Fall back to completed goals if no upcoming goals
+      const completedGoals = page.locator('.completed-goal');
+      const completedGoal = completedGoals.first();
+      await expect(completedGoal).toBeVisible();
+      await completedGoal.click();
+    }
+    
+    // Check that goal popup is visible
+    await expect(page.locator('#goal-popup')).toBeVisible();
+    
+    return page.locator('#goal-popup');
+  }
+
+  test('Thumbnail image initially has blur filter applied', async ({ page }) => {
+    // Block high-res images from loading to test initial blur state
+    await page.route('**/wtm/img/highres/*.jpg', route => route.abort());
+
+    const popup = await openFirstAvailableGoalPopup(page);
+    
+    // Check that thumbnail has blur initially
+    const thumbImage = popup.locator('#goal-thumb-image');
+    await expect(thumbImage).toBeVisible();
+    
+    // Since highres is blocked, blur should remain
+    await page.waitForTimeout(500); // Give time for any potential loading
+    
+    // Check the filter is still blur (since highres won't load)
+    const filterValue = await thumbImage.evaluate(el => getComputedStyle(el).filter);
+    expect(filterValue).toContain('blur');
+  });
+
+  test('Thumbnail image falls back to placeholder on error', async ({ page }) => {
+    // Mock network to make thumb image fail
+    await page.route('**/wtm/img/thumbs/*.jpg', route => {
+      if (route.request().url().includes('0-thumb.jpg')) {
+        // Let placeholder load successfully
+        route.continue();
+      } else {
+        // Fail all other thumb images
+        route.abort();
+      }
+    });
+
+    const popup = await openFirstAvailableGoalPopup(page);
+    
+    // Wait for error fallback to trigger
+    const thumbImage = popup.locator('#goal-thumb-image');
+    
+    // Check that fallback image is loaded
+    await expect(thumbImage).toHaveAttribute('src', '/wtm/img/thumbs/0-thumb.jpg');
+  });
+
+  test('High-res image falls back to placeholder on error', async ({ page }) => {
+    // Mock network to make highres image fail
+    await page.route('**/wtm/img/highres/*.jpg', route => {
+      if (route.request().url().includes('0.jpg')) {
+        // Let placeholder load successfully
+        route.continue();
+      } else {
+        // Fail all other highres images
+        route.abort();
+      }
+    });
+
+    const popup = await openFirstAvailableGoalPopup(page);
+    
+    // Wait for error fallback to trigger
+    const highresImage = popup.locator('#goal-highres-image');
+    
+    // Check that fallback image is loaded
+    await expect(highresImage).toHaveAttribute('src', '/wtm/img/highres/0.jpg');
+  });
+
+  test('Image lazy loading only occurs when popup is opened', async ({ page }) => {
+    let imageRequestsMade = [];
+    
+    // Track image requests
+    page.on('request', request => {
+      const url = request.url();
+      if (url.includes('/wtm/img/thumbs/') || url.includes('/wtm/img/highres/')) {
+        imageRequestsMade.push(url);
+      }
+    });
+
+    await page.goto('http://localhost:8787');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#goals-list')).toBeVisible();
+    
+    // Wait a bit to ensure no premature image loading
+    await page.waitForTimeout(1000);
+    
+    // Should have no image requests yet
+    expect(imageRequestsMade.length).toBe(0);
+    
+    // Now open a goal popup - check for upcoming goals first, fall back to completed
+    const upcomingGoals = page.locator('.upcoming-goal');
+    if (await upcomingGoals.count() > 0) {
+      const upcomingGoal = upcomingGoals.first();
+      await expect(upcomingGoal).toBeVisible();
+      await upcomingGoal.click();
+    } else {
+      // Fall back to completed goals if no upcoming goals
+      const completedGoals = page.locator('.completed-goal');
+      const completedGoal = completedGoals.first();
+      await expect(completedGoal).toBeVisible();
+      await completedGoal.click();
+    }
+    await expect(page.locator('#goal-popup')).toBeVisible();
+    
+    // Wait for images to start loading
+    await page.waitForTimeout(1000);
+    
+    // Should now have image requests
+    expect(imageRequestsMade.length).toBeGreaterThan(0);
+    
+    // Should have requests for both thumb and highres
+    const thumbRequests = imageRequestsMade.filter(url => url.includes('/thumbs/'));
+    const highresRequests = imageRequestsMade.filter(url => url.includes('/highres/'));
+    
+    expect(thumbRequests.length).toBeGreaterThan(0);
+    expect(highresRequests.length).toBeGreaterThan(0);
+  });
+
+  test('Goal popup handles scrolling properly with images', async ({ page }) => {
+    const popup = await openFirstAvailableGoalPopup(page);
+    
+    // Check that popup has proper scrolling setup
+    const popupBody = page.locator('.goal-popup-scrollable .mbsc-popup-body');
+    await expect(popupBody).toBeVisible();
+    
+    // Check scrolling CSS properties
+    await expect(popupBody).toHaveCSS('overflow-y', 'auto');
+    await expect(popupBody).toHaveCSS('overflow-x', 'hidden');
+    
+    // Check that content is scrollable if needed
+    const popupContent = popup.locator('div').first();
+    await expect(popupContent).toBeVisible();
+    
+    // Test scroll behavior by trying to scroll (should not throw errors)
+    await popupContent.evaluate(element => {
+      element.scrollTop = 10;
+    });
+  });
+
+  test('Custom scrollbar styling is applied to goal popup', async ({ page }) => {
+    const popup = await openFirstAvailableGoalPopup(page);
+    
+    // Check that the popup has the scrollable class
+    const popupElement = page.locator('.goal-popup-scrollable');
+    await expect(popupElement).toBeVisible();
+    
+    // Check that the popup content exceeds viewport if necessary for scrolling
+    // (This depends on the content length, but we can at least verify the class exists)
+    const popupBody = popupElement.locator('.mbsc-popup-body');
+    await expect(popupBody).toBeVisible();
+    
+    // Verify the CSS class is properly applied for custom scrollbar
+    const hasScrollableClass = await popup.evaluate(() => {
+      const popupContainer = document.querySelector('.goal-popup-scrollable');
+      return popupContainer !== null;
+    });
+    
+    expect(hasScrollableClass).toBe(true);
+  });
 });
