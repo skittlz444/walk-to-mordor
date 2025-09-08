@@ -7,7 +7,6 @@ This directory contains GitHub Actions workflows that automatically run comprehe
 ### 1. `pr-tests.yml` - Main PR Testing Workflow
 
 **Trigger**: Automatically runs on:
-- All branch pushes 
 - PR creation, updates, and synchronization (targeting any branch)
 
 **Jobs**:
@@ -38,7 +37,6 @@ This directory contains GitHub Actions workflows that automatically run comprehe
 ### 3. `pr-tests-enhanced.yml` - Advanced Deployment Detection
 
 **Trigger**: Automatically runs on:
-- All branch pushes
 - PR creation, updates, and synchronization (targeting any branch)  
 - Deployment status events
 

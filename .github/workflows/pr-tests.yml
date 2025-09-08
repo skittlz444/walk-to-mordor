@@ -1,9 +1,7 @@
 name: PR Tests
 
 on:
-  # Run on all branch pushes
-  push:
-  # Run on all pull requests (regardless of target branch)
+  # Run on pull requests targeting any branch
   pull_request:
     types: [opened, synchronize, reopened]
 

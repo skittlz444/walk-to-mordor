@@ -1,9 +1,7 @@
 name: Enhanced PR Tests with Deployment Detection
 
 on:
-  # Run on all branch pushes
-  push:
-  # Run on all pull requests (regardless of target branch)
+  # Run on pull requests targeting any branch
   pull_request:
     types: [opened, synchronize, reopened]
   # This allows the workflow to be triggered when deployment status changes
