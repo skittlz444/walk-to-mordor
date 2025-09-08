@@ -65,9 +65,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     // Calendar may be hidden on mobile viewports, check if it exists but don't require visibility
     const calendar = page.locator('#eventcalendar');
     const calendarExists = await calendar.count() > 0;
-    if (calendarExists) {
-      // Calendar exists but may be hidden on mobile - this is expected behavior
-    }
+    // Calendar exists but may be hidden on mobile - this is expected behavior
     
     await expect(page.locator('#goals-list')).toBeVisible();
   });

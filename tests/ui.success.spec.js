@@ -30,7 +30,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     // Add timestamp component to ensure uniqueness across parallel test runs
     const baseValue = Math.floor(Math.random() * 900000) + 100000; // 100000-999999
     const timestamp = Date.now() % 10000; // Last 4 digits of current timestamp
-    return baseValue + timestamp; // Results in 6-10 digit numbers, extremely unrealistic
+    return Math.min(baseValue + timestamp, 999999); // Ensure value does not exceed 999999
   }
 
   /**
