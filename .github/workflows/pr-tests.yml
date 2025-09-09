@@ -83,19 +83,6 @@ jobs:
           reporter: java-junit
           fail-on-error: false
           
-      - name: Generate coverage summary for PR
-        if: always()
-        run: |
-          # Create a simple coverage summary for the PR comment
-          if [ -f coverage/lcov-report/index.html ]; then
-            echo "✅ Coverage HTML report generated"
-          fi
-          
-          # Extract coverage percentages for summary (this will be used by the final job)
-          if [ -f coverage/coverage-final.json ]; then
-            echo "✅ Coverage JSON data available for processing"
-          fi
-
   # API integration tests - runs with local dev server
   api-tests:
     name: API Integration Tests
@@ -157,7 +144,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always() && hashFiles('api-reports/*') != ''
         with:
-          name: api-test-reports
+          name: api-test-reports-html
           path: api-reports/
           retention-days: 7
           
@@ -236,7 +223,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always() && hashFiles('ui-reports/*') != ''
         with:
-          name: ui-test-reports
+          name: ui-test-reports-html
           path: ui-reports/
           retention-days: 7
           
