@@ -74,9 +74,18 @@ jobs:
           reporter: java-junit
           fail-on-error: false
           
+      - name: Check if coverage JUnit XML exists
+        id: check_coverage_junit
+        run: |
+          if [ -f test-results/coverage-junit.xml ]; then
+            echo "coverage_junit_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "coverage_junit_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish Coverage Results
         uses: dorny/test-reporter@v1
-        if: always() && hashFiles('test-results/coverage-junit.xml') != ''
+        if: always() && steps.check_coverage_junit.outputs.coverage_junit_exists == 'true'
         with:
           name: Coverage Report
           path: test-results/coverage-junit.xml
