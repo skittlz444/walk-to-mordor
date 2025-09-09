@@ -324,4 +324,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { generateAPITestReport, generateCoverageJUnit, generateTestSummary };
+module.exports = { generateAPITestReport, generateCoverageJUnit };
