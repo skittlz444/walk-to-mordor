@@ -5,6 +5,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+
 env:
   NODE_VERSION: '22'
 
@@ -46,6 +52,15 @@ jobs:
           name: unit-test-results
           path: test-results/junit.xml
           retention-days: 7
+          
+      - name: Publish Unit Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Unit Tests
+          path: test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
 
   # API integration tests - runs with local dev server
   api-tests:
@@ -96,12 +111,17 @@ jobs:
         if: always()
         run: |
           mkdir -p api-reports
-          cp test-results/api-report.html api-reports/
-          cp test-results/junit.xml api-reports/api-junit.xml 2>/dev/null || echo "No API JUnit XML found"
+          # Only copy files if they exist
+          if [ -f test-results/api-report.html ]; then
+            cp test-results/api-report.html api-reports/
+          fi
+          if [ -f test-results/junit.xml ]; then
+            cp test-results/junit.xml api-reports/api-junit.xml
+          fi
           
       - name: Upload API test reports (Zipped HTML)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && hashFiles('api-reports/*') != ''
         with:
           name: api-test-reports
           path: api-reports/
@@ -109,11 +129,20 @@ jobs:
           
       - name: Upload API test results (JUnit XML)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && hashFiles('test-results/junit.xml') != ''
         with:
           name: api-test-results
           path: test-results/junit.xml
           retention-days: 7
+          
+      - name: Publish API Test Results
+        uses: dorny/test-reporter@v1
+        if: always() && hashFiles('test-results/junit.xml') != ''
+        with:
+          name: API Tests
+          path: test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
         
       - name: Stop dev server
         if: always()
@@ -155,18 +184,23 @@ jobs:
           npm run seedLocalD1
         
       - name: Run UI tests
-        run: npm run test:ui:all
+        run: npx playwright test tests/ui.success.spec.js tests/ui.edge-cases.spec.js
         
       - name: Create UI reports archive
         if: always()
         run: |
           mkdir -p ui-reports
-          cp -r playwright-report/* ui-reports/ 2>/dev/null || echo "No Playwright HTML report found"
-          cp -r test-results/* ui-reports/ 2>/dev/null || echo "No test results found"
+          # Only copy files if they exist
+          if [ -d playwright-report ] && [ "$(ls -A playwright-report 2>/dev/null)" ]; then
+            cp -r playwright-report/* ui-reports/ 2>/dev/null || true
+          fi
+          if [ -d test-results ] && [ "$(ls -A test-results 2>/dev/null)" ]; then
+            cp -r test-results/* ui-reports/ 2>/dev/null || true
+          fi
         
       - name: Upload Playwright report (Zipped HTML)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && hashFiles('ui-reports/*') != ''
         with:
           name: ui-test-reports
           path: ui-reports/
@@ -174,11 +208,20 @@ jobs:
           
       - name: Upload UI test results (JUnit XML)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && hashFiles('test-results/playwright-junit.xml') != ''
         with:
           name: ui-test-results
           path: test-results/playwright-junit.xml
           retention-days: 7
+          
+      - name: Publish UI Test Results
+        uses: dorny/test-reporter@v1
+        if: always() && hashFiles('test-results/playwright-junit.xml') != ''
+        with:
+          name: UI Tests
+          path: test-results/playwright-junit.xml
+          reporter: java-junit
+          fail-on-error: false
 
   # Final validation - all tests must pass
   tests-complete:
