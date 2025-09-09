@@ -50,7 +50,6 @@
     "test:api:all": "jest tests/api.success.test.js tests/api.errors.test.js --coverage=false",
     "test:api:report": "node tests/generate-reports.js api-report",
     "test:coverage:junit": "node tests/generate-reports.js coverage-junit",
-    "test:summary": "node tests/generate-reports.js test-summary",
     "test:ui": "npm run test:ui:all",
     "test:ui:success": "playwright test tests/ui.success.spec.js --reporter=list",
     "test:ui:edge-cases": "playwright test tests/ui.edge-cases.spec.js --reporter=list",
