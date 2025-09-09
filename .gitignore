@@ -192,3 +192,7 @@ coverage/
 /public/wtm/img/thumbs_backup
 /public/wtm/img/png
 test-results/.last-run.json
+
+# Temporary artifacts and build outputs
+artifacts/
+test-summary/

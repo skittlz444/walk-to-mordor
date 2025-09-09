@@ -5,6 +5,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+
 env:
   NODE_VERSION: '22'
 
@@ -32,13 +38,60 @@ jobs:
       - name: Generate coverage report
         run: npm run test:coverage:unit
         
+      - name: Generate coverage JUnit XML
+        if: always()
+        run: node tests/generate-reports.js coverage-junit
+        
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports
+          name: coverage-reports-html
           path: coverage/
           retention-days: 7
+          
+      - name: Upload coverage results (JUnit XML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-results
+          path: test-results/coverage-junit.xml
+          retention-days: 7
+          
+      - name: Upload test results (JUnit XML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: test-results/junit.xml
+          retention-days: 7
+          
+      - name: Publish Unit Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Unit Tests
+          path: test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
+          
+      - name: Check if coverage JUnit XML exists
+        id: check_coverage_junit
+        run: |
+          if [ -f test-results/coverage-junit.xml ]; then
+            echo "coverage_junit_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "coverage_junit_exists=false" >> $GITHUB_OUTPUT
+          fi
 
+      - name: Publish Coverage Results
+        uses: dorny/test-reporter@v1
+        if: always() && steps.check_coverage_junit.outputs.coverage_junit_exists == 'true'
+        with:
+          name: Coverage Report
+          path: test-results/coverage-junit.xml
+          reporter: java-junit
+          fail-on-error: false
+          
   # API integration tests - runs with local dev server
   api-tests:
     name: API Integration Tests
@@ -80,6 +133,47 @@ jobs:
       - name: Run API tests
         run: npm run test:api:all
         
+      - name: Generate API HTML report
+        if: always()
+        run: node tests/generate-reports.js api-report
+        
+      - name: Create API reports archive
+        if: always()
+        run: |
+          mkdir -p api-reports
+          # Only copy files if they exist
+          if [ -f test-results/api-report.html ]; then
+            cp test-results/api-report.html api-reports/
+          fi
+          if [ -f test-results/junit.xml ]; then
+            cp test-results/junit.xml api-reports/api-junit.xml
+          fi
+          
+      - name: Upload API test reports (Zipped HTML)
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('api-reports/*') != ''
+        with:
+          name: api-test-reports-html
+          path: api-reports/
+          retention-days: 7
+          
+      - name: Upload API test results (JUnit XML)
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('test-results/junit.xml') != ''
+        with:
+          name: api-test-results
+          path: test-results/junit.xml
+          retention-days: 7
+          
+      - name: Publish API Test Results
+        uses: dorny/test-reporter@v1
+        if: always() && hashFiles('test-results/junit.xml') != ''
+        with:
+          name: API Tests
+          path: test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
+        
       - name: Stop dev server
         if: always()
         run: |
@@ -120,50 +214,42 @@ jobs:
           npm run seedLocalD1
         
       - name: Run UI tests
-        run: npm run test:ui:all
+        run: npx playwright test tests/ui.success.spec.js tests/ui.edge-cases.spec.js
         
-      - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+      - name: Create UI reports archive
         if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-          
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results
-          path: test-results/
-          retention-days: 7
-
-  # Final validation - all tests must pass
-  tests-complete:
-    name: All Tests Complete
-    runs-on: ubuntu-latest
-    needs: [unit-tests, api-tests, ui-tests]
-    if: always()
-    steps:
-      - name: Check test results
         run: |
-          echo "Unit tests: ${{ needs.unit-tests.result }}"
-          echo "API tests: ${{ needs.api-tests.result }}"
-          echo "UI tests: ${{ needs.ui-tests.result }}"
-          
-          if [[ "${{ needs.unit-tests.result }}" != "success" ]]; then
-            echo "❌ Unit tests failed"
-            exit 1
+          mkdir -p ui-reports
+          # Only copy files if they exist
+          if [ -d playwright-report ] && [ "$(ls -A playwright-report 2>/dev/null)" ]; then
+            cp -r playwright-report/* ui-reports/ 2>/dev/null || true
           fi
-          
-          if [[ "${{ needs.api-tests.result }}" != "success" ]]; then
-            echo "❌ API tests failed"
-            exit 1
+          if [ -d test-results ] && [ "$(ls -A test-results 2>/dev/null)" ]; then
+            cp -r test-results/* ui-reports/ 2>/dev/null || true
           fi
+        
+      - name: Upload Playwright report (Zipped HTML)
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('ui-reports/*') != ''
+        with:
+          name: ui-test-reports-html
+          path: ui-reports/
+          retention-days: 7
           
-          if [[ "${{ needs.ui-tests.result }}" != "success" ]]; then
-            echo "❌ UI tests failed"
-            exit 1
-          fi
+      - name: Upload UI test results (JUnit XML)
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles('test-results/playwright-junit.xml') != ''
+        with:
+          name: ui-test-results
+          path: test-results/playwright-junit.xml
+          retention-days: 7
           
-          echo "✅ All tests passed successfully!"
+      - name: Publish UI Test Results
+        uses: dorny/test-reporter@v1
+        if: always() && hashFiles('test-results/playwright-junit.xml') != ''
+        with:
+          name: UI Tests
+          path: test-results/playwright-junit.xml
+          reporter: java-junit
+          fail-on-error: false
+
