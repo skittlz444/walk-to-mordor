@@ -20,15 +20,16 @@
     "publish": true
   },
   "devDependencies": {
-    "pnpm": "^10.15.1",
-    "typescript": "5.8.3",
-    "wrangler": "^4.33.1",
-    "jest": "^29.7.0",
-    "supertest": "^6.3.4",
     "@playwright/test": "^1.44.0",
-    "ts-jest": "^29.2.0",
     "@types/jest": "^29.5.0",
-    "@types/supertest": "^6.0.0"
+    "@types/supertest": "^6.0.0",
+    "jest": "^29.7.0",
+    "jest-junit": "^16.0.0",
+    "pnpm": "^10.15.1",
+    "supertest": "^6.3.4",
+    "ts-jest": "^29.2.0",
+    "typescript": "5.8.3",
+    "wrangler": "^4.33.1"
   },
   "scripts": {
     "cf-typegen": "wrangler types",
@@ -38,29 +39,25 @@
     "dev": "npm run build:sw:reset &&pnpm seedLocalD1 && wrangler dev",
     "predeploy": "wrangler d1 migrations apply DB --remote",
     "seedLocalD1": "wrangler d1 migrations apply DB --local",
-    
     "test": "npm run test:unit && npm run test:api && npm run test:ui",
     "test:all": "npm run test:unit && npm run test:api:all && npm run test:ui:all",
     "test:quick": "npm run test:api:success && npm run test:ui:success",
-    
     "test:unit": "jest --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js tests/api.success.test.js tests/api.errors.test.js tests/ui.success.spec.js tests/ui.edge-cases.spec.js",
     "test:unit:watch": "jest --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js tests/api.success.test.js tests/api.errors.test.js tests/ui.success.spec.js tests/ui.edge-cases.spec.js --watch",
-    
     "test:api": "npm run test:api:all",
     "test:api:success": "jest tests/api.success.test.js --coverage=false",
     "test:api:errors": "jest tests/api.errors.test.js --coverage=false",
     "test:api:all": "jest tests/api.success.test.js tests/api.errors.test.js --coverage=false",
-    
+    "test:api:report": "node tests/generate-reports.js api-report",
+    "test:coverage:junit": "node tests/generate-reports.js coverage-junit",
     "test:ui": "npm run test:ui:all",
     "test:ui:success": "playwright test tests/ui.success.spec.js --reporter=list",
     "test:ui:edge-cases": "playwright test tests/ui.edge-cases.spec.js --reporter=list",
     "test:ui:all": "playwright test tests/ui.success.spec.js tests/ui.edge-cases.spec.js --reporter=list",
     "test:ui:headed": "playwright test tests/ui.success.spec.js tests/ui.edge-cases.spec.js --headed",
     "test:ui:report": "playwright show-report",
-    
     "test:success": "npm run test:api:success && npm run test:ui:success",
     "test:errors": "npm run test:api:errors && npm run test:ui:edge-cases",
-    
     "test:coverage": "jest --coverage",
     "test:coverage:unit": "jest --coverage --testPathIgnorePatterns=tests/api.test.js tests/ui.spec.js tests/api.success.test.js tests/api.errors.test.js tests/ui.success.spec.js tests/ui.edge-cases.spec.js",
     "test:coverage:watch": "jest --coverage --watch",
@@ -68,9 +65,7 @@
     "coverage:report": "jest --coverage --coverageReporters=html && echo 'Coverage report generated in coverage/lcov-report/index.html'",
     "coverage:check": "jest --coverage --passWithNoTests",
     "coverage:ui": "playwright test tests/ui.success.spec.js tests/ui.edge-cases.spec.js --reporter=json --output=test-results/ui-coverage.json",
-    
     "test:cleanup": "node tests/helpers/cleanup.js",
-    
     "build:sw": "node public/wtm/js/update-cache-version.js",
     "build:sw:reset": "node public/wtm/js/reset-cache-version.js"
   },
