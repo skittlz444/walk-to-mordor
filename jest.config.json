@@ -9,6 +9,16 @@
     "lcov",
     "json"
   ],
+  "reporters": [
+    "default",
+    ["jest-junit", {
+      "outputDirectory": "test-results",
+      "outputName": "junit.xml",
+      "suiteNameTemplate": "{filepath}",
+      "classNameTemplate": "{classname}",
+      "titleTemplate": "{title}"
+    }]
+  ],
   "collectCoverageFrom": [
     "src/**/*.{js,ts}",
     "public/wtm/js/update-cache-version.js",

@@ -38,6 +38,14 @@ jobs:
           name: coverage-reports
           path: coverage/
           retention-days: 7
+          
+      - name: Upload test results (JUnit XML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: test-results/junit.xml
+          retention-days: 7
 
   # API integration tests - runs with local dev server
   api-tests:
@@ -79,6 +87,33 @@ jobs:
         
       - name: Run API tests
         run: npm run test:api:all
+        
+      - name: Generate API HTML report
+        if: always()
+        run: npm run test:api:report
+        
+      - name: Create API reports archive
+        if: always()
+        run: |
+          mkdir -p api-reports
+          cp test-results/api-report.html api-reports/
+          cp test-results/junit.xml api-reports/api-junit.xml 2>/dev/null || echo "No API JUnit XML found"
+          
+      - name: Upload API test reports (Zipped HTML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-reports
+          path: api-reports/
+          retention-days: 7
+          
+      - name: Upload API test results (JUnit XML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-results
+          path: test-results/junit.xml
+          retention-days: 7
         
       - name: Stop dev server
         if: always()
@@ -122,20 +157,27 @@ jobs:
       - name: Run UI tests
         run: npm run test:ui:all
         
-      - name: Upload Playwright report
+      - name: Create UI reports archive
+        if: always()
+        run: |
+          mkdir -p ui-reports
+          cp -r playwright-report/* ui-reports/ 2>/dev/null || echo "No Playwright HTML report found"
+          cp -r test-results/* ui-reports/ 2>/dev/null || echo "No test results found"
+        
+      - name: Upload Playwright report (Zipped HTML)
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: ui-test-reports
+          path: ui-reports/
           retention-days: 7
           
-      - name: Upload test results
+      - name: Upload UI test results (JUnit XML)
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results
-          path: test-results/
+          name: ui-test-results
+          path: test-results/playwright-junit.xml
           retention-days: 7
 
   # Final validation - all tests must pass
