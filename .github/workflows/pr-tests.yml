@@ -61,6 +61,19 @@ jobs:
           path: test-results/junit.xml
           reporter: java-junit
           fail-on-error: false
+          
+      - name: Generate coverage summary for PR
+        if: always()
+        run: |
+          # Create a simple coverage summary for the PR comment
+          if [ -f coverage/lcov-report/index.html ]; then
+            echo "✅ Coverage HTML report generated"
+          fi
+          
+          # Extract coverage percentages for summary (this will be used by the final job)
+          if [ -f coverage/coverage-final.json ]; then
+            echo "✅ Coverage JSON data available for processing"
+          fi
 
   # API integration tests - runs with local dev server
   api-tests:
@@ -230,6 +243,58 @@ jobs:
     needs: [unit-tests, api-tests, ui-tests]
     if: always()
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Generate test summary report
+        id: test-summary
+        env:
+          UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
+          API_TESTS_RESULT: ${{ needs.api-tests.result }}
+          UI_TESTS_RESULT: ${{ needs.ui-tests.result }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          echo "📊 Generating comprehensive test summary..."
+          node scripts/generate-test-summary.js
+          
+          # Set output for GitHub Actions
+          echo "SUMMARY<<EOF" >> $GITHUB_OUTPUT
+          cat test-summary/summary.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "✅ Test summary generation completed"
+        
+      - name: Upload test summary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-summary
+          path: test-summary/
+          retention-days: 7
+          
+      - name: Comment PR with test summary
+        uses: thollander/actions-comment-pull-request@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          message: ${{ steps.test-summary.outputs.SUMMARY }}
+          comment_tag: test-summary
+          
       - name: Check test results
         run: |
           echo "Unit tests: ${{ needs.unit-tests.result }}"
