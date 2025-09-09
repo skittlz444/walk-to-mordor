@@ -38,11 +38,23 @@ jobs:
       - name: Generate coverage report
         run: npm run test:coverage:unit
         
+      - name: Generate coverage JUnit XML
+        if: always()
+        run: npm run test:coverage:junit
+        
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
           path: coverage/
+          retention-days: 7
+          
+      - name: Upload coverage results (JUnit XML)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-results
+          path: test-results/coverage-junit.xml
           retention-days: 7
           
       - name: Upload test results (JUnit XML)
@@ -59,6 +71,15 @@ jobs:
         with:
           name: Unit Tests
           path: test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
+          
+      - name: Publish Coverage Results
+        uses: dorny/test-reporter@v1
+        if: always() && hashFiles('test-results/coverage-junit.xml') != ''
+        with:
+          name: Coverage Report
+          path: test-results/coverage-junit.xml
           reporter: java-junit
           fail-on-error: false
           

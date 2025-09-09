@@ -126,6 +126,7 @@ ${coverageSection}### 📋 Available Reports
 The following detailed reports are available in the **Actions** tab under **Artifacts**:
 
 - 📊 **Coverage Report** - HTML coverage report showing line-by-line coverage
+- 📋 **Coverage Results** - JUnit XML coverage report for GitHub test reporting
 - 🧪 **Unit Test Results** - JUnit XML results for unit tests  
 - 🔗 **API Test Reports** - HTML and XML reports for API integration tests
 - 🖥️ **UI Test Reports** - Playwright HTML reports for end-to-end tests
@@ -147,10 +148,6 @@ The following detailed reports are available in the **Actions** tab under **Arti
   // Save summary
   fs.writeFileSync('test-summary/summary.md', summary);
   console.log('📄 Test summary generated successfully');
-  
-  // Output for GitHub Actions
-  const summaryBase64 = Buffer.from(summary).toString('base64');
-  console.log(`\n::set-output name=summary::${summaryBase64}`);
   
   return summary;
 }
