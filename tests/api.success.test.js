@@ -1,8 +1,13 @@
 const request = require('supertest');
-const { TEST_VALUES, cleanupAllTestData } = require('./helpers/cleanup');
+const { cleanupAllTestData } = require('./helpers/cleanup');
 
 const server = 'http://localhost:8787';
 const TEST_EVENT_DATE = "2024-01-02";
+
+// Generate realistic test distances for API testing
+function generateRealisticAPIDistance() {
+  return Math.floor(Math.random() * 50) + 1;
+}
 
 describe('Calendar Progress API - Success Flows', () => {
   // Enhanced cleanup using our centralized system
@@ -28,22 +33,25 @@ describe('Calendar Progress API - Success Flows', () => {
   });
 
   it('should add a new event', async () => {
-    const res = await addEvent("999999");
+    const res = await addEvent(generateRealisticAPIDistance().toString());
     expect([200, 201]).toContain(res.status);
   });
 
   it('should edit the event', async () => {
-    await addEvent("888888");
+    const initialDistance = generateRealisticAPIDistance();
+    const updatedDistance = generateRealisticAPIDistance();
+    
+    await addEvent(initialDistance.toString());
     const editRes = await request(server)
       .put('/wtm/api/calendar-progress')
-      .send({ start: TEST_EVENT_DATE, title: "777777" });
+      .send({ start: TEST_EVENT_DATE, title: updatedDistance.toString() });
     expect([200, 201]).toContain(editRes.status);
     // Only check status, as response may not contain title
   });
 
   it('should delete the event', async () => {
     const uniqueDeleteDate = "2024-01-06"; // Use unique date for delete test
-    await addEvent("888888", uniqueDeleteDate);
+    await addEvent(generateRealisticAPIDistance().toString(), uniqueDeleteDate);
     const delRes = await request(server)
       .delete('/wtm/api/calendar-progress')
       .send({ start: uniqueDeleteDate });
@@ -70,7 +78,7 @@ describe('Calendar Progress API - Success Flows', () => {
     const testDate = "2024-01-04";
     const res = await request(server)
       .post('/wtm/api/calendar-progress')
-      .send({ start: testDate, title: "999999.99" });
+      .send({ start: testDate, title: (generateRealisticAPIDistance() + 0.5).toString() });
     expect([200, 201, 409]).toContain(res.status); // 409 if already exists
   });
 });

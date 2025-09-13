@@ -6,60 +6,66 @@ This project includes comprehensive testing with code coverage reporting to ensu
 ## Testing Methodology
 
 ### Core Principles
-1. **Data Isolation** - Use unique, unrealistic test data that's easily distinguishable from real user data
-2. **Automatic Cleanup** - All test data is automatically cleaned up after test execution
-3. **Conflict Avoidance** - Use specific date patterns and values that won't conflict with actual usage
+1. **Complete Database Cleanup** - All database entries are cleared before and after tests for complete isolation
+2. **Realistic Test Data** - Use realistic walking distances (1-50km) instead of large unrealistic numbers
+3. **Popup Interference Prevention** - UI tests include popup cleanup hooks to prevent cross-test interference
 4. **Comprehensive Coverage** - Test both success flows and error conditions extensively
 
-### Test Data Conventions
+### Test Data Strategy (Updated 2024)
 
-#### Date Patterns
-- **API Tests**: Use dates in January 2024 (e.g., `2024-01-01`, `2024-01-02`)
-- **UI Tests**: Use dates far in the future (e.g., `2025-09-14`) to avoid real data conflicts
-- **Edge Cases**: Use invalid dates like `2025-02-30` for negative testing
+#### Complete Database Cleanup Approach
+- **Pre-Test Cleanup**: Complete database clearing before test execution
+- **Post-Test Cleanup**: Complete database clearing after test completion
+- **No Pattern Matching**: Eliminates complexity of pattern-based cleanup systems
+- **Guaranteed Isolation**: Each test run starts with completely clean database state
 
 #### Distance Values
-- **Large Unrealistic Numbers**: `777777`, `888888`, `999999` - Easy to spot and unlikely to be real user data
-- **Decimal Test Values**: `15.5`, `999999.99` - For testing decimal handling
-- **Zero Values**: `0` - For boundary testing
-- **Invalid Values**: `-5`, `"abc"`, `null` - For error condition testing
+- **Realistic Distances**: `1-50 km` - Represents actual walking distances for normal tests
+- **Large Distances for Goals**: `100-1000 km` - For tests that need to complete specific goals
+- **Decimal Values**: `15.5`, `25.75` - For testing decimal precision handling
+- **Edge Values**: `0`, negative numbers, invalid formats for error testing
 
-#### Text Patterns
-- **Test Event Names**: Use descriptive names like `"Test Event 777777 km"` that clearly indicate test data
-- **Repeated Digits**: Values like `888888` are easily recognizable as test data
+#### Date Patterns
+- **Next Week Dates**: Tests use dates 7-13 days in the future for safety buffer
+- **Random Selection**: Each test generates random dates within safe ranges
+- **No Historical Data**: Avoids conflicts with any existing data patterns
 
-### Centralized Cleanup System
+### Complete Database Cleanup System
 
 #### Cleanup Helper (`tests/helpers/cleanup.js`)
-The centralized cleanup system automatically detects and removes test data using multiple pattern matching strategies:
+The centralized cleanup system provides complete database clearing for guaranteed test isolation:
 
-1. **UI Test Values** - Detects events with values like `9876543`
-2. **Repeated Digits** - Catches patterns like `777777`, `888888`, `999999`
-3. **Zero Values** - Removes test events with `0` distance
-4. **Decimal Test Values** - Finds decimal numbers like `15.5`, `999999.99`
-5. **Large Distances** - Detects unrealistically large values (>100,000)
-6. **Specific Test Dates** - Removes events on known test dates
+1. **Complete Data Removal** - Deletes ALL entries from progress table
+2. **Safe API Cleanup** - Uses proper DELETE endpoints with authentication
+3. **Comprehensive Logging** - Reports number of entries removed for verification
+4. **Error Handling** - Continues cleanup even if individual operations fail
 
 #### Usage in Tests
 ```javascript
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
 beforeAll(async () => {
-  await cleanupAllTestData(); // Clean before tests
+  await cleanupAllTestData(); // Complete database cleanup before tests
 });
 
 afterAll(async () => {
-  await cleanupAllTestData(); // Clean after tests
+  await cleanupAllTestData(); // Complete database cleanup after tests
+});
+
+// UI tests also include popup cleanup to prevent interference
+beforeEach(async ({ page }) => {
+  // Close any existing popups that might interfere with tests
+  // Handles congratulations popups and goal dialogs
 });
 ```
 
 ## Test Structure
 
 ### Test Types
-1. **Unit Tests** - Test individual functions and modules in isolation (51 tests)
+1. **Unit Tests** - Test individual functions and modules in isolation (81 tests)
 2. **API Tests** - Test API endpoints with real Cloudflare Workers environment (27 tests)
-3. **UI Tests** - End-to-end browser testing with Playwright (60 tests)
-4. **Build Tests** - Test build scripts and cache version management (16 tests)
+3. **UI Tests** - End-to-end browser testing with Playwright (128 tests)
+4. **Total Tests** - 236 tests across all categories
 
 ### Cache Version Testing
 
@@ -99,8 +105,8 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 - `tests/api.errors.test.js` - Error handling and edge cases (19 tests)
 
 #### UI End-to-End Tests
-- `tests/ui.success.spec.js` - Core UI functionality (32 tests)
-- `tests/ui.edge-cases.spec.js` - Complex features and edge cases (28 tests)
+- `tests/ui.success.spec.js` - Core UI functionality across all browsers (64 tests)
+- `tests/ui.edge-cases.spec.js` - Complex features and edge cases across all browsers (64 tests)
 
 #### Helper Files
 - `tests/helpers/cleanup.js` - Centralized test data cleanup utility
@@ -122,15 +128,15 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 
 ### All Tests
 ```bash
-npm test                    # Runs unit tests (81) + API tests (27) + UI tests (60) = 168 tests
+npm test                    # Runs unit tests (81) + API tests (27) + UI tests (128) = 236 tests
 npm run test:all           # Alternative command for complete test suite
 ```
 
 ### Category-Specific Tests
 ```bash
-npm run test:unit          # Unit tests only (65 tests) - Fast feedback
+npm run test:unit          # Unit tests only (81 tests) - Fast feedback
 npm run test:api:all       # API tests only (27 tests) - Both success and error cases
-npm run test:ui:all        # UI tests only (60 tests) - All browser scenarios
+npm run test:ui:all        # UI tests only (128 tests) - All browser scenarios
 ```
 
 ### Flow-Based Testing (Development Workflow)
@@ -144,8 +150,8 @@ npm run test:errors        # All error and edge case scenarios
 ```bash
 npm run test:api:success   # API success flows (8 tests)
 npm run test:api:errors    # API error handling (19 tests)
-npm run test:ui:success    # UI success flows (32 tests)
-npm run test:ui:edge-cases # UI edge cases (28 tests)
+npm run test:ui:success    # UI success flows (64 tests - all browsers)
+npm run test:ui:edge-cases # UI edge cases (64 tests - all browsers)
 ```
 
 ### Development Tools
@@ -157,11 +163,11 @@ npm run test:ui:headed     # UI tests with visible browser
 
 ### UI Tests Only
 ```bash
-npm run test:ui:all        # All UI tests (60 tests)
-npm run test:ui:success    # UI success flows (32 tests)
-npm run test:ui:edge-cases # UI edge cases (28 tests)
+npm run test:ui:all        # All UI tests (128 tests across 4 browsers)
+npm run test:ui:success    # UI success flows (64 tests across 4 browsers)
+npm run test:ui:edge-cases # UI edge cases (64 tests across 4 browsers)
 ```
-Runs end-to-end browser tests with Playwright across multiple browsers and devices.
+Runs end-to-end browser tests with Playwright across Chromium, Firefox, Mobile Chrome, and Mobile Firefox.
 
 ### Coverage Report
 ```bash
@@ -178,9 +184,10 @@ Runs all tests with comprehensive coverage reporting and generates HTML reports.
 - **Comprehensive Coverage**: Catches various test data formats across different test types
 
 ### Browser Testing (Playwright)
-- **Multi-Browser**: Tests run on Chromium, Firefox, and Mobile browsers
-- **Retry Logic**: Failed tests are automatically retried to handle timing issues
-- **Parallel Execution**: Tests run in parallel for faster feedback
+- **Multi-Browser**: Tests run on Chromium, Firefox, Mobile Chrome, and Mobile Firefox (4 browsers total)
+- **Popup Interference Prevention**: beforeEach hooks clear popups to prevent cross-test interference
+- **Parallel Execution**: Tests run with 4 workers (reduced from 8 to prevent database conflicts)
+- **Realistic Test Data**: Uses 1-50km distances and realistic date generation
 - **Screenshot Capture**: Failed tests automatically capture screenshots for debugging
 
 ### API Testing Environment
@@ -195,24 +202,24 @@ Runs all tests with comprehensive coverage reporting and generates HTML reports.
 2. All test data includes easily identifiable patterns (large numbers, specific dates)
 3. Test data is designed to be completely separate from any potential user data
 
-### Data Detection
-The cleanup system uses multiple strategies to identify test data:
+### Complete Database Clearing
+The cleanup system now uses a comprehensive approach:
 ```javascript
-// Example patterns that trigger cleanup
-const testPatterns = [
-  { distance: 9876543, date: '2025-09-14' },  // UI test values
-  { distance: 777777, date: '2024-01-01' },   // Repeated digits
-  { distance: 0, date: '2024-01-05' },        // Zero values  
-  { distance: 15.5, date: '2024-01-03' },     // Decimal test values
-  { distance: 999999.99, date: '2024-01-04' } // Large decimal values
-];
+// Complete database cleanup approach
+async function cleanupAllTestData() {
+  // DELETE all entries from progress table
+  // No pattern matching required - complete clearing
+  // Logs number of entries removed for verification
+  // Handles errors gracefully and continues cleanup
+}
 ```
 
-### Data Removal
-1. **Automatic Detection**: System scans database for test patterns
-2. **Safe Removal**: Only removes data matching specific test patterns
-3. **Comprehensive Logging**: All cleanup actions are logged for verification
-4. **Error Handling**: Cleanup continues even if individual deletions fail
+### Complete Data Removal
+1. **Complete Clearing**: System removes ALL entries from database
+2. **Safe API Operations**: Uses proper DELETE endpoints with error handling
+3. **Comprehensive Logging**: All cleanup actions are logged with entry counts
+4. **Error Handling**: Cleanup continues even if individual operations fail
+5. **Popup Cleanup**: UI tests also clear popups before each test to prevent interference
 
 ## Architecture Decisions
 
@@ -242,13 +249,14 @@ Tests are organized by type and flow rather than by file structure:
 - **Playwright**: Browser automation for UI testing
 - **Centralized Cleanup**: Custom helper system for test data management
 
-### Data Isolation Strategy
-The testing system ensures complete isolation between test data and real user data:
+### Complete Database Isolation Strategy
+The testing system ensures complete isolation through comprehensive database clearing:
 
-1. **Distinctive Patterns**: Test data uses patterns that are extremely unlikely in real usage
-2. **Date Separation**: Test dates are either historical (2024) or far future (2025+)
-3. **Value Separation**: Test distances use repeated digits or unrealistically large numbers
-4. **Automatic Recognition**: Cleanup system can identify test data without manual tracking
+1. **Complete Clearing**: All database entries removed before and after each test run
+2. **No Pattern Dependencies**: Eliminates complexity of pattern-matching cleanup systems
+3. **Realistic Test Data**: Uses actual walking distances (1-50km) for better test authenticity
+4. **Popup Interference Prevention**: UI tests clear popups before each test to prevent cross-test issues
+5. **Reduced Parallelism**: Uses 4 workers instead of 8 to prevent database conflicts
 
 ### Coverage Strategy
 - Unit tests achieve 100% coverage for extracted utility modules
@@ -293,14 +301,14 @@ The test suite is designed to run in CI environments and will fail builds if:
 ### CI Test Execution
 ```bash
 # Full CI pipeline
-npm run test:all           # Runs all 152 tests
+npm run test:all           # Runs all 236 tests
 npm run test:coverage      # Generates coverage reports
 ```
 
 ### Parallel Execution
 - **Unit Tests**: Run sequentially (fast execution, shared coverage reporting)
 - **API Tests**: Run sequentially (database state management)  
-- **UI Tests**: Run in parallel across 8 workers (faster execution)
+- **UI Tests**: Run in parallel across 4 workers (reduced from 8 to prevent database conflicts)
 
 ## Development Workflow
 

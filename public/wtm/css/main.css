@@ -98,3 +98,29 @@ h1 {
 .goal-popup-scrollable ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 215, 0, 0.7);
 }
+
+.goal-congratulations {
+  color: #00FF7F;
+  font-size: 1em;
+  font-weight: bold;
+  margin-bottom: 1em;
+  text-align: center;
+  text-shadow: 0 0 8px #00FF7F;
+  animation: pulse 1.5s normal;
+}
+
+/* Congratulations animation */
+@keyframes pulse {
+  0% {
+    text-shadow: 0 0 8px #00FF7F;
+    transform: scale(1);
+  }
+  50% {
+    text-shadow: 0 0 20px #00FF7F, 0 0 30px #00FF7F;
+    transform: scale(1.02);
+  }
+  100% {
+    text-shadow: 0 0 8px #00FF7F;
+    transform: scale(1);
+  }
+}
