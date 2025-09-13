@@ -7,7 +7,7 @@
 		{
 			"binding": "DB",
 			"database_name": "walk-to-mordor",
-			"database_id": "$DATABASE_ID"
+			"database_id": "7411c32e-f4f5-4fc6-ab39-c403416f048c"
 		}
 	],
 	"observability": {

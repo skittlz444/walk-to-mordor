@@ -179,9 +179,6 @@ dist
 .wrangler/
 build/
 
-# Cloudflare Workers development secrets
-.dev.vars
-
 # Turbo output
 .turbo/
 

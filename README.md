@@ -113,86 +113,21 @@ A live public deployment of this template is available at [https://d1-template.t
    ```bash
    npm install
    ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "walk-to-mordor":
+2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
    ```bash
-   npx wrangler d1 create walk-to-mordor
+   npx wrangler d1 create d1-template-database
    ```
-
-3. **Configure Environment Variables**:
-
-   **For Local Development:**
+   ...and update the `database_id` field in `wrangler.json` with the new database ID.
+3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
    ```bash
-   # Copy the example environment file
-   cp .dev.vars.example .dev.vars
-   # Edit .dev.vars with your database ID from step 2
+   npx wrangler d1 migrations apply --remote d1-template-database
    ```
-
-   **For Production Deployment:**
-   ```bash
-   # Set the database ID as a secret
-   # Replace with your actual database ID from step 2
-   wrangler secret put DATABASE_ID
-   # When prompted, enter your database ID
-   ```
-   
-   > **Note**: While database IDs are not sensitive, using secrets ensures consistent configuration management and keeps credentials out of your code repository.
-
-4. Run the database migrations to initialize the database:
-   ```bash
-   # For local development
-   npx wrangler d1 migrations apply DB --local
-   
-   # For production (remote)
-   npx wrangler d1 migrations apply DB --remote
-   ```
-5. Deploy the project!
+4. Deploy the project!
    ```bash
    npm run deploy
    ```
    
    This will automatically run the build process to update the service worker cache version before deploying.
-
-## Development Workflow
-
-For local development:
-
-```bash
-# Start the development server
-npm run dev
-```
-
-The development server automatically:
-1. Uses the `.dev.vars` file for local environment variables
-2. Applies database migrations locally
-3. Starts the Wrangler development server
-
-### Environment Variables
-
-- **Local Development**: Environment variables are loaded from `.dev.vars` (gitignored)
-- **Production**: Environment variables are set as secrets using `wrangler secret put`
-
-The `.dev.vars` file should contain:
-```bash
-DATABASE_ID=your-d1-database-id-here
-```
-
-### Quick Setup Commands
-
-```bash
-# 1. Create development environment
-cp .dev.vars.example .dev.vars
-# Edit .dev.vars with your database ID
-
-# 2. Create and configure D1 database
-npx wrangler d1 create walk-to-mordor
-# Copy the database ID to .dev.vars
-
-# 3. Apply migrations locally
-npm run seedLocalD1
-
-# 4. Start development server
-npm run dev
-```
 
 ## Build Process
 
