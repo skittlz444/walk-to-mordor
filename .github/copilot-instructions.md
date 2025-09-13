@@ -25,8 +25,7 @@ Always reference these instructions first and fallback to search or bash command
 
 #### Fast Feedback Loop (Active Development)
 - `npm run test:unit` -- Unit tests (81 tests) in 3 seconds
-- `npm run test:quick` -- Success flows only (40 tests) in 4 seconds  
-- `npm run test:api:success` -- API happy path (8 tests) in 2 seconds
+- `npm run test:quick` -- Success flows only (40 tests) in 4 seconds
 
 #### Comprehensive Validation (Pre-Commit)
 - `npm run test:api:all` -- All API tests (27 tests) in 2 seconds **REQUIRES DEV SERVER RUNNING**
