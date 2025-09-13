@@ -36,10 +36,10 @@ Always reference these instructions first and fallback to search or bash command
 
 #### UI Testing (Requires Playwright Browsers)
 - `npx playwright install chromium` -- install browser (may fail due to network)
-- `npm run test:ui:success` -- UI happy path tests (32 tests) 
-- `npm run test:ui:edge-cases` -- UI edge cases (28 tests)
-- `npm run test:ui:headed` -- Debug UI tests with visible browser
-- **NOTE**: UI tests require dev server running (started automatically by Playwright)
+- `npm run test:ui:success` -- UI happy path tests (32 tests) **REQUIRES DEV SERVER RUNNING**
+- `npm run test:ui:edge-cases` -- UI edge cases (28 tests) **REQUIRES DEV SERVER RUNNING**
+- `npm run test:ui:headed` -- Debug UI tests with visible browser **REQUIRES DEV SERVER RUNNING**
+- **NOTE**: UI tests require `npm run dev` in separate terminal, same as API tests
 
 ### Build and Deploy Commands  
 - `npm run build` -- updates cache version for deployment in <1 second
@@ -72,7 +72,7 @@ curl -X POST -H "Content-Type: application/json" \
 ALWAYS run before committing:
 - `npm run test:coverage` -- validates unit tests with coverage (no server required)
 - `npm run check` -- validates TypeScript and Wrangler config
-- For API validation: start dev server (`npm run dev`) then run `npm run test:api:all` in separate terminal
+- For API/UI validation: start dev server (`npm run dev`) then run `npm run test:api:all` and `npm run test:ui:all` in separate terminal
 - Manual API and UI validation as described above
 
 ## Common Tasks
