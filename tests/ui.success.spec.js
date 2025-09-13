@@ -4,7 +4,8 @@ const { cleanupAllTestData } = require('./helpers/cleanup');
 
 /**
  * UI Success Tests - Walk to Mordor
- * Following new testing methodology: Clean database before tests, use realistic distances
+ * Following new testing methodology: Clean database before tests, use realistic distances.
+ * Previously, tests did not clean the database before running and used fixed or arbitrary distance values.
  */
 
 test.describe('Walk to Mordor UI - Success Flows', () => {
