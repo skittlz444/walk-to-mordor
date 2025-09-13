@@ -1,8 +1,13 @@
 const request = require('supertest');
-const { TEST_VALUES, cleanupAllTestData } = require('./helpers/cleanup');
+const { cleanupAllTestData } = require('./helpers/cleanup');
 
 const server = 'http://localhost:8787';
 const TEST_EVENT_DATE = "2024-01-02";
+
+// Generate realistic test distances for API error testing
+function generateRealisticAPIDistance() {
+  return Math.floor(Math.random() * 50) + 1;
+}
 
 describe('Calendar Progress API - Error Handling & Edge Cases', () => {
   // Enhanced cleanup using our centralized system

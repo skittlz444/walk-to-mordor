@@ -52,10 +52,12 @@ module.exports = defineConfig({
     },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:8787',
-    reuseExistingServer: !process.env.CI,
-  },
+  /* Run your local dev server before starting the tests - only in CI */
+  ...(process.env.CI ? {
+    webServer: {
+      command: 'npm run dev',
+      url: 'http://localhost:8787',
+      reuseExistingServer: false,
+    },
+  } : {}),
 });
