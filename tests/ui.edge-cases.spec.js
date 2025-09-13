@@ -1,9 +1,51 @@
 const { test, expect } = require('@playwright/test');
-const { TEST_VALUES, cleanupAllTestData } = require('./helpers/cleanup');
+const { cleanupAllTestData } = require('./helpers/cleanup');
+
+/**
+ * Generate realistic walking distance values (1-50 km)
+ */
+function generateRealisticTestDistance() {
+  return Math.floor(Math.random() * 50) + 1;
+}
+
+/**
+ * Generate larger distance for completing goals (100-1000 km)
+ */
+function generateLargeTestDistance() {
+  return Math.floor(Math.random() * 900) + 100;
+}
 
 test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   // Set longer timeout for tests that might have slow loading
   test.setTimeout(60000); // 60 seconds
+
+  // Clear all data before and after tests for clean state
+  test.beforeAll(async () => {
+    await cleanupAllTestData();
+  });
+
+  test.afterAll(async () => {
+    await cleanupAllTestData();
+  });
+
+  // Clear popups before each test to prevent interference
+  test.beforeEach(async ({ page }) => {
+    try {
+      // Close any existing popups that might interfere with the next test
+      const existingPopup = page.locator('#goal-popup');
+      if (await existingPopup.isVisible({ timeout: 1000 })) {
+        const closeButton = page.locator('text=Close').last();
+        if (await closeButton.isVisible({ timeout: 1000 })) {
+          await closeButton.click();
+        } else {
+          await page.keyboard.press('Escape');
+        }
+        await page.waitForTimeout(500);
+      }
+    } catch (error) {
+      // No popup to close or page not loaded yet
+    }
+  });
 
   // Helper to get timestamp for first day of next week
   async function getNextWeekTimestamp(page) {
@@ -157,13 +199,27 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const viewport = page.viewportSize();
     const userAgent = await page.evaluate(() => navigator.userAgent);
     
-    // For Mobile Firefox, skip this specific test to avoid timeout issues
-    if (viewport && viewport.width < 768 && userAgent.includes('Firefox')) {
-      return;
-    }
-    
     await page.goto('http://localhost:8787');
     await page.waitForLoadState('networkidle');
+    
+    // Close any existing popups first - critical for mobile browsers
+    try {
+      const existingPopup = page.locator('#goal-popup');
+      if (await existingPopup.isVisible({ timeout: 2000 })) {
+        const closeButton = page.locator('text=Close').last();
+        if (await closeButton.isVisible({ timeout: 1000 })) {
+          await closeButton.click();
+        } else {
+          // Force close by clicking outside or ESC key
+          await page.keyboard.press('Escape');
+        }
+        await page.waitForTimeout(1000);
+        // Verify popup is closed
+        await expect(existingPopup).toBeHidden({ timeout: 5000 });
+      }
+    } catch (error) {
+      // No popup to close, continue
+    }
     
     // Check viewport and skip calendar operations on mobile
     if (viewport && viewport.width >= 768) {
@@ -171,13 +227,13 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         // Add some distance to ensure we have completed goals
         const cell = await selectNextWeekCell(page);
         await cell.click();
-        await page.fill('#distance-input', TEST_VALUES[0]); // Use 9876543
+        await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
         
         // Check if Add button is visible before clicking
         const addButton = page.locator('text=Add');
         if (await addButton.isVisible({ timeout: 5000 })) {
           await addButton.click();
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(2000); // Wait for distance processing and potential congratulations
         }
       } catch (error) {
         // Calendar operations failed, continue with existing goals
@@ -186,6 +242,22 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     
     // Wait for goals to load
     await expect(page.locator('#goals-list')).toBeVisible();
+    
+    // If there's a congratulations popup from adding distance, close it first
+    try {
+      const congratsPopup = page.locator('#goal-popup');
+      if (await congratsPopup.isVisible({ timeout: 2000 })) {
+        const congratsText = await congratsPopup.textContent();
+        if (congratsText && congratsText.includes('Congratulations')) {
+          const closeButton = page.locator('text=Close').last();
+          await closeButton.click();
+          await page.waitForTimeout(1000);
+          await expect(congratsPopup).toBeHidden({ timeout: 5000 });
+        }
+      }
+    } catch (error) {
+      // No congratulations popup, continue
+    }
     
     // Try to find any clickable goal - prioritize completed goals if available
     let goalToClick = page.locator('.completed-goal').first();
@@ -196,19 +268,26 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       goalToClick = page.locator('#goals-list li[role="button"], #goals-list li').first();
     }
     
-    // Close any existing popups that might be blocking the click
+    // Double-check no popups are blocking the click
     try {
-      const existingPopup = page.locator('#goal-popup');
-      if (await existingPopup.isVisible({ timeout: 1000 })) {
-        await page.click('body'); // Click outside to close
+      const blockingPopup = page.locator('#goal-popup');
+      if (await blockingPopup.isVisible({ timeout: 1000 })) {
+        await page.keyboard.press('Escape');
         await page.waitForTimeout(500);
+        await expect(blockingPopup).toBeHidden({ timeout: 3000 });
       }
     } catch (error) {
       // No popup to close, continue
     }
     
     await expect(goalToClick).toBeVisible();
-    await goalToClick.click();
+    
+    // Use force click for mobile browsers where popups might still interfere
+    if (viewport && viewport.width < 768) {
+      await goalToClick.click({ force: true });
+    } else {
+      await goalToClick.click();
+    }
     
     // Check that goal popup is visible
     await expect(page.locator('#goal-popup')).toBeVisible();
@@ -223,7 +302,8 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await expect(popupContent).not.toContainText('km to go');
     
     // Close the popup
-    await closePopupRobust(page, closeButton);
+    await closeButton.click();
+    await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
   });
 
   test('Goal popup opens from header goals', async ({ page }) => {
@@ -253,7 +333,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       // Add some distance to ensure we have a last goal in header
       const cell = await selectNextWeekCell(page);
       await cell.click();
-      await page.fill('#distance-input', TEST_VALUES[1]); // Use 8765432
+      await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
       await page.click('text=Add');
       await page.waitForTimeout(100);
       

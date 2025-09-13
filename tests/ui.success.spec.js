@@ -4,15 +4,14 @@ const { cleanupAllTestData } = require('./helpers/cleanup');
 
 /**
  * UI Success Tests - Walk to Mordor
- * Following testing methodology: use unrealistically large random numbers and dynamic dates
- * for complete data isolation in parallel test environments
+ * Following new testing methodology: Clean database before tests, use realistic distances
  */
 
 test.describe('Walk to Mordor UI - Success Flows', () => {
   // Set longer timeout for tests that might have slow loading  
   test.setTimeout(60000); // 60 seconds
 
-  // Centralized cleanup following testing conventions
+  // Clear all data before and after tests for clean state
   test.beforeAll(async () => {
     await cleanupAllTestData();
   });
@@ -21,21 +20,43 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     await cleanupAllTestData();
   });
 
+  // Clear popups before each test to prevent interference
+  test.beforeEach(async ({ page }) => {
+    try {
+      // Close any existing popups that might interfere with the next test
+      const existingPopup = page.locator('#goal-popup');
+      if (await existingPopup.isVisible({ timeout: 1000 })) {
+        const closeButton = page.locator('text=Close').last();
+        if (await closeButton.isVisible({ timeout: 1000 })) {
+          await closeButton.click();
+        } else {
+          await page.keyboard.press('Escape');
+        }
+        await page.waitForTimeout(500);
+      }
+    } catch (error) {
+      // No popup to close or page not loaded yet
+    }
+  });
+
   /**
-   * Generate unrealistically large random distance values for test isolation
-   * Following testing methodology: use distinctive patterns easily distinguishable from real data
+   * Generate realistic walking distance values (1-50 km)
    */
-  function generateRandomTestDistance() {
-    // Generate 6-digit random numbers between 100000-999999 (unrealistically large for daily walking)
-    // Add timestamp component to ensure uniqueness across parallel test runs
-    const baseValue = Math.floor(Math.random() * 900000) + 100000; // 100000-999999
-    const timestamp = Date.now() % 10000; // Last 4 digits of current timestamp
-    return Math.min(baseValue + timestamp, 999999); // Ensure value does not exceed 999999
+  function generateRealisticTestDistance() {
+    // Generate realistic distances between 1-50 km
+    return Math.floor(Math.random() * 50) + 1;
+  }
+
+  /**
+   * Generate larger distance for completing goals (100-1000 km)
+   */
+  function generateLargeTestDistance() {
+    // For tests that need to complete goals
+    return Math.floor(Math.random() * 900) + 100;
   }
 
   /**
    * Generate random test dates throughout the next week (7-13 days from now)
-   * Following testing methodology: use far future dates to avoid real data conflicts
    */
   function generateRandomTestDate() {
     const now = new Date();
@@ -95,7 +116,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
    * Create a new walking event with random test data
    */
   async function createTestEvent(page, distance, dateInfo) {
-    const testDistance = distance || generateRandomTestDistance();
+    const testDistance = distance || generateRealisticTestDistance();
     const testDateInfo = dateInfo || generateRandomTestDate();
     
     // Close any interfering popups/overlays first
@@ -258,7 +279,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     
-    const testDistance = generateRandomTestDistance();
+    const testDistance = generateRealisticTestDistance();
     
     // Create event using helper function
     const eventData = await createTestEvent(page, testDistance);
@@ -303,8 +324,8 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     
-    const initialDistance = generateRandomTestDistance();
-    const editedDistance = generateRandomTestDistance();
+    const initialDistance = generateRealisticTestDistance();
+    const editedDistance = generateRealisticTestDistance();
     
     // Create initial event
     const eventData = await createTestEvent(page, initialDistance);
@@ -599,6 +620,22 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
+    // Close any existing popups first
+    try {
+      const existingPopup = page.locator('#goal-popup');
+      if (await existingPopup.isVisible({ timeout: 1000 })) {
+        const closeButton = page.locator('text=Close').last();
+        if (await closeButton.isVisible({ timeout: 1000 })) {
+          await closeButton.click();
+        } else {
+          await page.click('body'); // Click outside to close
+        }
+        await page.waitForTimeout(500);
+      }
+    } catch (error) {
+      // No popup to close, continue
+    }
+
     // Verify page loaded with goals
     await expect(page.locator('#goals-list')).toBeVisible();
 
@@ -661,9 +698,26 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
       } else {
         console.log('Goal popup did not appear - this may be expected if no goals were passed');
       }
+
+      // Ensure popup is fully closed before test ends
+      await page.waitForTimeout(500);
+      
     } catch (error) {
       // Calendar interaction may fail, but test should not fail due to this
       console.log('Calendar interaction failed:', error.message);
+    } finally {
+      // Always try to close any remaining popups
+      try {
+        const finalPopup = page.locator('#goal-popup');
+        if (await finalPopup.isVisible({ timeout: 1000 })) {
+          const closeButton = page.locator('text=Close').last();
+          if (await closeButton.isVisible({ timeout: 1000 })) {
+            await closeButton.click();
+          }
+        }
+      } catch (error) {
+        // Ignore cleanup errors
+      }
     }
   });
 });
