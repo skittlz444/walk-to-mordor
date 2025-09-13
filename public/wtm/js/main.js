@@ -130,7 +130,7 @@ mobiscrollReady(function() {
     // Create the popup content with a placeholder for the image
     document.getElementById('goal-popup').innerHTML =
       `<div style="padding: 1.5em; max-width: 400px;">
-        ${isCongratulations ? `<div style="color: #00FF7F; font-size: 1em; font-weight: bold; margin-bottom: 1em; text-align: center; text-shadow: 0 0 8px #00FF7F; animation: pulse 1.5s normal;">🎉 Congratulations! You've passed a new goal! 🎉</div>` : ''}
+        ${isCongratulations ? `<div class="goal-congratulations">🎉 Congratulations! You've passed a new goal! 🎉</div>` : ''}
         ${goal.special ? `<div style="color: #FFD700; font-size: 1.4em; font-weight: bold; margin-bottom: 0.5em; text-align: center;">${goal.special}</div>` : ''}
         <div style="color: #fff; font-size: 1.2em; font-weight: bold; margin-bottom: 0.8em; text-align: center;">${goal.title}</div>
         <div style="${distanceStyle} font-size: 1.1em; margin-bottom: 0.5em; text-align: center;">${goal.distance.toFixed(2)} km</div>
