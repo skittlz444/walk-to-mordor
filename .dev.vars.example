@@ -1,0 +1,7 @@
+# Development environment variables for Cloudflare Workers
+# Copy this file to .dev.vars and fill in your actual values
+# The .dev.vars file is automatically loaded by `wrangler dev`
+
+# Database ID for your D1 database
+# Get this by running: npx wrangler d1 create walk-to-mordor
+DATABASE_ID=your-d1-database-id-here
