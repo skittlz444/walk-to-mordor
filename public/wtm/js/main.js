@@ -55,20 +55,49 @@ mobiscrollReady(function() {
         text: isEdit ? 'Save' : 'Add',
         handler: function () {
           const distance = document.getElementById('distance-input').value;
+          
+          // Get current total before updating
+          const currentTotal = events.reduce((acc, ev) => acc + Number(ev.title.replace(/\s*km$/, '')), 0);
+          
           if (isEdit) {
+            // For edits, we need to subtract the old distance and add the new one
+            const oldDistance = Number(popupEvent.title.replace(/\s*km$/, ''));
+            const newDistance = Number(distance);
+            const previousTotal = currentTotal - oldDistance;
+            const projectedNewTotal = previousTotal + newDistance;
+            
             popupEvent.title = distance;
             fetch('/wtm/api/calendar-progress', {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ start: selectedDate, title: distance })
-            }).then(updateCalendarAndTotal);
+            }).then(() => {
+              updateCalendarAndTotal();
+              // Check for newly passed goals after calendar update
+              checkForNewlyPassedGoals(previousTotal, projectedNewTotal).then(newlyPassedGoal => {
+                if (newlyPassedGoal) {
+                  setTimeout(() => showGoalPopup(newlyPassedGoal, projectedNewTotal, true), 500);
+                }
+              });
+            });
           } else {
+            const newDistance = Number(distance);
+            const projectedNewTotal = currentTotal + newDistance;
+            
             events.push({ start: selectedDate, title: distance });
             fetch('/wtm/api/calendar-progress', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ start: selectedDate, title: distance })
-            }).then(updateCalendarAndTotal);
+            }).then(() => {
+              updateCalendarAndTotal();
+              // Check for newly passed goals after calendar update
+              checkForNewlyPassedGoals(currentTotal, projectedNewTotal).then(newlyPassedGoal => {
+                if (newlyPassedGoal) {
+                  setTimeout(() => showGoalPopup(newlyPassedGoal, projectedNewTotal, true), 500);
+                }
+              });
+            });
           }
           popup.close();
         }
@@ -93,7 +122,7 @@ mobiscrollReady(function() {
     popup.open();
   }
 
-  function showGoalPopup(goal, currentDistance) {
+  function showGoalPopup(goal, currentDistance, isCongratulations = false) {
     const isCompleted = Number(currentDistance) >= goal.distance;
     const distanceStyle = isCompleted ? 'text-decoration: line-through; color: #888;' : 'color: #FFD700;';
     const distanceToGo = isCompleted ? 0 : goal.distance - Number(currentDistance);
@@ -101,6 +130,7 @@ mobiscrollReady(function() {
     // Create the popup content with a placeholder for the image
     document.getElementById('goal-popup').innerHTML =
       `<div style="padding: 1.5em; max-width: 400px;">
+        ${isCongratulations ? `<div style="color: #00FF7F; font-size: 1.6em; font-weight: bold; margin-bottom: 1em; text-align: center; text-shadow: 0 0 8px #00FF7F; animation: pulse 2s infinite;">🎉 Congratulations! You've passed a new goal! 🎉</div>` : ''}
         ${goal.special ? `<div style="color: #FFD700; font-size: 1.4em; font-weight: bold; margin-bottom: 0.5em; text-align: center;">${goal.special}</div>` : ''}
         <div style="color: #fff; font-size: 1.2em; font-weight: bold; margin-bottom: 0.8em; text-align: center;">${goal.title}</div>
         <div style="${distanceStyle} font-size: 1.1em; margin-bottom: 0.5em; text-align: center;">${goal.distance.toFixed(2)} km</div>
@@ -257,6 +287,22 @@ mobiscrollReady(function() {
       });
   }
 
+  function checkForNewlyPassedGoals(previousTotal, newTotal) {
+    return fetch('/wtm/api/goals')
+      .then(res => res.json())
+      .then(goals => {
+        goals.sort((a, b) => a.distance - b.distance);
+        
+        // Find goals that were passed with the new distance
+        const newlyPassed = goals.filter(goal => 
+          previousTotal < goal.distance && newTotal >= goal.distance
+        );
+        
+        // Return the highest distance goal that was newly passed
+        return newlyPassed.length > 0 ? newlyPassed[newlyPassed.length - 1] : null;
+      });
+  }
+
   function updateCalendarAndTotal() {
     mobiscroll.getJson(
       '/wtm/api/calendar-progress',
@@ -312,14 +358,35 @@ mobiscrollReady(function() {
         text: isEdit ? 'Save' : 'Add',
         handler: function () {
           const distance = document.getElementById('distance-input').value;
+          
+          // Get current total before updating
+          const currentTotal = events.reduce((acc, ev) => acc + Number(ev.title.replace(/\s*km$/, '')), 0);
+          
           if (isEdit) {
+            // For edits, we need to subtract the old distance and add the new one
+            const oldDistance = Number(popupEvent.title.replace(/\s*km$/, ''));
+            const newDistance = Number(distance);
+            const previousTotal = currentTotal - oldDistance;
+            const projectedNewTotal = previousTotal + newDistance;
+            
             popupEvent.title = distance;
             fetch('/wtm/api/calendar-progress', {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ start: popupEvent.start, title: distance })
-            }).then(updateCalendarAndTotal);
+            }).then(() => {
+              updateCalendarAndTotal();
+              // Check for newly passed goals after calendar update
+              checkForNewlyPassedGoals(previousTotal, projectedNewTotal).then(newlyPassedGoal => {
+                if (newlyPassedGoal) {
+                  setTimeout(() => showGoalPopup(newlyPassedGoal, projectedNewTotal, true), 500);
+                }
+              });
+            });
           } else {
+            const newDistance = Number(distance);
+            const projectedNewTotal = currentTotal + newDistance;
+            
             events.push({
               start: popupDate,
               title: distance
@@ -328,7 +395,15 @@ mobiscrollReady(function() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ start: popupDate, title: distance })
-            }).then(updateCalendarAndTotal);
+            }).then(() => {
+              updateCalendarAndTotal();
+              // Check for newly passed goals after calendar update
+              checkForNewlyPassedGoals(currentTotal, projectedNewTotal).then(newlyPassedGoal => {
+                if (newlyPassedGoal) {
+                  setTimeout(() => showGoalPopup(newlyPassedGoal, projectedNewTotal, true), 500);
+                }
+              });
+            });
           }
           eventcalendar.setOptions({ data: events });
           popup.close();
