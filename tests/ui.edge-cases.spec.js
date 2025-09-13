@@ -26,6 +26,23 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     return cell;
   }
 
+  // Helper to properly close popup with Firefox compatibility
+  async function closePopupRobust(page, closeButton) {
+    await closeButton.click();
+    
+    // Firefox may need more time for popup animations/transitions
+    await page.waitForTimeout(1000);
+    
+    // Wait for popup to actually close - Firefox sometimes has timing issues
+    await page.waitForFunction(() => {
+      const popup = document.querySelector('#goal-popup');
+      return !popup || window.getComputedStyle(popup).display === 'none' || 
+             popup.style.display === 'none' || !popup.offsetParent;
+    }, { timeout: 10000 });
+    
+    await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 5000 });
+  }
+
   // Clean up before each test to ensure clean state
   test.beforeEach(async ({ page }) => {
     try {
@@ -122,8 +139,16 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     } catch (error) {
       // If still visible, try clicking outside the popup to close it
       await page.click('body');
-      await page.waitForTimeout(500);
-      await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+      await page.waitForTimeout(1000);
+      
+      // Wait for popup to actually close - Firefox sometimes has timing issues
+      await page.waitForFunction(() => {
+        const popup = document.querySelector('#goal-popup');
+        return !popup || window.getComputedStyle(popup).display === 'none' || 
+               popup.style.display === 'none' || !popup.offsetParent;
+      }, { timeout: 10000 });
+      
+      await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 5000 });
     }
   });
 
@@ -198,9 +223,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await expect(popupContent).not.toContainText('km to go');
     
     // Close the popup
-    await closeButton.click();
-    await page.waitForTimeout(500);
-    await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+    await closePopupRobust(page, closeButton);
   });
 
   test('Goal popup opens from header goals', async ({ page }) => {
@@ -225,9 +248,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       await expect(popupContent).toContainText('km');
       
       // Close the popup
-      await closeButton.click();
-      await page.waitForTimeout(500);
-      await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+      await closePopupRobust(page, closeButton);
     } else {
       // Add some distance to ensure we have a last goal in header
       const cell = await selectNextWeekCell(page);
@@ -253,9 +274,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       await expect(popupContent).toContainText('km');
       
       // Close the popup
-      await closeButton.click();
-      await page.waitForTimeout(500);
-      await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+      await closePopupRobust(page, closeButton);
     }
   });
 
@@ -285,9 +304,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       
       // Check that Close button works
       const closeButton = page.locator('text=Close').last();
-      await closeButton.click();
-      await page.waitForTimeout(500);
-      await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+      await closePopupRobust(page, closeButton);
     } else {
       // If no upcoming goals, test with completed goals by showing all
       const showAllButton = page.locator('#toggle-completed');
@@ -309,9 +326,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         
         // Check that Close button works
         const closeButton = page.locator('text=Close').last();
-        await closeButton.click();
-        await page.waitForTimeout(500);
-        await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+        await closePopupRobust(page, closeButton);
       }
     }
   });
@@ -373,9 +388,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         
         // Close the popup
         const closeButton = page.locator('text=Close').last();
-        await closeButton.click();
-        await page.waitForTimeout(500);
-        await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+        await closePopupRobust(page, closeButton);
       }
     }
   });
@@ -721,8 +734,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
       // Close the popup
       const closeButton = page.locator('text=Close').last();
-      await closeButton.click();
-      await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+      await closePopupRobust(page, closeButton);
     } else {
       // Try clicking on a completed goal instead
       const completedGoals = page.locator('.completed-goal');
@@ -740,8 +752,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
         // Close the popup
         const closeButton = page.locator('text=Close').last();
-        await closeButton.click();
-        await expect(page.locator('#goal-popup')).toBeHidden({ timeout: 10000 });
+        await closePopupRobust(page, closeButton);
       } else {
         console.log('No goals available to test manual opening');
       }
@@ -810,8 +821,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         
         // Close the popup
         const closeButton = page.locator('text=Close').last();
-        await closeButton.click();
-        await expect(goalPopup).toBeHidden({ timeout: 10000 });
+        await closePopupRobust(page, closeButton);
       } else {
         console.log('Goal popup did not appear - this may be expected depending on test data');
       }
