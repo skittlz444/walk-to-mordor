@@ -1,12 +1,38 @@
-# Worker + D1 Database
+# Walk to Mordor 🧙‍♂️
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+![Walk to Mordor App Preview](https://github.com/user-attachments/assets/4cf0a895-d616-4bb0-aaff-31a22b7b40b2)
 
-## Walk to Mordor Progress Tracker
+## Project Description
 
-This is a calendar-based progress tracking application built on Cloudflare Workers + D1. It features robust API error handling and validation.
+**Walk to Mordor** is a fitness tracking Progressive Web App (PWA) inspired by J.R.R. Tolkien's *The Lord of the Rings*. This application gamifies your daily walking or running routine by mapping your exercise distances to the epic journey from Bag End to Mount Doom and back again.
+
+Track your real-world exercise progress as you virtually follow in the footsteps of Frodo and Sam on their legendary quest. Every kilometer you walk in real life advances you along the 6,425 km (3,991 mile) round trip from the Shire to Mordor, complete with 191+ milestone markers from the books.
+
+### Project Goals
+
+- **Gamify Fitness**: Transform daily exercise into an epic adventure through Middle-earth
+- **Long-term Motivation**: Provide a meaningful, story-driven goal that takes months or years to complete
+- **Literary Connection**: Create an immersive experience that connects physical activity with beloved literature
+- **Progress Visualization**: Offer clear milestones and progress tracking to maintain motivation
+- **Accessibility**: Provide a modern, responsive web application that works on all devices
+
+### What It Does
+
+🚶‍♂️ **Daily Progress Tracking**: Log your daily walking/running distances through an intuitive calendar interface
+
+📍 **Literary Milestones**: Unlock 191+ story locations from Bag End to Mount Doom with rich descriptions from the books
+
+📊 **Visual Progress**: See your cumulative distance and track how far you've traveled on the epic journey
+
+🏆 **Achievement System**: Reach major story milestones like crossing the Brandywine River, arriving at Rivendell, or entering Mordor
+
+📱 **Progressive Web App**: Install on your phone or desktop for offline access and native app-like experience
+
+🎯 **Goal Management**: View upcoming milestones and track your progress toward major story events
+
+The complete journey covers **6,425 kilometers (3,991 miles)** - a substantial fitness goal that provides months or years of motivation while reliving one of literature's greatest adventures.
 
 ## API Error Handling Features
 
@@ -66,68 +92,117 @@ Error responses:
 ```
 
 ### Test Coverage
-- 27 comprehensive test cases covering all error scenarios
+- 236 comprehensive test cases across unit, API, and UI testing
+- 96%+ code coverage with automated validation
 - Valid edge cases (zero values, decimals, large numbers)
 - Invalid input validation (malformed JSON, wrong types, out of range)
-- HTTP method validation
-- Database error conditions
-- Automatic test data cleanup
+- HTTP method validation and database error conditions
+- Automatic test data cleanup and isolation
 
-<!-- dash-content-start -->
+## Features
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+### 📅 Daily Progress Tracking
+- **Calendar Interface**: Log daily walking/running distances with an intuitive calendar
+- **Flexible Input**: Enter distances in kilometers with decimal precision (e.g., 5.25 km)
+- **Edit & Delete**: Modify or remove entries as needed
+- **Cumulative Tracking**: Automatic calculation of total distance traveled
 
-```SQL
-SELECT * FROM comments LIMIT 3;
-```
+### 🗺️ Interactive Journey Map
+- **191+ Story Milestones**: From Bag End through Rivendell, Moria, Lothlórien, to Mount Doom and back
+- **Rich Descriptions**: Each milestone includes detailed descriptions from Tolkien's writings
+- **Progress Visualization**: See exactly where you are on the journey and what's coming next
+- **Achievement System**: Unlock major story locations as you progress
 
-The D1 database is initialized with a `comments` table and this data:
+### 🏆 Milestone Goals
+The journey includes major checkpoints from the books:
+- **Bag End to Rivendell**: 458 km (Challenge 1)
+- **Rivendell to Lothlórien**: 684 km (Challenge 2) 
+- **Through Moria and beyond**: Multiple story arcs
+- **Mount Doom**: The ultimate destination at 1,779 km
+- **Return Journey**: Complete the round trip back to Bag End (6,425 km total)
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
-```
+### 📱 Progressive Web App
+- **Offline Support**: Works without internet connection once installed
+- **Mobile Optimized**: Responsive design for phones, tablets, and desktop
+- **App Installation**: Install directly to your device's home screen
+- **Service Worker**: Automatic updates and background sync
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
+### 🛡️ Robust Architecture
+- **Error Handling**: Comprehensive validation for all user inputs
+- **Data Safety**: Automatic backups and conflict resolution
+- **Performance**: Serverless architecture with global edge distribution
+- **Testing**: 236 automated tests ensuring reliability
 
-<!-- dash-content-end -->
+## How to Use
+
+1. **Start Tracking**: Click on any date in the calendar to log your daily walking distance
+2. **View Progress**: See your total distance at the top of the screen
+3. **Explore Milestones**: Click on upcoming goals to read about the next story locations
+4. **Stay Motivated**: Watch your progress advance through Middle-earth's most famous locations
+5. **Track Long-term**: The complete journey provides months or years of fitness motivation
+
+Whether you're a casual walker aiming for 2-3 km per day or a dedicated runner covering 10+ km daily, the journey scales to your fitness level while providing consistent motivation through Tolkien's beloved story.
+
+## Technology Stack
+
+Built with modern web technologies for performance, reliability, and scalability:
+
+- **Runtime**: Cloudflare Workers (serverless edge computing)
+- **Database**: Cloudflare D1 (SQLite-based serverless SQL)
+- **Frontend**: Progressive Web App with offline capabilities
+- **Testing**: Jest (unit), Supertest (API), Playwright (E2E browser testing)
+- **Deployment**: Automated CI/CD with GitHub Actions
 
 ## Getting Started
 
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
+### Prerequisites
+- Node.js 18+ 
+- npm or pnpm package manager
+- Cloudflare account (for deployment)
 
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
-```
+### Local Development Setup
 
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
-
-## Setup Steps
-
-1. Install the project dependencies with a package manager of your choice:
+1. **Install dependencies**:
    ```bash
    npm install
    ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
+
+2. **Initialize local database**:
    ```bash
-   npx wrangler d1 create d1-template-database
+   npx wrangler d1 migrations apply DB --local
    ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
+   This creates the local SQLite database with progress tracking tables and 191+ story milestones.
+
+3. **Start development server**:
    ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
+   npm run dev
    ```
-4. Deploy the project!
+   The app will be available at `http://localhost:8787/wtm/`
+
+4. **Run tests** (optional):
+   ```bash
+   npm run test:unit      # Fast unit tests (3 seconds)
+   npm run test:coverage  # Unit tests with coverage report
+   ```
+
+### Production Deployment
+
+1. **Create Cloudflare D1 database**:
+   ```bash
+   npx wrangler d1 create walk-to-mordor-db
+   ```
+   Update the `database_id` in `wrangler.json` with the returned database ID.
+
+2. **Initialize production database**:
+   ```bash
+   npx wrangler d1 migrations apply DB --remote
+   ```
+
+3. **Deploy to Cloudflare Workers**:
    ```bash
    npm run deploy
    ```
-   
-   This will automatically run the build process to update the service worker cache version before deploying.
+   This automatically updates the service worker cache version and deploys the application.
 
 ## Build Process
 
