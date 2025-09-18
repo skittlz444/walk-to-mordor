@@ -29,7 +29,7 @@
     "supertest": "^7.1.4",
     "ts-jest": "^29.2.0",
     "typescript": "5.9.2",
-    "wrangler": "^4.36.0"
+    "wrangler": "^4.37.0"
   },
   "scripts": {
     "cf-typegen": "wrangler types",
