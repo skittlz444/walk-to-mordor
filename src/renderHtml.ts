@@ -16,25 +16,25 @@ export function renderHtml(totalDistance?: number) {
         <meta name="apple-mobile-web-app-title" content="Walk to Mordor" />
         
         <!-- Web App Manifest -->
-        <link rel="manifest" href="wtm/manifest.json" />
+        <link rel="manifest" href="/wtm/manifest.json" />
         
         <!-- Favicon and App Icons -->
-        <link rel="icon" type="image/svg+xml" href="wtm/icons/icon.svg" />
-        <link rel="apple-touch-icon" href="wtm/icons/icon-192x192.png" />
+        <link rel="icon" type="image/svg+xml" href="/wtm/icons/icon.svg" />
+        <link rel="apple-touch-icon" href="/wtm/icons/icon-192x192.png" />
         
         <!-- Stylesheets -->
-        <link href="wtm/css/mobiscroll.javascript.min.css" rel="stylesheet" />
-        <link href="wtm/css/main.css" rel="stylesheet" />
+        <link href="/wtm/css/mobiscroll.javascript.min.css" rel="stylesheet" />
+        <link href="/wtm/css/main.css" rel="stylesheet" />
         
         <!-- Scripts -->
-        <script src="wtm/js/mobiscroll.javascript.min.js" defer></script>
-        <script src="wtm/js/main.js" defer></script>
+        <script src="/wtm/js/mobiscroll.javascript.min.js" defer></script>
+        <script src="/wtm/js/main.js" defer></script>
         
         <!-- Service Worker Registration -->
         <script>
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-              navigator.serviceWorker.register('wtm/sw.js')
+              navigator.serviceWorker.register('/wtm/sw.js')
                 .then((registration) => {
                   console.log('SW registered: ', registration);
                 })
