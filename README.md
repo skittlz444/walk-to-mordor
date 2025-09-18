@@ -2,7 +2,7 @@
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
 
-![Walk to Mordor App Preview](https://github.com/user-attachments/assets/4cf0a895-d616-4bb0-aaff-31a22b7b40b2)
+![Walk to Mordor App Preview](https://github.com/user-attachments/assets/a6293ba3-412c-4deb-ab5c-f238c31c0005)
 
 ## Project Description
 
