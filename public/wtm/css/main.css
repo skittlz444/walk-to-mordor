@@ -323,10 +323,14 @@ h1 {
 }
 
 /* Goal popup scrolling styles - updated for Bootstrap modals */
-.goal-modal-scrollable .modal-body {
-  max-height: 90vh !important;
+.goal-modal-scrollable {
+  max-height: 80vh !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+}
+
+.goal-modal-scrollable .modal-body {
+  max-height: none !important;
 }
 
 /* Custom scrollbar styling for WebKit browsers */
