@@ -387,10 +387,6 @@ document.addEventListener('DOMContentLoaded', function() {
     modalOverlay.innerHTML = `
       <div class="modal-dialog modal-large">
         <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Goal Achievement</h5>
-            <button type="button" class="close-btn" id="close-goal-modal">×</button>
-          </div>
           <div class="modal-body goal-modal-scrollable">
             <div style="padding: 1.5em;">
               ${isCongratulations ? `<div class="goal-congratulations">🎉 Congratulations! You've passed a new goal! 🎉</div>` : ''}
@@ -418,8 +414,10 @@ document.addEventListener('DOMContentLoaded', function() {
               ${goal.description ? `<div style="color: #ccc; font-size: 1em; line-height: 1.4; text-align: justify;">${goal.description}</div>` : ''}
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="close-goal-btn">Close</button>
+          <div class="modal-footer modal-footer-full">
+            <div class="modal-footer-btns modal-footer-btns-goal">
+              <button type="button" class="btn btn-secondary" id="close-goal-btn">Close</button>
+            </div>
           </div>
         </div>
       </div>
@@ -429,7 +427,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add event listeners
     document.getElementById('close-goal-btn').addEventListener('click', closeGoalModal);
-    document.getElementById('close-goal-modal').addEventListener('click', closeGoalModal);
+    const closeModalBtn = document.getElementById('close-goal-modal');
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener('click', closeGoalModal);
+    }
 
     // Close modal when clicking overlay
     modalOverlay.addEventListener('click', function(e) {
