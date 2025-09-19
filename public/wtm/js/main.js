@@ -249,6 +249,10 @@ document.addEventListener('DOMContentLoaded', function() {
       distanceValue = event.title.replace(/\s*km$/, '');
     }
 
+    // Check if user has Samsung Health linked
+    const user = typeof window.currentUser === 'function' ? window.currentUser() : null;
+    const showSamsungSync = user && user.samsung_health_linked;
+
     // Create modal overlay
     const modalOverlay = document.createElement('div');
     modalOverlay.className = 'modal-overlay';
@@ -261,7 +265,11 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="form-group">
               <label for="distance-input">Distance (km):</label>
-              <input type="number" id="distance-input" step="any" min="0" value="${distanceValue}" placeholder="0.00">
+              <div class="input-group">
+                <input type="number" id="distance-input" step="any" min="0" value="${distanceValue}" placeholder="0.00">
+                ${showSamsungSync ? '<button type="button" class="btn btn-sync" id="samsung-sync-btn" title="Sync from Samsung Health"><i class="fas fa-sync-alt"></i></button>' : ''}
+              </div>
+              ${showSamsungSync ? '<div id="samsung-sync-status" class="sync-status"></div>' : ''}
             </div>
           </div>
           <div class="modal-footer modal-footer-full">
@@ -280,6 +288,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listeners
     document.getElementById('save-btn').addEventListener('click', handleSaveDistance);
     document.getElementById('cancel-btn').addEventListener('click', closeModal);
+    
+    // Samsung Health sync button
+    if (showSamsungSync) {
+      const samsungSyncBtn = document.getElementById('samsung-sync-btn');
+      if (samsungSyncBtn) {
+        samsungSyncBtn.addEventListener('click', handleSamsungSync);
+      }
+    }
     
     const closeModalBtn = document.getElementById('close-modal');
     if (closeModalBtn) {
@@ -380,6 +396,61 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Close modal
     document.querySelector('.modal-overlay').remove();
+  }
+
+  async function handleSamsungSync() {
+    const selectedDate = formatDate(popupDate);
+    const syncBtn = document.getElementById('samsung-sync-btn');
+    const syncStatus = document.getElementById('samsung-sync-status');
+    const distanceInput = document.getElementById('distance-input');
+    
+    // Show loading state
+    if (syncBtn) {
+      syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      syncBtn.disabled = true;
+    }
+    
+    if (syncStatus) {
+      syncStatus.innerHTML = '<span class="sync-loading">Syncing from Samsung Health...</span>';
+    }
+    
+    try {
+      // Call the sync function from auth.js
+      const syncResult = await window.syncSamsungHealthForDate(selectedDate);
+      
+      if (syncResult && syncResult.distance > 0) {
+        // Fill the distance input with the synced value
+        if (distanceInput) {
+          distanceInput.value = syncResult.distance;
+        }
+        
+        if (syncStatus) {
+          syncStatus.innerHTML = `<span class="sync-success">✓ Synced ${syncResult.distance} km (${syncResult.steps} steps)</span>`;
+        }
+      } else {
+        if (syncStatus) {
+          syncStatus.innerHTML = '<span class="sync-warning">⚠ No step data found for this date</span>';
+        }
+      }
+    } catch (error) {
+      console.error('Samsung Health sync error:', error);
+      if (syncStatus) {
+        syncStatus.innerHTML = '<span class="sync-error">✗ Failed to sync. Please try again.</span>';
+      }
+    } finally {
+      // Restore button state
+      if (syncBtn) {
+        syncBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        syncBtn.disabled = false;
+      }
+      
+      // Clear status after 5 seconds
+      setTimeout(() => {
+        if (syncStatus) {
+          syncStatus.innerHTML = '';
+        }
+      }, 5000);
+    }
   }
 
   function showGoalModal(goal, currentDistance, isCongratulations = false) {
