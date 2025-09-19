@@ -15,6 +15,164 @@ function mobiscrollReady(callback) {
   }
 }
 
+// Authentication functions
+function initializeAuth() {
+  // Handle OAuth login buttons
+  const googleLoginBtn = document.getElementById('google-login-btn');
+  const facebookLoginBtn = document.getElementById('facebook-login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const linkSamsungBtn = document.getElementById('link-samsung-btn');
+
+  if (googleLoginBtn) {
+    googleLoginBtn.addEventListener('click', () => handleOAuthLogin('google'));
+  }
+  
+  if (facebookLoginBtn) {
+    facebookLoginBtn.addEventListener('click', () => handleOAuthLogin('facebook'));
+  }
+  
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
+  }
+  
+  if (linkSamsungBtn) {
+    linkSamsungBtn.addEventListener('click', handleSamsungHealthLink);
+  }
+}
+
+async function handleOAuthLogin(provider) {
+  try {
+    // Get OAuth URL from backend
+    const response = await fetch(`/wtm/api/auth/${provider}`);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to get OAuth URL');
+    }
+    
+    // Store state for CSRF protection
+    sessionStorage.setItem('oauth_state', data.state);
+    sessionStorage.setItem('oauth_provider', provider);
+    
+    // Redirect to OAuth provider
+    window.location.href = data.authUrl;
+  } catch (error) {
+    console.error('OAuth login error:', error);
+    alert('Login failed: ' + error.message);
+  }
+}
+
+async function handleLogout() {
+  try {
+    await fetch('/wtm/api/auth/logout', { method: 'POST' });
+    window.location.reload();
+  } catch (error) {
+    console.error('Logout error:', error);
+    window.location.reload(); // Reload anyway
+  }
+}
+
+async function handleSamsungHealthLink() {
+  try {
+    const response = await fetch('/wtm/api/samsung-health/link');
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to get Samsung Health link URL');
+    }
+    
+    // Store state for CSRF protection
+    sessionStorage.setItem('samsung_state', data.state);
+    
+    // Open Samsung Health authorization in popup
+    const popup = window.open(data.authUrl, 'samsung-health-auth', 'width=600,height=700');
+    
+    // Listen for popup close
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        // Check if authorization was successful by refreshing user data
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    }, 1000);
+  } catch (error) {
+    console.error('Samsung Health link error:', error);
+    alert('Failed to link Samsung Health: ' + error.message);
+  }
+}
+
+// Handle OAuth callback (if we're on the callback page)
+function handleOAuthCallback() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const state = urlParams.get('state');
+  const error = urlParams.get('error');
+  
+  if (error) {
+    alert('Authentication failed: ' + error);
+    window.location.href = '/wtm/';
+    return;
+  }
+  
+  if (code && state) {
+    const storedState = sessionStorage.getItem('oauth_state');
+    const provider = sessionStorage.getItem('oauth_provider');
+    
+    if (state !== storedState) {
+      alert('Invalid state parameter. Possible CSRF attack.');
+      window.location.href = '/wtm/';
+      return;
+    }
+    
+    // Exchange code for tokens
+    fetch('/wtm/api/auth/callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, code, state })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Clear stored OAuth data
+        sessionStorage.removeItem('oauth_state');
+        sessionStorage.removeItem('oauth_provider');
+        
+        // Redirect to main app
+        window.location.href = '/wtm/';
+      } else {
+        throw new Error(data.error || 'Authentication failed');
+      }
+    })
+    .catch(error => {
+      console.error('OAuth callback error:', error);
+      alert('Authentication failed: ' + error.message);
+      window.location.href = '/wtm/';
+    });
+  }
+}
+
+// Samsung Health sync function
+async function syncFromSamsungHealth(date) {
+  try {
+    const response = await fetch('/wtm/api/sync/samsung-health', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Sync failed');
+    }
+    
+    return data.distance;
+  } catch (error) {
+    console.error('Samsung Health sync error:', error);
+    throw error;
+  }
+}
+
 mobiscrollReady(function() {
   let events = [];
   let eventcalendar;
@@ -43,12 +201,62 @@ mobiscrollReady(function() {
     }
     isEdit = !!existingEvent;
     popupEvent = existingEvent || event;
+    
+    // Check if user is authenticated and has Samsung Health linked
+    const isAuthenticated = window.WTM_AUTH && window.WTM_AUTH.isAuthenticated;
+    const hasSamsungHealth = isAuthenticated && window.WTM_AUTH.user && window.WTM_AUTH.user.samsungHealthConnected;
+    
+    const samsungSyncButton = hasSamsungHealth ? 
+      `<button id="samsung-sync-btn" type="button" style="
+        width:100%;
+        margin-bottom:1em;
+        padding:0.7em;
+        background:#1f7ce8;
+        color:white;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+        font-size:0.9em;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:0.5em;
+      ">
+        📱 Sync from Samsung Health
+      </button>` : '';
+    
     document.getElementById('popup').innerHTML =
       `<div style="padding:1em;">
         <label style="color:white;">Date: ${selectedDate}</label><br>
         <label style="color:white;">Distance (km):</label>
         <input id="distance-input" type="number" step="any" min="0" value="${distanceValue}" style="width:100%;margin-bottom:1em;" />
+        ${samsungSyncButton}
       </div>`;
+    
+    // Add Samsung Health sync functionality
+    if (hasSamsungHealth) {
+      const syncBtn = document.getElementById('samsung-sync-btn');
+      if (syncBtn) {
+        syncBtn.addEventListener('click', async () => {
+          syncBtn.disabled = true;
+          syncBtn.innerHTML = '⏳ Syncing...';
+          
+          try {
+            const distance = await syncFromSamsungHealth(selectedDate);
+            document.getElementById('distance-input').value = distance.toFixed(2);
+            syncBtn.innerHTML = '✅ Synced!';
+            setTimeout(() => {
+              syncBtn.disabled = false;
+              syncBtn.innerHTML = '📱 Sync from Samsung Health';
+            }, 2000);
+          } catch (error) {
+            alert('Sync failed: ' + error.message);
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = '📱 Sync from Samsung Health';
+          }
+        });
+      }
+    }
     const buttons = [
       'cancel',
       {
@@ -467,4 +675,12 @@ mobiscrollReady(function() {
   });
 
   updateCalendarAndTotal();
+  
+  // Initialize authentication features
+  initializeAuth();
+  
+  // Handle OAuth callback if we're on callback page
+  if (window.location.search.includes('code=')) {
+    handleOAuthCallback();
+  }
 });
