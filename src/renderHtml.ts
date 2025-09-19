@@ -267,8 +267,115 @@ export function renderHtml(totalDistance?: number) {
           document.querySelectorAll('.calendar-cell').forEach(function(cell) {
             cell.addEventListener('click', function() {
               const dateStr = this.getAttribute('data-date');
-              alert('Clicked on date: ' + dateStr);
+              showDistanceModal(dateStr);
             });
+          });
+        }
+        
+        function showDistanceModal(dateStr) {
+          // Find existing event for this date
+          const existingEvent = events.find(function(ev) {
+            return formatDate(ev.start) === dateStr;
+          });
+          const isEdit = !!existingEvent;
+          const distanceValue = existingEvent ? existingEvent.title.replace(/\s*km$/, '') : '';
+          
+          // Create modal element
+          const modalDiv = document.createElement('div');
+          modalDiv.className = 'modal-overlay';
+          modalDiv.id = 'distance-modal';
+          modalDiv.innerHTML = 
+            '<div class="modal-dialog">' +
+              '<div class="modal-content">' +
+                '<div class="modal-header">' +
+                  '<h5 class="modal-title">' + (isEdit ? 'Edit' : 'Add') + ' Distance</h5>' +
+                  '<button type="button" class="close-btn">×</button>' +
+                '</div>' +
+                '<div class="modal-body">' +
+                  '<div class="form-group">' +
+                    '<label>Date: ' + dateStr + '</label>' +
+                  '</div>' +
+                  '<div class="form-group">' +
+                    '<label for="distance-input">Distance (km):</label>' +
+                    '<input type="number" id="distance-input" step="any" min="0" value="' + distanceValue + '" placeholder="0.00">' +
+                  '</div>' +
+                '</div>' +
+                '<div class="modal-footer">' +
+                  '<button type="button" class="btn btn-secondary" data-action="cancel">Cancel</button>' +
+                  (isEdit ? '<button type="button" class="btn btn-danger" data-action="delete">Delete</button>' : '') +
+                  '<button type="button" class="btn btn-primary" data-action="save">' + (isEdit ? 'Save' : 'Add') + '</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          
+          document.body.appendChild(modalDiv);
+          
+          // Add event listeners
+          modalDiv.querySelector('.close-btn').addEventListener('click', closeDistanceModal);
+          modalDiv.querySelector('[data-action="cancel"]').addEventListener('click', closeDistanceModal);
+          modalDiv.querySelector('[data-action="save"]').addEventListener('click', function() {
+            saveDistance(dateStr, isEdit);
+          });
+          
+          if (isEdit) {
+            modalDiv.querySelector('[data-action="delete"]').addEventListener('click', function() {
+              deleteDistance(dateStr);
+            });
+          }
+          
+          // Focus on input
+          setTimeout(function() {
+            document.getElementById('distance-input').focus();
+          }, 100);
+        }
+        
+        function closeDistanceModal() {
+          const modal = document.getElementById('distance-modal');
+          if (modal) {
+            modal.remove();
+          }
+        }
+        
+        function saveDistance(dateStr, isEdit) {
+          const distanceInput = document.getElementById('distance-input');
+          const distance = distanceInput.value;
+          
+          if (!distance || isNaN(distance) || Number(distance) < 0) {
+            alert('Please enter a valid distance');
+            return;
+          }
+          
+          const method = isEdit ? 'PUT' : 'POST';
+          const body = JSON.stringify({ start: dateStr, title: distance });
+          
+          fetch('/wtm/api/calendar-progress', {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: body
+          }).then(function() {
+            updateCalendarAndTotal();
+            closeDistanceModal();
+          }).catch(function(error) {
+            console.error('Save error:', error);
+            alert('Error saving distance');
+          });
+        }
+        
+        function deleteDistance(dateStr) {
+          if (!confirm('Are you sure you want to delete this distance entry?')) {
+            return;
+          }
+          
+          fetch('/wtm/api/calendar-progress', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ start: dateStr })
+          }).then(function() {
+            updateCalendarAndTotal();
+            closeDistanceModal();
+          }).catch(function(error) {
+            console.error('Delete error:', error);
+            alert('Error deleting distance');
           });
         }
         
