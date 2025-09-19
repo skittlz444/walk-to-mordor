@@ -317,7 +317,7 @@ h1 {
   bottom: 0;
   left: 0;
   width: 100vw;
-  z-index: 1;
+  z-index: 100;
   background: rgba(0,0,0,0.95);
   box-shadow: 0 -2px 16px #222;
 }
@@ -421,13 +421,14 @@ h1 {
 }
 
 .modal-dialog {
-  background: #2d2d2d;
-  border-radius: 8px;
+  background: #1a1a1a;
+  border-radius: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   max-width: 500px;
   width: 90%;
   max-height: 90vh;
   overflow: hidden;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 .modal-dialog.modal-large {
@@ -491,28 +492,33 @@ h1 {
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 0.2rem;
+  padding-left:2em;
+  padding-right:2em;
 }
 
 .form-group label {
   display: block;
   color: #ccc;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
+  margin-bottom: 0.2rem;
+
 }
 
 .form-group input {
-  width: 100%;
-  padding: 0.5rem;
-  background: #1a1a1a;
   border: 1px solid #555;
   border-radius: 4px;
-  color: #fff;
   font-size: 1rem;
+  width: 100%;
 }
 
 .form-group input:focus {
   outline: none;
+
+/* Center and size the distance input */
+.form-group input#distance-input {
+  margin: 0 auto;
+  display: block;
+}
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
@@ -578,4 +584,28 @@ h1 {
     text-shadow: 0 0 8px #00FF7F;
     transform: scale(1);
   }
+}
+
+/* Modal footer full width buttons */
+.modal-footer-full {
+  padding: 0;
+  background: #1a1a1a;
+}
+.modal-footer-btns {
+  display: flex;
+  width: 100%;
+  background: #1a1a1a;
+  gap: 0.7em;
+}
+.modal-footer-btns-edit button {
+  flex: 1 1 0;
+  margin: 0;
+  border-radius: 0;
+  font-size: 1.08em;
+  min-height: 2.5em;
+  width: 100%;
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  font-weight: 400;
 }

@@ -253,10 +253,6 @@ document.addEventListener('DOMContentLoaded', function() {
     modalOverlay.innerHTML = `
       <div class="modal-dialog">
         <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">${isEdit ? 'Edit' : 'Add'} Distance</h5>
-            <button type="button" class="close-btn" id="close-modal">×</button>
-          </div>
           <div class="modal-body">
             <div class="form-group">
               <label>Date: ${selectedDate}</label>
@@ -266,10 +262,12 @@ document.addEventListener('DOMContentLoaded', function() {
               <input type="number" id="distance-input" step="any" min="0" value="${distanceValue}" placeholder="0.00">
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
-            ${isEdit ? '<button type="button" class="btn btn-danger" id="delete-btn">Delete</button>' : ''}
-            <button type="button" class="btn btn-primary" id="save-btn">${isEdit ? 'Save' : 'Add'}</button>
+          <div class="modal-footer modal-footer-full">
+            <div class="modal-footer-btns modal-footer-btns-edit">
+              ${isEdit ? '<button type="button" class="btn btn-danger" id="delete-btn">Delete</button>' : ''}
+              <button type="button" class="btn btn-primary" id="save-btn">${isEdit ? 'Save' : 'Add'}</button>
+              <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
@@ -280,10 +278,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listeners
     document.getElementById('save-btn').addEventListener('click', handleSaveDistance);
     document.getElementById('cancel-btn').addEventListener('click', closeModal);
-    document.getElementById('close-modal').addEventListener('click', closeModal);
+    
+    const closeModalBtn = document.getElementById('close-modal');
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener('click', closeModal);
+    }
     
     if (isEdit) {
-      document.getElementById('delete-btn').addEventListener('click', handleDeleteDistance);
+      const deleteBtn = document.getElementById('delete-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', handleDeleteDistance);
+      }
     }
 
     // Close modal when clicking overlay
@@ -387,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="close-btn" id="close-goal-modal">×</button>
           </div>
           <div class="modal-body goal-modal-scrollable">
-            <div style="padding: 1.5em; max-width: 400px;">
+            <div style="padding: 1.5em;">
               ${isCongratulations ? `<div class="goal-congratulations">🎉 Congratulations! You've passed a new goal! 🎉</div>` : ''}
               ${goal.special ? `<div style="color: #FFD700; font-size: 1.4em; font-weight: bold; margin-bottom: 0.5em; text-align: center;">${goal.special}</div>` : ''}
               <div style="color: #fff; font-size: 1.2em; font-weight: bold; margin-bottom: 0.8em; text-align: center;">${goal.title}</div>
@@ -395,11 +400,11 @@ document.addEventListener('DOMContentLoaded', function() {
               ${!isCompleted ? `<div style="color: #aaa; font-size: 1em; margin-bottom: 1em; text-align: center;">${distanceToGo.toFixed(2)} km to go</div>` : ''}
               <div id="goal-image-container" style="margin-bottom: 1em; text-align: center;">
                 ${goal.id ? `
-                  <div style="position: relative; display: inline-block; max-width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                  <div style="position: relative; max-width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
                     <img id="goal-thumb-image" 
                          src="/wtm/img/thumbs/${goal.id}-thumb.jpg" 
                          alt="Goal image" 
-                         style="width: 100%; max-width: 350px; height: auto; filter: blur(2px); transition: filter 0.3s ease;"
+                         style="width: 100%; height: auto; filter: blur(2px); transition: filter 0.3s ease;"
                          onerror="this.onerror=null;this.src='/wtm/img/thumbs/0-thumb.jpg';">
                     <img id="goal-highres-image" 
                          src="/wtm/img/highres/${goal.id}.jpg" 
