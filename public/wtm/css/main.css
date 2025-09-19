@@ -1,38 +1,44 @@
 /* Custom Calendar Styles */
 .custom-calendar {
   color: #fff;
-  background: rgba(0,0,0,0.95);
   border-radius: 8px;
   overflow: hidden;
-  margin: 1rem 0;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #1a1a1a;
 }
+
 
 .calendar-header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: row;
   align-items: center;
-  padding: 0.8rem 1rem;
-  background: rgba(20,20,20,0.95);
-  border-bottom: 1px solid #333;
+  padding: 0.2rem 1rem;
+  background: #1a1a1a;
+  border-bottom: none;
 }
 
+
 .calendar-left {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   justify-content: flex-start;
 }
 
+
 .calendar-center {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
+  flex-direction: row;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
+  min-height: 50px;
+  padding: 0.3em;
+  background: #1a1a1a;
+  overflow: hidden;
+  gap: 0.5rem;
 }
-
 .calendar-nav {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -71,17 +77,18 @@
 .day-headers {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background: rgba(30,30,30,0.9);
+  background: #1a1a1a;
   border-bottom: 1px solid #444;
 }
 
 .day-header {
   padding: 0.6em 0.5em;
-  text-align: center;
-  font-weight: 500;
+  text-align: left;
+  font-weight: 400;
   color: #aaa;
-  font-size: 0.8em;
+  font-size: .875em;
   text-transform: capitalize;
+  border-top: none;
 }
 
 .week-view {
@@ -104,7 +111,6 @@
 
 .calendar-cell {
   min-height: 50px;
-  padding: 0.3em;
   border: solid #343434;
   border-width: 1px 0.666667px 0.666667px 1px;
   cursor: pointer;
@@ -126,7 +132,7 @@
 }
 
 .calendar-cell.today {
-  background: rgba(0,123,255,0.15);
+  background: rgba(0,120,215,.25);
   border: 1px solid rgba(0,123,255,0.3);
 }
 
@@ -137,7 +143,8 @@
 .day-number {
   font-weight: normal;
   font-size: 0.85em;
-  margin-bottom: 0.4em;
+  margin-bottom: 0.7em;
+  margin-left:0.3em;
   color: #ccc;
 }
 
@@ -151,14 +158,14 @@
 .event-label {
   background: #1e5aa8;
   color: white;
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  font-size: 0.65em;
-  font-weight: 500;
-  margin-top: auto;
-  max-width: 100%;
-  width: fit-content;
-  text-align: center;
+  padding: 0.15em 0.4em;
+  border-radius: 0;
+  font-size: 0.8em;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-top: 0.1em;
+  width: 100%;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -181,34 +188,37 @@
 
 .week-cell {
   min-height: 70px;
+  background: #1a1a1a;
 }
 
 .month-cell {
   min-height: 50px;
+  padding-bottom: 1.5em;
+  background: #1a1a1a;
 }
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .calendar-header {
     padding: 0.6rem 0.8rem;
-    flex-direction: column;
+    flex-direction: row;
     gap: 0.5rem;
   }
-  
-  .calendar-left,
-  .calendar-center,
-  .calendar-nav {
-    flex: none;
+  .calendar-left {
+    flex: 0 0 auto;
   }
-  
   .calendar-center {
+    flex: 1 1 0;
+    justify-content: center;
+    align-items: center;
     order: 2;
   }
-  
   .calendar-nav {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    align-items: center;
     order: 3;
   }
-  
   .calendar-title {
     font-size: 1.625em;
     min-width: 120px;
@@ -217,36 +227,29 @@
     line-height: 1.461538em;
     padding: 0 .307693em;
   }
-  
   .nav-btn {
     width: 28px;
     height: 28px;
     font-size: 0.9em;
   }
-  
   .calendar-cell {
     min-height: 45px;
     padding: 0.25em;
   }
-  
   .week-cell {
     min-height: 55px;
   }
-  
   .event-label {
     font-size: 0.6em;
     padding: 0.15em 0.25em;
   }
-  
   .day-number {
     font-size: 0.8em;
   }
-  
   .view-toggle-group label {
     padding: 0.3em 0.5em;
     font-size: 0.9em;
   }
-  
   .today-btn {
     padding: 0.3em 0.6em;
     font-size: 0.8em;
@@ -355,7 +358,7 @@ h1 {
   display: flex;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -364,13 +367,13 @@ h1 {
 }
 
 .view-toggle-group label {
-  padding: 0.4em 0.6em;
+  padding: 0.4em 1.2em;
   cursor: pointer;
   color: #ccc;
   border: none;
   background: #404040;
   transition: color 0.2s ease;
-  font-size: 1em;
+
   margin: 0;
 }
 
@@ -390,7 +393,8 @@ h1 {
   padding: 0.4em 0.7em;
   cursor: pointer;
   transition: color 0.2s ease;
-  font-size: 1em;
+  font-size: 1.2em;
+  font-weight: 300;
 }
 
 .today-btn:hover {
