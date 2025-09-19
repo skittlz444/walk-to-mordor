@@ -234,7 +234,7 @@
   }
   .calendar-cell {
     min-height: 45px;
-    padding: 0.25em;
+    padding: 0.25em 0;
   }
   .week-cell {
     min-height: 55px;
@@ -408,6 +408,29 @@ h1 {
 .today-btn:hover {
   background: rgba(60,60,60,0.8);
   color: white;
+}
+
+/* Default nav-buttons layout for desktop */
+.calendar-nav .nav-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 600px) {
+  .calendar-header {
+    flex-wrap: wrap;
+  }
+  
+  .calendar-nav {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  
+  .today-btn {
+    order: 2;
+    margin-top: 0.2em;
+  }
 }
 
 /* Modal Styles */

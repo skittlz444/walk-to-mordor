@@ -59,9 +59,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
           </div>
           <div class="calendar-nav">
-          <button class="today-btn" id="today-btn">Today</button>
-            <button class="nav-btn" id="prev-btn"><i class="fas fa-chevron-left"></i></button>
-            <button class="nav-btn" id="next-btn"><i class="fas fa-chevron-right"></i></button>
+            <div class="nav-buttons">
+              <button class="nav-btn" id="prev-btn"><i class="fas fa-chevron-left"></i></button>
+              <button class="nav-btn" id="next-btn"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <button class="today-btn" id="today-btn">Today</button>
           </div>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
