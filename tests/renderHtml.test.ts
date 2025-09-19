@@ -38,14 +38,12 @@ describe('renderHtml', () => {
     const result = renderHtml(10);
     
     expect(result).toContain('main.js');
-    expect(result).toContain('mobiscroll.javascript.min.js');
   });
 
   it('should include CSS files', () => {
     const result = renderHtml(10);
     
     expect(result).toContain('main.css');
-    expect(result).toContain('mobiscroll.javascript.min.css');
   });
 
   it('should handle large numbers', () => {

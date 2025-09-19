@@ -25,7 +25,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   test.beforeEach(async ({ page }) => {
     try {
       // Close any existing popups that might interfere with the next test
-      const existingPopup = page.locator('#goal-popup');
+      const existingPopup = page.locator('.modal-overlay');
       if (await existingPopup.isVisible({ timeout: 1000 })) {
         const closeButton = page.locator('text=Close').last();
         if (await closeButton.isVisible({ timeout: 1000 })) {
@@ -81,7 +81,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   async function selectCalendarDate(page, targetDay) {
     try {
       // Use the approach from edge cases test - navigate to next week
-      await page.click('[aria-label="Next page"]');
+      await page.click('#next-btn');
       await page.waitForTimeout(300);
       
       // Get timestamp for next week using the same approach as edge cases
@@ -93,14 +93,14 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
       });
       
       // Use the timestamp-based selector that works reliably
-      const cell = page.locator(`[aria-describedby="mbsc-calendar-day-desc-${timestamp}"]`).first();
+      const cell = page.locator(`[data-timestamp="${timestamp}"]`).first();
       await expect(cell).toBeVisible({ timeout: 5000 });
       await expect(cell).toBeEnabled({ timeout: 5000 });
       
       return cell;
     } catch (error) {
       // Fallback: try any available calendar cell that's not disabled
-      const availableCells = page.locator('.mbsc-calendar-cell:not(.mbsc-disabled)');
+      const availableCells = page.locator('.calendar-cell');
       const cellCount = await availableCells.count();
       
       if (cellCount > 0) {
@@ -202,7 +202,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
       // Manual deletion approach as fallback
       // Look for the event in the calendar by clicking on the calendar label
-      const eventLabel = page.locator('.mbsc-calendar-label-text', { hasText: `${distance} km` }).first();
+      const eventLabel = page.locator('.event-label', { hasText: `${distance} km` }).first();
       
       if (await eventLabel.isVisible({ timeout: 2000 })) {
         await eventLabel.click();
@@ -487,8 +487,8 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     await expect(page.locator('#eventcalendar')).toBeVisible();
     
     // Find navigation buttons
-    const nextButton = page.locator('button[title="Next page"], [aria-label*="Next page"]');
-    const prevButton = page.locator('button[title="Previous page"], [aria-label*="Previous page"]');
+    const nextButton = page.locator('#next-btn');
+    const prevButton = page.locator('#prev-btn');
     
     await expect(nextButton).toBeVisible();
     await expect(prevButton).toBeVisible();
@@ -531,7 +531,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
             await page.waitForTimeout(1000);
             
             // Check if popup appeared using simpler selector
-            const popup = page.locator('#goal-popup');
+            const popup = page.locator('.modal-overlay');
             if (await popup.isVisible({ timeout: 3000 })) {
               
               // Check for images in popup (simplified verification)
@@ -623,7 +623,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
     // Close any existing popups first
     try {
-      const existingPopup = page.locator('#goal-popup');
+      const existingPopup = page.locator('.modal-overlay');
       if (await existingPopup.isVisible({ timeout: 1000 })) {
         const closeButton = page.locator('text=Close').last();
         if (await closeButton.isVisible({ timeout: 1000 })) {
@@ -684,7 +684,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
       await page.waitForTimeout(1000);
 
       // Check if the goal popup opened with congratulations text
-      const goalPopup = page.locator('#goal-popup');
+      const goalPopup = page.locator('.modal-overlay');
       if (await goalPopup.isVisible({ timeout: 5000 })) {
         // Check for congratulations text
         await expect(goalPopup).toContainText('Congratulations! You\'ve passed a new goal!');
@@ -709,7 +709,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     } finally {
       // Always try to close any remaining popups
       try {
-        const finalPopup = page.locator('#goal-popup');
+        const finalPopup = page.locator('.modal-overlay');
         if (await finalPopup.isVisible({ timeout: 1000 })) {
           const closeButton = page.locator('text=Close').last();
           if (await closeButton.isVisible({ timeout: 1000 })) {

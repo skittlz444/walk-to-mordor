@@ -23,12 +23,8 @@ export function renderHtml(totalDistance?: number) {
         <link rel="apple-touch-icon" href="/wtm/icons/icon-192x192.png" />
         
         <!-- Stylesheets -->
-        <link href="/wtm/css/mobiscroll.javascript.min.css" rel="stylesheet" />
-        <link href="/wtm/css/main.css" rel="stylesheet" />
-        
-        <!-- Scripts -->
-        <script src="/wtm/js/mobiscroll.javascript.min.js" defer></script>
-        <script src="/wtm/js/main.js" defer></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+        <link href="wtm/css/main.css" rel="stylesheet" />
         
         <!-- Service Worker Registration -->
         <script>
@@ -57,8 +53,9 @@ export function renderHtml(totalDistance?: number) {
       <div id="eventcalendar-container">
         <div id="eventcalendar"></div>
       </div>
-      <div id="popup"></div>
-      <div id="goal-popup"></div>
+      
+      <!-- Scripts -->
+      <script src="wtm/js/main.js"></script>
       </body>
     </html>
 `;
