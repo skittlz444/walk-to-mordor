@@ -329,6 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const previousTotal = currentTotal - oldDistance;
       const projectedNewTotal = previousTotal + newDistance;
       
+      popupEvent.title = distance;
       fetch('/wtm/api/calendar-progress', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -345,6 +346,9 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       const newDistance = Number(distance);
       const projectedNewTotal = currentTotal + newDistance;
+      
+      // Update local events array before making the API call
+      events.push({ start: selectedDate, title: distance });
       
       fetch('/wtm/api/calendar-progress', {
         method: 'POST',
