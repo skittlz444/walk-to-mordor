@@ -44,20 +44,25 @@ document.addEventListener('DOMContentLoaded', function() {
     container.innerHTML = `
       <div class="custom-calendar">
         <div class="calendar-header">
-          <div class="calendar-nav">
-            <button class="nav-btn" id="prev-btn">‹</button>
+          <div class="calendar-left">
             <div class="calendar-title" id="calendar-title"></div>
-            <button class="nav-btn" id="next-btn">›</button>
           </div>
-          <div class="calendar-view-toggle">
-            <div class="view-toggle-group">
-              <input type="radio" name="view-toggle" id="month-view" value="month" ${currentView === 'month' ? 'checked' : ''}>
-              <label for="month-view">Month</label>
-              <input type="radio" name="view-toggle" id="week-view" value="week" ${currentView === 'week' ? 'checked' : ''}>
-              <label for="week-view">Week</label>
+          <div class="calendar-center">
+            <div class="calendar-view-toggle">
+              <div class="view-toggle-group">
+                <input type="radio" name="view-toggle" id="month-view" value="month" ${currentView === 'month' ? 'checked' : ''}>
+                <label for="month-view"><i class="fa-solid fa-calendar-days"></i></label>
+                <input type="radio" name="view-toggle" id="week-view" value="week" ${currentView === 'week' ? 'checked' : ''}>
+                <label for="week-view"><i class="fa-solid fa-calendar-week"></i></label>
+              </div>
             </div>
+            
           </div>
+          <div class="calendar-nav">
           <button class="today-btn" id="today-btn">Today</button>
+            <button class="nav-btn" id="prev-btn"><i class="fas fa-chevron-left"></i></button>
+            <button class="nav-btn" id="next-btn"><i class="fas fa-chevron-right"></i></button>
+          </div>
         </div>
         <div class="calendar-grid" id="calendar-grid"></div>
       </div>

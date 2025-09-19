@@ -4,55 +4,84 @@
   background: rgba(0,0,0,0.95);
   border-radius: 8px;
   overflow: hidden;
+  margin: 1rem 0;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.8rem 1rem;
   background: rgba(20,20,20,0.95);
   border-bottom: 1px solid #333;
 }
 
-.calendar-nav {
+.calendar-left {
+  flex: 1;
   display: flex;
+  justify-content: flex-start;
+}
+
+.calendar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
   align-items: center;
   gap: 1rem;
 }
 
+.calendar-nav {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .nav-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2em;
-  font-weight: bold;
+  font-size: 1em;
+  background: transparent;
+  color: #ccc;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.nav-btn:hover {
+  color: #fff;
 }
 
 .calendar-title {
-  font-size: 1.1em;
-  font-weight: bold;
-  color: #FFD700;
+  font-size: 1.625em;
+  font-weight: 300;
+  line-height: 1.461538em;
+  padding: 0 .307693em;
+  color: #fff;
   min-width: 150px;
-  text-align: center;
+  text-align: left;
+  
 }
 
 .day-headers {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background: rgba(40,40,40,0.8);
-  border-bottom: 1px solid #555;
+  background: rgba(30,30,30,0.9);
+  border-bottom: 1px solid #444;
 }
 
 .day-header {
-  padding: 0.8em 0.5em;
+  padding: 0.6em 0.5em;
   text-align: center;
-  font-weight: bold;
-  color: #ccc;
-  font-size: 0.9em;
+  font-weight: 500;
+  color: #aaa;
+  font-size: 0.8em;
+  text-transform: capitalize;
 }
 
 .week-view {
@@ -74,15 +103,18 @@
 }
 
 .calendar-cell {
-  min-height: 80px;
-  padding: 0.5em;
-  border-right: 1px solid #333;
+  min-height: 50px;
+  padding: 0.3em;
+  border: solid #343434;
+  border-width: 1px 0.666667px 0.666667px 1px;
   cursor: pointer;
   position: relative;
   transition: background-color 0.2s ease;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   align-items: flex-start;
+  overflow: hidden;
 }
 
 .calendar-cell:last-child {
@@ -90,11 +122,12 @@
 }
 
 .calendar-cell:hover {
-  background: rgba(255,215,0,0.1);
+  background: rgba(255,255,255,0.05);
 }
 
 .calendar-cell.today {
-  background: rgba(0,123,255,0.2);
+  background: rgba(0,123,255,0.15);
+  border: 1px solid rgba(0,123,255,0.3);
 }
 
 .calendar-cell.other-month {
@@ -102,81 +135,120 @@
 }
 
 .day-number {
-  font-weight: bold;
-  font-size: 0.9em;
-  margin-bottom: 0.3em;
-  color: #fff;
+  font-weight: normal;
+  font-size: 0.85em;
+  margin-bottom: 0.4em;
+  color: #ccc;
 }
 
 .calendar-cell.today .day-number {
   color: #007bff;
+  font-weight: bold;
 }
 
+/* Remove the blue background for event cells - events should only show as distance labels */
+
 .event-label {
-  background: #007bff;
+  background: #1e5aa8;
   color: white;
   padding: 0.2em 0.4em;
-  border-radius: 4px;
-  font-size: 0.7em;
-  font-weight: bold;
+  border-radius: 3px;
+  font-size: 0.65em;
+  font-weight: 500;
   margin-top: auto;
-  width: 100%;
+  max-width: 100%;
+  width: fit-content;
   text-align: center;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.calendar-cell:hover .event-label {
+  background: #2563eb;
 }
 
 .today-indicator {
   position: absolute;
-  top: 0.3em;
-  right: 0.3em;
-  width: 8px;
-  height: 8px;
+  top: 0.4em;
+  right: 0.4em;
+  width: 6px;
+  height: 6px;
   background: #007bff;
   border-radius: 50%;
 }
 
 .week-cell {
-  min-height: 120px;
+  min-height: 70px;
 }
 
 .month-cell {
-  min-height: 80px;
+  min-height: 50px;
 }
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .calendar-header {
-    padding: 0.5rem;
-    flex-wrap: wrap;
+    padding: 0.6rem 0.8rem;
+    flex-direction: column;
     gap: 0.5rem;
   }
   
+  .calendar-left,
+  .calendar-center,
+  .calendar-nav {
+    flex: none;
+  }
+  
+  .calendar-center {
+    order: 2;
+  }
+  
+  .calendar-nav {
+    order: 3;
+  }
+  
   .calendar-title {
-    font-size: 1em;
+    font-size: 1.625em;
     min-width: 120px;
+    text-align: center;
+    font-weight: 300;
+    line-height: 1.461538em;
+    padding: 0 .307693em;
   }
   
   .nav-btn {
-    width: 32px;
-    height: 32px;
-    font-size: 1em;
+    width: 28px;
+    height: 28px;
+    font-size: 0.9em;
   }
   
   .calendar-cell {
-    min-height: 60px;
-    padding: 0.3em;
+    min-height: 45px;
+    padding: 0.25em;
   }
   
   .week-cell {
-    min-height: 80px;
+    min-height: 55px;
   }
   
   .event-label {
     font-size: 0.6em;
-    padding: 0.1em 0.3em;
+    padding: 0.15em 0.25em;
   }
   
   .day-number {
+    font-size: 0.8em;
+  }
+  
+  .view-toggle-group label {
+    padding: 0.3em 0.5em;
+    font-size: 0.9em;
+  }
+  
+  .today-btn {
+    padding: 0.3em 0.6em;
     font-size: 0.8em;
   }
 }
@@ -246,9 +318,6 @@ h1 {
   background: rgba(0,0,0,0.95);
   box-shadow: 0 -2px 16px #222;
 }
-#eventcalendar {
-  padding-bottom: 0.5em;
-}
 
 /* Goal popup scrolling styles - updated for Bootstrap modals */
 .goal-modal-scrollable .modal-body {
@@ -284,8 +353,9 @@ h1 {
 
 .view-toggle-group {
   display: flex;
-  background: rgba(40,40,40,0.8);
-  border-radius: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
   overflow: hidden;
 }
 
@@ -294,27 +364,37 @@ h1 {
 }
 
 .view-toggle-group label {
-  padding: 0.5em 1em;
+  padding: 0.4em 0.6em;
   cursor: pointer;
   color: #ccc;
   border: none;
-  background: transparent;
-  transition: all 0.2s ease;
+  background: #404040;
+  transition: color 0.2s ease;
+  font-size: 1em;
+  margin: 0;
 }
 
 .view-toggle-group input[type="radio"]:checked + label {
-  background: #007bff;
-  color: white;
+  color: #000;
+  background-color: #ababab;
+}
+
+.view-toggle-group label:hover {
+  color: #fff;
 }
 
 .today-btn {
-  background: rgba(40,40,40,0.8);
+  background: transparent;
   color: #ccc;
-  border: 1px solid #555;
-  padding: 0.5em 0.8em;
-  border-radius: 4px;
+  border: none;
+  padding: 0.4em 0.7em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
+  font-size: 1em;
+}
+
+.today-btn:hover {
+  color: #fff;
 }
 
 .today-btn:hover {
