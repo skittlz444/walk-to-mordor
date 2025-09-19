@@ -66,6 +66,23 @@ export function isValidMethod(pathname: string, method: string): boolean {
   if (pathname === "/wtm/api/goals") {
     return method === 'GET';
   }
+  // OAuth endpoints
+  if (pathname === "/wtm/api/auth/google" || pathname === "/wtm/api/auth/facebook") {
+    return method === 'GET';
+  }
+  if (pathname === "/wtm/api/auth/callback" || 
+      pathname === "/wtm/api/auth/logout" || 
+      pathname === "/wtm/api/auth/refresh") {
+    return method === 'POST';
+  }
+  // Samsung Health endpoints
+  if (pathname === "/wtm/api/samsung-health/link") {
+    return method === 'GET';
+  }
+  if (pathname === "/wtm/api/samsung-health/callback" || 
+      pathname === "/wtm/api/sync/samsung-health") {
+    return method === 'POST';
+  }
   return false;
 }
 

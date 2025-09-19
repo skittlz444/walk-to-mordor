@@ -1,4 +1,6 @@
-export function renderHtml(totalDistance?: number) {
+import { User } from "./auth/session";
+
+export function renderHtml(totalDistance?: number, user?: User | null) {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -32,6 +34,17 @@ export function renderHtml(totalDistance?: number) {
         
         <!-- Service Worker Registration -->
         <script>
+          // Global authentication state
+          window.WTM_AUTH = {
+            isAuthenticated: ${user ? 'true' : 'false'},
+            user: ${user ? JSON.stringify({
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              samsungHealthConnected: !!user.samsung_health_linked_at
+            }) : 'null'}
+          };
+          
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
               navigator.serviceWorker.register('wtm/sw.js')
@@ -50,6 +63,39 @@ export function renderHtml(totalDistance?: number) {
         <h1>Total distance travelled</h1>
         <div id="total-distance-value">${totalDistance ?? 0} km</div>
         <div id="last-goal"></div>
+        ${user ? `
+        <div id="user-info">
+          <div class="user-details">
+            <span>Welcome, ${user.name || user.email}!</span>
+            ${user.samsung_health_linked_at ? 
+              '<span class="samsung-status">📱 Samsung Health Connected</span>' : 
+              '<span class="samsung-status">📱 Samsung Health Not Connected</span>'
+            }
+          </div>
+          <div class="user-actions">
+            ${!user.samsung_health_linked_at ? 
+              '<button id="link-samsung-btn" class="auth-btn">Link Samsung Health</button>' : ''
+            }
+            <button id="logout-btn" class="auth-btn">Logout</button>
+          </div>
+        </div>
+        ` : `
+        <div id="auth-section">
+          <div class="auth-prompt">
+            <p>Sign in to sync your walking data and access personal progress tracking</p>
+          </div>
+          <div class="auth-buttons">
+            <button id="google-login-btn" class="auth-btn google-btn">
+              <span class="auth-icon">🔍</span>
+              Sign in with Google
+            </button>
+            <button id="facebook-login-btn" class="auth-btn facebook-btn">
+              <span class="auth-icon">📘</span>
+              Sign in with Facebook
+            </button>
+          </div>
+        </div>
+        `}
       </header>
       <section id="goals-section">
         <div id="goals-list"></div>
