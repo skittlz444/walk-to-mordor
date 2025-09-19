@@ -27,9 +27,9 @@
     "jest-junit": "^16.0.0",
     "pnpm": "^10.16.1",
     "supertest": "^7.1.4",
-    "ts-jest": "^29.2.0",
+    "ts-jest": "^29.4.2",
     "typescript": "5.9.2",
-    "wrangler": "^4.36.0"
+    "wrangler": "^4.37.0"
   },
   "scripts": {
     "cf-typegen": "wrangler types",
