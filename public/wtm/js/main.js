@@ -19,16 +19,11 @@ function mobiscrollReady(callback) {
 function initializeAuth() {
   // Handle OAuth login buttons
   const googleLoginBtn = document.getElementById('google-login-btn');
-  const facebookLoginBtn = document.getElementById('facebook-login-btn');
   const logoutBtn = document.getElementById('logout-btn');
   const linkSamsungBtn = document.getElementById('link-samsung-btn');
 
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', () => handleOAuthLogin('google'));
-  }
-  
-  if (facebookLoginBtn) {
-    facebookLoginBtn.addEventListener('click', () => handleOAuthLogin('facebook'));
   }
   
   if (logoutBtn) {

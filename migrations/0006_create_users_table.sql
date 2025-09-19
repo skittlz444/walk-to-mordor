@@ -5,7 +5,7 @@ CREATE TABLE users (
     id INTEGER PRIMARY KEY NOT NULL,
     email TEXT NOT NULL UNIQUE,
     name TEXT,
-    oauth_provider TEXT NOT NULL, -- 'google', 'facebook', etc.
+    oauth_provider TEXT NOT NULL, -- 'google', etc.
     oauth_provider_id TEXT NOT NULL, -- unique ID from OAuth provider
     oauth_access_token TEXT, -- encrypted OAuth access token
     oauth_refresh_token TEXT, -- encrypted OAuth refresh token

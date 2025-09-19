@@ -89,10 +89,6 @@ export function renderHtml(totalDistance?: number, user?: User | null) {
               <span class="auth-icon">🔍</span>
               Sign in with Google
             </button>
-            <button id="facebook-login-btn" class="auth-btn facebook-btn">
-              <span class="auth-icon">📘</span>
-              Sign in with Facebook
-            </button>
           </div>
         </div>
         `}

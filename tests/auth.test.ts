@@ -206,20 +206,6 @@ describe('Authentication System', () => {
       expect(provider?.authUrl).toContain('accounts.google.com');
     });
 
-    test('should get Facebook OAuth provider configuration', () => {
-      const env = {
-        FACEBOOK_CLIENT_ID: 'test-fb-client-id',
-        FACEBOOK_CLIENT_SECRET: 'test-fb-client-secret',
-        OAUTH_REDIRECT_URI: 'http://localhost/callback'
-      };
-      
-      const provider = getOAuthProvider('facebook', env);
-      
-      expect(provider).toBeDefined();
-      expect(provider?.clientId).toBe('test-fb-client-id');
-      expect(provider?.authUrl).toContain('facebook.com');
-    });
-
     test('should return null for unknown provider', () => {
       const provider = getOAuthProvider('unknown', {});
       expect(provider).toBeNull();

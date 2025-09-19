@@ -22,15 +22,6 @@ export function getOAuthProvider(provider: string, env: any): OAuthProvider | nu
         tokenUrl: 'https://oauth2.googleapis.com/token',
         userInfoUrl: 'https://www.googleapis.com/oauth2/v2/userinfo'
       };
-    case 'facebook':
-      return {
-        clientId: env.FACEBOOK_CLIENT_ID || '',
-        clientSecret: env.FACEBOOK_CLIENT_SECRET || '',
-        redirectUri: env.OAUTH_REDIRECT_URI || '',
-        authUrl: 'https://www.facebook.com/v18.0/dialog/oauth',
-        tokenUrl: 'https://graph.facebook.com/v18.0/oauth/access_token',
-        userInfoUrl: 'https://graph.facebook.com/me?fields=id,name,email'
-      };
     default:
       return null;
   }
@@ -107,12 +98,6 @@ export async function getUserInfo(provider: OAuthProvider, accessToken: string):
     
     // Normalize response format between providers
     if (provider.userInfoUrl.includes('google')) {
-      return {
-        id: data.id,
-        email: data.email,
-        name: data.name
-      };
-    } else if (provider.userInfoUrl.includes('facebook')) {
       return {
         id: data.id,
         email: data.email,

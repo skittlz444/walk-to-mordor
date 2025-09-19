@@ -155,3 +155,118 @@ This ensures:
 ## Testing & CI/CD
 
 The project includes comprehensive GitHub Actions workflows for automated testing on pull requests. The PR workflow includes unit tests, API integration tests, and UI end-to-end tests to ensure code quality and reliability.
+
+## Authentication and Samsung Health Integration
+
+This application supports OAuth social login with Google and Samsung Health integration for automatic distance sync.
+
+### Prerequisites
+
+- A deployed Cloudflare Workers application
+- Access to Google Developer Console
+- Samsung Developer account (for Samsung Health integration)
+
+### Google OAuth Setup
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the Google+ API
+4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
+5. Configure the OAuth consent screen
+6. Set up the OAuth client:
+   - Application type: Web application
+   - Authorized redirect URIs: `https://yourdomain.com/wtm/` (where OAuth callback will be handled)
+
+7. Set the following environment variables in your Cloudflare Workers:
+   ```bash
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   OAUTH_REDIRECT_URI=https://yourdomain.com/wtm/
+   ```
+
+### Samsung Health Integration Setup
+
+1. Go to [Samsung Developers](https://developer.samsung.com/)
+2. Create a Samsung account and complete developer registration
+3. Create a new app in the Samsung Health section
+4. Request access to the Samsung Health SDK
+5. Configure your app permissions to include:
+   - `com.samsung.health.step_daily_trend.read`
+
+6. Set the following environment variables:
+   ```bash
+   SAMSUNG_HEALTH_CLIENT_ID=your_samsung_health_client_id
+   SAMSUNG_HEALTH_CLIENT_SECRET=your_samsung_health_client_secret
+   SAMSUNG_HEALTH_REDIRECT_URI=https://yourdomain.com/wtm/
+   ```
+
+### Environment Variables Setup
+
+Add environment variables to your `wrangler.json`:
+
+```json
+{
+  "vars": {
+    "GOOGLE_CLIENT_ID": "your_google_client_id",
+    "OAUTH_REDIRECT_URI": "https://yourdomain.com/wtm/",
+    "SAMSUNG_HEALTH_CLIENT_ID": "your_samsung_health_client_id",
+    "SAMSUNG_HEALTH_REDIRECT_URI": "https://yourdomain.com/wtm/"
+  }
+}
+```
+
+For production, use Cloudflare Workers secrets for sensitive values:
+
+```bash
+# Set OAuth secrets
+wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put SAMSUNG_HEALTH_CLIENT_SECRET
+```
+
+### Authentication Features
+
+#### For Anonymous Users
+- Can view existing anonymous progress data
+- See login prompts for enhanced features
+- Cannot create/modify progress entries
+
+#### For Authenticated Users  
+- Personal progress tracking separated from anonymous data
+- Can link Samsung Health for automatic sync
+- Samsung Health sync button in distance entry popups
+- User profile display with sync status
+
+#### Samsung Health Integration
+- One-click sync of daily walking/running distances
+- Automatic conversion from meters to kilometers
+- Overwrites manual entries when syncing
+- Clear indication of synced vs manual entries
+
+### API Endpoints
+
+The following authentication API endpoints are available:
+
+#### Authentication
+- `GET /wtm/api/auth/google` - Get Google OAuth URL
+- `POST /wtm/api/auth/callback` - Handle OAuth callback
+- `POST /wtm/api/auth/logout` - Logout user
+- `POST /wtm/api/auth/refresh` - Refresh user session
+
+#### Samsung Health
+- `GET /wtm/api/samsung-health/link` - Get Samsung Health OAuth URL
+- `POST /wtm/api/samsung-health/callback` - Handle Samsung Health callback
+- `POST /wtm/api/sync/samsung-health` - Sync daily distance data
+
+#### Progress (Now User-Specific)
+- `GET /wtm/api/calendar-progress` - Get user's progress (anonymous if not logged in)
+- `POST /wtm/api/calendar-progress` - Create progress entry (requires auth)
+- `PUT /wtm/api/calendar-progress` - Update progress entry (requires auth)
+- `DELETE /wtm/api/calendar-progress` - Delete progress entry (requires auth)
+
+### Security Considerations
+
+1. **HTTPS Required**: OAuth flows require HTTPS in production
+2. **Secrets Management**: Never commit OAuth secrets to version control
+3. **Session Security**: Sessions are stored as HTTP-only cookies
+4. **Token Encryption**: In production, encrypt stored OAuth tokens
+5. **CSRF Protection**: OAuth state parameters prevent CSRF attacks

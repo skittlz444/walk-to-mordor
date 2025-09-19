@@ -175,15 +175,6 @@ h1 {
   transform: translateY(-1px);
 }
 
-.facebook-btn {
-  background: #1877f2;
-}
-
-.facebook-btn:hover {
-  background: #166fe5;
-  transform: translateY(-1px);
-}
-
 #user-info {
   max-width: 500px;
   margin: 1em auto;

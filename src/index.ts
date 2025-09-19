@@ -68,10 +68,9 @@ export default {
         '/wtm/api/calendar-progress',
         '/wtm/api/goals',
         '/wtm/api/auth/google',
-        '/wtm/api/auth/facebook', 
+        '/wtm/api/auth/callback',
         '/wtm/api/auth/logout',
         '/wtm/api/auth/refresh',
-        '/wtm/api/auth/callback',
         '/wtm/api/samsung-health/link',
         '/wtm/api/samsung-health/callback',
         '/wtm/api/sync/samsung-health'
@@ -113,8 +112,8 @@ export default {
     }
 
     // OAuth Authentication Endpoints
-    if ((url.pathname === "/wtm/api/auth/google" || url.pathname === "/wtm/api/auth/facebook") && method === "GET") {
-      const provider = url.pathname.includes('google') ? 'google' : 'facebook';
+    if (url.pathname === "/wtm/api/auth/google" && method === "GET") {
+      const provider = 'google';
       const oauthProvider = getOAuthProvider(provider, env);
       
       if (!oauthProvider || !oauthProvider.clientId) {

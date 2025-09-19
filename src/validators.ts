@@ -67,7 +67,7 @@ export function isValidMethod(pathname: string, method: string): boolean {
     return method === 'GET';
   }
   // OAuth endpoints
-  if (pathname === "/wtm/api/auth/google" || pathname === "/wtm/api/auth/facebook") {
+  if (pathname === "/wtm/api/auth/google") {
     return method === 'GET';
   }
   if (pathname === "/wtm/api/auth/callback" || 
