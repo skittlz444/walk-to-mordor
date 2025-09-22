@@ -4,22 +4,25 @@ import { createErrorResponse, createSuccessResponse } from "./validators";
 
 export interface User {
   id: number;
+  username: string;
   email: string;
-  oauth_provider: string;
-  oauth_id: string;
   samsung_health_linked: boolean;
 }
 
-export interface GoogleUserInfo {
-  id: string;
+export interface UserRegistration {
+  username: string;
   email: string;
-  name: string;
-  picture: string;
+  password: string;
+}
+
+export interface UserLogin {
+  username: string;
+  password: string;
 }
 
 export interface SessionData {
   user_id: number;
-  email: string;
+  username: string;
   expires_at: number;
 }
 
@@ -28,53 +31,222 @@ export function generateSessionToken(): string {
   return crypto.randomUUID();
 }
 
-// Verify Google OAuth token and get user info
-export async function verifyGoogleToken(token: string): Promise<GoogleUserInfo | null> {
+// Hash password using Web Crypto API (best practice for Cloudflare Workers)
+export async function hashPassword(password: string): Promise<string> {
+  // Generate a random salt
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltString = Array.from(salt, byte => byte.toString(16).padStart(2, '0')).join('');
+  
+  // Create password hash using PBKDF2 (recommended for password hashing)
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + saltString);
+  
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  
+  const hashBuffer = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: encoder.encode(saltString),
+      iterations: 100000, // OWASP recommended minimum
+      hash: 'SHA-256'
+    },
+    key,
+    256
+  );
+  
+  const hashArray = new Uint8Array(hashBuffer);
+  const hashString = Array.from(hashArray, byte => byte.toString(16).padStart(2, '0')).join('');
+  
+  // Return salt + hash format for storage
+  return `${saltString}:${hashString}`;
+}
+
+// Verify password against stored hash
+export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   try {
-    const response = await fetch(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${token}`);
-    if (!response.ok) {
-      return null;
+    const [saltString, hash] = storedHash.split(':');
+    if (!saltString || !hash) {
+      return false;
     }
-    return await response.json();
-  } catch {
-    return null;
+    
+    // Create the same hash with the stored salt
+    const encoder = new TextEncoder();
+    
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveBits']
+    );
+    
+    const hashBuffer = await crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        salt: encoder.encode(saltString),
+        iterations: 100000,
+        hash: 'SHA-256'
+      },
+      key,
+      256
+    );
+    
+    const hashArray = new Uint8Array(hashBuffer);
+    const computedHash = Array.from(hashArray, byte => byte.toString(16).padStart(2, '0')).join('');
+    
+    return computedHash === hash;
+  } catch (error) {
+    console.error('Password verification error:', error);
+    return false;
   }
 }
 
-// Get or create user from Google OAuth data
-export async function getOrCreateUser(env: any, googleUser: GoogleUserInfo): Promise<User | null> {
+// Validate password strength
+export function validatePassword(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+// Validate username
+export function validateUsername(username: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (username.length < 3) {
+    errors.push('Username must be at least 3 characters long');
+  }
+  
+  if (username.length > 30) {
+    errors.push('Username must be no more than 30 characters long');
+  }
+  
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    errors.push('Username can only contain letters, numbers, and underscores');
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+// Validate email
+export function validateEmail(email: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    errors.push('Please enter a valid email address');
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+// Register new user
+export async function registerUser(env: any, userData: UserRegistration): Promise<User | { error: string; errors?: string[] }> {
   try {
-    // First, try to find existing user
-    const existing = await env.DB.prepare(
-      `SELECT id, email, oauth_provider, oauth_id, samsung_health_linked 
-       FROM users 
-       WHERE oauth_provider = 'google' AND oauth_id = ?`
-    ).bind(googleUser.id).first();
-
-    if (existing) {
-      return existing as User;
+    // Validate input
+    const usernameValidation = validateUsername(userData.username);
+    const emailValidation = validateEmail(userData.email);
+    const passwordValidation = validatePassword(userData.password);
+    
+    const allErrors = [
+      ...usernameValidation.errors,
+      ...emailValidation.errors,
+      ...passwordValidation.errors
+    ];
+    
+    if (allErrors.length > 0) {
+      return { error: 'Validation failed', errors: allErrors };
     }
-
+    
+    // Check if username or email already exists
+    const existingUser = await env.DB.prepare(
+      `SELECT id FROM users WHERE username = ? OR email = ?`
+    ).bind(userData.username, userData.email).first();
+    
+    if (existingUser) {
+      return { error: 'Username or email already exists' };
+    }
+    
+    // Hash password
+    const passwordHash = await hashPassword(userData.password);
+    
     // Create new user
     const result = await env.DB.prepare(
-      `INSERT INTO users (email, oauth_provider, oauth_id, samsung_health_linked, created_at, updated_at)
-       VALUES (?, 'google', ?, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-    ).bind(googleUser.email, googleUser.id).run();
+      `INSERT INTO users (username, email, password_hash, samsung_health_linked, created_at, updated_at)
+       VALUES (?, ?, ?, FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+    ).bind(userData.username, userData.email, passwordHash).run();
 
     if (!result.success) {
-      return null;
+      return { error: 'Failed to create user account' };
     }
 
     // Fetch the created user
     const newUser = await env.DB.prepare(
-      `SELECT id, email, oauth_provider, oauth_id, samsung_health_linked 
+      `SELECT id, username, email, samsung_health_linked 
        FROM users 
-       WHERE oauth_provider = 'google' AND oauth_id = ?`
-    ).bind(googleUser.id).first();
+       WHERE username = ?`
+    ).bind(userData.username).first();
 
     return newUser as User;
   } catch (error) {
-    console.error('Error getting or creating user:', error);
+    console.error('Error registering user:', error);
+    return { error: 'Internal server error during registration' };
+  }
+}
+
+// Authenticate user with username/password
+export async function authenticateUser(env: any, loginData: UserLogin): Promise<User | null> {
+  try {
+    // Find user by username
+    const user = await env.DB.prepare(
+      `SELECT id, username, email, password_hash, samsung_health_linked 
+       FROM users 
+       WHERE username = ?`
+    ).bind(loginData.username).first();
+
+    if (!user) {
+      return null;
+    }
+
+    // Verify password
+    const isValid = await verifyPassword(loginData.password, user.password_hash);
+    if (!isValid) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      samsung_health_linked: user.samsung_health_linked
+    } as User;
+  } catch (error) {
+    console.error('Error authenticating user:', error);
     return null;
   }
 }
@@ -85,8 +257,7 @@ export async function createSession(env: any, user: User): Promise<string | null
     const sessionToken = generateSessionToken();
     const expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Store session in KV (we'll use D1 for now since KV not configured)
-    // In a real app, use Cloudflare KV or similar for session storage
+    // Store session in database
     await env.DB.prepare(
       `INSERT OR REPLACE INTO user_sessions (token, user_id, expires_at, created_at)
        VALUES (?, ?, ?, CURRENT_TIMESTAMP)`
@@ -103,7 +274,7 @@ export async function createSession(env: any, user: User): Promise<string | null
 export async function getUserFromSession(env: any, sessionToken: string): Promise<User | null> {
   try {
     const sessionData = await env.DB.prepare(
-      `SELECT us.user_id, us.expires_at, u.email, u.oauth_provider, u.oauth_id, u.samsung_health_linked
+      `SELECT us.user_id, us.expires_at, u.username, u.email, u.samsung_health_linked
        FROM user_sessions us
        JOIN users u ON us.user_id = u.id
        WHERE us.token = ? AND us.expires_at > ?`
@@ -115,9 +286,8 @@ export async function getUserFromSession(env: any, sessionToken: string): Promis
 
     return {
       id: sessionData.user_id,
+      username: sessionData.username,
       email: sessionData.email,
-      oauth_provider: sessionData.oauth_provider,
-      oauth_id: sessionData.oauth_id,
       samsung_health_linked: sessionData.samsung_health_linked
     } as User;
   } catch (error) {

@@ -8,8 +8,8 @@ import {
   createSuccessResponse 
 } from "./validators";
 import {
-  verifyGoogleToken,
-  getOrCreateUser,
+  registerUser,
+  authenticateUser,
   createSession,
   getUserFromSession,
   deleteSession,
@@ -48,9 +48,9 @@ export default {
       const endpointMethods: { [key: string]: string[] } = {
         "/wtm/api/calendar-progress": ['GET', 'POST', 'PUT', 'DELETE'],
         "/wtm/api/goals": ['GET'],
-        "/wtm/api/auth/google": ['POST'],
+        "/wtm/api/auth/register": ['POST'],
+        "/wtm/api/auth/login": ['POST'],
         "/wtm/api/auth/logout": ['POST'],
-        "/wtm/api/auth/refresh": ['POST'],
         "/wtm/api/auth/status": ['GET'],
         "/wtm/api/samsung-health/link": ['POST'],
         "/wtm/api/samsung-health/unlink": ['POST'],
@@ -76,9 +76,9 @@ export default {
     // Only read body for API endpoints that need it
     if (
       (url.pathname === "/wtm/api/calendar-progress" && (method === "POST" || method === "PUT" || method === "DELETE")) ||
-      (url.pathname === "/wtm/api/auth/google" && method === "POST") ||
+      (url.pathname === "/wtm/api/auth/register" && method === "POST") ||
+      (url.pathname === "/wtm/api/auth/login" && method === "POST") ||
       (url.pathname === "/wtm/api/auth/logout" && method === "POST") ||
-      (url.pathname === "/wtm/api/auth/refresh" && method === "POST") ||
       (url.pathname === "/wtm/api/samsung-health/link" && method === "POST") ||
       (url.pathname === "/wtm/api/samsung-health/unlink" && method === "POST") ||
       (url.pathname === "/wtm/api/sync/samsung-health" && method === "POST")
@@ -96,23 +96,56 @@ export default {
     }
 
     // Authentication endpoints
-    if (url.pathname === "/wtm/api/auth/google" && method === "POST") {
-      const { token } = body || {};
+    if (url.pathname === "/wtm/api/auth/register" && method === "POST") {
+      const { username, email, password } = body || {};
       
-      if (!token) {
-        return createErrorResponse('Missing Google access token', 400);
+      if (!username || !email || !password) {
+        return createErrorResponse('Missing required fields: username, email, password', 400);
       }
 
-      // Verify Google token and get user info
-      const googleUser = await verifyGoogleToken(token);
-      if (!googleUser) {
-        return createErrorResponse('Invalid Google token', 401);
+      // Register new user
+      const result = await registerUser(env, { username, email, password });
+      
+      if ('error' in result) {
+        return new Response(JSON.stringify(result), {
+          status: 400,
+          headers: { "content-type": "application/json" }
+        });
       }
 
-      // Get or create user in database
-      const user = await getOrCreateUser(env, googleUser);
+      // Create session for newly registered user
+      const sessionToken = await createSession(env, result);
+      if (!sessionToken) {
+        return createErrorResponse('Failed to create session', 500);
+      }
+
+      // Return success with session cookie
+      return new Response(JSON.stringify({
+        message: 'Registration successful',
+        user: {
+          id: result.id,
+          username: result.username,
+          email: result.email,
+          samsung_health_linked: result.samsung_health_linked
+        }
+      }), {
+        status: 201,
+        headers: {
+          "content-type": "application/json",
+          "Set-Cookie": createSessionCookie(sessionToken)
+        }
+      });
+    } else if (url.pathname === "/wtm/api/auth/login" && method === "POST") {
+      const { username, password } = body || {};
+      
+      if (!username || !password) {
+        return createErrorResponse('Missing required fields: username, password', 400);
+      }
+
+      // Authenticate user
+      const user = await authenticateUser(env, { username, password });
       if (!user) {
-        return createErrorResponse('Failed to create user account', 500);
+        return createErrorResponse('Invalid username or password', 401);
       }
 
       // Create session
@@ -126,6 +159,7 @@ export default {
         message: 'Login successful',
         user: {
           id: user.id,
+          username: user.username,
           email: user.email,
           samsung_health_linked: user.samsung_health_linked
         }
@@ -178,6 +212,7 @@ export default {
         authenticated: true,
         user: {
           id: user.id,
+          username: user.username,
           email: user.email,
           samsung_health_linked: user.samsung_health_linked
         }

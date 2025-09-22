@@ -2,7 +2,6 @@
 console.log('Auth.js script loaded');
 
 let currentUser = null;
-let googleAuth = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Auth DOMContentLoaded fired');
@@ -27,33 +26,41 @@ async function initializeAuth() {
     } else {
       showLoginSection();
     }
-    
-    // Initialize Google Sign-In
-    initializeGoogleAuth();
   } catch (error) {
     console.error('Error initializing auth:', error);
     showLoginSection();
   }
 }
 
-function initializeGoogleAuth() {
-  // Initialize Google API
-  if (typeof gapi !== 'undefined') {
-    gapi.load('auth2', function() {
-      gapi.auth2.init({
-        client_id: 'YOUR_GOOGLE_CLIENT_ID' // This would be configured via environment variables
-      }).then(function() {
-        googleAuth = gapi.auth2.getAuthInstance();
-      });
+function setupAuthEventListeners() {
+  // Login form submission
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) {
+    loginForm.addEventListener('submit', handleLogin);
+  }
+  
+  // Register form submission
+  const registerForm = document.getElementById('register-form');
+  if (registerForm) {
+    registerForm.addEventListener('submit', handleRegister);
+  }
+  
+  // Show register form link
+  const showRegisterLink = document.getElementById('show-register-link');
+  if (showRegisterLink) {
+    showRegisterLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      showRegisterForm();
     });
   }
-}
-
-function setupAuthEventListeners() {
-  // Google login button
-  const googleLoginBtn = document.getElementById('google-login-btn');
-  if (googleLoginBtn) {
-    googleLoginBtn.addEventListener('click', handleGoogleLogin);
+  
+  // Show login form link
+  const showLoginLink = document.getElementById('show-login-link');
+  if (showLoginLink) {
+    showLoginLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      showLoginForm();
+    });
   }
   
   // Logout button
@@ -96,36 +103,32 @@ function setupAuthEventListeners() {
   }
 }
 
-async function handleGoogleLogin() {
+async function handleLogin(event) {
+  event.preventDefault();
+  
+  const formData = new FormData(event.target);
+  const username = formData.get('username');
+  const password = formData.get('password');
+  const errorDiv = document.getElementById('login-error');
+  
+  // Clear previous errors
+  if (errorDiv) {
+    errorDiv.textContent = '';
+    errorDiv.style.display = 'none';
+  }
+  
   try {
-    // For demo purposes, we'll simulate Google OAuth
-    // In a real implementation, this would use Google's OAuth 2.0 flow
-    console.log('Google login clicked - would redirect to Google OAuth');
-    
-    // Simulate successful Google login for testing
-    const mockGoogleToken = 'mock_google_token_' + Date.now();
-    
-    // For now, let's create a test user without actually calling Google
-    const testUser = {
-      email: 'test@example.com',
-      name: 'Test User'
-    };
-    
-    // Call our backend API to create/login user
-    const response = await fetch('/wtm/api/auth/google', {
+    const response = await fetch('/wtm/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        token: mockGoogleToken,
-        // In real implementation, this would be the Google OAuth token
-        user: testUser
-      })
+      body: JSON.stringify({ username, password })
     });
     
+    const result = await response.json();
+    
     if (response.ok) {
-      const result = await response.json();
       currentUser = result.user;
       showUserSection();
       updateSamsungHealthStatus();
@@ -135,12 +138,81 @@ async function handleGoogleLogin() {
         updateCalendarAndTotal();
       }
     } else {
-      const error = await response.json();
-      alert('Login failed: ' + error.error);
+      if (errorDiv) {
+        errorDiv.textContent = result.error || 'Login failed';
+        errorDiv.style.display = 'block';
+      }
     }
   } catch (error) {
     console.error('Login error:', error);
-    alert('Login failed. Please try again.');
+    if (errorDiv) {
+      errorDiv.textContent = 'Login failed. Please try again.';
+      errorDiv.style.display = 'block';
+    }
+  }
+}
+
+async function handleRegister(event) {
+  event.preventDefault();
+  
+  const formData = new FormData(event.target);
+  const username = formData.get('username');
+  const email = formData.get('email');
+  const password = formData.get('password');
+  const confirmPassword = formData.get('confirm-password');
+  const errorDiv = document.getElementById('register-error');
+  
+  // Clear previous errors
+  if (errorDiv) {
+    errorDiv.textContent = '';
+    errorDiv.style.display = 'none';
+  }
+  
+  // Client-side validation
+  if (password !== confirmPassword) {
+    if (errorDiv) {
+      errorDiv.textContent = 'Passwords do not match';
+      errorDiv.style.display = 'block';
+    }
+    return;
+  }
+  
+  try {
+    const response = await fetch('/wtm/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, email, password })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      currentUser = result.user;
+      showUserSection();
+      updateSamsungHealthStatus();
+      
+      // Refresh the calendar and totals to show user-specific data
+      if (typeof updateCalendarAndTotal === 'function') {
+        updateCalendarAndTotal();
+      }
+    } else {
+      if (errorDiv) {
+        if (result.errors && result.errors.length > 0) {
+          errorDiv.innerHTML = result.errors.join('<br>');
+        } else {
+          errorDiv.textContent = result.error || 'Registration failed';
+        }
+        errorDiv.style.display = 'block';
+      }
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    if (errorDiv) {
+      errorDiv.textContent = 'Registration failed. Please try again.';
+      errorDiv.style.display = 'block';
+    }
   }
 }
 
@@ -173,20 +245,43 @@ function showLoginSection() {
     loginSection.style.display = 'block';
     userSection.style.display = 'none';
   }
+  
+  // Show login form by default
+  showLoginForm();
 }
 
 function showUserSection() {
   const loginSection = document.getElementById('login-section');
   const userSection = document.getElementById('user-section');
-  const userEmail = document.getElementById('user-email');
+  const userDisplay = document.getElementById('user-display');
   
   if (loginSection && userSection) {
     loginSection.style.display = 'none';
     userSection.style.display = 'block';
   }
   
-  if (userEmail && currentUser) {
-    userEmail.textContent = currentUser.email;
+  if (userDisplay && currentUser) {
+    userDisplay.textContent = currentUser.username;
+  }
+}
+
+function showLoginForm() {
+  const loginForm = document.getElementById('login-form-container');
+  const registerForm = document.getElementById('register-form-container');
+  
+  if (loginForm && registerForm) {
+    loginForm.style.display = 'block';
+    registerForm.style.display = 'none';
+  }
+}
+
+function showRegisterForm() {
+  const loginForm = document.getElementById('login-form-container');
+  const registerForm = document.getElementById('register-form-container');
+  
+  if (loginForm && registerForm) {
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'block';
   }
 }
 

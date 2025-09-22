@@ -46,13 +46,51 @@ export function renderHtml(totalDistance?: number) {
         <div class="header-top">
           <div class="auth-section" id="auth-section">
             <div id="login-section" style="display: none;">
-              <button id="google-login-btn" class="auth-btn google-btn">
-                <i class="fab fa-google"></i> Sign in with Google
-              </button>
+              <!-- Login Form -->
+              <div id="login-form-container" class="auth-form-container">
+                <form id="login-form" class="auth-form">
+                  <h3>Login</h3>
+                  <div class="form-group">
+                    <input type="text" name="username" placeholder="Username" required>
+                  </div>
+                  <div class="form-group">
+                    <input type="password" name="password" placeholder="Password" required>
+                  </div>
+                  <div id="login-error" class="error-message" style="display: none;"></div>
+                  <button type="submit" class="auth-btn login-btn">Login</button>
+                  <p class="auth-link">
+                    Don't have an account? <a href="#" id="show-register-link">Register here</a>
+                  </p>
+                </form>
+              </div>
+              
+              <!-- Register Form -->
+              <div id="register-form-container" class="auth-form-container" style="display: none;">
+                <form id="register-form" class="auth-form">
+                  <h3>Register</h3>
+                  <div class="form-group">
+                    <input type="text" name="username" placeholder="Username" required>
+                  </div>
+                  <div class="form-group">
+                    <input type="email" name="email" placeholder="Email" required>
+                  </div>
+                  <div class="form-group">
+                    <input type="password" name="password" placeholder="Password" required>
+                  </div>
+                  <div class="form-group">
+                    <input type="password" name="confirm-password" placeholder="Confirm Password" required>
+                  </div>
+                  <div id="register-error" class="error-message" style="display: none;"></div>
+                  <button type="submit" class="auth-btn register-btn">Register</button>
+                  <p class="auth-link">
+                    Already have an account? <a href="#" id="show-login-link">Login here</a>
+                  </p>
+                </form>
+              </div>
             </div>
             <div id="user-section" style="display: none;">
               <div class="user-info">
-                <span id="user-email"></span>
+                <span id="user-display"></span>
                 <div class="user-actions">
                   <button id="profile-btn" class="auth-btn profile-btn">
                     <i class="fas fa-user"></i> Profile
@@ -106,8 +144,6 @@ export function renderHtml(totalDistance?: number) {
       </div>
       
       <!-- Scripts -->
-      <script src="https://apis.google.com/js/gapi.js" async defer></script>
-      <script src="https://accounts.google.com/gsi/client" async defer></script>
       <script src="wtm/js/auth.js"></script>
       <script src="wtm/js/main.js"></script>
       </body>

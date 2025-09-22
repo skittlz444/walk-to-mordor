@@ -669,8 +669,74 @@ h1 {
   align-items: center;
 }
 
+.auth-form-container {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 0.5rem;
+  min-width: 300px;
+  border: 1px solid #333;
+}
+
+.auth-form h3 {
+  color: #fff;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: #fff;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4285f4;
+  background: #333;
+}
+
+.form-group input::placeholder {
+  color: #aaa;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.auth-link {
+  color: #ccc;
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.auth-link a {
+  color: #4285f4;
+  text-decoration: none;
+}
+
+.auth-link a:hover {
+  text-decoration: underline;
+}
+
 .auth-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   border: none;
   border-radius: 4px;
   font-size: 0.9rem;
@@ -680,20 +746,32 @@ h1 {
   align-items: center;
   gap: 0.5rem;
   transition: background-color 0.2s;
+  width: 100%;
+  justify-content: center;
 }
 
-.google-btn {
+.login-btn {
   background: #4285f4;
   color: white;
 }
 
-.google-btn:hover {
+.login-btn:hover {
   background: #357ae8;
+}
+
+.register-btn {
+  background: #28a745;
+  color: white;
+}
+
+.register-btn:hover {
+  background: #218838;
 }
 
 .profile-btn {
   background: #6c757d;
   color: white;
+  width: auto;
 }
 
 .profile-btn:hover {
@@ -703,6 +781,7 @@ h1 {
 .logout-btn {
   background: #dc3545;
   color: white;
+  width: auto;
 }
 
 .logout-btn:hover {
@@ -821,6 +900,11 @@ h1 {
     padding: 0.5rem;
   }
   
+  .auth-form-container {
+    min-width: 280px;
+    padding: 1rem;
+  }
+  
   .user-info {
     flex-direction: column;
     gap: 0.5rem;
@@ -834,6 +918,6 @@ h1 {
   
   .auth-btn {
     font-size: 0.8rem;
-    padding: 0.4rem 0.8rem;
+    padding: 0.5rem 0.8rem;
   }
 }
