@@ -111,7 +111,7 @@ export function renderAuthHtml() {
               <h2>Login</h2>
               <form onsubmit="handleLogin(event)">
                 <div class="form-group">
-                  <label for="login-username">Username or Email</label>
+                  <label for="login-username">Username</label>
                   <input 
                     type="text" 
                     id="login-username" 
@@ -132,7 +132,6 @@ export function renderAuthHtml() {
                 </div>
                 <button type="submit" class="auth-button">Login</button>
                 <div class="auth-links">
-                  <a href="#" onclick="showPasswordReset()">Forgot Password?</a>
                   <a href="#" onclick="showRegister()">Don't have an account? Register</a>
                 </div>
               </form>
@@ -155,16 +154,7 @@ export function renderAuthHtml() {
                   />
                   <small>3-20 characters, letters, numbers, underscores, and hyphens only</small>
                 </div>
-                <div class="form-group">
-                  <label for="register-email">Email</label>
-                  <input 
-                    type="email" 
-                    id="register-email" 
-                    name="email" 
-                    required 
-                    autocomplete="email"
-                  />
-                </div>
+
                 <div class="form-group">
                   <label for="register-password">Password</label>
                   <input 
@@ -186,27 +176,7 @@ export function renderAuthHtml() {
               </form>
             </div>
             
-            <!-- Password Reset Form -->
-            <div id="password-reset-form" class="auth-form">
-              <h2>Password Reset</h2>
-              <form onsubmit="handlePasswordReset(event)">
-                <p>Enter your email address to receive a password reset link.</p>
-                <div class="form-group">
-                  <label for="reset-email">Email</label>
-                  <input 
-                    type="email" 
-                    id="reset-email" 
-                    name="email" 
-                    required 
-                    autocomplete="email"
-                  />
-                </div>
-                <button type="submit" class="auth-button">Send Reset Link</button>
-                <div class="auth-links">
-                  <a href="#" onclick="showLogin()">Back to Login</a>
-                </div>
-              </form>
-            </div>
+            <!-- Password Reset Form removed (no email required) -->
           </div>
           
           <div id="auth-message" class="auth-message"></div>

@@ -22,7 +22,6 @@ import {
   handleLogin,
   handleLogout,
   handleMe,
-  handlePasswordResetRequest,
   requireAuth,
   getUserFromSession
 } from "./auth-handlers";
@@ -83,8 +82,6 @@ export default {
       return handleLogin(request, env, body);
     } else if (url.pathname === "/wtm/api/auth/logout" && method === "POST") {
       return handleLogout(request, env);
-    } else if (url.pathname === "/wtm/api/auth/password-reset" && method === "POST") {
-      return handlePasswordResetRequest(request, env, body);
     } else if (url.pathname === "/wtm/api/auth/me" && method === "GET") {
       return handleMe(request, env);
     }

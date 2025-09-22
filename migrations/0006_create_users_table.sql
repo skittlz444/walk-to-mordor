@@ -1,10 +1,9 @@
 --Migration number: 0006 	 2025-09-22T08:15:00.000Z
 
--- Create users table with encrypted passwords
+-- Create users table with encrypted passwords (no email required)
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     salt TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

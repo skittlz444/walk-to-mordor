@@ -14,12 +14,7 @@ function showRegister() {
   clearMessage();
 }
 
-// Show password reset form
-function showPasswordReset() {
-  hideAllForms();
-  document.getElementById('password-reset-form').classList.add('active');
-  clearMessage();
-}
+// Password reset functionality removed (no email required)
 
 // Hide all forms
 function hideAllForms() {
@@ -98,7 +93,6 @@ async function handleRegister(event) {
   const formData = new FormData(form);
   const data = {
     username: formData.get('username'),
-    email: formData.get('email'),
     password: formData.get('password')
   };
   
@@ -137,47 +131,7 @@ async function handleRegister(event) {
   }
 }
 
-// Handle password reset form submission
-async function handlePasswordReset(event) {
-  event.preventDefault();
-  
-  const form = event.target;
-  const formData = new FormData(form);
-  const data = {
-    email: formData.get('email')
-  };
-  
-  // Disable submit button
-  const submitBtn = form.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Sending...';
-  
-  try {
-    const response = await fetch('/wtm/api/auth/password-reset', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    });
-    
-    const result = await response.json();
-    
-    if (response.ok) {
-      showMessage(result.message || 'Password reset link sent if account exists', 'success');
-      form.reset();
-    } else {
-      showMessage(result.error || 'Password reset failed', 'error');
-    }
-  } catch (error) {
-    console.error('Password reset error:', error);
-    showMessage('Network error. Please try again.', 'error');
-  } finally {
-    // Re-enable submit button
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Send Reset Link';
-  }
-}
+// Password reset functionality removed (no email required)
 
 // Handle logout (for authenticated pages)
 async function handleLogout() {

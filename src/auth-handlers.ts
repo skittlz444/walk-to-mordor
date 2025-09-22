@@ -3,7 +3,6 @@ import {
   generateSalt, 
   hashPassword, 
   verifyPassword, 
-  isValidEmail, 
   isValidUsername, 
   isValidPassword,
   createSession,
@@ -15,11 +14,11 @@ import { createErrorResponse, createSuccessResponse } from "./validators";
 
 // Register new user
 export async function handleRegister(request: Request, env: any, body: any) {
-  const { username, email, password } = body || {};
+  const { username, password } = body || {};
   
   // Validate required fields
-  if (!username || !email || !password) {
-    return createErrorResponse('Missing required fields: username, email, password', 400);
+  if (!username || !password) {
+    return createErrorResponse('Missing required fields: username, password', 400);
   }
   
   // Validate input formats
@@ -27,22 +26,18 @@ export async function handleRegister(request: Request, env: any, body: any) {
     return createErrorResponse('Invalid username. Must be 3-20 characters, alphanumeric, underscores, or hyphens only', 400);
   }
   
-  if (!isValidEmail(email)) {
-    return createErrorResponse('Invalid email format', 400);
-  }
-  
   if (!isValidPassword(password)) {
     return createErrorResponse('Invalid password. Must be at least 8 characters and contain both letters and numbers', 400);
   }
   
   try {
-    // Check if username or email already exists
+    // Check if username already exists
     const existingUser = await env.DB.prepare(`
-      SELECT id FROM users WHERE username = ? OR email = ?
-    `).bind(username, email).first();
+      SELECT id FROM users WHERE username = ?
+    `).bind(username).first();
     
     if (existingUser) {
-      return createErrorResponse('Username or email already exists', 409);
+      return createErrorResponse('Username already exists', 409);
     }
     
     // Hash password
@@ -51,9 +46,9 @@ export async function handleRegister(request: Request, env: any, body: any) {
     
     // Create user
     const result = await env.DB.prepare(`
-      INSERT INTO users (username, email, password_hash, salt)
-      VALUES (?, ?, ?, ?)
-    `).bind(username, email, passwordHash, salt).run();
+      INSERT INTO users (username, password_hash, salt)
+      VALUES (?, ?, ?)
+    `).bind(username, passwordHash, salt).run();
     
     const userId = result.meta.last_row_id;
     
@@ -62,7 +57,7 @@ export async function handleRegister(request: Request, env: any, body: any) {
     
     return new Response(JSON.stringify({
       message: 'User registered successfully',
-      user: { id: userId, username, email },
+      user: { id: userId, username },
       sessionId
     }), {
       status: 201,
@@ -91,12 +86,12 @@ export async function handleLogin(request: Request, env: any, body: any) {
     // Clean up expired sessions first
     await cleanupExpiredSessions(env);
     
-    // Find user by username or email
+    // Find user by username
     const user = await env.DB.prepare(`
-      SELECT id, username, email, password_hash, salt 
+      SELECT id, username, password_hash, salt 
       FROM users 
-      WHERE username = ? OR email = ?
-    `).bind(username, username).first();
+      WHERE username = ?
+    `).bind(username).first();
     
     if (!user) {
       return createErrorResponse('Invalid username or password', 401);
@@ -113,7 +108,7 @@ export async function handleLogin(request: Request, env: any, body: any) {
     
     return new Response(JSON.stringify({
       message: 'Login successful',
-      user: { id: user.id, username: user.username, email: user.email },
+      user: { id: user.id, username: user.username },
       sessionId
     }), {
       status: 200,
@@ -168,7 +163,7 @@ export async function handleMe(request: Request, env: any) {
     }
     
     return createSuccessResponse({
-      user: { id: user.id, username: user.username, email: user.email }
+      user: { id: user.id, username: user.username }
     });
     
   } catch (error: any) {
@@ -177,28 +172,7 @@ export async function handleMe(request: Request, env: any) {
   }
 }
 
-// Password reset request (simplified - just returns success for now)
-export async function handlePasswordResetRequest(request: Request, env: any, body: any) {
-  const { email } = body || {};
-  
-  if (!email) {
-    return createErrorResponse('Missing required field: email', 400);
-  }
-  
-  if (!isValidEmail(email)) {
-    return createErrorResponse('Invalid email format', 400);
-  }
-  
-  // In a real implementation, you would:
-  // 1. Check if email exists
-  // 2. Generate a reset token
-  // 3. Send reset email
-  // For now, we'll just return success to prevent email enumeration
-  
-  return createSuccessResponse({
-    message: 'If an account with that email exists, a password reset link has been sent'
-  });
-}
+// Note: Password reset functionality removed since email is not required
 
 // Extract session ID from request cookies
 function getSessionFromRequest(request: Request): string | null {
@@ -215,7 +189,7 @@ function getSessionFromRequest(request: Request): string | null {
 }
 
 // Authentication middleware - check if user is authenticated
-export async function requireAuth(request: Request, env: any): Promise<{id: number, username: string, email: string} | Response> {
+export async function requireAuth(request: Request, env: any): Promise<{id: number, username: string} | Response> {
   const sessionId = getSessionFromRequest(request);
   
   if (!sessionId) {

@@ -2,7 +2,6 @@ import {
   generateSalt,
   hashPassword,
   verifyPassword,
-  isValidEmail,
   isValidUsername,
   isValidPassword,
   generateSessionId
@@ -81,21 +80,7 @@ describe('Auth Utils', () => {
     });
   });
 
-  describe('isValidEmail', () => {
-    it('should accept valid email addresses', () => {
-      expect(isValidEmail('test@example.com')).toBe(true);
-      expect(isValidEmail('user.name+tag@domain.co.uk')).toBe(true);
-      expect(isValidEmail('valid_email@test-domain.org')).toBe(true);
-    });
 
-    it('should reject invalid email addresses', () => {
-      expect(isValidEmail('invalid')).toBe(false);
-      expect(isValidEmail('invalid@')).toBe(false);
-      expect(isValidEmail('@domain.com')).toBe(false);
-      expect(isValidEmail('test@')).toBe(false);
-      expect(isValidEmail('test.domain.com')).toBe(false);
-    });
-  });
 
   describe('isValidUsername', () => {
     it('should accept valid usernames', () => {

@@ -50,11 +50,7 @@ export function generateSessionId(): string {
   return crypto.randomUUID();
 }
 
-// Validate email format
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
+// Email validation removed - no longer needed
 
 // Validate username (alphanumeric, underscores, hyphens, 3-20 characters)
 export function isValidUsername(username: string): boolean {
@@ -72,16 +68,16 @@ export function isValidPassword(password: string): boolean {
 }
 
 // Extract user from session
-export async function getUserFromSession(sessionId: string, env: any): Promise<{id: number, username: string, email: string} | null> {
+export async function getUserFromSession(sessionId: string, env: any): Promise<{id: number, username: string} | null> {
   try {
     const { results } = await env.DB.prepare(`
-      SELECT u.id, u.username, u.email 
+      SELECT u.id, u.username 
       FROM users u 
       JOIN sessions s ON u.id = s.user_id 
       WHERE s.id = ? AND s.expires_at > datetime('now')
     `).bind(sessionId).all();
     
-    return results.length > 0 ? results[0] as {id: number, username: string, email: string} : null;
+    return results.length > 0 ? results[0] as {id: number, username: string} : null;
   } catch (error) {
     console.error('Error getting user from session:', error);
     return null;

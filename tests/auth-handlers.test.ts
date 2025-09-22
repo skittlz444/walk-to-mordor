@@ -3,7 +3,6 @@ import {
   handleLogin,
   handleLogout,
   handleMe,
-  handlePasswordResetRequest,
   requireAuth
 } from '../src/auth-handlers';
 
@@ -12,12 +11,11 @@ jest.mock('../src/auth-utils', () => ({
   generateSalt: jest.fn(() => 'mock-salt'),
   hashPassword: jest.fn(() => Promise.resolve('mock-hash')),
   verifyPassword: jest.fn(() => Promise.resolve(true)),
-  isValidEmail: jest.fn(() => true),
   isValidUsername: jest.fn(() => true),
   isValidPassword: jest.fn(() => true),
   createSession: jest.fn(() => Promise.resolve('mock-session-id')),
   destroySession: jest.fn(() => Promise.resolve()),
-  getUserFromSession: jest.fn(() => Promise.resolve({ id: 1, username: 'testuser', email: 'test@example.com' })),
+  getUserFromSession: jest.fn(() => Promise.resolve({ id: 1, username: 'testuser' })),
   cleanupExpiredSessions: jest.fn(() => Promise.resolve())
 }));
 
@@ -63,7 +61,6 @@ describe('Auth Handlers', () => {
     );
     
     // Reset auth utils mocks
-    (authUtils.isValidEmail as jest.Mock).mockReturnValue(true);
     (authUtils.isValidUsername as jest.Mock).mockReturnValue(true);
     (authUtils.isValidPassword as jest.Mock).mockReturnValue(true);
     
@@ -89,7 +86,6 @@ describe('Auth Handlers', () => {
     it('should register a new user successfully', async () => {
       const body = {
         username: 'testuser',
-        email: 'test@example.com',
         password: 'password123'
       };
 
@@ -99,7 +95,7 @@ describe('Auth Handlers', () => {
       expect(response.status).toBe(201);
       expect(responseData).toEqual({
         message: 'User registered successfully',
-        user: { id: 1, username: 'testuser', email: 'test@example.com' },
+        user: { id: 1, username: 'testuser' },
         sessionId: 'mock-session-id'
       });
       expect(authUtils.generateSalt).toHaveBeenCalled();
@@ -108,13 +104,13 @@ describe('Auth Handlers', () => {
     });
 
     it('should reject registration with missing fields', async () => {
-      const body = { username: 'testuser' }; // missing email and password
+      const body = { username: 'testuser' }; // missing password
       
       const response = await handleRegister(mockRequest, mockEnv, body);
       
       expect(response.status).toBe(400);
       expect(validators.createErrorResponse).toHaveBeenCalledWith(
-        'Missing required fields: username, email, password',
+        'Missing required fields: username, password',
         400
       );
     });
@@ -124,7 +120,6 @@ describe('Auth Handlers', () => {
       
       const body = {
         username: 'invalid@user',
-        email: 'test@example.com',
         password: 'password123'
       };
 
@@ -146,7 +141,6 @@ describe('Auth Handlers', () => {
 
       const body = {
         username: 'testuser',
-        email: 'test@example.com',
         password: 'password123'
       };
 
@@ -154,7 +148,7 @@ describe('Auth Handlers', () => {
       
       expect(response.status).toBe(409);
       expect(validators.createErrorResponse).toHaveBeenCalledWith(
-        'Username or email already exists',
+        'Username already exists',
         409
       );
     });
@@ -167,7 +161,6 @@ describe('Auth Handlers', () => {
           first: jest.fn().mockResolvedValue({
             id: 1,
             username: 'testuser',
-            email: 'test@example.com',
             password_hash: 'mock-hash',
             salt: 'mock-salt'
           })
@@ -182,7 +175,7 @@ describe('Auth Handlers', () => {
       expect(response.status).toBe(200);
       expect(responseData).toEqual({
         message: 'Login successful',
-        user: { id: 1, username: 'testuser', email: 'test@example.com' },
+        user: { id: 1, username: 'testuser' },
         sessionId: 'mock-session-id'
       });
       expect(authUtils.verifyPassword).toHaveBeenCalledWith('password123', 'mock-hash', 'mock-salt');
@@ -226,7 +219,6 @@ describe('Auth Handlers', () => {
           first: jest.fn().mockResolvedValue({
             id: 1,
             username: 'testuser',
-            email: 'test@example.com',
             password_hash: 'mock-hash',
             salt: 'mock-salt'
           })
@@ -283,7 +275,7 @@ describe('Auth Handlers', () => {
       
       expect(response.status).toBe(200);
       expect(validators.createSuccessResponse).toHaveBeenCalledWith({
-        user: { id: 1, username: 'testuser', email: 'test@example.com' }
+        user: { id: 1, username: 'testuser' }
       });
     });
 
@@ -295,27 +287,7 @@ describe('Auth Handlers', () => {
     });
   });
 
-  describe('handlePasswordResetRequest', () => {
-    it('should handle password reset request', async () => {
-      const body = { email: 'test@example.com' };
-      
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
-      
-      expect(response.status).toBe(200);
-      expect(validators.createSuccessResponse).toHaveBeenCalledWith({
-        message: 'If an account with that email exists, a password reset link has been sent'
-      });
-    });
 
-    it('should reject password reset without email', async () => {
-      const body = {};
-      
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
-      
-      expect(response.status).toBe(400);
-      expect(validators.createErrorResponse).toHaveBeenCalledWith('Missing required field: email', 400);
-    });
-  });
 
   describe('requireAuth', () => {
     it('should return user for valid session', async () => {
@@ -325,7 +297,7 @@ describe('Auth Handlers', () => {
 
       const result = await requireAuth(requestWithSession, mockEnv);
       
-      expect(result).toEqual({ id: 1, username: 'testuser', email: 'test@example.com' });
+      expect(result).toEqual({ id: 1, username: 'testuser' });
     });
 
     it('should return error response for missing session', async () => {
