@@ -195,8 +195,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Goal popup opens for completed goals and shows strikethrough distance', async ({ page }) => {
-    // Get viewport and user agent for responsive behavior
-    const viewport = page.viewportSize();
     const userAgent = await page.evaluate(() => navigator.userAgent);
     
     await page.goto('http://localhost:8787');
@@ -221,19 +219,16 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       // No popup to close, continue
     }
     
-    // Check viewport and skip calendar operations on mobile
-    if (viewport && viewport.width >= 768) {
-      // Add some distance to ensure we have completed goals
-      const cell = await selectNextWeekCell(page);
-      await cell.click();
-      await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
-      
-      // Check if Add button is visible before clicking
-      const addButton = page.locator('text=Add');
-      if (await addButton.isVisible({ timeout: 5000 })) {
-        await addButton.click();
-        await page.waitForTimeout(2000); // Wait for distance processing and potential congratulations
-      }
+    // Add some distance to ensure we have completed goals
+    const cell = await selectNextWeekCell(page);
+    await cell.click();
+    await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
+    
+    // Check if Add button is visible before clicking
+    const addButton = page.locator('text=Add');
+    if (await addButton.isVisible({ timeout: 5000 })) {
+      await addButton.click();
+      await page.waitForTimeout(2000); // Wait for distance processing and potential congratulations
     }
     
     // Wait for goals to load
@@ -278,12 +273,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     
     await expect(goalToClick).toBeVisible();
     
-    // Use force click for mobile browsers where popups might still interfere
-    if (viewport && viewport.width < 768) {
-      await goalToClick.click({ force: true });
-    } else {
-      await goalToClick.click();
-    }
+    await goalToClick.click();
     
     // Check that goal popup is visible
     await expect(page.locator('.modal-overlay')).toBeVisible();
@@ -484,14 +474,8 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
       
-      // Calendar may be hidden on smaller mobile viewports
-      if (viewport.width >= 768) {
-        // Expect calendar to be visible on larger screens
-        await expect(page.locator('.custom-calendar')).toBeVisible();
-      } else {
-        // On mobile, just check that the page loads and goals are visible
-        await expect(page.locator('#goals-list')).toBeVisible();
-      }
+      // Expect calendar to be visible on all screen sizes
+      await expect(page.locator('.custom-calendar')).toBeVisible();
     }
   });
 
@@ -550,21 +534,15 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await page.goto('http://localhost:8787');
     await page.waitForLoadState('networkidle');
     
-    // Check viewport size and skip calendar tests on small mobile screens
-    const viewport = page.viewportSize();
-    if (viewport && viewport.width < 768) {
-      return;
-    }
-    
     const nextButton = page.locator('#next-btn');
     await expect(nextButton).toBeVisible();
-    
+
     // Test rapid navigation clicks
     for (let i = 0; i < 3; i++) {
       await nextButton.click();
       await page.waitForTimeout(100);
     }
-    
+
     // Calendar should still be functional
     await expect(page.locator('.custom-calendar')).toBeVisible();
   });
@@ -577,15 +555,8 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await page.goBack();
     await page.goForward();
     
-    // Check viewport size for calendar visibility
-    const viewport = page.viewportSize();
-    if (viewport && viewport.width >= 768) {
-      // Should return to the application with visible calendar on larger screens
-      await expect(page.locator('.custom-calendar')).toBeVisible();
-    } else {
-      // On mobile, just ensure the page loads correctly
-      await expect(page.locator('#goals-list')).toBeVisible();
-    }
+    // Should return to the application with visible calendar
+    await expect(page.locator('.custom-calendar')).toBeVisible();
   });
 
   test('Page accessibility basics', async ({ page }) => {
@@ -596,15 +567,9 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const title = await page.title();
     expect(title).toBeTruthy();
     
-    // Check for navigation landmarks - but only if calendar is visible
-    const viewport = page.viewportSize();
-    if (viewport && viewport.width >= 768) {
-      const navigation = page.locator('#next-btn, #prev-btn');
-      await expect(navigation.first()).toBeVisible();
-    } else {
-      // On mobile, just check that the page has proper structure
-      await expect(page.locator('header')).toBeVisible();
-    }
+    // Check for navigation landmarks
+    const navigation = page.locator('#next-btn, #prev-btn');
+    await expect(navigation.first()).toBeVisible();
   });
 
   // Goal Image Loading Edge Cases & Advanced Features
