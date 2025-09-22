@@ -241,3 +241,6 @@ export async function requireAuth(request: Request, env: any): Promise<{id: numb
     return createErrorResponse('Internal server error', 500);
   }
 }
+
+// Re-export for convenience
+export { getUserFromSession } from "./auth-utils";
