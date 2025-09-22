@@ -223,20 +223,16 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     
     // Check viewport and skip calendar operations on mobile
     if (viewport && viewport.width >= 768) {
-      try {
-        // Add some distance to ensure we have completed goals
-        const cell = await selectNextWeekCell(page);
-        await cell.click();
-        await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
-        
-        // Check if Add button is visible before clicking
-        const addButton = page.locator('text=Add');
-        if (await addButton.isVisible({ timeout: 5000 })) {
-          await addButton.click();
-          await page.waitForTimeout(2000); // Wait for distance processing and potential congratulations
-        }
-      } catch (error) {
-        // Calendar operations failed, continue with existing goals
+      // Add some distance to ensure we have completed goals
+      const cell = await selectNextWeekCell(page);
+      await cell.click();
+      await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
+      
+      // Check if Add button is visible before clicking
+      const addButton = page.locator('text=Add');
+      if (await addButton.isVisible({ timeout: 5000 })) {
+        await addButton.click();
+        await page.waitForTimeout(2000); // Wait for distance processing and potential congratulations
       }
     }
     
@@ -870,44 +866,39 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const highestGoal = suitableGoals[1]; // Second goal
     const testDistance = highestGoal.distance + 1; // Should pass both first and second goal
 
-    try {
-      // Add the distance entry using the same approach as other edge case tests
-      const cell = await selectNextWeekCell(page);
-      await cell.click();
+    // Add the distance entry using the same approach as other edge case tests
+    const cell = await selectNextWeekCell(page);
+    await cell.click();
 
-      // Enter the distance
-      const distanceInput = page.locator('#distance-input');
-      await expect(distanceInput).toBeVisible();
-      await distanceInput.fill(testDistance.toString());
+    // Enter the distance
+    const distanceInput = page.locator('#distance-input');
+    await expect(distanceInput).toBeVisible();
+    await distanceInput.fill(testDistance.toString());
 
-      // Click Save/Add button
-      const addButton = page.locator('text=Add');
-      await addButton.click();
+    // Click Save/Add button
+    const addButton = page.locator('text=Add');
+    await addButton.click();
 
-      // Wait for the distance input popup to close
-      await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
+    // Wait for the distance input popup to close
+    await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
 
-      // Wait a moment for the congratulations popup to appear
-      await page.waitForTimeout(1000);
+    // Wait a moment for the congratulations popup to appear
+    await page.waitForTimeout(1000);
 
-      // Check if the goal popup opened
-      const goalPopup = page.locator('.modal-overlay');
-      if (await goalPopup.isVisible({ timeout: 5000 })) {
-        // Check for congratulations text
-        await expect(goalPopup).toContainText('Congratulations! You\'ve passed a new goal!');
-        
-        // Check that it shows the HIGHEST goal passed (the second goal)
-        await expect(goalPopup).toContainText(highestGoal.title);
-        
-        // Close the popup
-        const closeButton = page.locator('text=Close').last();
-        await closePopupRobust(page, closeButton);
-      } else {
-        console.log('Goal popup did not appear - this may be expected depending on test data');
-      }
-    } catch (error) {
-      // Calendar interaction may fail, but this is acceptable for edge case testing
-      console.log('Calendar interaction failed in edge case test:', error.message);
+    // Check if the goal popup opened
+    const goalPopup = page.locator('.modal-overlay');
+    if (await goalPopup.isVisible({ timeout: 5000 })) {
+      // Check for congratulations text
+      await expect(goalPopup).toContainText('Congratulations! You\'ve passed a new goal!');
+      
+      // Check that it shows the HIGHEST goal passed (the second goal)
+      await expect(goalPopup).toContainText(highestGoal.title);
+      
+      // Close the popup
+      const closeButton = page.locator('text=Close').last();
+      await closePopupRobust(page, closeButton);
+    } else {
+      console.log('Goal popup did not appear - this may be expected depending on test data');
     }
   });
 });

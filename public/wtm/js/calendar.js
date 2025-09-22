@@ -26,6 +26,12 @@ function isToday(date) {
          date.getDate() === today.getDate();
 }
 
+function getDateAtMidnight(date) {
+  const midnight = new Date(date);
+  midnight.setHours(0, 0, 0, 0);
+  return midnight;
+}
+
 function getEventForDate(date) {
   const dateStr = formatDate(date);
   return events.find(ev => formatDate(ev.start) === dateStr);
@@ -136,11 +142,12 @@ function renderWeekView(grid, title) {
     
     const event = getEventForDate(cellDate);
     const isCurrentDay = isToday(cellDate);
+    const midnightTimestamp = getDateAtMidnight(cellDate);
     
     html += `
       <div class="calendar-cell week-cell ${isCurrentDay ? 'today' : ''}" 
            data-date="${formatDate(cellDate)}"
-           data-timestamp="${cellDate.getTime()}">
+           data-timestamp="${midnightTimestamp.getTime()}">
         <div class="day-number">${cellDate.getDate()}</div>
         ${event ? `<div class="event-label">${event.title}</div>` : ''}
         ${isCurrentDay ? '<div class="today-indicator"></div>' : ''}
@@ -187,11 +194,12 @@ function renderMonthView(grid, title) {
       const event = getEventForDate(currentCellDate);
       const isCurrentDay = isToday(currentCellDate);
       const isCurrentMonth = currentCellDate.getMonth() === currentDate.getMonth();
+      const midnightTimestamp = getDateAtMidnight(currentCellDate);
       
       html += `
         <div class="calendar-cell month-cell ${isCurrentDay ? 'today' : ''} ${!isCurrentMonth ? 'other-month' : ''}" 
              data-date="${formatDate(currentCellDate)}"
-             data-timestamp="${currentCellDate.getTime()}">
+             data-timestamp="${midnightTimestamp.getTime()}">
           <div class="day-number">${currentCellDate.getDate()}</div>
           ${event ? `<div class="event-label">${event.title}</div>` : ''}
           ${isCurrentDay ? '<div class="today-indicator"></div>' : ''}
