@@ -1,0 +1,132 @@
+/* Goals domain styles */
+
+#goals-section {
+  width: 100vw;
+  max-width: 700px;
+  margin: 0 auto 2em auto;
+  text-align: center;
+}
+
+#last-goal {
+  margin: 1em auto 0 auto;
+  text-align: center;
+  max-width: 90vw;
+}
+
+#goals-list {
+  margin: 1em auto 0 auto;
+}
+
+/* Goal popup scrolling styles */
+.goal-modal-scrollable {
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.goal-modal-scrollable .modal-body {
+  max-height: none !important;
+}
+
+/* Custom scrollbar styling for WebKit browsers */
+.goal-modal-scrollable ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.goal-modal-scrollable ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.goal-modal-scrollable ::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.5);
+  border-radius: 4px;
+}
+
+.goal-modal-scrollable ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.7);
+}
+
+.goal-congratulations {
+  color: #00FF7F;
+  font-size: 1em;
+  font-weight: bold;
+  margin-bottom: 1em;
+  text-align: center;
+  text-shadow: 0 0 8px #00FF7F;
+  animation: pulse 1.5s normal;
+}
+
+/* Congratulations animation */
+@keyframes pulse {
+  0% {
+    text-shadow: 0 0 8px #00FF7F;
+    transform: scale(1);
+  }
+  50% {
+    text-shadow: 0 0 20px #00FF7F, 0 0 30px #00FF7F;
+    transform: scale(1.02);
+  }
+  100% {
+    text-shadow: 0 0 8px #00FF7F;
+    transform: scale(1);
+  }
+}
+
+.modal-footer-btns-goal {
+  display: flex;
+  width: 100%;
+  background: #1a1a1a;
+}
+
+.modal-footer-btns-goal button {
+  flex: 1 1 100%;
+  margin: 0 auto;
+  border-radius: 0;
+  font-size: 1.08em;
+  min-height: 2.5em;
+  width: 100%;
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  font-weight: 400;
+  text-align: center;
+}
+
+/* Goal list styles */
+.completed-goal,
+.all-completed-goal,
+.upcoming-goal {
+  transition: background-color 0.2s ease;
+}
+
+.completed-goal:hover,
+.all-completed-goal:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.upcoming-goal:hover {
+  background: rgba(50,50,50,0.95) !important;
+}
+
+/* Goal header styles */
+.goal-header-main,
+.goal-header-special {
+  transition: color 0.2s ease;
+}
+
+.goal-header-main:hover,
+.goal-header-special:hover {
+  color: #fff !important;
+}
+
+/* Goal toggle buttons */
+#toggle-completed-visibility,
+#toggle-completed {
+  transition: background-color 0.2s ease;
+}
+
+#toggle-completed-visibility:hover,
+#toggle-completed:hover {
+  background: #555 !important;
+}

@@ -1,23 +1,7 @@
 import { renderHtml } from '../src/renderHtml';
 
 describe('renderHtml', () => {
-  it('should render HTML with provided total distance', () => {
-    const result = renderHtml(42.5);
-    
-    expect(result).toContain('<!DOCTYPE html>');
-    expect(result).toContain('<title>Walk to Mordor</title>');
-    expect(result).toContain('42.5');
-  });
-
-  it('should render HTML with zero distance', () => {
-    const result = renderHtml(0);
-    
-    expect(result).toContain('<!DOCTYPE html>');
-    expect(result).toContain('<title>Walk to Mordor</title>');
-    expect(result).toContain('0');
-  });
-
-  it('should render HTML without distance parameter', () => {
+  it('should render HTML with standard structure', () => {
     const result = renderHtml();
     
     expect(result).toContain('<!DOCTYPE html>');
@@ -25,8 +9,14 @@ describe('renderHtml', () => {
     expect(result).toContain('<html lang="en">');
   });
 
+  it('should include loading placeholder for total distance', () => {
+    const result = renderHtml();
+    
+    expect(result).toContain('<div id="total-distance-value">Loading...</div>');
+  });
+
   it('should include PWA meta tags', () => {
-    const result = renderHtml(10);
+    const result = renderHtml();
     
     expect(result).toContain('manifest.json');
     expect(result).toContain('theme-color');
@@ -35,26 +25,35 @@ describe('renderHtml', () => {
   });
 
   it('should include JavaScript files', () => {
-    const result = renderHtml(10);
+    const result = renderHtml();
     
     expect(result).toContain('main.js');
+    expect(result).toContain('calendar.js');
+    expect(result).toContain('progress.js');
+    expect(result).toContain('goals.js');
+    expect(result).toContain('validators.js');
   });
 
   it('should include CSS files', () => {
-    const result = renderHtml(10);
+    const result = renderHtml();
     
     expect(result).toContain('main.css');
   });
 
-  it('should handle large numbers', () => {
-    const result = renderHtml(999999.99);
+  it('should include required HTML structure elements', () => {
+    const result = renderHtml();
     
-    expect(result).toContain('999999.99');
+    expect(result).toContain('<header>');
+    expect(result).toContain('<section id="goals-section">');
+    expect(result).toContain('<div id="eventcalendar-container">');
+    expect(result).toContain('<div id="goals-list">');
+    expect(result).toContain('<div id="eventcalendar">');
   });
 
-  it('should handle decimal numbers', () => {
-    const result = renderHtml(123.456);
+  it('should include service worker registration script', () => {
+    const result = renderHtml();
     
-    expect(result).toContain('123.456');
+    expect(result).toContain('serviceWorker');
+    expect(result).toContain('/wtm/sw.js');
   });
 });
