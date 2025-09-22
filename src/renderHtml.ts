@@ -24,7 +24,7 @@ export function renderHtml() {
         
         <!-- Stylesheets -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        <link href="wtm/css/main.css" rel="stylesheet" />
+        <link href="/wtm/css/main.css" rel="stylesheet" />
         
         <!-- Service Worker Registration -->
         <script>
@@ -58,12 +58,12 @@ export function renderHtml() {
       </div>
       
       <!-- Scripts -->
-      <script src="wtm/js/validators.js"></script>
-      <script src="wtm/js/calendar.js"></script>
-      <script src="wtm/js/progress.js"></script>
-      <script src="wtm/js/goals.js"></script>
-      <script src="wtm/js/auth.js"></script>
-      <script src="wtm/js/main.js"></script>
+      <script src="/wtm/js/validators.js"></script>
+      <script src="/wtm/js/calendar.js"></script>
+      <script src="/wtm/js/progress.js"></script>
+      <script src="/wtm/js/goals.js"></script>
+      <script src="/wtm/js/auth.js"></script>
+      <script src="/wtm/js/main.js"></script>
       </body>
     </html>
 `;
@@ -95,8 +95,8 @@ export function renderAuthHtml() {
         
         <!-- Stylesheets -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        <link href="wtm/css/main.css" rel="stylesheet" />
-        <link href="wtm/css/auth.css" rel="stylesheet" />
+        <link href="/wtm/css/main.css" rel="stylesheet" />
+        <link href="/wtm/css/auth.css" rel="stylesheet" />
       </head>
       <body class="auth-page">
         <div class="auth-container">
@@ -183,7 +183,7 @@ export function renderAuthHtml() {
         </div>
         
         <!-- Scripts -->
-        <script src="wtm/js/auth.js"></script>
+        <script src="/wtm/js/auth.js"></script>
       </body>
     </html>
 `;

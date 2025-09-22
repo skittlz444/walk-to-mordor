@@ -70,8 +70,8 @@ async function handleLogin(event) {
       showMessage('Login successful! Redirecting...', 'success');
       // Redirect to main page after successful login
       setTimeout(() => {
-        window.location.href = '/wtm/';
-      }, 1000);
+        window.location.reload();
+      }, 500);
     } else {
       showMessage(result.error || 'Login failed', 'error');
     }
@@ -116,8 +116,8 @@ async function handleRegister(event) {
       showMessage('Registration successful! Redirecting...', 'success');
       // Redirect to main page after successful registration
       setTimeout(() => {
-        window.location.href = '/wtm/';
-      }, 1000);
+        window.location.reload();
+      }, 500);
     } else {
       showMessage(result.error || 'Registration failed', 'error');
     }
@@ -144,11 +144,11 @@ async function handleLogout() {
     });
     
     // Redirect to login page regardless of response
-    window.location.href = '/wtm/';
+    window.location.reload();
   } catch (error) {
     console.error('Logout error:', error);
     // Still redirect on error
-    window.location.href = '/wtm/';
+    window.location.reload();
   }
 }
 
