@@ -66,6 +66,9 @@ export function isValidMethod(pathname: string, method: string): boolean {
   if (pathname === "/wtm/api/goals") {
     return method === 'GET';
   }
+  if (pathname === "/wtm/api/total-distance") {
+    return method === 'GET';
+  }
   return false;
 }
 

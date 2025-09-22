@@ -90,3 +90,13 @@ describe('Goals API - Success Flows', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 });
+
+describe('Total Distance API - Success Flows', () => {
+  it('GET returns total distance', async () => {
+    const res = await request(server).get('/wtm/api/total-distance');
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('totalDistance');
+    expect(typeof res.body.totalDistance).toBe('number');
+    expect(res.body.totalDistance).toBeGreaterThanOrEqual(0);
+  });
+});

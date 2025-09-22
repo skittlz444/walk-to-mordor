@@ -413,23 +413,8 @@ describe('Cloudflare Worker Index', () => {
     expect(response.status).toBe(500);
   });
 
-  it('should handle database errors in main page rendering', async () => {
-    mockRequest.url = 'https://example.com/';
-    mockRequest.method = 'GET';
-
-    // Mock database error
-    mockEnv.DB.prepare.mockReturnValue({
-      all: jest.fn(() => Promise.reject(new Error('Database error')))
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(mockRenderHtml).toHaveBeenCalledWith(0); // Should fallback to 0
-    expect(response.status).toBe(200);
-  });
-
-  it('should calculate total distance correctly for main page', async () => {
-    mockRequest.url = 'https://example.com/';
+  it('should calculate total distance correctly via API endpoint', async () => {
+    mockRequest.url = 'https://example.com/wtm/api/total-distance';
     mockRequest.method = 'GET';
 
     // Mock multiple entries with distances
@@ -443,9 +428,60 @@ describe('Cloudflare Worker Index', () => {
       }))
     });
 
+    const response = await worker.fetch(mockRequest, mockEnv);
+    const data = await response.json();
+    
+    expect(response.status).toBe(200);
+    expect(data.totalDistance).toBe(10); // 5.5 + 3.2 + 1.3 = 10
+  });
+
+  it('should handle database errors in total distance API', async () => {
+    mockRequest.url = 'https://example.com/wtm/api/total-distance';
+    mockRequest.method = 'GET';
+
+    // Mock database error
+    mockEnv.DB.prepare.mockReturnValue({
+      all: jest.fn(() => Promise.reject(new Error('Database error')))
+    });
+
+    const response = await worker.fetch(mockRequest, mockEnv);
+    
+    expect(response.status).toBe(500);
+  });
+
+  it('should render main page even with database errors', async () => {
+    mockRequest.url = 'https://example.com/';
+    mockRequest.method = 'GET';
+
+    // Mock database error (this won't affect main page rendering in new architecture)
+    mockEnv.DB.prepare.mockReturnValue({
+      all: jest.fn(() => Promise.reject(new Error('Database error')))
+    });
+
+    const response = await worker.fetch(mockRequest, mockEnv);
+    
+    expect(mockRenderHtml).toHaveBeenCalledWith(); // No parameters in new architecture
+    expect(response.status).toBe(200);
+  });
+
+  it('should render main page without server-side distance calculation', async () => {
+    mockRequest.url = 'https://example.com/';
+    mockRequest.method = 'GET';
+
+    // Database data doesn't affect main page rendering in new architecture
+    mockEnv.DB.prepare.mockReturnValue({
+      all: jest.fn(() => Promise.resolve({
+        results: [
+          { distance: 5.5 },
+          { distance: 3.2 },
+          { distance: 1.3 }
+        ]
+      }))
+    });
+
     await worker.fetch(mockRequest, mockEnv);
     
-    expect(mockRenderHtml).toHaveBeenCalledWith(10); // 5.5 + 3.2 + 1.3 = 10
+    expect(mockRenderHtml).toHaveBeenCalledWith(); // No parameters in new architecture
   });
 
   it('should handle HEAD requests for assets', async () => {

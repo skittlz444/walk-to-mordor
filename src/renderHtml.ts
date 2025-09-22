@@ -1,4 +1,4 @@
-export function renderHtml(totalDistance?: number) {
+export function renderHtml() {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -44,7 +44,7 @@ export function renderHtml(totalDistance?: number) {
       <body>
       <header>
         <h1>Total distance travelled</h1>
-        <div id="total-distance-value">${totalDistance ?? 0} km</div>
+        <div id="total-distance-value">Loading...</div>
         <div id="last-goal"></div>
       </header>
       <section id="goals-section">
@@ -55,6 +55,10 @@ export function renderHtml(totalDistance?: number) {
       </div>
       
       <!-- Scripts -->
+      <script src="wtm/js/validators.js"></script>
+      <script src="wtm/js/calendar.js"></script>
+      <script src="wtm/js/progress.js"></script>
+      <script src="wtm/js/goals.js"></script>
       <script src="wtm/js/main.js"></script>
       </body>
     </html>
