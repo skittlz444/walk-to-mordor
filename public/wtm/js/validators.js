@@ -1,5 +1,14 @@
 // Client-side validators
 
+// Validation constants - keep in sync with server-side validators.ts
+// Year range 1000-9999 provides a reasonable range for date validation
+// while supporting historical dates and far future dates if needed
+const VALIDATION_CONSTANTS = {
+  MIN_YEAR: 1000,
+  MAX_YEAR: 9999,
+  MAX_DISTANCE_VALUE: 999999999
+};
+
 function isValidDateFormat(dateStr) {
   if (!dateStr || typeof dateStr !== 'string') {
     return false;
@@ -17,8 +26,8 @@ function isValidDateFormat(dateStr) {
   const month = parseInt(parts[1], 10);
   const day = parseInt(parts[2], 10);
   
-  // Basic range checks
-  if (year < 1900 || year > 2100) return false;
+  // Basic range checks - use shared constants
+  if (year < VALIDATION_CONSTANTS.MIN_YEAR || year > VALIDATION_CONSTANTS.MAX_YEAR) return false;
   if (month < 1 || month > 12) return false;
   if (day < 1 || day > 31) return false;
   
@@ -47,7 +56,7 @@ function isValidDistance(distance) {
   }
   
   // Check if it's within reasonable bounds (less than 1 billion)
-  if (num > 999999999) {
+  if (num > VALIDATION_CONSTANTS.MAX_DISTANCE_VALUE) {
     return false;
   }
   
@@ -71,7 +80,7 @@ function validateProgressInput(date, distance) {
       errors.push('Invalid distance value. Must be a valid number');
     } else if (num < 0) {
       errors.push('Invalid distance value. Must be non-negative (0 or greater)');
-    } else if (num > 999999999) {
+    } else if (num > VALIDATION_CONSTANTS.MAX_DISTANCE_VALUE) {
       errors.push('Invalid distance value. Must be less than 1 billion');
     } else {
       errors.push('Invalid distance value. Must be a non-negative number');

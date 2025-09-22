@@ -81,8 +81,16 @@ function makeGoalClickable(element, goal, currentDistance) {
 
 function renderGoals(currentDistance) {
   fetch('/wtm/api/goals')
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`Goals API error: ${res.status} ${res.statusText}`);
+      }
+      return res.json();
+    })
     .then(goals => {
+      if (!Array.isArray(goals)) {
+        throw new Error('Invalid goals data: expected array');
+      }
       goals.sort((a, b) => a.distance - b.distance);
       const completed = goals.filter(g => Number(currentDistance) >= g.distance);
       const upcoming = goals.filter(g => Number(currentDistance) < g.distance);
@@ -204,13 +212,51 @@ function renderGoals(currentDistance) {
     })
     .catch(error => {
       console.error('Error loading goals:', error);
+      
+      // Provide user-friendly error message
+      const goalsContainer = document.getElementById('goals-list');
+      const lastGoalContainer = document.getElementById('last-goal');
+      
+      if (goalsContainer) {
+        goalsContainer.innerHTML = `
+          <div style="text-align: center; padding: 1.5em; background: rgba(40,40,40,0.95); border-radius: 12px; margin: 1em 0;">
+            <div style="color: #ff6b6b; font-size: 1.1em; margin-bottom: 0.5em;">
+              ⚠️ Unable to load goals
+            </div>
+            <div style="color: #aaa; font-size: 0.9em; margin-bottom: 1em;">
+              ${error.message.includes('fetch') ? 'Network connection error' : 'Server error loading goals'}
+            </div>
+            <button onclick="window.goalsModule.renderGoals(${currentDistance})" 
+                    style="background: #4CAF50; color: white; border: none; padding: 0.5em 1em; border-radius: 6px; cursor: pointer;">
+              Retry
+            </button>
+          </div>
+        `;
+      }
+      
+      if (lastGoalContainer) {
+        lastGoalContainer.innerHTML = `
+          <span style="color: #ff6b6b; font-size: 0.9em; text-align: center; display: block;">
+            Goals unavailable
+          </span>
+        `;
+      }
     });
 }
 
 function checkForNewlyPassedGoals(previousTotal, newTotal) {
   return fetch('/wtm/api/goals')
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`Goals API error: ${res.status} ${res.statusText}`);
+      }
+      return res.json();
+    })
     .then(goals => {
+      if (!Array.isArray(goals)) {
+        throw new Error('Invalid goals data: expected array');
+      }
+      
       goals.sort((a, b) => a.distance - b.distance);
       
       // Find goals that were passed with the new distance
@@ -220,6 +266,11 @@ function checkForNewlyPassedGoals(previousTotal, newTotal) {
       
       // Return the highest distance goal that was newly passed
       return newlyPassed.length > 0 ? newlyPassed[newlyPassed.length - 1] : null;
+    })
+    .catch(error => {
+      console.error('Error checking for newly passed goals:', error);
+      // Return null on error to prevent breaking the flow
+      return null;
     });
 }
 

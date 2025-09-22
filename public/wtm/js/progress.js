@@ -5,12 +5,17 @@ let popupEvent;
 let popupDate;
 let isEdit = false;
 
+// Helper function to format date with calendar module fallback
+function formatDateWithFallback(date) {
+  return window.calendarModule ? window.calendarModule.formatDate(date) : formatDateLocal(date);
+}
+
 function showDistanceModal(event, date = null) {
   popupDate = date;
   popupEvent = event;
   isEdit = !!event;
 
-  const selectedDate = window.calendarModule ? window.calendarModule.formatDate(popupDate) : formatDateLocal(popupDate);
+  const selectedDate = formatDateWithFallback(popupDate);
   let distanceValue = '';
   
   if (event && event.title) {
@@ -96,7 +101,7 @@ function showDistanceModal(event, date = null) {
 
 function handleSaveDistance() {
   const distance = document.getElementById('distance-input').value;
-  const selectedDate = window.calendarModule ? window.calendarModule.formatDate(popupDate) : formatDateLocal(popupDate);
+  const selectedDate = formatDateWithFallback(popupDate);
   
   if (!distance || isNaN(distance) || Number(distance) < 0) {
     alert('Please enter a valid distance');
@@ -191,7 +196,7 @@ function handleSaveDistance() {
 }
 
 function handleDeleteDistance() {
-  const selectedDate = window.calendarModule ? window.calendarModule.formatDate(popupDate) : formatDateLocal(popupDate);
+  const selectedDate = formatDateWithFallback(popupDate);
   
   fetch('/wtm/api/calendar-progress', {
     method: 'DELETE',
@@ -224,7 +229,7 @@ function handleDeleteDistance() {
 }
 
 async function handleSamsungSync() {
-  const selectedDate = window.calendarModule ? window.calendarModule.formatDate(popupDate) : formatDateLocal(popupDate);
+  const selectedDate = formatDateWithFallback(popupDate);
   const syncBtn = document.getElementById('samsung-sync-btn');
   const syncStatus = document.getElementById('samsung-sync-status');
   const distanceInput = document.getElementById('distance-input');
