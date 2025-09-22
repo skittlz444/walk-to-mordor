@@ -7,7 +7,7 @@ import {
   createSuccessResponse 
 } from "./validators";
 
-export async function handleProgressPost(request: Request, env: any, body: any) {
+export async function handleProgressPost(request: Request, env: any, body: any, userId: number) {
   const { start, title } = body || {};
   
   // Validate required fields
@@ -76,9 +76,9 @@ export async function handleProgressPost(request: Request, env: any, body: any) 
 
   try {
     await env.DB.prepare(
-      "INSERT INTO progress (date, distance) VALUES (?, ?)"
+      "INSERT INTO progress (date, distance, user_id) VALUES (?, ?, ?)"
     )
-      .bind(start, Number(title))
+      .bind(start, Number(title), userId)
       .run();
     return new Response(JSON.stringify({ 
       message: "Created successfully",
@@ -112,7 +112,7 @@ export async function handleProgressPost(request: Request, env: any, body: any) 
   }
 }
 
-export async function handleProgressPut(request: Request, env: any, body: any) {
+export async function handleProgressPut(request: Request, env: any, body: any, userId: number) {
   const { start, title } = body || {};
   
   // Validate required fields
@@ -156,9 +156,9 @@ export async function handleProgressPut(request: Request, env: any, body: any) {
 
   try {
     const result = await env.DB.prepare(
-      "UPDATE progress SET distance = ? WHERE date = ?"
+      "UPDATE progress SET distance = ? WHERE date = ? AND user_id = ?"
     )
-      .bind(Number(title), start)
+      .bind(Number(title), start, userId)
       .run();
       
     if (result.meta.changes === 0) {
@@ -189,7 +189,7 @@ export async function handleProgressPut(request: Request, env: any, body: any) {
   }
 }
 
-export async function handleProgressDelete(request: Request, env: any, body: any) {
+export async function handleProgressDelete(request: Request, env: any, body: any, userId: number) {
   const { start } = body || {};
   
   // Validate required field
@@ -214,8 +214,8 @@ export async function handleProgressDelete(request: Request, env: any, body: any
 
   try {
     console.log("Deleting date:", start);
-    const result = await env.DB.prepare("DELETE FROM progress WHERE date = ?")
-      .bind(start)
+    const result = await env.DB.prepare("DELETE FROM progress WHERE date = ? AND user_id = ?")
+      .bind(start, userId)
       .run();
       
     if (result.meta.changes === 0) {
@@ -245,9 +245,9 @@ export async function handleProgressDelete(request: Request, env: any, body: any
   }
 }
 
-export async function handleProgressGet(request: Request, env: any) {
+export async function handleProgressGet(request: Request, env: any, userId: number) {
   try {
-    const { results } = await env.DB.prepare("SELECT * FROM progress").all();
+    const { results } = await env.DB.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
     const calendarData = (results as Array<{ date: string; distance: number }>).map(row => ({
       start: row.date,
       title: row.distance.toString(),

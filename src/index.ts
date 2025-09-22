@@ -1,4 +1,4 @@
-import { renderHtml } from "./renderHtml";
+import { renderHtml, renderAuthHtml } from "./renderHtml";
 import { 
   isValidDateFormat, 
   isValidDistance, 
@@ -17,6 +17,14 @@ import {
   handleGoalsGet, 
   calculateTotalDistance 
 } from "./goals-handlers";
+import {
+  handleRegister,
+  handleLogin,
+  handleLogout,
+  handleMe,
+  handlePasswordResetRequest,
+  requireAuth
+} from "./auth-handlers";
 
 export default {
   async fetch(request, env) {
@@ -34,28 +42,26 @@ export default {
 
     // Validate HTTP method for API endpoints
     if (url.pathname.startsWith("/wtm/api/")) {
-      if (!isValidMethod(url.pathname, method)) {
+      const allowedMethods = getAllowedMethods(url.pathname);
+      if (!allowedMethods.includes(method)) {
         return new Response(JSON.stringify({ 
           error: `Method ${method} not allowed for ${url.pathname}`,
-          allowedMethods: url.pathname === "/wtm/api/calendar-progress" 
-            ? ['GET', 'POST', 'PUT', 'DELETE'] 
-            : ['GET']
+          allowedMethods
         }), { 
           status: 405,
           headers: { 
             "content-type": "application/json",
-            "Allow": url.pathname === "/wtm/api/calendar-progress" 
-              ? "GET, POST, PUT, DELETE" 
-              : "GET"
+            "Allow": allowedMethods.join(", ")
           }
         });
       }
     }
 
-    // Only read body for calendar-progress API and relevant methods
+    // Only read body for API endpoints that need it
     if (
-      url.pathname === "/wtm/api/calendar-progress" &&
-      (method === "POST" || method === "PUT" || method === "DELETE")
+      url.pathname.startsWith("/wtm/api/") &&
+      (method === "POST" || method === "PUT" || method === "DELETE") &&
+      !url.pathname.includes("/logout") // logout doesn't need body
     ) {
       const parseResult = await safeJsonParse(request);
       if (!parseResult.success) {
@@ -69,20 +75,40 @@ export default {
       body = parseResult.data;
     }
 
-    // CRUD for calendar events
+    // Authentication endpoints (no auth required)
+    if (url.pathname === "/wtm/api/auth/register" && method === "POST") {
+      return handleRegister(request, env, body);
+    } else if (url.pathname === "/wtm/api/auth/login" && method === "POST") {
+      return handleLogin(request, env, body);
+    } else if (url.pathname === "/wtm/api/auth/logout" && method === "POST") {
+      return handleLogout(request, env);
+    } else if (url.pathname === "/wtm/api/auth/password-reset" && method === "POST") {
+      return handlePasswordResetRequest(request, env, body);
+    } else if (url.pathname === "/wtm/api/auth/me" && method === "GET") {
+      return handleMe(request, env);
+    }
+
+    // Protected endpoints - require authentication
+    const authResult = await requireAuth(request, env);
+    if (authResult instanceof Response) {
+      return authResult; // Return auth error
+    }
+    const user = authResult;
+
+    // CRUD for calendar events (now with user isolation)
     if (url.pathname === "/wtm/api/calendar-progress" && method === "POST") {
-      return handleProgressPost(request, env, body);
+      return handleProgressPost(request, env, body, user.id);
     } else if (url.pathname === "/wtm/api/calendar-progress" && method === "PUT") {
-      return handleProgressPut(request, env, body);
+      return handleProgressPut(request, env, body, user.id);
     } else if (url.pathname === "/wtm/api/calendar-progress" && method === "DELETE") {
-      return handleProgressDelete(request, env, body);
+      return handleProgressDelete(request, env, body, user.id);
     } else if (url.pathname === "/wtm/api/calendar-progress") {
-      return handleProgressGet(request, env);
+      return handleProgressGet(request, env, user.id);
     } else if (url.pathname === "/wtm/api/goals") {
       return handleGoalsGet(request, env);
     } else if (url.pathname === "/wtm/api/total-distance") {
       try {
-        const totalDistance = await calculateTotalDistance(env);
+        const totalDistance = await calculateTotalDistance(env, user.id);
         return new Response(JSON.stringify({ totalDistance }), {
           headers: { "content-type": "application/json" },
         });
@@ -97,7 +123,18 @@ export default {
       }
     }
 
-    // Render main HTML page
+    // Check if user is authenticated for main page
+    const mainPageAuthResult = await requireAuth(request, env);
+    if (mainPageAuthResult instanceof Response) {
+      // User not authenticated, show login page
+      return new Response(renderAuthHtml(), {
+        headers: {
+          "content-type": "text/html",
+        },
+      });
+    }
+
+    // Render main HTML page for authenticated users
     return new Response(renderHtml(), {
       headers: {
         "content-type": "text/html",
@@ -105,3 +142,22 @@ export default {
     });
   },
 } satisfies ExportedHandler<Env>;
+
+// Helper function to get allowed methods for API endpoints
+function getAllowedMethods(pathname: string): string[] {
+  switch (pathname) {
+    case "/wtm/api/calendar-progress":
+      return ['GET', 'POST', 'PUT', 'DELETE'];
+    case "/wtm/api/auth/register":
+    case "/wtm/api/auth/login":
+    case "/wtm/api/auth/logout":
+    case "/wtm/api/auth/password-reset":
+      return ['POST'];
+    case "/wtm/api/auth/me":
+    case "/wtm/api/goals":
+    case "/wtm/api/total-distance":
+      return ['GET'];
+    default:
+      return ['GET'];
+  }
+}
