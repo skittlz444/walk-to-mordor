@@ -32,7 +32,30 @@ Track your real-world exercise progress as you virtually follow in the footsteps
 
 🎯 **Goal Management**: View upcoming milestones and track your progress toward major story events
 
+📱 **Samsung Health Integration**: Sync your walking distances directly from Samsung Health with secure OAuth authentication
+
 The complete journey covers **6,425 kilometers (3,991 miles)** - a substantial fitness goal that provides months or years of motivation while reliving one of literature's greatest adventures.
+
+## Samsung Health Integration 🔗
+
+Walk to Mordor now supports Samsung Health integration, allowing you to automatically sync your walking distances:
+
+### Features
+- **Secure OAuth Authentication**: Link your Samsung Health account securely
+- **One-Click Sync**: Sync walking data for any date with a single button
+- **Visual Indicators**: Calendar shows dots for entries synced from Samsung Health  
+- **Data Privacy**: Encrypted token storage with AES-GCM encryption
+- **Full Control**: Easily unlink your account at any time
+
+### How to Use
+1. **Link Account**: Click your user dropdown → "Link Samsung Health"
+2. **Authorize Access**: Follow the OAuth flow to grant permissions
+3. **Sync Data**: Use the "Sync from Samsung Health" button in the distance input modal
+4. **Review & Save**: Synced data is populated automatically but you can review before saving
+
+For detailed setup instructions, see [Samsung Health Setup Guide](SAMSUNG_HEALTH_SETUP.md).
+
+*Note: Currently includes a mock service for development. Production requires Samsung Health Developer credentials.*
 
 ## API Error Handling Features
 
