@@ -4,6 +4,7 @@
  */
 
 const { request } = require('@playwright/test');
+const { getAuthHeaders } = require('./test-auth');
 
 /**
  * Clear ALL distance data from the database before/after tests
@@ -12,7 +13,10 @@ const { request } = require('@playwright/test');
  */
 async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
   try {
-    const apiContext = await request.newContext();
+    const authHeaders = getAuthHeaders();
+    const apiContext = await request.newContext({
+      extraHTTPHeaders: authHeaders || {}
+    });
     
     // Get all events
     const response = await apiContext.get(`${baseUrl}/wtm/api/calendar-progress`);
