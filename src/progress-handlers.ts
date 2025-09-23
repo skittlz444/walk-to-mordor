@@ -213,7 +213,6 @@ export async function handleProgressDelete(request: Request, env: any, body: any
   }
 
   try {
-    console.log("Deleting date:", start);
     const result = await env.DB.prepare("DELETE FROM progress WHERE date = ? AND user_id = ?")
       .bind(start, userId)
       .run();
