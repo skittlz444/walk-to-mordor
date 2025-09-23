@@ -4,7 +4,11 @@ import {
   verifyPassword,
   isValidUsername,
   isValidPassword,
-  generateSessionId
+  generateSessionId,
+  getUserFromSession,
+  createSession,
+  destroySession,
+  cleanupExpiredSessions
 } from '../src/auth-utils';
 
 // Mock crypto API for testing
@@ -123,6 +127,155 @@ describe('Auth Utils', () => {
       const sessionId = generateSessionId();
       expect(sessionId).toBe('test-uuid-1234');
       expect(mockCrypto.randomUUID).toHaveBeenCalled();
+    });
+  });
+
+  describe('getUserFromSession', () => {
+    let mockEnv: any;
+
+    beforeEach(() => {
+      mockEnv = {
+        DB: {
+          prepare: jest.fn()
+        }
+      };
+    });
+
+    it('should return user for valid session', async () => {
+      const sessionId = 'valid-session';
+      const mockUser = { id: 1, username: 'testuser' };
+
+      mockEnv.DB.prepare.mockReturnValue({
+        bind: jest.fn().mockReturnThis(),
+        all: jest.fn(() => Promise.resolve({
+          results: [mockUser]
+        }))
+      });
+
+      const result = await getUserFromSession(sessionId, mockEnv);
+
+      expect(result).toEqual(mockUser);
+      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(expect.stringContaining('SELECT u.id, u.username'));
+    });
+
+    it('should return null for invalid session', async () => {
+      const sessionId = 'invalid-session';
+
+      mockEnv.DB.prepare.mockReturnValue({
+        bind: jest.fn().mockReturnThis(),
+        all: jest.fn(() => Promise.resolve({
+          results: []
+        }))
+      });
+
+      const result = await getUserFromSession(sessionId, mockEnv);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null on database error', async () => {
+      const sessionId = 'any-session';
+
+      mockEnv.DB.prepare.mockReturnValue({
+        bind: jest.fn().mockReturnThis(),
+        all: jest.fn(() => Promise.reject(new Error('Database error')))
+      });
+
+      const result = await getUserFromSession(sessionId, mockEnv);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('createSession', () => {
+    let mockEnv: any;
+
+    beforeEach(() => {
+      mockEnv = {
+        DB: {
+          prepare: jest.fn()
+        }
+      };
+    });
+
+    it('should create session successfully', async () => {
+      const userId = 1;
+
+      mockEnv.DB.prepare.mockReturnValue({
+        bind: jest.fn().mockReturnThis(),
+        run: jest.fn(() => Promise.resolve())
+      });
+
+      const sessionId = await createSession(userId, mockEnv);
+
+      expect(sessionId).toBe('test-uuid-1234');
+      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO sessions'));
+    });
+  });
+
+  describe('destroySession', () => {
+    let mockEnv: any;
+
+    beforeEach(() => {
+      mockEnv = {
+        DB: {
+          prepare: jest.fn()
+        }
+      };
+    });
+
+    it('should destroy session successfully', async () => {
+      const sessionId = 'session-to-delete';
+
+      mockEnv.DB.prepare.mockReturnValue({
+        bind: jest.fn().mockReturnThis(),
+        run: jest.fn(() => Promise.resolve())
+      });
+
+      await destroySession(sessionId, mockEnv);
+
+      expect(mockEnv.DB.prepare).toHaveBeenCalledWith("DELETE FROM sessions WHERE id = ?");
+    });
+
+    it('should handle database errors gracefully', async () => {
+      const sessionId = 'session-to-delete';
+
+      mockEnv.DB.prepare.mockReturnValue({
+        bind: jest.fn().mockReturnThis(),
+        run: jest.fn(() => Promise.reject(new Error('Database error')))
+      });
+
+      await expect(destroySession(sessionId, mockEnv)).resolves.not.toThrow();
+    });
+  });
+
+  describe('cleanupExpiredSessions', () => {
+    let mockEnv: any;
+
+    beforeEach(() => {
+      mockEnv = {
+        DB: {
+          prepare: jest.fn()
+        }
+      };
+    });
+
+    it('should cleanup expired sessions successfully', async () => {
+      mockEnv.DB.prepare.mockReturnValue({
+        run: jest.fn(() => Promise.resolve())
+      });
+
+      await cleanupExpiredSessions(mockEnv);
+
+      expect(mockEnv.DB.prepare).toHaveBeenCalledWith("DELETE FROM sessions WHERE expires_at <= datetime('now')");
+    });
+
+    it('should handle database errors gracefully', async () => {
+      mockEnv.DB.prepare.mockReturnValue({
+        run: jest.fn(() => Promise.reject(new Error('Database error')))
+      });
+
+      await expect(cleanupExpiredSessions(mockEnv)).resolves.not.toThrow();
     });
   });
 });
