@@ -1,4 +1,4 @@
-import { renderHtml } from '../src/renderHtml';
+import { renderHtml, renderAuthHtml } from '../src/renderHtml';
 import { 
   isValidDateFormat, 
   isValidDistance, 
@@ -9,21 +9,74 @@ import {
 // Mock the modules at module level
 jest.mock('../src/renderHtml');
 jest.mock('../src/validators');
+jest.mock('../src/auth-handlers');
+jest.mock('../src/goals-handlers');
 
 // Import after mocking
 import worker from '../src/index';
+import { requireAuth, getUserFromSession } from '../src/auth-handlers';
+import { calculateTotalDistance, handleGoalsGet } from '../src/goals-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
+const mockRenderAuthHtml = jest.mocked(renderAuthHtml);
 const mockIsValidDateFormat = jest.mocked(isValidDateFormat);
 const mockIsValidDistance = jest.mocked(isValidDistance);
 const mockSafeJsonParse = jest.mocked(safeJsonParse);
 const mockIsValidMethod = jest.mocked(isValidMethod);
+const mockRequireAuth = jest.mocked(requireAuth);
+const mockGetUserFromSession = jest.mocked(getUserFromSession);
+const mockCalculateTotalDistance = jest.mocked(calculateTotalDistance);
+const mockHandleGoalsGet = jest.mocked(handleGoalsGet);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
   let mockRequest: any;
   let originalConsoleError: typeof console.error;
   let originalConsoleLog: typeof console.log;
+
+  // Helper function to create an authenticated request
+  const createAuthenticatedRequest = (url: string, method: string = 'GET', sessionId: string = 'test-session-id') => {
+    return {
+      ...mockRequest,
+      url,
+      method,
+      headers: {
+        get: jest.fn((name: string) => {
+          if (name === 'Cookie') {
+            return `session=${sessionId}`;
+          }
+          if (name === 'content-type' || name === 'Content-Type') {
+            return 'application/json';
+          }
+          return null;
+        }),
+        set: jest.fn(),
+        has: jest.fn(),
+        delete: jest.fn(),
+        append: jest.fn(),
+        entries: jest.fn(),
+        forEach: jest.fn(),
+        keys: jest.fn(),
+        values: jest.fn(),
+        [Symbol.iterator]: jest.fn()
+      }
+    };
+  };
+
+  // Helper function to create an unauthenticated request
+  const createUnauthenticatedRequest = (url: string, method: string = 'GET') => {
+    return {
+      ...mockRequest,
+      url,
+      method
+    };
+  };
+
+  // Helper to mock authentication failure
+  const mockAuthFailure = () => {
+    mockRequireAuth.mockResolvedValue(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }));
+    mockGetUserFromSession.mockResolvedValue(null);
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -36,10 +89,21 @@ describe('Cloudflare Worker Index', () => {
     
     // Setup default mock returns
     mockRenderHtml.mockReturnValue('<html>Mock HTML</html>');
+    mockRenderAuthHtml.mockReturnValue('<html>Mock Auth HTML</html>');
     mockIsValidDateFormat.mockReturnValue(true);
     mockIsValidDistance.mockReturnValue(true);
     mockIsValidMethod.mockReturnValue(true);
     mockSafeJsonParse.mockResolvedValue({ success: true, data: {} });
+
+    // Setup authentication mocks - default to authenticated user
+    const mockUser = { id: 1, username: 'testuser' };
+    mockRequireAuth.mockResolvedValue(mockUser as any);
+    mockGetUserFromSession.mockResolvedValue(mockUser);
+    mockCalculateTotalDistance.mockResolvedValue(10);
+    mockHandleGoalsGet.mockResolvedValue(new Response(JSON.stringify({ goals: [] }), { 
+      status: 200, 
+      headers: { 'content-type': 'application/json' } 
+    }));
 
     // Create simple mock environment
     mockEnv = {
@@ -57,9 +121,28 @@ describe('Cloudflare Worker Index', () => {
       }
     };
 
+    // Create a more complete mock Request object with proper headers support
     mockRequest = {
       url: 'https://example.com/',
-      method: 'GET'
+      method: 'GET',
+      headers: {
+        get: jest.fn((name: string) => {
+          const headerMap = new Map([
+            ['content-type', 'application/json'],
+            ['Cookie', ''] // Empty cookie by default
+          ]);
+          return headerMap.get(name) || null;
+        }),
+        set: jest.fn(),
+        has: jest.fn(),
+        delete: jest.fn(),
+        append: jest.fn(),
+        entries: jest.fn(),
+        forEach: jest.fn(),
+        keys: jest.fn(),
+        values: jest.fn(),
+        [Symbol.iterator]: jest.fn()
+      }
     };
   });
 
@@ -69,36 +152,45 @@ describe('Cloudflare Worker Index', () => {
     console.log = originalConsoleLog;
   });
 
-  it('should call renderHtml for main page', async () => {
-    const response = await worker.fetch(mockRequest, mockEnv);
+  it('should call renderHtml for authenticated user on main page', async () => {
+    const authRequest = createAuthenticatedRequest('https://example.com/');
+    const response = await worker.fetch(authRequest, mockEnv);
     
     expect(mockRenderHtml).toHaveBeenCalled();
     expect(response.status).toBe(200);
   });
 
-  it('should validate method for API endpoints', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
-    mockRequest.method = 'POST';
-    mockIsValidMethod.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
+  it('should call renderAuthHtml for unauthenticated user on main page', async () => {
+    mockGetUserFromSession.mockResolvedValue(null); // No user found
+    const unauthRequest = createUnauthenticatedRequest('https://example.com/');
+    const response = await worker.fetch(unauthRequest, mockEnv);
     
-    expect(mockIsValidMethod).toHaveBeenCalledWith('/wtm/api/calendar-progress', 'POST');
+    expect(mockRenderAuthHtml).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+  });
+
+  it('should validate method for API endpoints', async () => {
+    // Use PATCH method which is not allowed for calendar-progress endpoint
+    const authRequest = createAuthenticatedRequest('https://example.com/wtm/api/calendar-progress', 'PATCH');
+
+    const response = await worker.fetch(authRequest, mockEnv);
+    
     expect(response.status).toBe(405);
+    const data = await response.json();
+    expect(data.error).toContain('Method PATCH not allowed');
   });
 
   it('should parse JSON for POST requests', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
-    mockRequest.method = 'POST';
+    const authRequest = createAuthenticatedRequest('https://example.com/wtm/api/calendar-progress', 'POST');
     
     mockSafeJsonParse.mockResolvedValue({
       success: true,
       data: { start: '2024-01-15', title: '5.5' }
     });
 
-    await worker.fetch(mockRequest, mockEnv);
+    await worker.fetch(authRequest, mockEnv);
     
-    expect(mockSafeJsonParse).toHaveBeenCalledWith(mockRequest);
+    expect(mockSafeJsonParse).toHaveBeenCalledWith(authRequest);
     expect(mockIsValidDateFormat).toHaveBeenCalledWith('2024-01-15');
     expect(mockIsValidDistance).toHaveBeenCalledWith('5.5');
   });
@@ -180,10 +272,9 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should return goals data', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/goals';
-    mockRequest.method = 'GET';
+    const authRequest = createAuthenticatedRequest('https://example.com/wtm/api/goals', 'GET');
 
-    const response = await worker.fetch(mockRequest, mockEnv);
+    const response = await worker.fetch(authRequest, mockEnv);
     
     expect(response.status).toBe(200);
   });
@@ -400,22 +491,23 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle database errors in GET goals', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/goals';
-    mockRequest.method = 'GET';
+    const authRequest = createAuthenticatedRequest('https://example.com/wtm/api/goals', 'GET');
 
-    // Mock database error
-    mockEnv.DB.prepare.mockReturnValue({
-      all: jest.fn(() => Promise.reject(new Error('Database error')))
-    });
+    // Mock database error in goals handler
+    mockHandleGoalsGet.mockResolvedValue(new Response(JSON.stringify({ 
+      error: 'Database error' 
+    }), { 
+      status: 500, 
+      headers: { 'content-type': 'application/json' } 
+    }));
 
-    const response = await worker.fetch(mockRequest, mockEnv);
+    const response = await worker.fetch(authRequest, mockEnv);
     
     expect(response.status).toBe(500);
   });
 
   it('should calculate total distance correctly via API endpoint', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/total-distance';
-    mockRequest.method = 'GET';
+    const authRequest = createAuthenticatedRequest('https://example.com/wtm/api/total-distance', 'GET');
 
     // Mock multiple entries with distances
     mockEnv.DB.prepare.mockReturnValue({
@@ -428,7 +520,7 @@ describe('Cloudflare Worker Index', () => {
       }))
     });
 
-    const response = await worker.fetch(mockRequest, mockEnv);
+    const response = await worker.fetch(authRequest, mockEnv);
     const data = await response.json();
     
     expect(response.status).toBe(200);
@@ -436,37 +528,32 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle database errors in total distance API', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/total-distance';
-    mockRequest.method = 'GET';
+    const authRequest = createAuthenticatedRequest('https://example.com/wtm/api/total-distance', 'GET');
 
-    // Mock database error
-    mockEnv.DB.prepare.mockReturnValue({
-      all: jest.fn(() => Promise.reject(new Error('Database error')))
-    });
+    // Mock calculateTotalDistance to throw an error
+    mockCalculateTotalDistance.mockRejectedValue(new Error('Database error'));
 
-    const response = await worker.fetch(mockRequest, mockEnv);
+    const response = await worker.fetch(authRequest, mockEnv);
     
     expect(response.status).toBe(500);
   });
 
   it('should render main page even with database errors', async () => {
-    mockRequest.url = 'https://example.com/';
-    mockRequest.method = 'GET';
+    const authRequest = createAuthenticatedRequest('https://example.com/', 'GET');
 
     // Mock database error (this won't affect main page rendering in new architecture)
     mockEnv.DB.prepare.mockReturnValue({
       all: jest.fn(() => Promise.reject(new Error('Database error')))
     });
 
-    const response = await worker.fetch(mockRequest, mockEnv);
+    const response = await worker.fetch(authRequest, mockEnv);
     
     expect(mockRenderHtml).toHaveBeenCalledWith(); // No parameters in new architecture
     expect(response.status).toBe(200);
   });
 
   it('should render main page without server-side distance calculation', async () => {
-    mockRequest.url = 'https://example.com/';
-    mockRequest.method = 'GET';
+    const authRequest = createAuthenticatedRequest('https://example.com/', 'GET');
 
     // Database data doesn't affect main page rendering in new architecture
     mockEnv.DB.prepare.mockReturnValue({
@@ -479,7 +566,7 @@ describe('Cloudflare Worker Index', () => {
       }))
     });
 
-    await worker.fetch(mockRequest, mockEnv);
+    await worker.fetch(authRequest, mockEnv);
     
     expect(mockRenderHtml).toHaveBeenCalledWith(); // No parameters in new architecture
   });

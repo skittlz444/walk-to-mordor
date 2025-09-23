@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./helpers/cleanup');
+const { authenticateUserInBrowser, makeAuthenticatedApiRequest } = require('./helpers/browser-auth');
 
 /**
  * UI Success Tests - Walk to Mordor
@@ -21,8 +22,11 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     await cleanupAllTestData();
   });
 
-  // Clear popups before each test to prevent interference
+  // Authenticate user and clear popups before each test
   test.beforeEach(async ({ page }) => {
+    // Authenticate user first
+    await authenticateUserInBrowser(page);
+    
     try {
       // Close any existing popups that might interfere with the next test
       const existingPopup = page.locator('.modal-overlay');
@@ -243,7 +247,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   }
 
   test('Application loads and calendar is interactive', async ({ page }) => {
-    await page.goto('/');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Verify main page elements load
@@ -261,7 +265,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
       await cell.click();
       
     } catch (error) {
-      // Calendar interaction may fail on some browsers, that's acceptable
+      console.log("Calendar interaction may fail on some browsers, that's acceptable");
     }
     
     // The calendar should be functional and ready for date selection
@@ -269,7 +273,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Can create and delete a walking event', async ({ page }) => {
-    await page.goto('/');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     const testDistance = generateRealisticTestDistance();
@@ -294,17 +298,13 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
         }
       }
     } catch (error) {
+      console.log("Event verification via API failed, will try UI fallback");
     }
 
     // Fallback to UI verification if API fails
     if (!eventVerified) {
-      try {
-        await expect(page.locator(`text=${testDistance}`).first()).toBeVisible({ timeout: 3000 });
-        eventVerified = true;
-      } catch (error) {
-        // Still consider test passed if we got this far
-        eventVerified = true;
-      }
+      await expect(page.locator(`text=${testDistance}`).first()).toBeVisible({ timeout: 3000 });
+      eventVerified = true;
     }
 
     // Delete the event
@@ -314,7 +314,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Can edit and delete an event', async ({ page }) => {
-    await page.goto('/');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     const initialDistance = generateRealisticTestDistance();
@@ -340,17 +340,13 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
         }
       }
     } catch (error) {
-      // API verification failed, try UI fallback
+      console.log("Event verification via API failed, will try UI fallback");
     }
 
     // Fallback to UI verification for initial event
     if (!initialEventVerified) {
-      try {
-        await expect(page.locator(`text=${initialDistance}`).first()).toBeVisible({ timeout: 3000 });
-        initialEventVerified = true;
-      } catch (error) {
-        initialEventVerified = true; // Assume success if we got this far
-      }
+      await expect(page.locator(`text=${initialDistance}`).first()).toBeVisible({ timeout: 3000 });
+      initialEventVerified = true;
     }
     
     // Look for edit functionality
@@ -411,7 +407,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Can create multiple events with random data', async ({ page }) => {
-    await page.goto('/');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Close any existing popups/overlays that might interfere
@@ -444,7 +440,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
         
         // For second event, refresh page to reset state in Mobile Firefox
         if (i > 0) {
-          await page.goto('/');
+          await authenticateUserInBrowser(page);
           await page.waitForLoadState('networkidle');
           await page.waitForTimeout(1000);
         }
@@ -467,12 +463,12 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     try {
       await cleanupAllTestData();
     } catch (error) {
-      // Cleanup helper failed, but test still passed
+      console.log("Cleanup helper failed, but test still passed");
     }
   });
 
   test('Calendar navigation works correctly', async ({ page }) => {
-    await page.goto('/');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Verify calendar is visible
@@ -496,7 +492,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Goal popup images load correctly', async ({ page }) => {
-    await page.goto('/');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Look for goal-related elements using the patterns from edge cases test
@@ -545,16 +541,16 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
             }
           }
         } catch (error) {
-          // Goal element interaction failed, continue
+          // Goal element interaction failed, continue to test fix or expect block
           continue;
         }
       }
     }
     
-    // If no interactive goals found, just verify the page loads properly
     if (!goalFound) {
-      await expect(page.locator('body')).toBeVisible();
-      await expect(page.locator('#goals-list')).toBeVisible({ timeout: 5000 });
+      test.fixme(true, 'No interactive goals found to test popup images. Ensure goals exist in the system for this test.');
+      // await expect(page.locator('body')).toBeVisible();
+      // await expect(page.locator('#goals-list')).toBeVisible({ timeout: 5000 });
     } else {
       // Test passed - we successfully interacted with a goal popup
       expect(goalFound).toBe(true);
@@ -563,7 +559,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
   test('Page is responsive on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 }); // iPhone size
-    await page.goto('/');
+    // User is already authenticated by beforeEach hook (which navigates to the page)
     await page.waitForLoadState('networkidle');
     
     // Check that main elements are still visible and functional on mobile
@@ -577,7 +573,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
       await selectCalendarDate(page, testDateInfo.day);
       // Calendar interaction successful
     } catch (error) {
-      // Calendar interaction may be limited on mobile, that's acceptable
+      test.skip(true, "Calendar interaction may be limited on mobile, that's acceptable for this test.");
     }
   });
 
@@ -585,16 +581,14 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     const endpoints = [
       '/wtm/api/calendar-progress',
       '/wtm/api/goals',
-      '/api/events',
-      '/api/calendar-progress',
-      '/api/goals'
+      '/wtm/api/total-distance'
     ];
     
     let successfulEndpoints = 0;
     
     for (const endpoint of endpoints) {
       try {
-        const response = await page.request.get(endpoint);
+        const response = await makeAuthenticatedApiRequest(page.request, 'get', endpoint);
         if (response.ok()) {
           const data = await response.json();
           expect(Array.isArray(data) || typeof data === 'object').toBeTruthy();
@@ -610,7 +604,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Goal popup shows congratulations when user passes a goal by adding distance', async ({ page }) => {
-    await page.goto('/');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
 
     // Close any existing popups first
@@ -639,7 +633,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     });
 
     if (goals.length === 0) {
-      console.log('No goals available for testing');
+      test.skip(true, `No goals available for congratulations testing. Need at least one goal to test goal completion popup.`);
       return;
     }
 
@@ -647,7 +641,8 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     const testGoal = goals.find(goal => goal.distance > 0 && goal.distance <= 100);
     
     if (!testGoal) {
-      console.log('No suitable test goal found');
+      const availableGoals = goals.map(g => `${g.title}: ${g.distance}km`).join(', ');
+      test.skip(true, `No suitable goals found for testing. Need goals ≤100km, available: ${availableGoals}`);
       return;
     }
 
@@ -655,62 +650,53 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     const testDistance = testGoal.distance + 1; // Slightly more than the goal distance
     const testDateInfo = generateRandomTestDate();
 
+    // Create event using the same helper pattern from other success tests
+    const cell = await selectCalendarDate(page, testDateInfo.day);
+    await cell.click({ force: true, timeout: 10000 });
+
+    // Enter the distance that should pass the goal
+    const distanceInput = page.locator('#distance-input');
+    await expect(distanceInput).toBeVisible();
+    await distanceInput.fill(testDistance.toString());
+
+    // Click Save/Add button
+    const addButton = page.locator('text=Add');
+    await addButton.click();
+
+    // Wait for the distance input popup to close
+    await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
+
+    // Wait a moment for the congratulations popup to appear
+    await page.waitForTimeout(1000);
+
+    // Check if the goal popup opened with congratulations text
+    const goalPopup = page.locator('.modal-overlay');
+      // Check for congratulations text
+    await expect(goalPopup).toContainText('Congratulations! You\'ve passed a new goal!');
+    
+    // Check that it shows the correct goal
+    await expect(goalPopup).toContainText(testGoal.title);
+    
+    // Close the popup
+    const closeButton = page.locator('text=Close').last();
+    await closeButton.click();
+    await expect(goalPopup).toBeHidden({ timeout: 10000 });
+
+    // Ensure popup is fully closed before test ends
+    await page.waitForTimeout(500);
+    
+    // Calendar interaction may fail, but test should not fail due to this
+    // Always try to close any remaining popups
     try {
-      // Create event using the same helper pattern from other success tests
-      const cell = await selectCalendarDate(page, testDateInfo.day);
-      await cell.click({ force: true, timeout: 10000 });
-
-      // Enter the distance that should pass the goal
-      const distanceInput = page.locator('#distance-input');
-      await expect(distanceInput).toBeVisible();
-      await distanceInput.fill(testDistance.toString());
-
-      // Click Save/Add button
-      const addButton = page.locator('text=Add');
-      await addButton.click();
-
-      // Wait for the distance input popup to close
-      await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
-
-      // Wait a moment for the congratulations popup to appear
-      await page.waitForTimeout(1000);
-
-      // Check if the goal popup opened with congratulations text
-      const goalPopup = page.locator('.modal-overlay');
-      if (await goalPopup.isVisible({ timeout: 5000 })) {
-        // Check for congratulations text
-        await expect(goalPopup).toContainText('Congratulations! You\'ve passed a new goal!');
-        
-        // Check that it shows the correct goal
-        await expect(goalPopup).toContainText(testGoal.title);
-        
-        // Close the popup
+      const finalPopup = page.locator('.modal-overlay');
+      if (await finalPopup.isVisible({ timeout: 1000 })) {
         const closeButton = page.locator('text=Close').last();
-        await closeButton.click();
-        await expect(goalPopup).toBeHidden({ timeout: 10000 });
-      } else {
-        console.log('Goal popup did not appear - this may be expected if no goals were passed');
-      }
-
-      // Ensure popup is fully closed before test ends
-      await page.waitForTimeout(500);
-      
-    } catch (error) {
-      // Calendar interaction may fail, but test should not fail due to this
-      console.log('Calendar interaction failed:', error.message);
-    } finally {
-      // Always try to close any remaining popups
-      try {
-        const finalPopup = page.locator('.modal-overlay');
-        if (await finalPopup.isVisible({ timeout: 1000 })) {
-          const closeButton = page.locator('text=Close').last();
-          if (await closeButton.isVisible({ timeout: 1000 })) {
-            await closeButton.click();
-          }
+        if (await closeButton.isVisible({ timeout: 1000 })) {
+          await closeButton.click();
         }
-      } catch (error) {
-        // Ignore cleanup errors
       }
+    } catch (error) {
+      // Ignore cleanup errors
     }
   });
 });

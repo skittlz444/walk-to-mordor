@@ -1,4 +1,4 @@
-import { renderHtml } from '../src/renderHtml';
+import { renderHtml, renderAuthHtml } from '../src/renderHtml';
 
 describe('renderHtml', () => {
   it('should render HTML with standard structure', () => {
@@ -55,5 +55,44 @@ describe('renderHtml', () => {
     
     expect(result).toContain('serviceWorker');
     expect(result).toContain('/wtm/sw.js');
+  });
+});
+
+describe('renderAuthHtml', () => {
+  it('should render authentication page with standard structure', () => {
+    const result = renderAuthHtml();
+    
+    expect(result).toContain('<!DOCTYPE html>');
+    expect(result).toContain('<title>Walk to Mordor - Login</title>');
+    expect(result).toContain('<html lang="en">');
+  });
+
+  it('should include authentication form elements', () => {
+    const result = renderAuthHtml();
+    
+    expect(result).toContain('id="login-form"');
+    expect(result).toContain('id="register-form"');
+    expect(result).toContain('type="text"');
+    expect(result).toContain('type="password"');
+  });
+
+  it('should include PWA meta tags', () => {
+    const result = renderAuthHtml();
+    
+    expect(result).toContain('theme-color');
+    expect(result).toContain('mobile-web-app-capable');
+    expect(result).toContain('apple-mobile-web-app-capable');
+  });
+
+  it('should include authentication JavaScript', () => {
+    const result = renderAuthHtml();
+    
+    expect(result).toContain('auth.js');
+  });
+
+  it('should include authentication CSS', () => {
+    const result = renderAuthHtml();
+    
+    expect(result).toContain('auth.css');
   });
 });

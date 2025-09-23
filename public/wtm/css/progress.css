@@ -163,24 +163,7 @@
   background: #c82333;
 }
 
-.btn-sync {
-  background: #28a745;
-  color: white;
-  padding: 0.5rem;
-  min-width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.btn-sync:hover {
-  background: #218838;
-}
-
-.btn-sync:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-}
 
 /* Modal footer full width buttons */
 .modal-footer-full {
@@ -208,24 +191,3 @@
   font-weight: 400;
 }
 
-/* Samsung Health sync styles */
-.sync-status {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.sync-loading {
-  color: #ffc107;
-}
-
-.sync-success {
-  color: #28a745;
-}
-
-.sync-warning {
-  color: #ffc107;
-}
-
-.sync-error {
-  color: #dc3545;
-}

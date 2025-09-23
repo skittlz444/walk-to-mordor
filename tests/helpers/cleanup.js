@@ -4,6 +4,7 @@
  */
 
 const { request } = require('@playwright/test');
+const { getAuthHeaders, createTestUserAndAuth } = require('./test-auth');
 
 /**
  * Clear ALL distance data from the database before/after tests
@@ -12,12 +13,20 @@ const { request } = require('@playwright/test');
  */
 async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
   try {
-    const apiContext = await request.newContext();
+    // Ensure we have authentication
+    let authHeaders = getAuthHeaders();
+    if (!authHeaders) {
+      await createTestUserAndAuth(baseUrl);
+      authHeaders = getAuthHeaders();
+    }
+    
+    const apiContext = await request.newContext({
+      extraHTTPHeaders: authHeaders || {}
+    });
     
     // Get all events
     const response = await apiContext.get(`${baseUrl}/wtm/api/calendar-progress`);
     if (!response.ok()) {
-      console.log(`No existing data to clean up: ${response.status()}`);
       await apiContext.dispose();
       return 0;
     }
@@ -64,7 +73,6 @@ module.exports = {
 if (require.main === module) {
   cleanupAllTestData()
     .then((count) => {
-      console.log(`✨ Cleanup complete! Removed ${count} test events`);
       process.exit(0);
     })
     .catch((error) => {
