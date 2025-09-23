@@ -25,6 +25,7 @@ export function renderHtml() {
         <!-- Stylesheets -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <link href="/wtm/css/main.css" rel="stylesheet" />
+        <link href="/wtm/css/auth.css" rel="stylesheet" />
         
         <!-- Service Worker Registration -->
         <script>
@@ -44,7 +45,18 @@ export function renderHtml() {
       <body>
       <header>
         <div class="header-actions">
-          <button id="logout-btn" onclick="handleLogout()">Logout</button>
+          <div class="user-dropdown">
+            <button id="user-menu-btn" class="user-menu-toggle" onclick="toggleUserMenu()">
+              <i class="fas fa-user"></i>
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <div id="user-dropdown-menu" class="user-dropdown-menu">
+              <button onclick="handleLogout()">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
         <h1>Total distance travelled</h1>
         <div id="total-distance-value">Loading...</div>

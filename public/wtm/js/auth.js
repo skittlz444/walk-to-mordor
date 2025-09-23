@@ -166,3 +166,37 @@ async function checkAuth() {
     return null;
   }
 }
+
+// User dropdown functionality for authenticated users
+function toggleUserMenu() {
+  const dropdown = document.querySelector('.user-dropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('active');
+  }
+}
+
+// Make function globally accessible for onclick handlers
+window.toggleUserMenu = toggleUserMenu;
+
+// Initialize dropdown event listeners when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(event) {
+    const dropdown = document.querySelector('.user-dropdown');
+    const menuButton = document.getElementById('user-menu-btn');
+    
+    if (dropdown && menuButton && !dropdown.contains(event.target)) {
+      dropdown.classList.remove('active');
+    }
+  });
+
+  // Close dropdown on escape key
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      const dropdown = document.querySelector('.user-dropdown');
+      if (dropdown) {
+        dropdown.classList.remove('active');
+      }
+    }
+  });
+});
