@@ -459,6 +459,11 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         // Close the popup
         const closeButton = page.locator('text=Close').last();
         await closePopupRobust(page, closeButton);
+      } else {
+        // No goals available to test popup functionality
+        const upcomingCount = await page.locator('.upcoming-goal').count();
+        const completedCount = await page.locator('.completed-goal').count();
+        test.skip(`No goals available for popup testing. Upcoming: ${upcomingCount}, Completed: ${completedCount}. Need at least one goal to test popup functionality.`);
       }
     }
   });
@@ -824,6 +829,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     });
 
     if (goals.length < 2) {
+      test.skip(true, `Skipping test: Not enough goals available (found ${goals.length}, need at least 2). Current goals: ${JSON.stringify(goals.map(g => ({title: g.title, distance: g.distance})))}`);
       return;
     }
 
@@ -832,6 +838,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const suitableGoals = goals.filter(goal => goal.distance > 0 && goal.distance <= 100);
     
     if (suitableGoals.length < 2) {
+      test.skip(true, `Skipping test: Not enough suitable goals for testing (found ${suitableGoals.length}, need at least 2). Suitable goals (distance 1-100km): ${JSON.stringify(suitableGoals.map(g => ({title: g.title, distance: g.distance})))}. Total goals: ${goals.length}`);
       return;
     }
 
