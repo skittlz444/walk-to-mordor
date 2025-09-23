@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./helpers/cleanup');
+const { authenticateUserInBrowser, makeAuthenticatedApiRequest } = require('./helpers/browser-auth');
 
 /**
  * Generate realistic walking distance values (1-50 km)
@@ -28,8 +29,11 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await cleanupAllTestData();
   });
 
-  // Clear popups before each test to prevent interference
+  // Authenticate user and clear popups before each test
   test.beforeEach(async ({ page }) => {
+    // Authenticate user first
+    await authenticateUserInBrowser(page);
+    
     try {
       // Close any existing popups that might interfere with the next test
       const existingPopup = page.locator('.modal-overlay');
@@ -104,7 +108,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Goals section renders and controls work', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await expect(page.locator('#goals-list')).toBeVisible();
     await page.click('#toggle-completed-visibility');
     await expect(page.locator('#completed-goals-wrapper')).toBeHidden();
@@ -118,7 +122,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
   test('UI is responsive on specific viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await expect(page.locator('header')).toBeVisible();
     
     // Calendar may be hidden on mobile viewports, check if it exists but don't require visibility
@@ -130,7 +134,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Goal popup opens for upcoming goals and shows correct content', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Wait for goals to load and find the first visible goal (upcoming or any goal)
@@ -197,7 +201,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   test('Goal popup opens for completed goals and shows strikethrough distance', async ({ page }) => {
     const userAgent = await page.evaluate(() => navigator.userAgent);
     
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Close any existing popups first - critical for mobile browsers
@@ -293,7 +297,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Goal popup opens from header goals', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Check if there's already a header goal visible without adding distance
@@ -345,7 +349,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Goal popup displays special milestone and description', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Check if there are upcoming goals available
@@ -398,7 +402,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Goal popup shows distance information correctly', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Test any available goal without adding distance first
@@ -460,7 +464,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Page handles different screen sizes', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Test various screen sizes
@@ -481,9 +485,12 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
   test('API error handling works correctly', async ({ page }) => {
     // Test API with invalid data
-    const response = await page.request.post('http://localhost:8787/wtm/api/calendar-progress', {
-      data: { start: 'invalid-date', title: 'test' }
-    });
+    const response = await makeAuthenticatedApiRequest(
+      page.request, 
+      'post', 
+      'http://localhost:8787/wtm/api/calendar-progress', 
+      { data: { start: 'invalid-date', title: 'test' } }
+    );
     expect(response.status()).toBe(400);
     
     const errorData = await response.json();
@@ -492,9 +499,12 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
   test('API validates required fields', async ({ page }) => {
     // Test missing required fields
-    const response = await page.request.post('http://localhost:8787/wtm/api/calendar-progress', {
-      data: {}
-    });
+    const response = await makeAuthenticatedApiRequest(
+      page.request, 
+      'post', 
+      'http://localhost:8787/wtm/api/calendar-progress', 
+      { data: {} }
+    );
     expect([400, 422]).toContain(response.status());
   });
 
@@ -502,7 +512,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const jsErrors = [];
     page.on('pageerror', error => jsErrors.push(error));
     
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Verify no JavaScript errors occurred
@@ -513,7 +523,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const failedRequests = [];
     page.on('requestfailed', request => failedRequests.push(request));
     
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Verify no critical network requests failed
@@ -531,7 +541,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Calendar navigation performance', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     const nextButton = page.locator('#next-btn');
@@ -548,7 +558,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Browser back/forward navigation', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Navigate to a different page if possible
@@ -560,7 +570,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Page accessibility basics', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Check for basic accessibility elements
@@ -574,7 +584,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
   // Goal Image Loading Edge Cases & Advanced Features
   async function openFirstAvailableGoalPopup(page) {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Wait for goals to load
@@ -671,7 +681,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       }
     });
 
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#goals-list')).toBeVisible();
     
@@ -753,7 +763,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Goal popup does not show congratulations when opened manually', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
 
     // Wait for goals to load
@@ -795,13 +805,13 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         const closeButton = page.locator('text=Close').last();
         await closePopupRobust(page, closeButton);
       } else {
-        console.log('No goals available to test manual opening');
+        // No goals available to test manual opening
       }
     }
   });
 
   test('Only the highest passed goal shows when multiple goals are passed', async ({ page }) => {
-    await page.goto('http://localhost:8787');
+    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
 
     // Verify page loaded with goals
@@ -814,7 +824,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     });
 
     if (goals.length < 2) {
-      console.log('Need at least 2 goals to test multiple goals passing');
       return;
     }
 
@@ -823,7 +832,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const suitableGoals = goals.filter(goal => goal.distance > 0 && goal.distance <= 100);
     
     if (suitableGoals.length < 2) {
-      console.log('Need at least 2 suitable goals for testing');
       return;
     }
 
@@ -863,7 +871,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       const closeButton = page.locator('text=Close').last();
       await closePopupRobust(page, closeButton);
     } else {
-      console.log('Goal popup did not appear - this may be expected depending on test data');
+      // Goal popup did not appear - this may be expected depending on test data
     }
   });
 });
