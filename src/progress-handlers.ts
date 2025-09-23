@@ -8,7 +8,7 @@ import {
 } from "./validators";
 
 export async function handleProgressPost(request: Request, env: any, body: any, userId: number) {
-  const { start, title } = body || {};
+  const { start, title, syncSource } = body || {};
   
   // Validate required fields
   if (!start) {
@@ -74,16 +74,28 @@ export async function handleProgressPost(request: Request, env: any, body: any, 
     });
   }
 
+  // Validate sync source if provided
+  const validSyncSource = syncSource || 'manual';
+  if (!['manual', 'samsung_health'].includes(validSyncSource)) {
+    return new Response(JSON.stringify({ 
+      error: 'Invalid sync source. Must be either "manual" or "samsung_health"' 
+    }), { 
+      status: 400,
+      headers: { "content-type": "application/json" }
+    });
+  }
+
   try {
     await env.DB.prepare(
-      "INSERT INTO progress (date, distance, user_id) VALUES (?, ?, ?)"
+      "INSERT INTO progress (date, distance, user_id, sync_source) VALUES (?, ?, ?, ?)"
     )
-      .bind(start, Number(title), userId)
+      .bind(start, Number(title), userId, validSyncSource)
       .run();
     return new Response(JSON.stringify({ 
       message: "Created successfully",
       date: start,
-      distance: Number(title)
+      distance: Number(title),
+      syncSource: validSyncSource
     }), { 
       status: 201,
       headers: { "content-type": "application/json" }
@@ -246,10 +258,11 @@ export async function handleProgressDelete(request: Request, env: any, body: any
 
 export async function handleProgressGet(request: Request, env: any, userId: number) {
   try {
-    const { results } = await env.DB.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
-    const calendarData = (results as Array<{ date: string; distance: number }>).map(row => ({
+    const { results } = await env.DB.prepare("SELECT date, distance, sync_source FROM progress WHERE user_id = ?").bind(userId).all();
+    const calendarData = (results as Array<{ date: string; distance: number; sync_source?: string }>).map(row => ({
       start: row.date,
       title: row.distance.toString(),
+      syncSource: row.sync_source || 'manual',
     }));
     return new Response(JSON.stringify(calendarData), {
       headers: { "content-type": "application/json" },

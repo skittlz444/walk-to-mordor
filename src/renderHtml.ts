@@ -51,6 +51,10 @@ export function renderHtml() {
               <i class="fas fa-chevron-down"></i>
             </button>
             <div id="user-dropdown-menu" class="user-dropdown-menu">
+              <button onclick="handleSamsungHealthLink()">
+                <i class="fas fa-link"></i>
+                Link Samsung Health
+              </button>
               <button onclick="handleLogout()">
                 <i class="fas fa-sign-out-alt"></i>
                 Logout
@@ -75,6 +79,7 @@ export function renderHtml() {
       <script src="/wtm/js/progress.js"></script>
       <script src="/wtm/js/goals.js"></script>
       <script src="/wtm/js/auth.js"></script>
+      <script src="/wtm/js/samsung-health.js"></script>
       <script src="/wtm/js/main.js"></script>
       </body>
     </html>

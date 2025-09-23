@@ -149,7 +149,12 @@ function renderWeekView(grid, title) {
            data-date="${formatDate(cellDate)}"
            data-timestamp="${midnightTimestamp.getTime()}">
         <div class="day-number">${cellDate.getDate()}</div>
-        ${event ? `<div class="event-label">${event.title}</div>` : ''}
+        ${event ? `
+          <div class="event-label">
+            ${event.title}
+            ${event.syncSource === 'samsung_health' ? '<i class="fas fa-dot-circle samsung-health-indicator" title="Synced from Samsung Health"></i>' : ''}
+          </div>
+        ` : ''}
         ${isCurrentDay ? '<div class="today-indicator"></div>' : ''}
       </div>
     `;
@@ -201,7 +206,12 @@ function renderMonthView(grid, title) {
              data-date="${formatDate(currentCellDate)}"
              data-timestamp="${midnightTimestamp.getTime()}">
           <div class="day-number">${currentCellDate.getDate()}</div>
-          ${event ? `<div class="event-label">${event.title}</div>` : ''}
+          ${event ? `
+            <div class="event-label">
+              ${event.title}
+              ${event.syncSource === 'samsung_health' ? '<i class="fas fa-dot-circle samsung-health-indicator" title="Synced from Samsung Health"></i>' : ''}
+            </div>
+          ` : ''}
           ${isCurrentDay ? '<div class="today-indicator"></div>' : ''}
         </div>
       `;

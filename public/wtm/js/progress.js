@@ -54,6 +54,11 @@ function showDistanceModal(event, date = null) {
 
   document.body.appendChild(modalOverlay);
 
+  // Add Samsung Health sync button if linked
+  if (window.addSamsungHealthSyncButton) {
+    window.addSamsungHealthSyncButton(modalOverlay, selectedDate);
+  }
+
   // Add event listeners
   document.getElementById('save-btn').addEventListener('click', handleSaveDistance);
   document.getElementById('cancel-btn').addEventListener('click', closeModal);
@@ -96,6 +101,10 @@ function handleSaveDistance() {
     return;
   }
 
+  // Check if this is synced from Samsung Health
+  const distanceInput = document.getElementById('distance-input');
+  const syncSource = distanceInput.dataset.syncSource || 'manual';
+
   // Get current total before updating
   const events = window.calendarModule ? window.calendarModule.events() : [];
   const currentTotal = events.reduce((acc, ev) => acc + Number(ev.title.replace(/\s*km$/, '')), 0);
@@ -108,13 +117,14 @@ function handleSaveDistance() {
     const projectedNewTotal = previousTotal + newDistance;
     
     popupEvent.title = distance;
+    popupEvent.syncSource = syncSource;
     fetch('/wtm/api/calendar-progress', {
       method: 'PUT',
       headers: { 
         'Content-Type': 'application/json',
         'X-CSRF-Token': window.csrfToken || ''
       },
-      body: JSON.stringify({ start: selectedDate, title: distance })
+      body: JSON.stringify({ start: selectedDate, title: distance, syncSource: syncSource })
     }).then(response => {
       if (response.status === 401) {
         window.isAuthenticated = false;
@@ -144,7 +154,7 @@ function handleSaveDistance() {
     // Update local events array before making the API call
     if (window.calendarModule && window.calendarModule.setEvents) {
       const currentEvents = window.calendarModule.events();
-      currentEvents.push({ start: selectedDate, title: distance });
+      currentEvents.push({ start: selectedDate, title: distance, syncSource: syncSource });
       window.calendarModule.setEvents(currentEvents);
     }
     
@@ -154,7 +164,7 @@ function handleSaveDistance() {
         'Content-Type': 'application/json',
         'X-CSRF-Token': window.csrfToken || ''
       },
-      body: JSON.stringify({ start: selectedDate, title: distance })
+      body: JSON.stringify({ start: selectedDate, title: distance, syncSource: syncSource })
     }).then(response => {
       if (response.status === 401) {
         window.isAuthenticated = false;

@@ -25,9 +25,34 @@ import {
   requireAuth,
   getUserFromSession
 } from "./auth-handlers";
+import {
+  handleSamsungHealthAuthUrl,
+  handleSamsungHealthCallback,
+  handleSamsungHealthUnlink,
+  handleSamsungHealthStatus,
+  handleSamsungHealthSync,
+  initializeSamsungHealthService
+} from "./samsung-health-handlers";
+
+// Samsung Health service initialization flag
+let samsungHealthServiceInitialized = false;
 
 export default {
   async fetch(request, env) {
+    // Initialize Samsung Health service on first request
+    if (!samsungHealthServiceInitialized) {
+      try {
+        await initializeSamsungHealthService(
+          env.SAMSUNG_HEALTH_CLIENT_ID || 'mock_client_id',
+          env.SAMSUNG_HEALTH_CLIENT_SECRET || 'mock_client_secret',
+          env.SAMSUNG_HEALTH_ENCRYPTION_KEY || 'default_encryption_key_32_chars'
+        );
+        samsungHealthServiceInitialized = true;
+      } catch (error) {
+        console.warn('Failed to initialize Samsung Health service:', error);
+      }
+    }
+
     const url = new URL(request.url);
     const method = request.method;
     let body: any = undefined;
@@ -120,6 +145,17 @@ export default {
             headers: { "content-type": "application/json" }
           });
         }
+      // Samsung Health integration endpoints
+      } else if (url.pathname === "/wtm/api/samsung-health/auth-url" && method === "GET") {
+        return handleSamsungHealthAuthUrl(request, env, user);
+      } else if (url.pathname === "/wtm/api/samsung-health/callback" && method === "POST") {
+        return handleSamsungHealthCallback(request, env, body, user);
+      } else if (url.pathname === "/wtm/api/samsung-health/unlink" && method === "POST") {
+        return handleSamsungHealthUnlink(request, env, user);
+      } else if (url.pathname === "/wtm/api/samsung-health/status" && method === "GET") {
+        return handleSamsungHealthStatus(request, env, user);
+      } else if (url.pathname === "/wtm/api/samsung-health/sync" && method === "POST") {
+        return handleSamsungHealthSync(request, env, body, user);
       }
     }
 
@@ -159,10 +195,15 @@ function getAllowedMethods(pathname: string): string[] {
     case "/wtm/api/auth/login":
     case "/wtm/api/auth/logout":
     case "/wtm/api/auth/password-reset":
+    case "/wtm/api/samsung-health/callback":
+    case "/wtm/api/samsung-health/unlink":
+    case "/wtm/api/samsung-health/sync":
       return ['POST'];
     case "/wtm/api/auth/me":
     case "/wtm/api/goals":
     case "/wtm/api/total-distance":
+    case "/wtm/api/samsung-health/auth-url":
+    case "/wtm/api/samsung-health/status":
       return ['GET'];
     default:
       return ['GET'];

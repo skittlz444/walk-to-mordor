@@ -3,6 +3,72 @@
 @import url("./progress.css");
 @import url("./goals.css");
 
+/* Samsung Health integration styles */
+.samsung-health-indicator {
+  color: #1ba1f2; /* Samsung Health blue */
+  font-size: 0.8em;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+.samsung-health-sync-group {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.samsung-health-sync-group .btn {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.sync-status {
+  margin-top: 5px;
+  padding: 5px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.auth-simulation {
+  text-align: center;
+  padding: 20px;
+}
+
+.demo-buttons {
+  margin: 20px 0;
+}
+
+.demo-buttons .btn {
+  margin: 0 10px;
+}
+
+.samsung-health-auth-info {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.samsung-health-auth-info h4 {
+  margin-top: 0;
+  color: #495057;
+}
+
+.samsung-health-auth-info ul {
+  padding-left: 20px;
+}
+
+.samsung-health-auth-info li {
+  margin: 8px 0;
+}
+
+.samsung-health-auth-info small {
+  display: block;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #dee2e6;
+}
+
 /* General application layout */
 body {
   background-color: black;
