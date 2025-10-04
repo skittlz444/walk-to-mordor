@@ -1,3 +1,12 @@
+// Validation constants - keep in sync with client-side validators.js
+// Year range 1000-9999 provides a reasonable range for date validation
+// while supporting historical dates and far future dates if needed
+const VALIDATION_CONSTANTS = {
+  MIN_YEAR: 1000,
+  MAX_YEAR: 9999,
+  MAX_DISTANCE_VALUE: 999999999
+} as const;
+
 // Helper function to validate date format (yyyy-MM-dd)
 export function isValidDateFormat(dateString: string): boolean {
   if (!dateString || typeof dateString !== 'string') {
@@ -13,8 +22,8 @@ export function isValidDateFormat(dateString: string): boolean {
   // Parse the date components
   const [year, month, day] = dateString.split('-').map(Number);
   
-  // Basic range checks
-  if (year < 1000 || year > 9999) return false;
+  // Basic range checks - use shared constants
+  if (year < VALIDATION_CONSTANTS.MIN_YEAR || year > VALIDATION_CONSTANTS.MAX_YEAR) return false;
   if (month < 1 || month > 12) return false;
   if (day < 1 || day > 31) return false;
   
@@ -25,16 +34,13 @@ export function isValidDateFormat(dateString: string): boolean {
          date.getDate() === day;
 }
 
-// Reasonable upper limit for distance values
-const MAX_DISTANCE_VALUE = 999999999;
-
 // Helper function to validate distance value
 export function isValidDistance(value: any): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string' && value.trim() === '') return false;
   
   const num = Number(value);
-  return !isNaN(num) && isFinite(num) && num >= 0 && num <= MAX_DISTANCE_VALUE;
+  return !isNaN(num) && isFinite(num) && num >= 0 && num <= VALIDATION_CONSTANTS.MAX_DISTANCE_VALUE;
 }
 
 // Helper function to safely parse JSON
@@ -64,6 +70,9 @@ export function isValidMethod(pathname: string, method: string): boolean {
     return ['GET', 'POST', 'PUT', 'DELETE'].includes(method);
   }
   if (pathname === "/wtm/api/goals") {
+    return method === 'GET';
+  }
+  if (pathname === "/wtm/api/total-distance") {
     return method === 'GET';
   }
   return false;
