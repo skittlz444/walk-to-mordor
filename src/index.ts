@@ -1,4 +1,4 @@
-import { renderHtml } from "./renderHtml";
+import { renderHtml, renderAuthHtml } from "./renderHtml";
 import { 
   isValidDateFormat, 
   isValidDistance, 
@@ -7,6 +7,24 @@ import {
   createErrorResponse, 
   createSuccessResponse 
 } from "./validators";
+import { 
+  handleProgressPost, 
+  handleProgressPut, 
+  handleProgressDelete, 
+  handleProgressGet 
+} from "./progress-handlers";
+import { 
+  handleGoalsGet, 
+  calculateTotalDistance 
+} from "./goals-handlers";
+import {
+  handleRegister,
+  handleLogin,
+  handleLogout,
+  handleMe,
+  requireAuth,
+  getUserFromSession
+} from "./auth-handlers";
 
 export default {
   async fetch(request, env) {
@@ -24,28 +42,26 @@ export default {
 
     // Validate HTTP method for API endpoints
     if (url.pathname.startsWith("/wtm/api/")) {
-      if (!isValidMethod(url.pathname, method)) {
+      const allowedMethods = getAllowedMethods(url.pathname);
+      if (!allowedMethods.includes(method)) {
         return new Response(JSON.stringify({ 
           error: `Method ${method} not allowed for ${url.pathname}`,
-          allowedMethods: url.pathname === "/wtm/api/calendar-progress" 
-            ? ['GET', 'POST', 'PUT', 'DELETE'] 
-            : ['GET']
+          allowedMethods
         }), { 
           status: 405,
           headers: { 
             "content-type": "application/json",
-            "Allow": url.pathname === "/wtm/api/calendar-progress" 
-              ? "GET, POST, PUT, DELETE" 
-              : "GET"
+            "Allow": allowedMethods.join(", ")
           }
         });
       }
     }
 
-    // Only read body for calendar-progress API and relevant methods
+    // Only read body for API endpoints that need it
     if (
-      url.pathname === "/wtm/api/calendar-progress" &&
-      (method === "POST" || method === "PUT" || method === "DELETE")
+      url.pathname.startsWith("/wtm/api/") &&
+      (method === "POST" || method === "PUT" || method === "DELETE") &&
+      !url.pathname.includes("/logout") // logout doesn't need body
     ) {
       const parseResult = await safeJsonParse(request);
       if (!parseResult.success) {
@@ -59,298 +75,110 @@ export default {
       body = parseResult.data;
     }
 
-    // CRUD for calendar events
-    if (url.pathname === "/wtm/api/calendar-progress" && method === "POST") {
-      const { start, title } = body || {};
-      
-      // Validate required fields
-      if (!start) {
-        return new Response(JSON.stringify({ 
-          error: 'Missing required field: start (date)' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-      
-      if (typeof title === 'undefined') {
-        return new Response(JSON.stringify({ 
-          error: 'Missing required field: title (distance)' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
+    // Authentication endpoints (no auth required)
+    if (url.pathname === "/wtm/api/auth/register" && method === "POST") {
+      return handleRegister(request, env, body);
+    } else if (url.pathname === "/wtm/api/auth/login" && method === "POST") {
+      return handleLogin(request, env, body);
+    } else if (url.pathname === "/wtm/api/auth/logout" && method === "POST") {
+      return handleLogout(request, env);
+    } else if (url.pathname === "/wtm/api/auth/me" && method === "GET") {
+      return handleMe(request, env);
+    }
 
-      // Validate date format
-      if (!isValidDateFormat(start)) {
-        return new Response(JSON.stringify({ 
-          error: 'Invalid date format. Expected format: YYYY-MM-DD (e.g., 2024-01-15)' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
+    // Protected API endpoints - require authentication
+    if (url.pathname.startsWith("/wtm/api/")) {
+      const authResult = await requireAuth(request, env);
+      if (authResult instanceof Response) {
+        return authResult; // Return auth error
       }
+      const user = authResult;
 
-      // Validate distance value with specific error messages
-      if (!isValidDistance(title)) {
-        const num = Number(title);
-        if (isNaN(num) || !isFinite(num)) {
+      // CRUD for calendar events (now with user isolation)
+      if (url.pathname === "/wtm/api/calendar-progress" && method === "POST") {
+        return handleProgressPost(request, env, body, user.id);
+      } else if (url.pathname === "/wtm/api/calendar-progress" && method === "PUT") {
+        return handleProgressPut(request, env, body, user.id);
+      } else if (url.pathname === "/wtm/api/calendar-progress" && method === "DELETE") {
+        return handleProgressDelete(request, env, body, user.id);
+      } else if (url.pathname === "/wtm/api/calendar-progress") {
+        return handleProgressGet(request, env, user.id);
+      } else if (url.pathname === "/wtm/api/goals") {
+        return handleGoalsGet(request, env);
+      } else if (url.pathname === "/wtm/api/total-distance") {
+        try {
+          const totalDistance = await calculateTotalDistance(env, user.id);
+          return new Response(JSON.stringify({ totalDistance }), {
+            headers: { "content-type": "application/json" },
+          });
+        } catch (error: any) {
+          console.error('Database error during total distance calculation:', error);
           return new Response(JSON.stringify({ 
-            error: 'Invalid distance value. Must be a valid number' 
+            error: 'Internal server error while calculating total distance' 
           }), { 
-            status: 400,
+            status: 500,
             headers: { "content-type": "application/json" }
           });
         }
-        if (num < 0) {
-          return new Response(JSON.stringify({ 
-            error: 'Invalid distance value. Must be non-negative (0 or greater)' 
-          }), { 
-            status: 400,
-            headers: { "content-type": "application/json" }
-          });
-        }
-        if (num > 999999999) {
-          return new Response(JSON.stringify({ 
-            error: 'Invalid distance value. Must be less than 1 billion' 
-          }), { 
-            status: 400,
-            headers: { "content-type": "application/json" }
-          });
-        }
-        return new Response(JSON.stringify({ 
-          error: 'Invalid distance value. Must be a non-negative number' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-
-      try {
-        await env.DB.prepare(
-          "INSERT INTO progress (date, distance) VALUES (?, ?)"
-        )
-          .bind(start, Number(title))
-          .run();
-        return new Response(JSON.stringify({ 
-          message: "Created successfully",
-          date: start,
-          distance: Number(title)
-        }), { 
-          status: 201,
-          headers: { "content-type": "application/json" }
-        });
-      } catch (error: any) {
-        // Handle database errors
-        console.error('Database error during INSERT:', error);
-        if (error.message?.includes('UNIQUE constraint failed') || 
-            error.message?.includes('UNIQUE constraint') ||
-            error.cause?.message?.includes('UNIQUE constraint') ||
-            error.toString().includes('UNIQUE constraint')) {
-          return new Response(JSON.stringify({ 
-            error: 'An entry for this date already exists. Use PUT to update instead.' 
-          }), { 
-            status: 409,
-            headers: { "content-type": "application/json" }
-          });
-        }
-        
-        return new Response(JSON.stringify({ 
-          error: 'Internal server error while creating entry' 
-        }), { 
-          status: 500,
-          headers: { "content-type": "application/json" }
-        });
-      }
-    } else if (url.pathname === "/wtm/api/calendar-progress" && method === "PUT") {
-      const { start, title } = body || {};
-      
-      // Validate required fields
-      if (!start) {
-        return new Response(JSON.stringify({ 
-          error: 'Missing required field: start (date)' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-      
-      if (typeof title === 'undefined') {
-        return new Response(JSON.stringify({ 
-          error: 'Missing required field: title (distance)' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-
-      // Validate date format
-      if (!isValidDateFormat(start)) {
-        return new Response(JSON.stringify({ 
-          error: 'Invalid date format. Expected format: YYYY-MM-DD (e.g., 2024-01-15)' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-
-      // Validate distance value
-      if (!isValidDistance(title)) {
-        return new Response(JSON.stringify({ 
-          error: 'Invalid distance value. Must be a non-negative number' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-
-      try {
-        const result = await env.DB.prepare(
-          "UPDATE progress SET distance = ? WHERE date = ?"
-        )
-          .bind(Number(title), start)
-          .run();
-          
-        if (result.meta.changes === 0) {
-          return new Response(JSON.stringify({ 
-            error: 'No entry found for the specified date. Use POST to create a new entry.' 
-          }), { 
-            status: 404,
-            headers: { "content-type": "application/json" }
-          });
-        }
-        
-        return new Response(JSON.stringify({ 
-          message: "Updated successfully",
-          date: start,
-          distance: Number(title)
-        }), { 
-          status: 200,
-          headers: { "content-type": "application/json" }
-        });
-      } catch (error: any) {
-        console.error('Database error during UPDATE:', error);
-        return new Response(JSON.stringify({ 
-          error: 'Internal server error while updating entry' 
-        }), { 
-          status: 500,
-          headers: { "content-type": "application/json" }
-        });
-      }
-    } else if (url.pathname === "/wtm/api/calendar-progress" && method === "DELETE") {
-      const { start } = body || {};
-      
-      // Validate required field
-      if (!start) {
-        return new Response(JSON.stringify({ 
-          error: 'Missing required field: start (date)' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-
-      // Validate date format
-      if (!isValidDateFormat(start)) {
-        return new Response(JSON.stringify({ 
-          error: 'Invalid date format. Expected format: YYYY-MM-DD (e.g., 2024-01-15)' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-
-      try {
-        console.log("Deleting date:", start);
-        const result = await env.DB.prepare("DELETE FROM progress WHERE date = ?")
-          .bind(start)
-          .run();
-          
-        if (result.meta.changes === 0) {
-          return new Response(JSON.stringify({ 
-            error: 'No entry found for the specified date' 
-          }), { 
-            status: 404,
-            headers: { "content-type": "application/json" }
-          });
-        }
-        
-        return new Response(JSON.stringify({ 
-          message: "Deleted successfully",
-          date: start
-        }), { 
-          status: 200,
-          headers: { "content-type": "application/json" }
-        });
-      } catch (error: any) {
-        console.error('Database error during DELETE:', error);
-        return new Response(JSON.stringify({ 
-          error: 'Internal server error while deleting entry' 
-        }), { 
-          status: 500,
-          headers: { "content-type": "application/json" }
-        });
-      }
-    } else if (url.pathname === "/wtm/api/calendar-progress") {
-      try {
-        const { results } = await env.DB.prepare("SELECT * FROM progress").all();
-        const calendarData = (results as Array<{ date: string; distance: number }>).map(row => ({
-          start: row.date,
-          title: row.distance.toString(),
-        }));
-        return new Response(JSON.stringify(calendarData), {
-          headers: { "content-type": "application/json" },
-        });
-      } catch (error: any) {
-        console.error('Database error during SELECT (calendar-progress):', error);
-        return new Response(JSON.stringify({ 
-          error: 'Internal server error while retrieving calendar progress' 
-        }), { 
-          status: 500,
-          headers: { "content-type": "application/json" }
-        });
-      }
-    } else if (url.pathname === "/wtm/api/goals") {
-      try {
-        const { results } = await env.DB.prepare("SELECT * FROM goals").all();
-        // Return all goals as array of {distance, title, special}
-        return new Response(JSON.stringify(results), {
-          headers: { "content-type": "application/json" },
-        });
-      } catch (error: any) {
-        console.error('Database error during SELECT (goals):', error);
-        return new Response(JSON.stringify({ 
-          error: 'Internal server error while retrieving goals' 
-        }), { 
-          status: 500,
-          headers: { "content-type": "application/json" }
-        });
       }
     }
 
-    // Render main HTML page
-    try {
-      const { results } = await env.DB.prepare("SELECT * FROM progress").all();
-      const totalDistance = Number(
-        (results as Array<{ distance: number }>).reduce(
-          (acc, row) => acc + row.distance,
-          0
-        ).toFixed(2)
-      );
-      return new Response(renderHtml(totalDistance), {
-        headers: {
-          "content-type": "text/html",
-        },
-      });
-    } catch (error: any) {
-      console.error('Database error during SELECT (main page):', error);
-      // Return a fallback HTML page with 0 distance if database fails
-      return new Response(renderHtml(0), {
-        headers: {
-          "content-type": "text/html",
-        },
-      });
+    // Check if user is authenticated for main page
+    const sessionId = getSessionFromRequest(request);
+    if (sessionId) {
+      try {
+        const user = await getUserFromSession(sessionId, env);
+        if (user) {
+          // User is authenticated, show main page
+          return new Response(renderHtml(), {
+            headers: {
+              "content-type": "text/html",
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Auth check error for main page:', error);
+      }
     }
+    
+    // User not authenticated, show login page
+    return new Response(renderAuthHtml(), {
+      headers: {
+        "content-type": "text/html",
+      },
+    });
   },
 } satisfies ExportedHandler<Env>;
+
+// Helper function to get allowed methods for API endpoints
+function getAllowedMethods(pathname: string): string[] {
+  switch (pathname) {
+    case "/wtm/api/calendar-progress":
+      return ['GET', 'POST', 'PUT', 'DELETE'];
+    case "/wtm/api/auth/register":
+    case "/wtm/api/auth/login":
+    case "/wtm/api/auth/logout":
+    case "/wtm/api/auth/password-reset":
+      return ['POST'];
+    case "/wtm/api/auth/me":
+    case "/wtm/api/goals":
+    case "/wtm/api/total-distance":
+      return ['GET'];
+    default:
+      return ['GET'];
+  }
+}
+
+// Extract session ID from request cookies
+function getSessionFromRequest(request: Request): string | null {
+  const cookieHeader = request.headers.get('Cookie');
+  if (!cookieHeader) return null;
+  
+  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+    const [key, value] = cookie.trim().split('=');
+    acc[key] = value;
+    return acc;
+  }, {} as Record<string, string>);
+  
+  return cookies.session || null;
+}
