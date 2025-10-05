@@ -1,8 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./helpers/cleanup');
-
-
 /**
  * UI Success Tests - Walk to Mordor
  * Following new testing methodology: Clean database before tests, use realistic distances.
