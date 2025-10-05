@@ -92,11 +92,8 @@ Error responses:
 ```
 
 ### Test Coverage
-- 330+ comprehensive test cases across unit, API, and UI testing with authentication
+- 90+ comprehensive test cases across unit, API, and UI testing
 - 96%+ code coverage with automated validation
-- Authentication flow validation (registration, login, logout, session management)
-- User data isolation testing
-- Security testing for password hashing and session management
 - Valid edge cases (zero values, decimals, large numbers)
 - Invalid input validation (malformed JSON, wrong types, out of range)
 - HTTP method validation and database error conditions
@@ -104,19 +101,12 @@ Error responses:
 
 ## Features
 
-### 🔐 User Authentication & Security
-- **User Registration & Login**: Secure account creation with username and password
-- **Password Security**: PBKDF2 hashing with random salt and 100,000 iterations for maximum security
-- **Session Management**: Secure session-based authentication with HttpOnly cookies
-- **Data Isolation**: Each user's progress data is completely private and isolated
-- **User Management**: Login, logout, and account management functionality
-
 ### 📅 Daily Progress Tracking
 - **Calendar Interface**: Log daily walking/running distances with an intuitive calendar
 - **Flexible Input**: Enter distances in kilometers with decimal precision (e.g., 5.25 km)
 - **Edit & Delete**: Modify or remove entries as needed
 - **Cumulative Tracking**: Automatic calculation of total distance traveled
-- **Personal Progress**: All progress tracking is tied to your personal account
+- **Simple Access**: No login required - immediate access to start tracking
 
 ### 🗺️ Interactive Journey Map
 - **191+ Story Milestones**: From Bag End through Rivendell, Moria, Lothlórien, to Mount Doom and back
@@ -139,27 +129,20 @@ The journey includes major checkpoints from the books:
 - **Service Worker**: Automatic updates and background sync
 
 ### 🛡️ Robust Architecture
-- **User Authentication**: Secure registration and login system with encrypted passwords
-- **Data Security**: Complete user data isolation and privacy protection
-- **Session Management**: Secure session handling with automatic expiration
 - **Error Handling**: Comprehensive validation for all user inputs
 - **Data Safety**: Automatic backups and conflict resolution
 - **Performance**: Serverless architecture with global edge distribution
-- **Testing**: 330+ automated tests ensuring reliability and security
+- **Testing**: 90+ automated tests ensuring reliability
 
 ## How to Use
 
 ### 🚀 Getting Started
-1. **Create Account**: Register with a username and secure password
-2. **Login**: Access your personal fitness tracking dashboard
-3. **Start Tracking**: Click on any date in the calendar to log your daily walking distance
-4. **View Progress**: See your total distance at the top of the screen
-5. **Explore Milestones**: Click on upcoming goals to read about the next story locations
-6. **Stay Motivated**: Watch your progress advance through Middle-earth's most famous locations
-7. **Track Long-term**: The complete journey provides months or years of fitness motivation
-8. **Account Management**: Use the user menu to logout or manage your account
-
-Your progress is private and secure - only you can see your personal journey data.
+1. **Open the App**: Navigate to the application URL - no login required
+2. **Start Tracking**: Click on any date in the calendar to log your daily walking distance
+3. **View Progress**: See your total distance at the top of the screen
+4. **Explore Milestones**: Click on upcoming goals to read about the next story locations
+5. **Stay Motivated**: Watch your progress advance through Middle-earth's most famous locations
+6. **Track Long-term**: The complete journey provides months or years of fitness motivation
 
 Whether you're a casual walker aiming for 2-3 km per day or a dedicated runner covering 10+ km daily, the journey scales to your fitness level while providing consistent motivation through Tolkien's beloved story.
 

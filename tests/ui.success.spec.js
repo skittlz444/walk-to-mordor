@@ -1,8 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./helpers/cleanup');
-const { authenticateUserInBrowser, makeAuthenticatedApiRequest } = require('./helpers/browser-auth');
-
 /**
  * UI Success Tests - Walk to Mordor
  * Following new testing methodology: Clean database before tests, use realistic distances.
@@ -22,10 +20,9 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     await cleanupAllTestData();
   });
 
-  // Authenticate user and clear popups before each test
+  // Navigate to page and clear popups before each test
   test.beforeEach(async ({ page }) => {
-    // Authenticate user first
-    await authenticateUserInBrowser(page);
+    await page.goto('http://localhost:8787/wtm/');
     
     try {
       // Close any existing popups that might interfere with the next test
@@ -247,7 +244,6 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   }
 
   test('Application loads and calendar is interactive', async ({ page }) => {
-    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Verify main page elements load
@@ -273,7 +269,6 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Can create and delete a walking event', async ({ page }) => {
-    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     const testDistance = generateRealisticTestDistance();
@@ -314,7 +309,6 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Can edit and delete an event', async ({ page }) => {
-    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     const initialDistance = generateRealisticTestDistance();
@@ -407,7 +401,6 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Can create multiple events with random data', async ({ page }) => {
-    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Close any existing popups/overlays that might interfere
@@ -440,7 +433,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
         
         // For second event, refresh page to reset state in Mobile Firefox
         if (i > 0) {
-          await authenticateUserInBrowser(page);
+          await page.goto('http://localhost:8787/wtm/');
           await page.waitForLoadState('networkidle');
           await page.waitForTimeout(1000);
         }
@@ -468,7 +461,6 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Calendar navigation works correctly', async ({ page }) => {
-    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Verify calendar is visible
@@ -492,7 +484,6 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Goal popup images load correctly', async ({ page }) => {
-    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
     
     // Look for goal-related elements using the patterns from edge cases test
@@ -559,7 +550,6 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
   test('Page is responsive on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 }); // iPhone size
-    // User is already authenticated by beforeEach hook (which navigates to the page)
     await page.waitForLoadState('networkidle');
     
     // Check that main elements are still visible and functional on mobile
@@ -579,16 +569,16 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
   test('API endpoints are accessible', async ({ page }) => {
     const endpoints = [
-      '/wtm/api/calendar-progress',
-      '/wtm/api/goals',
-      '/wtm/api/total-distance'
+      'http://localhost:8787/wtm/api/calendar-progress',
+      'http://localhost:8787/wtm/api/goals',
+      'http://localhost:8787/wtm/api/total-distance'
     ];
     
     let successfulEndpoints = 0;
     
     for (const endpoint of endpoints) {
       try {
-        const response = await makeAuthenticatedApiRequest(page.request, 'get', endpoint);
+        const response = await page.request.get(endpoint);
         if (response.ok()) {
           const data = await response.json();
           expect(Array.isArray(data) || typeof data === 'object').toBeTruthy();
@@ -604,7 +594,6 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   });
 
   test('Goal popup shows congratulations when user passes a goal by adding distance', async ({ page }) => {
-    // User is already authenticated by beforeEach hook
     await page.waitForLoadState('networkidle');
 
     // Close any existing popups first

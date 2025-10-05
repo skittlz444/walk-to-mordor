@@ -65,12 +65,13 @@ beforeEach(async ({ page }) => {
 ## File Structure & Organization
 
 ### API Tests
-- **`tests/api.success.test.js`** - 8 success flow tests for core functionality
+- **`tests/api.success.test.js`** - 9 success flow tests for core functionality
   - GET calendar data retrieval
   - POST event creation (including edge values like 0, decimals, large numbers)
   - PUT event editing
   - DELETE event removal
   - GET goals data retrieval
+  - GET total distance
   
 - **`tests/api.errors.test.js`** - 19 error handling and edge case tests
   - Input validation (missing fields, invalid formats, malformed JSON)
@@ -79,15 +80,8 @@ beforeEach(async ({ page }) => {
   - Edge case validation (negative numbers, extremely large values)
   - Request body validation (empty payloads, non-object JSON)
 
-- **`tests/api.auth.test.js`** - 18 authentication API tests
-  - User registration with validation
-  - User login and session creation
-  - Authentication middleware testing
-  - Session management and expiration
-  - User data isolation verification
-
 ### UI Tests  
-- **`tests/ui.success.spec.js`** - 64 core UI functionality tests (16 tests × 4 browsers)
+- **`tests/ui.success.spec.js`** - Core UI functionality tests
   - Calendar rendering and navigation
   - Event CRUD operations (Create, Read, Update, Delete)
   - Form validation and user feedback
@@ -96,24 +90,15 @@ beforeEach(async ({ page }) => {
   - Basic user workflows
   - Congratulations popup handling with realistic distances
 
-- **`tests/ui.edge-cases.spec.js`** - 64 complex features and edge case tests (16 tests × 4 browsers)
+- **`tests/ui.edge-cases.spec.js`** - Complex features and edge case tests
   - Goal popup functionality and interactions
   - Advanced calendar navigation
   - Error handling in UI
-  - Browser compatibility testing (Chromium, Firefox, Mobile Chrome, Mobile Firefox)
+  - Browser compatibility testing
   - Accessibility features
   - Performance scenarios
   - Network request handling
   - Popup interference prevention
-
-- **`tests/ui.auth.spec.js`** - 48 authentication UI tests (12 tests × 4 browsers)
-  - User registration form validation and submission
-  - Login form functionality and error handling
-  - Authentication state management
-  - Session persistence and logout functionality
-  - UI transitions between authenticated and unauthenticated states
-  - Form switching between login and registration
-  - Password validation and user feedback
 
 ### Unit Tests
 - **`tests/validators.test.ts`** - 22 validation function tests
@@ -123,75 +108,65 @@ beforeEach(async ({ page }) => {
   - HTTP method validation (endpoint-specific methods)
   - Error response generation
 
-- **`tests/renderHtml.test.ts`** - 8 HTML rendering tests
+- **`tests/renderHtml.test.ts`** - 10 HTML rendering tests
   - Template rendering with different data
   - PWA meta tag inclusion
   - JavaScript/CSS file inclusion
   - Numeric formatting (large numbers, decimals)
   - Default value handling
+  - Verification auth components are removed
 
-- **`tests/index.test.ts`** - 32 main handler tests  
+- **`tests/index.test.ts`** - 37 main handler tests  
   - Complete request/response cycle testing
   - All HTTP methods (GET, POST, PUT, DELETE, HEAD)
   - Database integration scenarios
   - Error handling across all endpoints
   - Static asset serving
 
-- **`tests/index.auth.test.ts`** - 15 authentication integration tests
-  - Authentication middleware integration
-  - Protected endpoint access control
-  - Session-based request handling
-  - User context in request processing
-
-- **`tests/auth-handlers.test.ts`** - 17 authentication handler tests
-  - User registration with validation
-  - Login credential verification
-  - Session creation and management
-  - Logout and session cleanup
-  - Password hashing verification
-
-- **`tests/auth-utils.test.ts`** - 13 authentication utility tests
-  - Password hashing with PBKDF2
-  - Salt generation and verification
-  - Session ID generation
-  - Username and password validation
-  - User session management
-
-- **`tests/goals-handlers.test.ts`** - 3 goals handler tests
+- **`tests/goals-handlers.test.ts`** - 5 goals handler tests
   - Goals data retrieval
-  - Total distance calculation per user
-  - User-specific goal progress
+  - Total distance calculation
+  - Goal progress tracking
+  - Decimal precision handling
 
 ### Helper Files
 - **`tests/helpers/cleanup.js`** - Complete database cleanup utility
-  - Complete database clearing (no pattern detection needed)
+  - Complete database clearing (no authentication required)
   - Safe API operations with comprehensive logging
   - Error handling for failed operations
   - Database state management and verification
 
-### Removed Files (Migration Complete)
+- **`tests/helpers/test-auth.js`** - Test helper compatibility layer
+  - No-op functions for backward compatibility
+  - Direct API request helpers (no authentication)
+
+### Removed Files
 - `tests/api.test.js` ✅ (migrated to split files)
 - `tests/ui.spec.js` ✅ (migrated to split files)
+- `tests/auth-handlers.test.ts` ✅ (authentication removed)
+- `tests/auth-utils.test.ts` ✅ (authentication removed)
+- `tests/index.auth.test.ts` ✅ (authentication removed)
+- `tests/api.auth.test.js` ✅ (authentication removed)
+- `tests/ui.auth.spec.js` ✅ (authentication removed)
+- `tests/helpers/browser-auth.js` ✅ (authentication removed)
 
 ## NPM Scripts Organization
 
 ### Main Test Commands
-- **`npm run test`** - Runs all tests (unit + API + UI) = 333+ total tests
+- **`npm run test`** - Runs all tests (unit + API + UI) = 118+ total tests
 - **`npm run test:all`** - Alternative command for complete test suite  
 - **`npm run test:quick`** - **Fast feedback** - Success flows only for rapid development
 
 ### Category-Specific Commands
-- **`npm run test:unit`** - Unit tests only (112 tests) - Fast, isolated function testing
-- **`npm run test:api:all`** - All API tests (45 tests) - Combined success + error flows  
-- **`npm run test:ui:all`** - All UI tests (176 tests) - Complete cross-browser testing
+- **`npm run test:unit`** - Unit tests only (90 tests) - Fast, isolated function testing
+- **`npm run test:api:all`** - All API tests (28 tests) - Combined success + error flows  
+- **`npm run test:ui:all`** - All UI tests - Complete browser testing
 
 ### Granular Test Commands
-- **`npm run test:api:success`** - API success flows only (8 tests)
+- **`npm run test:api:success`** - API success flows only (9 tests)
 - **`npm run test:api:errors`** - API error handling only (19 tests)
-- **`npm run test:api:auth`** - Authentication API tests only (18 tests)
-- **`npm run test:ui:success`** - UI success flows only (64 tests across 4 browsers)
-- **`npm run test:ui:edge-cases`** - UI edge cases only (64 tests across 4 browsers)
-- **`npm run test:ui:auth`** - Authentication UI tests only (48 tests across 4 browsers)
+- **`npm run test:ui:success`** - UI success flows
+- **`npm run test:ui:edge-cases`** - UI edge cases
 
 ### Flow-Based Commands
 - **`npm run test:success`** - All success flows (API + UI) - Happy path validation
@@ -261,11 +236,9 @@ beforeEach(async ({ page }) => {
 
 ### 📊 Better Organization & Reliability  
 - **Clear separation**: Success flows vs. edge cases for easier maintenance
-- **Authentication testing**: Dedicated test suites for auth functionality
 - **Automatic cleanup**: No manual test data management required
-- **Pattern-based detection**: Robust test data identification and removal
-- **Comprehensive coverage**: 333+ tests across all application layers including authentication
-- **User isolation testing**: Verifies complete data separation between users
+- **Comprehensive coverage**: 118+ tests across all application layers
+- **Simple architecture**: No authentication complexity to test
 
 ### 🔧 Flexible Execution
 - **Multiple entry points**: Different commands for different development phases
@@ -280,26 +253,25 @@ beforeEach(async ({ page }) => {
 
 ## Test Results & Coverage
 
-### Current Test Status ✅ (Updated with Authentication)
-- **Unit Tests**: 112/112 passing (100% success rate)
-- **API Tests**: 45/45 passing (100% success rate)  
-- **UI Tests**: 176/176 passing (100% success rate)
-- **Total**: 333+/333+ passing (100% overall success rate)
+### Current Test Status ✅
+- **Unit Tests**: 90/90 passing (100% success rate)
+- **API Tests**: 28/28 passing (100% success rate)  
+- **UI Tests**: Tests passing (100% success rate)
+- **Total**: 118+/118+ passing (100% overall success rate)
 
-### Coverage Achievement (Updated)
-- **validators.ts**: 100% coverage (all validation functions fully tested)
+### Coverage Achievement
+- **validators.ts**: 97.77% coverage (all validation functions fully tested)
 - **renderHtml.ts**: 100% coverage (complete HTML generation testing)
-- **auth-utils.ts**: 100% coverage (password hashing, session management)
-- **auth-handlers.ts**: 100% coverage (registration, login, logout handlers)
+- **progress-handlers.ts**: 95.23% coverage (CRUD operations)
 - **goals-handlers.ts**: 100% coverage (goals and distance calculation)
-- **index.ts**: Integration tested via API tests (Workers environment)
-- **Overall**: Exceeds 96% coverage across all testable modules
+- **index.ts**: 97.67% coverage (main request handler)
+- **Overall**: 95.97% coverage across all testable modules
 
-### Performance Metrics (Updated with Authentication)
+### Performance Metrics
 - **Unit Tests**: ~2-3 seconds (fast feedback)
-- **API Tests**: ~4-5 seconds (includes authentication and database operations)
-- **UI Tests**: ~3 minutes (cross-browser with authentication flows, 176 tests)
-- **Full Suite**: ~3.5 minutes total (excellent for 333+ tests)
+- **API Tests**: ~2 seconds (database operations only)
+- **UI Tests**: Variable (cross-browser testing)
+- **Full Suite**: Quick execution for rapid development
 
 ### Methodology Improvements Achieved ✅
 - **Complete Database Isolation**: Eliminated pattern-based cleanup complexity

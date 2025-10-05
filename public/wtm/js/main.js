@@ -1,17 +1,7 @@
 // Main application controller - coordinates domain modules
 
-// Global authentication state
-let isAuthenticated = false;
-let currentUser = null;
-let csrfToken = null;
-
-// Make authentication state and functions globally accessible for auth.js
-window.isAuthenticated = isAuthenticated;
-window.currentUser = currentUser;
-window.csrfToken = csrfToken;
-
 document.addEventListener("DOMContentLoaded", function() {
-  // Initialize calendar with authentication check
+  // Initialize application
   async function initializeApp() {
     try {
       // Initialize calendar module if available

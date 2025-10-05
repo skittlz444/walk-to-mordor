@@ -246,18 +246,7 @@ function addCellEventListeners() {
 
 function updateCalendarAndTotal() {
   fetch('/wtm/api/calendar-progress')
-    .then(res => {
-      if (res.status === 401) {
-        // Unauthorized - show auth section
-        window.isAuthenticated = false;
-        window.currentUser = null;
-        if (typeof showLoginSection === 'function') {
-          showLoginSection();
-        }
-        throw new Error('Authentication required');
-      }
-      return res.json();
-    })
+    .then(res => res.json())
     .then(fetchedEvents => {
       events = fetchedEvents.map(ev => ({
         ...ev,
@@ -293,6 +282,4 @@ window.calendarModule = {
   currentDate: () => currentDate,
   currentView: () => currentView
 };
-
-// Make updateCalendarAndTotal available globally for auth.js compatibility
 window.updateCalendarAndTotal = updateCalendarAndTotal;
