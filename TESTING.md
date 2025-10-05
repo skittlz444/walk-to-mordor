@@ -62,10 +62,10 @@ beforeEach(async ({ page }) => {
 ## Test Structure
 
 ### Test Types
-1. **Unit Tests** - Test individual functions and modules in isolation (112 tests)
-2. **API Tests** - Test API endpoints with real Cloudflare Workers environment (45 tests)
-3. **UI Tests** - End-to-end browser testing with Playwright (176 tests)
-4. **Total Tests** - 333+ tests across all categories
+1. **Unit Tests** - Test individual functions and modules in isolation (90 tests)
+2. **API Tests** - Test API endpoints with real Cloudflare Workers environment (28 tests)
+3. **UI Tests** - End-to-end browser testing with Playwright
+4. **Total Tests** - 118+ tests across all categories
 
 ### Cache Version Testing
 
@@ -97,22 +97,17 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 #### Unit Tests
 - `tests/validators.test.ts` - Validation functions (22 tests)
 - `tests/renderHtml.test.ts` - HTML rendering (8 tests)
-- `tests/index.test.ts` - Main handler logic (32 tests)
-- `tests/index.auth.test.ts` - Authentication integration tests (15 tests)
-- `tests/auth-handlers.test.ts` - Authentication handler functions (17 tests)
-- `tests/auth-utils.test.ts` - Authentication utilities (13 tests)
-- `tests/goals-handlers.test.ts` - Goals handler functions (3 tests)
+- `tests/index.test.ts` - Main handler logic (37 tests)
+- `tests/goals-handlers.test.ts` - Goals handler functions (5 tests)
 - `tests/cache-version.test.js` - Cache version management scripts (16 tests)
 
 #### API Integration Tests  
-- `tests/api.success.test.js` - Success flows and happy path scenarios (8 tests)
+- `tests/api.success.test.js` - Success flows and happy path scenarios (9 tests)
 - `tests/api.errors.test.js` - Error handling and edge cases (19 tests)
-- `tests/api.auth.test.js` - Authentication API endpoint tests (18 tests)
 
 #### UI End-to-End Tests
-- `tests/ui.success.spec.js` - Core UI functionality across all browsers (64 tests)
-- `tests/ui.edge-cases.spec.js` - Complex features and edge cases across all browsers (64 tests)
-- `tests/ui.auth.spec.js` - Authentication UI flows across all browsers (48 tests)
+- `tests/ui.success.spec.js` - Core UI functionality
+- `tests/ui.edge-cases.spec.js` - Complex features and edge cases
 
 #### Helper Files
 - `tests/helpers/cleanup.js` - Centralized test data cleanup utility
@@ -134,15 +129,15 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 
 ### All Tests
 ```bash
-npm test                    # Runs unit tests (112) + API tests (45) + UI tests (176) = 333+ tests
+npm test                    # Runs unit tests (90) + API tests (28) + UI tests
 npm run test:all           # Alternative command for complete test suite
 ```
 
 ### Category-Specific Tests
 ```bash
-npm run test:unit          # Unit tests only (112 tests) - Fast feedback
-npm run test:api:all       # API tests only (45 tests) - Both success and error cases
-npm run test:ui:all        # UI tests only (176 tests) - All browser scenarios
+npm run test:unit          # Unit tests only (90 tests) - Fast feedback
+npm run test:api:all       # API tests only (28 tests) - Both success and error cases
+npm run test:ui:all        # UI tests - All browser scenarios
 ```
 
 ### Flow-Based Testing (Development Workflow)
@@ -154,12 +149,10 @@ npm run test:errors        # All error and edge case scenarios
 
 ### Granular Test Execution
 ```bash
-npm run test:api:success   # API success flows (8 tests)
+npm run test:api:success   # API success flows (9 tests)
 npm run test:api:errors    # API error handling (19 tests)
-npm run test:api:auth      # Authentication API tests (18 tests)
-npm run test:ui:success    # UI success flows (64 tests - all browsers)
-npm run test:ui:edge-cases # UI edge cases (64 tests - all browsers)
-npm run test:ui:auth       # Authentication UI tests (48 tests - all browsers)
+npm run test:ui:success    # UI success flows
+npm run test:ui:edge-cases # UI edge cases
 ```
 
 ### Development Tools
@@ -171,12 +164,11 @@ npm run test:ui:headed     # UI tests with visible browser
 
 ### UI Tests Only
 ```bash
-npm run test:ui:all        # All UI tests (176 tests across 4 browsers)
-npm run test:ui:success    # UI success flows (64 tests across 4 browsers)
-npm run test:ui:edge-cases # UI edge cases (64 tests across 4 browsers)
-npm run test:ui:auth       # Authentication UI tests (48 tests across 4 browsers)
+npm run test:ui:all        # All UI tests
+npm run test:ui:success    # UI success flows
+npm run test:ui:edge-cases # UI edge cases
 ```
-Runs end-to-end browser tests with Playwright across Chromium, Firefox, Mobile Chrome, and Mobile Firefox.
+Runs end-to-end browser tests with Playwright.
 
 ### Coverage Report
 ```bash
@@ -203,8 +195,6 @@ Runs all tests with comprehensive coverage reporting and generates HTML reports.
 - **Real Environment**: Tests run against actual Cloudflare Workers local development server
 - **Database Integration**: Uses real D1 database for authentic testing conditions
 - **HTTP Testing**: Full request/response cycle testing with proper status codes and headers
-- **Authentication Testing**: Complete authentication flow testing with user registration, login, and session management
-- **Data Isolation**: Tests verify proper user data isolation and security
 
 ## Test Data Lifecycle
 
@@ -239,10 +229,8 @@ To enable comprehensive unit testing, validation and utility functions were extr
 
 - `src/validators.ts` - All validation functions (date, distance, JSON, HTTP methods)
 - `src/renderHtml.ts` - HTML rendering function  
-- `src/auth-utils.ts` - Authentication utilities (password hashing, session management)
-- `src/auth-handlers.ts` - Authentication API handlers (register, login, logout)
-- `src/progress-handlers.ts` - Progress data CRUD operations with user isolation
-- `src/goals-handlers.ts` - Goals and total distance calculation per user
+- `src/progress-handlers.ts` - Progress data CRUD operations
+- `src/goals-handlers.ts` - Goals and total distance calculation
 - `src/index.ts` - Main request handler (tested via integration tests)
 
 ### Test Organization Strategy
@@ -374,9 +362,11 @@ After running `npm run test:coverage`, open `coverage/index.html` in a browser t
 - **Lines**: 80% minimum
 
 ### Current Coverage Achievement
-- **validators.ts**: 100% coverage (fully tested utility functions)
+- **validators.ts**: 97.77% coverage (fully tested utility functions)
 - **renderHtml.ts**: 100% coverage (complete HTML generation testing)
-- **index.ts**: Excluded (tested via API integration tests in Workers environment)
+- **progress-handlers.ts**: 95.23% coverage (CRUD operations)
+- **goals-handlers.ts**: 100% coverage (goals and distance calculations)
+- **index.ts**: 97.67% coverage (main request handler)
 
 ## Troubleshooting
 

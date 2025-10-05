@@ -1,4 +1,4 @@
-import { renderHtml, renderAuthHtml } from "./renderHtml";
+import { renderHtml } from "./renderHtml";
 import { 
   isValidDateFormat, 
   isValidDistance, 
@@ -17,14 +17,6 @@ import {
   handleGoalsGet, 
   calculateTotalDistance 
 } from "./goals-handlers";
-import {
-  handleRegister,
-  handleLogin,
-  handleLogout,
-  handleMe,
-  requireAuth,
-  getUserFromSession
-} from "./auth-handlers";
 
 export default {
   async fetch(request, env) {
@@ -60,8 +52,7 @@ export default {
     // Only read body for API endpoints that need it
     if (
       url.pathname.startsWith("/wtm/api/") &&
-      (method === "POST" || method === "PUT" || method === "DELETE") &&
-      !url.pathname.includes("/logout") // logout doesn't need body
+      (method === "POST" || method === "PUT" || method === "DELETE")
     ) {
       const parseResult = await safeJsonParse(request);
       if (!parseResult.success) {
@@ -75,39 +66,22 @@ export default {
       body = parseResult.data;
     }
 
-    // Authentication endpoints (no auth required)
-    if (url.pathname === "/wtm/api/auth/register" && method === "POST") {
-      return handleRegister(request, env, body);
-    } else if (url.pathname === "/wtm/api/auth/login" && method === "POST") {
-      return handleLogin(request, env, body);
-    } else if (url.pathname === "/wtm/api/auth/logout" && method === "POST") {
-      return handleLogout(request, env);
-    } else if (url.pathname === "/wtm/api/auth/me" && method === "GET") {
-      return handleMe(request, env);
-    }
-
-    // Protected API endpoints - require authentication
+    // API endpoints (no authentication required)
     if (url.pathname.startsWith("/wtm/api/")) {
-      const authResult = await requireAuth(request, env);
-      if (authResult instanceof Response) {
-        return authResult; // Return auth error
-      }
-      const user = authResult;
-
-      // CRUD for calendar events (now with user isolation)
+      // CRUD for calendar events
       if (url.pathname === "/wtm/api/calendar-progress" && method === "POST") {
-        return handleProgressPost(request, env, body, user.id);
+        return handleProgressPost(request, env, body);
       } else if (url.pathname === "/wtm/api/calendar-progress" && method === "PUT") {
-        return handleProgressPut(request, env, body, user.id);
+        return handleProgressPut(request, env, body);
       } else if (url.pathname === "/wtm/api/calendar-progress" && method === "DELETE") {
-        return handleProgressDelete(request, env, body, user.id);
+        return handleProgressDelete(request, env, body);
       } else if (url.pathname === "/wtm/api/calendar-progress") {
-        return handleProgressGet(request, env, user.id);
+        return handleProgressGet(request, env);
       } else if (url.pathname === "/wtm/api/goals") {
         return handleGoalsGet(request, env);
       } else if (url.pathname === "/wtm/api/total-distance") {
         try {
-          const totalDistance = await calculateTotalDistance(env, user.id);
+          const totalDistance = await calculateTotalDistance(env);
           return new Response(JSON.stringify({ totalDistance }), {
             headers: { "content-type": "application/json" },
           });
@@ -123,26 +97,8 @@ export default {
       }
     }
 
-    // Check if user is authenticated for main page
-    const sessionId = getSessionFromRequest(request);
-    if (sessionId) {
-      try {
-        const user = await getUserFromSession(sessionId, env);
-        if (user) {
-          // User is authenticated, show main page
-          return new Response(renderHtml(), {
-            headers: {
-              "content-type": "text/html",
-            },
-          });
-        }
-      } catch (error) {
-        console.error('Auth check error for main page:', error);
-      }
-    }
-    
-    // User not authenticated, show login page
-    return new Response(renderAuthHtml(), {
+    // Main page - no authentication needed
+    return new Response(renderHtml(), {
       headers: {
         "content-type": "text/html",
       },
@@ -155,30 +111,10 @@ function getAllowedMethods(pathname: string): string[] {
   switch (pathname) {
     case "/wtm/api/calendar-progress":
       return ['GET', 'POST', 'PUT', 'DELETE'];
-    case "/wtm/api/auth/register":
-    case "/wtm/api/auth/login":
-    case "/wtm/api/auth/logout":
-    case "/wtm/api/auth/password-reset":
-      return ['POST'];
-    case "/wtm/api/auth/me":
     case "/wtm/api/goals":
     case "/wtm/api/total-distance":
       return ['GET'];
     default:
       return ['GET'];
   }
-}
-
-// Extract session ID from request cookies
-function getSessionFromRequest(request: Request): string | null {
-  const cookieHeader = request.headers.get('Cookie');
-  if (!cookieHeader) return null;
-  
-  const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split('=');
-    acc[key] = value;
-    return acc;
-  }, {} as Record<string, string>);
-  
-  return cookies.session || null;
 }

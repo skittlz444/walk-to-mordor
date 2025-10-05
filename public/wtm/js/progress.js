@@ -111,20 +111,10 @@ function handleSaveDistance() {
     fetch('/wtm/api/calendar-progress', {
       method: 'PUT',
       headers: { 
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': window.csrfToken || ''
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ start: selectedDate, title: distance })
-    }).then(response => {
-      if (response.status === 401) {
-        window.isAuthenticated = false;
-        if (typeof showLoginSection === 'function') {
-          showLoginSection();
-        }
-        throw new Error('Authentication required');
-      }
-      return response;
-    }).then(() => {
+    }).then(response => response).then(() => {
       if (window.updateCalendarAndTotal) {
         window.updateCalendarAndTotal();
       }
@@ -151,20 +141,10 @@ function handleSaveDistance() {
     fetch('/wtm/api/calendar-progress', {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': window.csrfToken || ''
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ start: selectedDate, title: distance })
-    }).then(response => {
-      if (response.status === 401) {
-        window.isAuthenticated = false;
-        if (typeof showLoginSection === 'function') {
-          showLoginSection();
-        }
-        throw new Error('Authentication required');
-      }
-      return response;
-    }).then(() => {
+    }).then(response => response).then(() => {
       if (window.updateCalendarAndTotal) {
         window.updateCalendarAndTotal();
       }
@@ -189,27 +169,15 @@ function handleDeleteDistance() {
   fetch('/wtm/api/calendar-progress', {
     method: 'DELETE',
     headers: { 
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': window.csrfToken || ''
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({ start: selectedDate })
-  }).then(response => {
-    if (response.status === 401) {
-      window.isAuthenticated = false;
-      if (typeof showLoginSection === 'function') {
-        showLoginSection();
-      }
-      throw new Error('Authentication required');
-    }
-    return response;
-  }).then(() => {
+  }).then(response => response).then(() => {
     if (window.updateCalendarAndTotal) {
       window.updateCalendarAndTotal();
     }
   }).catch(error => {
-    if (error.message !== 'Authentication required') {
-      console.error('Error deleting progress:', error);
-    }
+    console.error('Error deleting progress:', error);
   });
   
   // Close modal

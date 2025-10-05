@@ -50,7 +50,6 @@ describe('Goals Handlers', () => {
 
   describe('calculateTotalDistance', () => {
     it('should calculate total distance correctly', async () => {
-      const userId = 1;
       const mockResults = [
         { distance: 5.5 },
         { distance: 3.2 },
@@ -58,35 +57,30 @@ describe('Goals Handlers', () => {
       ];
 
       mockEnv.DB.prepare.mockReturnValue({
-        bind: jest.fn().mockReturnThis(),
         all: jest.fn(() => Promise.resolve({
           results: mockResults
         }))
       });
 
-      const total = await calculateTotalDistance(mockEnv, userId);
+      const total = await calculateTotalDistance(mockEnv);
 
       expect(total).toBe(10); // 5.5 + 3.2 + 1.3 = 10
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith("SELECT * FROM progress WHERE user_id = ?");
+      expect(mockEnv.DB.prepare).toHaveBeenCalledWith("SELECT * FROM progress");
     });
 
     it('should return 0 for no progress entries', async () => {
-      const userId = 1;
-
       mockEnv.DB.prepare.mockReturnValue({
-        bind: jest.fn().mockReturnThis(),
         all: jest.fn(() => Promise.resolve({
           results: []
         }))
       });
 
-      const total = await calculateTotalDistance(mockEnv, userId);
+      const total = await calculateTotalDistance(mockEnv);
 
       expect(total).toBe(0);
     });
 
     it('should handle decimal precision correctly', async () => {
-      const userId = 1;
       const mockResults = [
         { distance: 1.111 },
         { distance: 2.222 },
@@ -94,13 +88,12 @@ describe('Goals Handlers', () => {
       ];
 
       mockEnv.DB.prepare.mockReturnValue({
-        bind: jest.fn().mockReturnThis(),
         all: jest.fn(() => Promise.resolve({
           results: mockResults
         }))
       });
 
-      const total = await calculateTotalDistance(mockEnv, userId);
+      const total = await calculateTotalDistance(mockEnv);
 
       expect(total).toBe(6.67); // Should be rounded to 2 decimal places
     });

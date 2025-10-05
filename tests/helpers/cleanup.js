@@ -4,7 +4,6 @@
  */
 
 const { request } = require('@playwright/test');
-const { getAuthHeaders, createTestUserAndAuth } = require('./test-auth');
 
 /**
  * Clear ALL distance data from the database before/after tests
@@ -13,16 +12,8 @@ const { getAuthHeaders, createTestUserAndAuth } = require('./test-auth');
  */
 async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
   try {
-    // Ensure we have authentication
-    let authHeaders = getAuthHeaders();
-    if (!authHeaders) {
-      await createTestUserAndAuth(baseUrl);
-      authHeaders = getAuthHeaders();
-    }
-    
-    const apiContext = await request.newContext({
-      extraHTTPHeaders: authHeaders || {}
-    });
+    // No authentication needed - create API context without auth headers
+    const apiContext = await request.newContext();
     
     // Get all events
     const response = await apiContext.get(`${baseUrl}/wtm/api/calendar-progress`);
