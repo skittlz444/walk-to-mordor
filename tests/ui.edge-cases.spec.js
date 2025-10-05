@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./helpers/cleanup');
-const { authenticateUserInBrowser, makeAuthenticatedApiRequest } = require('./helpers/browser-auth');
+
 
 /**
  * Generate realistic walking distance values (1-50 km)
@@ -29,10 +29,9 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await cleanupAllTestData();
   });
 
-  // Authenticate user and clear popups before each test
+  // Navigate to page and clear popups before each test
   test.beforeEach(async ({ page }) => {
-    // Authenticate user first
-    await authenticateUserInBrowser(page);
+    await page.goto('http://localhost:8787/wtm/');
     
     try {
       // Close any existing popups that might interfere with the next test
