@@ -569,16 +569,16 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
   test('API endpoints are accessible', async ({ page }) => {
     const endpoints = [
-      '/wtm/api/calendar-progress',
-      '/wtm/api/goals',
-      '/wtm/api/total-distance'
+      'http://localhost:8787/wtm/api/calendar-progress',
+      'http://localhost:8787/wtm/api/goals',
+      'http://localhost:8787/wtm/api/total-distance'
     ];
     
     let successfulEndpoints = 0;
     
     for (const endpoint of endpoints) {
       try {
-        const response = await makeAuthenticatedApiRequest(page.request, 'get', endpoint);
+        const response = await page.request.get(endpoint);
         if (response.ok()) {
           const data = await response.json();
           expect(Array.isArray(data) || typeof data === 'object').toBeTruthy();
