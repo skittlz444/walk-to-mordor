@@ -28,7 +28,7 @@
     "pnpm": "^10.17.1",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.4",
-    "typescript": "5.9.2",
+    "typescript": "5.9.3",
     "wrangler": "^4.42.0"
   },
   "scripts": {
