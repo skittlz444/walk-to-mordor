@@ -1,6 +1,6 @@
 // Build timestamp - this should be replaced during build process
-const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}';
-const CACHE_NAME = `walk-to-mordor-{{BUILD_TIMESTAMP}}`;
+const BUILD_TIMESTAMP = '20251008-055844';
+const CACHE_NAME = `walk-to-mordor-20251008-055844`;
 const urlsToCache = [
   '/',
   '/wtm/css/main.css',
@@ -64,8 +64,13 @@ self.addEventListener('fetch', (event) => {
             // Clone the response
             const responseToCache = response.clone();
             
-            // Cache static assets and API responses (but not POST/PUT/DELETE)
-            if (event.request.url.includes('/wtm/')) {
+            // Cache static assets but exclude distance-related API endpoints
+            const url = event.request.url;
+            const shouldCache = url.includes('/wtm/') && 
+                               !url.includes('/api/calendar-progress') &&
+                               !url.includes('/api/total-distance');
+            
+            if (shouldCache) {
               caches.open(CACHE_NAME)
                 .then((cache) => {
                   cache.put(event.request, responseToCache);
