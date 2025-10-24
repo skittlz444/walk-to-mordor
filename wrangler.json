@@ -3,6 +3,7 @@
 	"main": "src/index.ts",
 	"name": "walk-to-mordor",
 	"upload_source_maps": true,
+	"preview_urls": true,
 	"d1_databases": [
 		{
 			"binding": "DB",
