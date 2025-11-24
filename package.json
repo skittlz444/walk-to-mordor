@@ -34,7 +34,7 @@
   "scripts": {
     "cf-typegen": "wrangler types",
     "check": "tsc && wrangler deploy --dry-run",
-    "build": "node public/wtm/js/update-cache-version.js",
+    "build": "node public/js/update-cache-version.js",
     "deploy": "npm run build && wrangler deploy",
     "dev": "npm run build:sw:reset &&pnpm seedLocalD1 && wrangler dev",
     "predeploy": "wrangler d1 migrations apply DB --remote",
@@ -66,8 +66,8 @@
     "coverage:check": "jest --coverage --passWithNoTests",
     "coverage:ui": "playwright test tests/ui.success.spec.js tests/ui.edge-cases.spec.js --reporter=json --output=test-results/ui-coverage.json",
     "test:cleanup": "node tests/helpers/cleanup.js",
-    "build:sw": "node public/wtm/js/update-cache-version.js",
-    "build:sw:reset": "node public/wtm/js/reset-cache-version.js"
+    "build:sw": "node public/js/update-cache-version.js",
+    "build:sw:reset": "node public/js/reset-cache-version.js"
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.4.0"

@@ -16,21 +16,21 @@ export function renderHtml() {
         <meta name="apple-mobile-web-app-title" content="Walk to Mordor" />
         
         <!-- Web App Manifest -->
-        <link rel="manifest" href="/wtm/manifest.json" />
+        <link rel="manifest" href="/manifest.json" />
         
         <!-- Favicon and App Icons -->
-        <link rel="icon" type="image/svg+xml" href="/wtm/icons/icon.svg" />
-        <link rel="apple-touch-icon" href="/wtm/icons/icon-192x192.png" />
+        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         
         <!-- Stylesheets -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-        <link href="/wtm/css/main.css" rel="stylesheet" />
+        <link href="/css/main.css" rel="stylesheet" />
         
         <!-- Service Worker Registration -->
         <script>
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-              navigator.serviceWorker.register('/wtm/sw.js')
+              navigator.serviceWorker.register('/sw.js')
                 .then((registration) => {
                   console.log('SW registered: ', registration);
                 })
@@ -55,11 +55,11 @@ export function renderHtml() {
       </div>
       
       <!-- Scripts -->
-      <script src="/wtm/js/validators.js"></script>
-      <script src="/wtm/js/calendar.js"></script>
-      <script src="/wtm/js/progress.js"></script>
-      <script src="/wtm/js/goals.js"></script>
-      <script src="/wtm/js/main.js"></script>
+      <script src="/js/validators.js"></script>
+      <script src="/js/calendar.js"></script>
+      <script src="/js/progress.js"></script>
+      <script src="/js/goals.js"></script>
+      <script src="/js/main.js"></script>
       </body>
     </html>
 `;

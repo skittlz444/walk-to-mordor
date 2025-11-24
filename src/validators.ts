@@ -66,13 +66,13 @@ export async function safeJsonParse(request: Request): Promise<{success: boolean
 
 // Helper function to validate HTTP method for endpoint
 export function isValidMethod(pathname: string, method: string): boolean {
-  if (pathname === "/wtm/api/calendar-progress") {
+  if (pathname === "/api/calendar-progress") {
     return ['GET', 'POST', 'PUT', 'DELETE'].includes(method);
   }
-  if (pathname === "/wtm/api/goals") {
+  if (pathname === "/api/goals") {
     return method === 'GET';
   }
-  if (pathname === "/wtm/api/total-distance") {
+  if (pathname === "/api/total-distance") {
     return method === 'GET';
   }
   return false;
