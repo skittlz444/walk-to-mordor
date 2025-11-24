@@ -33,7 +33,7 @@ export default {
     }
 
     // Validate HTTP method for API endpoints
-    if (url.pathname.startsWith("/wtm/api/")) {
+    if (url.pathname.startsWith("/api/")) {
       const allowedMethods = getAllowedMethods(url.pathname);
       if (!allowedMethods.includes(method)) {
         return new Response(JSON.stringify({ 
@@ -51,7 +51,7 @@ export default {
 
     // Only read body for API endpoints that need it
     if (
-      url.pathname.startsWith("/wtm/api/") &&
+      url.pathname.startsWith("/api/") &&
       (method === "POST" || method === "PUT" || method === "DELETE")
     ) {
       const parseResult = await safeJsonParse(request);
@@ -67,19 +67,19 @@ export default {
     }
 
     // API endpoints (no authentication required)
-    if (url.pathname.startsWith("/wtm/api/")) {
+    if (url.pathname.startsWith("/api/")) {
       // CRUD for calendar events
-      if (url.pathname === "/wtm/api/calendar-progress" && method === "POST") {
+      if (url.pathname === "/api/calendar-progress" && method === "POST") {
         return handleProgressPost(request, env, body);
-      } else if (url.pathname === "/wtm/api/calendar-progress" && method === "PUT") {
+      } else if (url.pathname === "/api/calendar-progress" && method === "PUT") {
         return handleProgressPut(request, env, body);
-      } else if (url.pathname === "/wtm/api/calendar-progress" && method === "DELETE") {
+      } else if (url.pathname === "/api/calendar-progress" && method === "DELETE") {
         return handleProgressDelete(request, env, body);
-      } else if (url.pathname === "/wtm/api/calendar-progress") {
+      } else if (url.pathname === "/api/calendar-progress") {
         return handleProgressGet(request, env);
-      } else if (url.pathname === "/wtm/api/goals") {
+      } else if (url.pathname === "/api/goals") {
         return handleGoalsGet(request, env);
-      } else if (url.pathname === "/wtm/api/total-distance") {
+      } else if (url.pathname === "/api/total-distance") {
         try {
           const totalDistance = await calculateTotalDistance(env);
           return new Response(JSON.stringify({ totalDistance }), {
@@ -109,10 +109,10 @@ export default {
 // Helper function to get allowed methods for API endpoints
 function getAllowedMethods(pathname: string): string[] {
   switch (pathname) {
-    case "/wtm/api/calendar-progress":
+    case "/api/calendar-progress":
       return ['GET', 'POST', 'PUT', 'DELETE'];
-    case "/wtm/api/goals":
-    case "/wtm/api/total-distance":
+    case "/api/goals":
+    case "/api/total-distance":
       return ['GET'];
     default:
       return ['GET'];

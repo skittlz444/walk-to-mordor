@@ -245,7 +245,7 @@ function addCellEventListeners() {
 }
 
 function updateCalendarAndTotal() {
-  fetch('/wtm/api/calendar-progress')
+  fetch('/api/calendar-progress')
     .then(res => res.json())
     .then(fetchedEvents => {
       events = fetchedEvents.map(ev => ({

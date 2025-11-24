@@ -143,23 +143,23 @@ describe('Validators', () => {
 
   describe('isValidMethod', () => {
     it('should validate calendar-progress endpoint methods', () => {
-      expect(isValidMethod('/wtm/api/calendar-progress', 'GET')).toBe(true);
-      expect(isValidMethod('/wtm/api/calendar-progress', 'POST')).toBe(true);
-      expect(isValidMethod('/wtm/api/calendar-progress', 'PUT')).toBe(true);
-      expect(isValidMethod('/wtm/api/calendar-progress', 'DELETE')).toBe(true);
-      expect(isValidMethod('/wtm/api/calendar-progress', 'PATCH')).toBe(false);
-      expect(isValidMethod('/wtm/api/calendar-progress', 'HEAD')).toBe(false);
+      expect(isValidMethod('/api/calendar-progress', 'GET')).toBe(true);
+      expect(isValidMethod('/api/calendar-progress', 'POST')).toBe(true);
+      expect(isValidMethod('/api/calendar-progress', 'PUT')).toBe(true);
+      expect(isValidMethod('/api/calendar-progress', 'DELETE')).toBe(true);
+      expect(isValidMethod('/api/calendar-progress', 'PATCH')).toBe(false);
+      expect(isValidMethod('/api/calendar-progress', 'HEAD')).toBe(false);
     });
 
     it('should validate goals endpoint methods', () => {
-      expect(isValidMethod('/wtm/api/goals', 'GET')).toBe(true);
-      expect(isValidMethod('/wtm/api/goals', 'POST')).toBe(false);
-      expect(isValidMethod('/wtm/api/goals', 'PUT')).toBe(false);
-      expect(isValidMethod('/wtm/api/goals', 'DELETE')).toBe(false);
+      expect(isValidMethod('/api/goals', 'GET')).toBe(true);
+      expect(isValidMethod('/api/goals', 'POST')).toBe(false);
+      expect(isValidMethod('/api/goals', 'PUT')).toBe(false);
+      expect(isValidMethod('/api/goals', 'DELETE')).toBe(false);
     });
 
     it('should reject unknown endpoints', () => {
-      expect(isValidMethod('/wtm/api/unknown', 'GET')).toBe(false);
+      expect(isValidMethod('/api/unknown', 'GET')).toBe(false);
       expect(isValidMethod('/other/endpoint', 'GET')).toBe(false);
     });
   });

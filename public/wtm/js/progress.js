@@ -108,7 +108,7 @@ function handleSaveDistance() {
     const projectedNewTotal = previousTotal + newDistance;
     
     popupEvent.title = distance;
-    fetch('/wtm/api/calendar-progress', {
+    fetch('/api/calendar-progress', {
       method: 'PUT',
       headers: { 
         'Content-Type': 'application/json'
@@ -138,7 +138,7 @@ function handleSaveDistance() {
       window.calendarModule.setEvents(currentEvents);
     }
     
-    fetch('/wtm/api/calendar-progress', {
+    fetch('/api/calendar-progress', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json'
@@ -166,7 +166,7 @@ function handleSaveDistance() {
 function handleDeleteDistance() {
   const selectedDate = formatDateWithFallback(popupDate);
   
-  fetch('/wtm/api/calendar-progress', {
+  fetch('/api/calendar-progress', {
     method: 'DELETE',
     headers: { 
       'Content-Type': 'application/json'
@@ -197,7 +197,7 @@ function formatDateLocal(date) {
 
 async function fetchAndUpdateTotalDistance() {
   try {
-    const response = await fetch('/wtm/api/total-distance');
+    const response = await fetch('/api/total-distance');
     if (response.ok) {
       const data = await response.json();
       document.getElementById('total-distance-value').textContent = `${data.totalDistance} km`;

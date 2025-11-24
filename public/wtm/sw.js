@@ -3,11 +3,11 @@ const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}';
 const CACHE_NAME = `walk-to-mordor-{{BUILD_TIMESTAMP}}`;
 const urlsToCache = [
   '/',
-  '/wtm/css/main.css',
-  '/wtm/css/mobiscroll.javascript.min.css',
-  '/wtm/js/main.js',
-  '/wtm/js/mobiscroll.javascript.min.js',
-  '/wtm/manifest.json'
+  '/css/main.css',
+  '/css/mobiscroll.javascript.min.css',
+  '/js/main.js',
+  '/js/mobiscroll.javascript.min.js',
+  '/manifest.json'
 ];
 
 // Install event - cache essential resources
@@ -66,8 +66,7 @@ self.addEventListener('fetch', (event) => {
             
             // Cache static assets but exclude distance-related API endpoints
             const url = event.request.url;
-            const shouldCache = url.includes('/wtm/') && 
-                               !url.includes('/api/calendar-progress') &&
+            const shouldCache = !url.includes('/api/calendar-progress') &&
                                !url.includes('/api/total-distance');
             
             if (shouldCache) {

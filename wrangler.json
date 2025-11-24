@@ -19,6 +19,6 @@
 		"binding": "ASSETS"
 	},
   "routes": [
-    { "pattern": "*haydencarson.com/wtm*", "zone_name": "haydencarson.com" }
+    { "pattern": "wtm.haydencarson.com/*", "custom_domain": true }
   ]
 }

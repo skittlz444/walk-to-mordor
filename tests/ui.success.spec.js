@@ -569,9 +569,9 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
   test('API endpoints are accessible', async ({ page }) => {
     const endpoints = [
-      'http://localhost:8787/wtm/api/calendar-progress',
-      'http://localhost:8787/wtm/api/goals',
-      'http://localhost:8787/wtm/api/total-distance'
+      'http://localhost:8787/api/calendar-progress',
+      'http://localhost:8787/api/goals',
+      'http://localhost:8787/api/total-distance'
     ];
     
     let successfulEndpoints = 0;

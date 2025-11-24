@@ -54,7 +54,7 @@ describe('renderHtml', () => {
     const result = renderHtml();
     
     expect(result).toContain('serviceWorker');
-    expect(result).toContain('/wtm/sw.js');
+    expect(result).toContain('/sw.js');
   });
   
   it('should not include auth.js script', () => {

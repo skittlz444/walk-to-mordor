@@ -22,16 +22,16 @@ function showGoalModal(goal, currentDistance, isCongratulations = false) {
               ${goal.id ? `
                 <div style="position: relative; max-width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
                   <img id="goal-thumb-image" 
-                       src="/wtm/img/thumbs/${goal.id}-thumb.jpg" 
+                       src="/img/thumbs/${goal.id}-thumb.jpg" 
                        alt="Goal image" 
                        style="width: 100%; height: auto; filter: blur(2px); transition: filter 0.3s ease;"
-                       onerror="this.onerror=null;this.src='/wtm/img/thumbs/0-thumb.jpg';">
+                       onerror="this.onerror=null;this.src='/img/thumbs/0-thumb.jpg';">
                   <img id="goal-highres-image" 
-                       src="/wtm/img/highres/${goal.id}.jpg" 
+                       src="/img/highres/${goal.id}.jpg" 
                        alt="Goal image" 
                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s ease;"
                        onload="this.style.opacity = '1'; document.getElementById('goal-thumb-image').style.filter = 'none';"
-                       onerror="this.onerror=null;this.src='/wtm/img/highres/0.jpg';">
+                       onerror="this.onerror=null;this.src='/img/highres/0.jpg';">
                 </div>
               ` : ''}
             </div>
@@ -80,7 +80,7 @@ function makeGoalClickable(element, goal, currentDistance) {
 }
 
 function renderGoals(currentDistance) {
-  fetch('/wtm/api/goals')
+  fetch('/api/goals')
     .then(res => {
       if (!res.ok) {
         throw new Error(`Goals API error: ${res.status} ${res.statusText}`);
@@ -245,7 +245,7 @@ function renderGoals(currentDistance) {
 }
 
 function checkForNewlyPassedGoals(previousTotal, newTotal) {
-  return fetch('/wtm/api/goals')
+  return fetch('/api/goals')
     .then(res => {
       if (!res.ok) {
         throw new Error(`Goals API error: ${res.status} ${res.statusText}`);

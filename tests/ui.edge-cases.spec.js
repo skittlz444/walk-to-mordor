@@ -482,7 +482,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   test('API error handling works correctly', async ({ page }) => {
     // Test API with invalid data
     const response = await page.request.post(
-      'http://localhost:8787/wtm/api/calendar-progress', 
+      'http://localhost:8787/api/calendar-progress', 
       { data: { start: 'invalid-date', title: 'test' } }
     );
     expect(response.status()).toBe(400);
@@ -494,7 +494,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   test('API validates required fields', async ({ page }) => {
     // Test missing required fields
     const response = await page.request.post(
-      'http://localhost:8787/wtm/api/calendar-progress', 
+      'http://localhost:8787/api/calendar-progress', 
       { data: {} }
     );
     expect([400, 422]).toContain(response.status());
@@ -632,7 +632,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const thumbImage = popup.locator('#goal-thumb-image');
     
     // Check that fallback image is loaded
-    await expect(thumbImage).toHaveAttribute('src', '/wtm/img/thumbs/0-thumb.jpg');
+    await expect(thumbImage).toHaveAttribute('src', '/img/thumbs/0-thumb.jpg');
   });
 
   test('High-res image falls back to placeholder on error', async ({ page }) => {
@@ -653,7 +653,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const highresImage = popup.locator('#goal-highres-image');
     
     // Check that fallback image is loaded
-    await expect(highresImage).toHaveAttribute('src', '/wtm/img/highres/0.jpg');
+    await expect(highresImage).toHaveAttribute('src', '/img/highres/0.jpg');
   });
 
   test('Image lazy loading only occurs when popup is opened', async ({ page }) => {
@@ -662,7 +662,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     // Track image requests
     page.on('request', request => {
       const url = request.url();
-      if (url.includes('/wtm/img/thumbs/') || url.includes('/wtm/img/highres/')) {
+      if (url.includes('/img/thumbs/') || url.includes('/img/highres/')) {
         imageRequestsMade.push(url);
       }
     });
