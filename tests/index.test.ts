@@ -142,7 +142,7 @@ describe('Cloudflare Worker Index', () => {
 
   it('should validate method for API endpoints', async () => {
     // Use PATCH method which is not allowed for calendar-progress endpoint
-    const authRequest = createRequest('https://example.com/wtm/api/calendar-progress', 'PATCH');
+    const authRequest = createRequest('https://example.com/api/calendar-progress', 'PATCH');
 
     const response = await worker.fetch(authRequest, mockEnv);
     
@@ -152,7 +152,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should parse JSON for POST requests', async () => {
-    const authRequest = createRequest('https://example.com/wtm/api/calendar-progress', 'POST');
+    const authRequest = createRequest('https://example.com/api/calendar-progress', 'POST');
     
     mockSafeJsonParse.mockResolvedValue({
       success: true,
@@ -167,7 +167,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle invalid JSON', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -181,7 +181,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate date format', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -196,7 +196,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate distance', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -220,7 +220,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle missing required fields in POST', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -234,7 +234,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should return calendar data for GET requests', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'GET';
 
     const response = await worker.fetch(mockRequest, mockEnv);
@@ -243,7 +243,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should return goals data', async () => {
-    const authRequest = createRequest('https://example.com/wtm/api/goals', 'GET');
+    const authRequest = createRequest('https://example.com/api/goals', 'GET');
 
     const response = await worker.fetch(authRequest, mockEnv);
     
@@ -251,7 +251,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle PUT requests successfully', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'PUT';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -265,7 +265,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle PUT with missing fields', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'PUT';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -279,7 +279,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle PUT when entry not found', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'PUT';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -300,7 +300,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle DELETE requests successfully', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'DELETE';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -314,7 +314,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle DELETE with missing start field', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'DELETE';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -328,7 +328,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle DELETE when entry not found', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'DELETE';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -349,7 +349,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle DELETE with invalid date', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'DELETE';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -364,7 +364,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle database errors in POST', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -385,7 +385,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle UNIQUE constraint error in POST', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -406,7 +406,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle database errors in PUT', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'PUT';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -427,7 +427,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle database errors in DELETE', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'DELETE';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -448,7 +448,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle database errors in GET calendar-progress', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'GET';
 
     // Mock database error
@@ -462,7 +462,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle database errors in GET goals', async () => {
-    const authRequest = createRequest('https://example.com/wtm/api/goals', 'GET');
+    const authRequest = createRequest('https://example.com/api/goals', 'GET');
 
     // Mock database error in goals handler
     mockHandleGoalsGet.mockResolvedValue(new Response(JSON.stringify({ 
@@ -478,7 +478,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should calculate total distance correctly via API endpoint', async () => {
-    const authRequest = createRequest('https://example.com/wtm/api/total-distance', 'GET');
+    const authRequest = createRequest('https://example.com/api/total-distance', 'GET');
 
     // Mock multiple entries with distances
     mockEnv.DB.prepare.mockReturnValue({
@@ -499,7 +499,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should handle database errors in total distance API', async () => {
-    const authRequest = createRequest('https://example.com/wtm/api/total-distance', 'GET');
+    const authRequest = createRequest('https://example.com/api/total-distance', 'GET');
 
     // Mock calculateTotalDistance to throw an error
     mockCalculateTotalDistance.mockRejectedValue(new Error('Database error'));
@@ -554,7 +554,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate distance for specific error types in POST', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -569,7 +569,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate distance for NaN values in POST', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -586,7 +586,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate distance for negative values in POST', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -603,7 +603,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate distance for too large values in POST', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -620,7 +620,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate missing title field in POST', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'POST';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -636,7 +636,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate missing title field in PUT', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'PUT';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -652,7 +652,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate date format in PUT', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'PUT';
     
     mockSafeJsonParse.mockResolvedValue({
@@ -669,7 +669,7 @@ describe('Cloudflare Worker Index', () => {
   });
 
   it('should validate distance in PUT', async () => {
-    mockRequest.url = 'https://example.com/wtm/api/calendar-progress';
+    mockRequest.url = 'https://example.com/api/calendar-progress';
     mockRequest.method = 'PUT';
     
     mockSafeJsonParse.mockResolvedValue({

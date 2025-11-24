@@ -16,7 +16,7 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
     const apiContext = await request.newContext();
     
     // Get all events
-    const response = await apiContext.get(`${baseUrl}/wtm/api/calendar-progress`);
+    const response = await apiContext.get(`${baseUrl}/api/calendar-progress`);
     if (!response.ok()) {
       await apiContext.dispose();
       return 0;
@@ -29,7 +29,7 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
     // Delete ALL events - we start with a completely clean slate
     for (const event of events) {
       try {
-        const deleteResponse = await apiContext.delete(`${baseUrl}/wtm/api/calendar-progress`, {
+        const deleteResponse = await apiContext.delete(`${baseUrl}/api/calendar-progress`, {
           data: { start: event.start }
         });
         

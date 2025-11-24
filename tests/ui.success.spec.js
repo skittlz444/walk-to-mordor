@@ -22,7 +22,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
   // Navigate to page and clear popups before each test
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:8787/wtm/');
+    await page.goto('http://localhost:8787/');
     
     try {
       // Close any existing popups that might interfere with the next test
@@ -282,7 +282,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     // Verify via API endpoint first (more reliable)
     let eventVerified = false;
     try {
-      const response = await page.request.get('/wtm/api/calendar-progress');
+      const response = await page.request.get('/api/calendar-progress');
       if (response.ok()) {
         const data = await response.json();
         const eventFound = data.some(event => 
@@ -323,7 +323,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     // Verify initial event exists using API first
     let initialEventVerified = false;
     try {
-      const response = await page.request.get('/wtm/api/calendar-progress');
+      const response = await page.request.get('/api/calendar-progress');
       if (response.ok()) {
         const data = await response.json();
         const eventFound = data.some(event => 
@@ -433,7 +433,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
         
         // For second event, refresh page to reset state in Mobile Firefox
         if (i > 0) {
-          await page.goto('http://localhost:8787/wtm/');
+          await page.goto('http://localhost:8787/');
           await page.waitForLoadState('networkidle');
           await page.waitForTimeout(1000);
         }
@@ -569,9 +569,9 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
   test('API endpoints are accessible', async ({ page }) => {
     const endpoints = [
-      'http://localhost:8787/wtm/api/calendar-progress',
-      'http://localhost:8787/wtm/api/goals',
-      'http://localhost:8787/wtm/api/total-distance'
+      'http://localhost:8787/api/calendar-progress',
+      'http://localhost:8787/api/goals',
+      'http://localhost:8787/api/total-distance'
     ];
     
     let successfulEndpoints = 0;
@@ -617,7 +617,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
     // Get the current goals to find the first upcoming goal
     const goals = await page.evaluate(async () => {
-      const response = await fetch('/wtm/api/goals');
+      const response = await fetch('/api/goals');
       return await response.json();
     });
 
