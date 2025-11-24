@@ -9,12 +9,12 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"  # Run only on Mondays
-      time: "09:00"  # Run at 9 AM Central Time
-      timezone: "America/Chicago"
+      time: "06:00"  # Run at 6 AM Singapore Time
+      timezone: "Asia/Singapore"
     target-branch: "dev"
     
     # Limit the number of open pull requests
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     
     # Add labels to PRs for easier identification
     labels:
@@ -42,16 +42,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      
-      # Separate group for major version updates (more risky)
-      major-updates:
-        update-types:
-          - "major"
-    
-    # Allow additional configurations
-    allow:
-      - dependency-type: "direct"
-      - dependency-type: "indirect"
     
     # Ignore specific packages if needed (uncomment to use)
     # ignore:
@@ -64,12 +54,12 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"  # Run only on Mondays
-      time: "09:00"  # Run at 9 AM Central Time
-      timezone: "America/Chicago"
+      time: "06:00"  # Run at 6 AM Singapore Time
+      timezone: "Asia/Singapore"
     target-branch: "dev"
     
     # Limit the number of open pull requests
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 5
     
     # Add labels to PRs for easier identification
     labels:

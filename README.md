@@ -242,7 +242,7 @@ This project uses GitHub's Dependabot to automatically keep dependencies up-to-d
 
 #### Schedule
 - **Run Day**: Mondays only
-- **Run Time**: 9:00 AM Central Time (America/Chicago)
+- **Run Time**: 6:00 AM Singapore Time (Asia/Singapore)
 - **Frequency**: Weekly
 
 #### NPM Dependencies
@@ -250,13 +250,12 @@ Dependabot monitors and updates all npm packages with smart grouping:
 
 - **Development Dependencies Group**: Minor and patch updates for devDependencies (Jest, Playwright, TypeScript, etc.) are grouped together into a single PR to reduce noise
 - **Production Dependencies Group**: Minor and patch updates for production dependencies (like @cloudflare/kv-asset-handler) are grouped separately
-- **Major Updates Group**: Major version updates are handled separately for careful review since they may include breaking changes
+- **Major Updates**: Major version updates are NOT grouped and handled individually for careful review since they may include breaking changes
 
 **Configuration**:
-- Maximum 5 open PRs at a time
+- Maximum 10 open PRs at a time
 - PRs are labeled with `dependencies` and `npm`
 - Commits use conventional format: `chore(deps)` or `chore(deps-dev)`
-- Both direct and indirect dependencies are monitored
 - All PRs target the `dev` branch
 
 #### GitHub Actions
@@ -264,7 +263,7 @@ Dependabot also monitors GitHub Actions for updates:
 
 - All GitHub Actions updates are grouped together in a single PR
 - Keeps workflows current with the latest action versions
-- Maximum 3 open PRs at a time
+- Maximum 5 open PRs at a time
 - PRs are labeled with `dependencies` and `github-actions`
 - Commits use conventional format: `chore(deps)`
 
