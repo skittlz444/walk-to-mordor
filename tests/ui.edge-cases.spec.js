@@ -31,7 +31,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
   // Navigate to page and clear popups before each test
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:8787/wtm/');
+    await page.goto('http://localhost:8787/');
     
     try {
       // Close any existing popups that might interfere with the next test
@@ -598,7 +598,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
   test('Thumbnail image initially has blur filter applied', async ({ page }) => {
     // Block high-res images from loading to test initial blur state
-    await page.route('**/wtm/img/highres/*.jpg', route => route.abort());
+    await page.route('**/img/highres/*.jpg', route => route.abort());
 
     const popup = await openFirstAvailableGoalPopup(page);
     
@@ -616,7 +616,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
   test('Thumbnail image falls back to placeholder on error', async ({ page }) => {
     // Mock network to make thumb image fail
-    await page.route('**/wtm/img/thumbs/*.jpg', route => {
+    await page.route('**/img/thumbs/*.jpg', route => {
       if (route.request().url().includes('0-thumb.jpg')) {
         // Let placeholder load successfully
         route.continue();
@@ -637,7 +637,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
   test('High-res image falls back to placeholder on error', async ({ page }) => {
     // Mock network to make highres image fail
-    await page.route('**/wtm/img/highres/*.jpg', route => {
+    await page.route('**/img/highres/*.jpg', route => {
       if (route.request().url().includes('0.jpg')) {
         // Let placeholder load successfully
         route.continue();
@@ -802,7 +802,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
     // Get the current goals
     const goals = await page.evaluate(async () => {
-      const response = await fetch('/wtm/api/goals');
+      const response = await fetch('/api/goals');
       return await response.json();
     });
 
