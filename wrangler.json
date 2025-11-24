@@ -4,6 +4,12 @@
 	"name": "walk-to-mordor",
 	"upload_source_maps": true,
 	"preview_urls": true,
+	"routes": [
+		{
+			"pattern": "wtm.haydencarson.com",
+			"custom_domain": true
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",
