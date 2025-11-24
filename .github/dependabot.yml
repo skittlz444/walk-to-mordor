@@ -1,12 +1,78 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot configuration for Walk to Mordor
+# Documentation: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # NPM dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"  # Run only on Mondays
+      time: "06:00"  # Run at 6 AM Singapore Time
+      timezone: "Asia/Singapore"
     target-branch: "dev"
+    
+    # Limit the number of open pull requests
+    open-pull-requests-limit: 10
+    
+    # Add labels to PRs for easier identification
+    labels:
+      - "dependencies"
+      - "npm"
+    
+    # Commit message configuration
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    
+    # Group dependency updates to reduce PR noise
+    groups:
+      # Group all development dependencies together
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # Group all production dependencies together
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+    
+    # Ignore specific packages if needed (uncomment to use)
+    # ignore:
+    #   - dependency-name: "package-name"
+    #     versions: ["x.x.x"]
+  
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"  # Run only on Mondays
+      time: "06:00"  # Run at 6 AM Singapore Time
+      timezone: "Asia/Singapore"
+    target-branch: "dev"
+    
+    # Limit the number of open pull requests
+    open-pull-requests-limit: 5
+    
+    # Add labels to PRs for easier identification
+    labels:
+      - "dependencies"
+      - "github-actions"
+    
+    # Commit message configuration
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    
+    # Group GitHub Actions updates together
+    groups:
+      github-actions:
+        patterns:
+          - "*"
