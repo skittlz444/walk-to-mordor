@@ -68,8 +68,5 @@
     "test:cleanup": "node tests/helpers/cleanup.js",
     "build:sw": "node public/js/update-cache-version.js",
     "build:sw:reset": "node public/js/reset-cache-version.js"
-  },
-  "dependencies": {
-    "@cloudflare/kv-asset-handler": "^0.4.1"
   }
 }
