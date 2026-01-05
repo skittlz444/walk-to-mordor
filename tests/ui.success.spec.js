@@ -1,6 +1,19 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test: base, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./helpers/cleanup');
+
+// Extend test with unique auth token fixture
+const test = base.extend({
+  authToken: async ({ }, use) => {
+    const uniqueId = Math.random().toString(36).substring(7);
+    const username = `testuser_${uniqueId}`;
+    const token = `TEST_MOCK_TOKEN_${username}`;
+    await use(token);
+    // Cleanup after test
+    await cleanupAllTestData('http://localhost:8787', token);
+  },
+});
+
 /**
  * UI Success Tests - Walk to Mordor
  * Following new testing methodology: Clean database before tests, use realistic distances.
@@ -11,17 +24,19 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
   // Set longer timeout for tests that might have slow loading  
   test.setTimeout(60000); // 60 seconds
 
-  // Clear all data before and after tests for clean state
-  test.beforeAll(async () => {
-    await cleanupAllTestData();
-  });
-
-  test.afterAll(async () => {
-    await cleanupAllTestData();
-  });
-
   // Navigate to page and clear popups before each test
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, authToken }) => {
+    // Ensure clean state for this user
+    await cleanupAllTestData('http://localhost:8787', authToken);
+
+    await page.goto('http://localhost:8787/');
+    
+    // Set mock session token for auth
+    await page.evaluate((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+    
+    // Navigate back to root to apply auth state
     await page.goto('http://localhost:8787/');
     
     try {
@@ -578,7 +593,11 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
     
     for (const endpoint of endpoints) {
       try {
-        const response = await page.request.get(endpoint);
+        const response = await page.request.get(endpoint, {
+          headers: {
+            'Authorization': 'Bearer TEST_MOCK_TOKEN'
+          }
+        });
         if (response.ok()) {
           const data = await response.json();
           expect(Array.isArray(data) || typeof data === 'object').toBeTruthy();
@@ -617,7 +636,8 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
     // Get the current goals to find the first upcoming goal
     const goals = await page.evaluate(async () => {
-      const response = await fetch('/api/goals');
+      const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': 'Bearer TEST_MOCK_TOKEN' };
+      const response = await fetch('/api/goals', { headers });
       return await response.json();
     });
 

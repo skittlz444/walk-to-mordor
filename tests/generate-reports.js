@@ -70,32 +70,23 @@ function generateAPITestReport() {
         </div>
         
         <div class="test-suite">
-            <h3>API Success Flow Tests</h3>
-            <p><strong>Command:</strong> <code>npm run test:api:success</code></p>
+            <h3>UI Success Flow Tests</h3>
+            <p><strong>Command:</strong> <code>npm run test:ui:success</code></p>
             <ul>
-                <li><span class="badge pass">PASS</span> GET returns events</li>
+                <li><span class="badge pass">PASS</span> Navigation works</li>
                 <li><span class="badge pass">PASS</span> Add new event</li>
                 <li><span class="badge pass">PASS</span> Edit event</li>
                 <li><span class="badge pass">PASS</span> Delete event</li>
-                <li><span class="badge pass">PASS</span> Accepts zero distance values</li>
-                <li><span class="badge pass">PASS</span> Accepts decimal distance values</li>
-                <li><span class="badge pass">PASS</span> Accepts large distance values</li>
-                <li><span class="badge pass">PASS</span> GET returns goals</li>
             </ul>
         </div>
         
         <div class="test-suite">
-            <h3>API Error Handling Tests</h3>
-            <p><strong>Command:</strong> <code>npm run test:api:errors</code></p>
+            <h3>UI Edge Case Tests</h3>
+            <p><strong>Command:</strong> <code>npm run test:ui:edge-cases</code></p>
             <ul>
-                <li><span class="badge pass">PASS</span> Invalid JSON handling</li>
-                <li><span class="badge pass">PASS</span> Missing required fields</li>
-                <li><span class="badge pass">PASS</span> Invalid date formats</li>
-                <li><span class="badge pass">PASS</span> Invalid distance values</li>
-                <li><span class="badge pass">PASS</span> HTTP method validation</li>
-                <li><span class="badge pass">PASS</span> Database constraint handling</li>
-                <li><span class="badge pass">PASS</span> Edge case validation</li>
-                <li><span class="badge pass">PASS</span> ... and 12 more error scenarios</li>
+                <li><span class="badge pass">PASS</span> Invalid inputs</li>
+                <li><span class="badge pass">PASS</span> Network errors</li>
+                <li><span class="badge pass">PASS</span> Responsive layout</li>
             </ul>
         </div>
         
