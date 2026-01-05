@@ -4,19 +4,9 @@
 
   const API_BASE = '/api';
   
-  // Get session token from localStorage
-  function getSessionToken() {
-    return localStorage.getItem('sessionToken');
-  }
-  
   // Set session token in localStorage
   function setSessionToken(token) {
     localStorage.setItem('sessionToken', token);
-  }
-  
-  // Clear session token
-  function clearSessionToken() {
-    localStorage.removeItem('sessionToken');
   }
   
   // Show/hide form containers

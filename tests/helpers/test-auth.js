@@ -38,11 +38,32 @@ async function createTestUserAndAuth(baseUrl = 'http://localhost:8787') {
     // User needs approval. Since we are in a test environment, we can manually approve the user.
     // This assumes we are running locally with wrangler.
     const { execSync } = require('child_process');
+    const fs = require('fs');
+    const path = require('path');
+    
     try {
       // We need to use the exact same database as the running worker.
       // Assuming local dev environment.
       console.log(`Approving user ${testUsername}...`);
-      execSync(`npx wrangler d1 execute DB --local --command "UPDATE users SET approved = 1 WHERE username = '${testUsername}'"`);
+      
+      // Create a temporary SQL file for the parameterized query
+      const tmpDir = path.join(__dirname, '../../.tmp');
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      }
+      
+      const tmpFile = path.join(tmpDir, `approve_user_${Date.now()}.sql`);
+      // Use parameterized query by writing to a file
+      // Note: wrangler d1 execute doesn't support direct parameterization, 
+      // but we sanitize the username to prevent SQL injection
+      const sanitizedUsername = testUsername.replace(/'/g, "''"); // SQL escape single quotes
+      fs.writeFileSync(tmpFile, `UPDATE users SET approved = 1 WHERE username = '${sanitizedUsername}';`);
+      
+      // Execute the SQL file
+      execSync(`npx wrangler d1 execute DB --local --file="${tmpFile}"`);
+      
+      // Clean up temporary file
+      fs.unlinkSync(tmpFile);
       
       // Try login again
       loginRes = await request(baseUrl)

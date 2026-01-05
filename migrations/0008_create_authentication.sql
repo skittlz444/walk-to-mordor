@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 -- Add user_id to progress table for user isolation
 -- First, create new progress table with user_id and composite unique constraint
 CREATE TABLE progress_new (
-    id INTEGER PRIMARY KEY NOT NULL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     date DATE NOT NULL,
     distance REAL NOT NULL,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -32,8 +32,9 @@ CREATE TABLE progress_new (
 );
 
 -- Copy existing data to new table (all existing entries will have NULL user_id initially)
-INSERT INTO progress_new (id, date, distance, user_id)
-SELECT id, date, distance, NULL
+-- Let SQLite auto-assign new IDs to avoid AUTOINCREMENT issues
+INSERT INTO progress_new (date, distance, user_id)
+SELECT date, distance, NULL
 FROM progress;
 
 -- Drop old table and rename new one

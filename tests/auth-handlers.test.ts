@@ -6,7 +6,6 @@ import {
   handleSessionValidation, 
   validateSession 
 } from '../src/auth-handlers';
-import { createErrorResponse, createSuccessResponse } from '../src/validators';
 import * as authUtils from '../src/auth-utils';
 
 // Mock auth-utils
