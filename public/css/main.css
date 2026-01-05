@@ -37,3 +37,31 @@ h1 {
   margin-top: 0.5em;
   word-break: break-word;
 }
+
+
+/* Logout button styles */
+.header-controls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  background: #16c79a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.logout-btn:hover {
+  background: #0f3460;
+}
+
+.logout-btn:active {
+  transform: translateY(1px);
+}
