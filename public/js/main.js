@@ -1,6 +1,80 @@
 // Main application controller - coordinates domain modules
 
-document.addEventListener("DOMContentLoaded", function() {
+// Authentication utilities
+function getSessionToken() {
+  return localStorage.getItem('sessionToken');
+}
+
+function getAuthHeaders() {
+  const token = getSessionToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+function clearSession() {
+  localStorage.removeItem('sessionToken');
+}
+
+// Check if user is authenticated
+async function checkAuth() {
+  const token = getSessionToken();
+  if (!token) {
+    // No token, redirect to login
+    window.location.href = '/login';
+    return false;
+  }
+  
+  try {
+    const response = await fetch('/api/session', {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      // Session invalid or expired
+      clearSession();
+      window.location.href = '/login';
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Auth check error:', error);
+    window.location.href = '/login';
+    return false;
+  }
+}
+
+// Logout function
+async function logout() {
+  const token = getSessionToken();
+  if (token) {
+    try {
+      await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sessionId: token })
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  }
+  
+  clearSession();
+  window.location.href = '/login';
+}
+
+// Make auth utilities available globally
+window.getAuthHeaders = getAuthHeaders;
+window.logout = logout;
+
+document.addEventListener("DOMContentLoaded", async function() {
+  // Check authentication before initializing app
+  const isAuthenticated = await checkAuth();
+  if (!isAuthenticated) {
+    return; // Redirect will happen in checkAuth
+  }
+  
   // Initialize application
   async function initializeApp() {
     try {

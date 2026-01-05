@@ -1,6 +1,13 @@
 // Goals API handlers
+import { validateSession } from "./auth-handlers";
 
 export async function handleGoalsGet(request: Request, env: any) {
+  // Validate session
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  
   try {
     const { results } = await env.DB.prepare("SELECT * FROM goals").all();
     // Return all goals as array of {distance, title, special}
@@ -18,8 +25,8 @@ export async function handleGoalsGet(request: Request, env: any) {
   }
 }
 
-export async function calculateTotalDistance(env: any): Promise<number> {
-  const { results } = await env.DB.prepare("SELECT * FROM progress").all();
+export async function calculateTotalDistance(env: any, userId: number): Promise<number> {
+  const { results } = await env.DB.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
   return Number(
     (results as Array<{ distance: number }>).reduce(
       (acc, row) => acc + row.distance,
