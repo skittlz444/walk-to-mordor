@@ -11,7 +11,7 @@ updates:
       day: "monday"  # Run only on Mondays
       time: "06:00"  # Run at 6 AM Singapore Time
       timezone: "Asia/Singapore"
-    target-branch: "dev"
+    target-branch: "main"
     
     # Limit the number of open pull requests
     open-pull-requests-limit: 10
@@ -56,7 +56,7 @@ updates:
       day: "monday"  # Run only on Mondays
       time: "06:00"  # Run at 6 AM Singapore Time
       timezone: "Asia/Singapore"
-    target-branch: "dev"
+    target-branch: "main"
     
     # Limit the number of open pull requests
     open-pull-requests-limit: 5
