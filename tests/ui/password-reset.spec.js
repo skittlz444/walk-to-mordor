@@ -36,7 +36,9 @@ test.describe('Password Reset', () => {
     test('should show error for invalid email format', async ({ page }) => {
         await page.goto('/password-reset');
         
-        // Fill form with invalid email
+        // Fill form with invalid email - bypass HTML5 validation by setting a valid email first
+        const emailInput = page.locator('#reset-email');
+        await emailInput.evaluate(el => el.setAttribute('type', 'text')); // Temporarily change type to bypass validation
         await page.fill('#reset-email', 'invalid-email');
         await page.click('button[type="submit"]');
         
@@ -48,8 +50,6 @@ test.describe('Password Reset', () => {
     });
 
     test('should successfully request password reset for existing user', async ({ page }) => {
-        await page.goto('/password-reset');
-        
         // First, create a test user by registering
         await page.goto('/login');
         await page.click('#show-register');
@@ -61,7 +61,7 @@ test.describe('Password Reset', () => {
         await page.fill('#register-username', testUsername);
         await page.fill('#register-email', testEmail);
         await page.fill('#register-password', 'TestPassword123!');
-        await page.click('button[type="submit"]');
+        await page.click('#register-form button[type="submit"]');
         
         // Wait for success
         await page.waitForSelector('#register-success', { timeout: 5000 });
@@ -184,7 +184,7 @@ test.describe('Password Reset', () => {
         await backLink.click();
         
         await expect(page).toHaveURL(/.*login/);
-        await expect(page.locator('h2')).toHaveText('Login');
+        await expect(page.locator('#login-form-container h2')).toHaveText('Login');
     });
 
     test('should navigate back to login from reset password page', async ({ page }) => {
@@ -194,6 +194,6 @@ test.describe('Password Reset', () => {
         await backLink.click();
         
         await expect(page).toHaveURL(/.*login/);
-        await expect(page.locator('h2')).toHaveText('Login');
+        await expect(page.locator('#login-form-container h2')).toHaveText('Login');
     });
 });
