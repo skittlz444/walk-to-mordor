@@ -9,6 +9,10 @@ const { test, expect, setupTest, createTestEvent, generateRealisticTestDistance 
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
 test.describe('User Isolation - Multi-User Scenarios', () => {
+    // Constants for day offsets to improve readability
+    const TODAY = 0;
+    const TOMORROW = 1;
+    const ONE_WEEK = 7;
     
     test('Different users should see only their own progress entries', async ({ browser }) => {
         // Create two different browser contexts for two users
@@ -95,25 +99,25 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             // User 1 adds multiple entries
             const user1Distance1 = 5.5;
             const user1Distance2 = 3.2;
-            await createTestEvent(page1, user1Distance1, authToken1, 0); // today
+            await createTestEvent(page1, user1Distance1, authToken1, TODAY);
             await page1.waitForLoadState('networkidle'); // Wait for first event to be saved
-            await createTestEvent(page1, user1Distance2, authToken1, 1); // tomorrow
+            await createTestEvent(page1, user1Distance2, authToken1, TOMORROW);
             
             // User 2 adds a different set of entries
             const user2Distance1 = 10.0;
             const user2Distance2 = 7.5;
-            await createTestEvent(page2, user2Distance1, authToken2, 0); // today
+            await createTestEvent(page2, user2Distance1, authToken2, TODAY);
             await page2.waitForLoadState('networkidle'); // Wait for first event to be saved
-            await createTestEvent(page2, user2Distance2, authToken2, 1); // tomorrow
+            await createTestEvent(page2, user2Distance2, authToken2, TOMORROW);
             
             // Reload and wait for totals to update
             await page1.reload();
             await page1.waitForLoadState('networkidle');
-            await page1.waitForTimeout(1000);
+            await page1.locator('#total-distance-value').waitFor({ state: 'visible', timeout: 5000 });
             
             await page2.reload();
             await page2.waitForLoadState('networkidle');
-            await page2.waitForTimeout(1000);
+            await page2.locator('#total-distance-value').waitFor({ state: 'visible', timeout: 5000 });
             
             // User 1's total should be 8.7 km (5.5 + 3.2)
             const user1Total = await page1.locator('#total-distance-value').textContent();
@@ -162,7 +166,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             testDate.setDate(testDate.getDate() + 7); // Next week
             const dateString = testDate.toISOString().split('T')[0];
             
-            await createTestEvent(page1, originalDistance, authToken1, 7);
+            await createTestEvent(page1, originalDistance, authToken1, ONE_WEEK);
             await page1.waitForLoadState('networkidle');
             
             // User 2 attempts to modify User 1's entry via API
@@ -223,10 +227,10 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             const user1Distance = 8.5;
             const user2Distance = 12.3;
             
-            await createTestEvent(page1, user1Distance, authToken1, 7);
+            await createTestEvent(page1, user1Distance, authToken1, ONE_WEEK);
             await page1.waitForLoadState('networkidle');
             
-            await createTestEvent(page2, user2Distance, authToken2, 7);
+            await createTestEvent(page2, user2Distance, authToken2, ONE_WEEK);
             await page2.waitForLoadState('networkidle');
             
             // Both should succeed without conflicts

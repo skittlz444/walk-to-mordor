@@ -48,7 +48,7 @@ describe('User Isolation', () => {
     validators.isValidDateFormat.mockReturnValue(true);
     validators.isValidDistance.mockReturnValue(true);
 
-    // Simple in-memory database mock
+    // Simple in-memory database mock using structured composite keys
     mockDb = new Map();
 
     // Mock DB with in-memory storage
@@ -57,12 +57,19 @@ describe('User Isolation', () => {
         prepare: jest.fn((sql: string) => {
           return {
             bind: jest.fn((...params: any[]) => {
+              // Helper to create composite key from userId and date
+              const createKey = (userId: number, date: string) => 
+                JSON.stringify({ userId, date });
+              
+              // Helper to parse composite key
+              const parseKey = (key: string) => JSON.parse(key);
+              
               return {
                 run: jest.fn(async () => {
                   // Simulate INSERT
                   if (sql === SQL_INSERT_PROGRESS) {
                     const [date, distance, userId] = params;
-                    const key = `${userId}:${date}`;
+                    const key = createKey(userId, date);
                     if (mockDb.has(key)) {
                       throw new Error('UNIQUE constraint failed');
                     }
@@ -73,7 +80,7 @@ describe('User Isolation', () => {
                   // Simulate UPDATE
                   if (sql === SQL_UPDATE_PROGRESS) {
                     const [distance, date, userId] = params;
-                    const key = `${userId}:${date}`;
+                    const key = createKey(userId, date);
                     if (mockDb.has(key)) {
                       const entry = mockDb.get(key);
                       entry.distance = distance;
@@ -85,7 +92,7 @@ describe('User Isolation', () => {
                   // Simulate DELETE
                   if (sql === SQL_DELETE_PROGRESS) {
                     const [date, userId] = params;
-                    const key = `${userId}:${date}`;
+                    const key = createKey(userId, date);
                     if (mockDb.has(key)) {
                       mockDb.delete(key);
                       return { meta: { changes: 1 } };
@@ -101,7 +108,8 @@ describe('User Isolation', () => {
                     const [userId] = params;
                     const results: any[] = [];
                     mockDb.forEach((value, key) => {
-                      if (key.startsWith(`${userId}:`)) {
+                      const parsed = parseKey(key);
+                      if (parsed.userId === userId) {
                         results.push(value);
                       }
                     });
@@ -157,15 +165,17 @@ describe('User Isolation', () => {
       });
       expect(response2.status).toBe(201);
 
-      // Verify both entries exist
+      // Verify both entries exist with proper composite keys
       expect(mockDb.size).toBe(2);
-      expect(mockDb.get('1:2024-01-01')).toEqual({
+      const key1 = JSON.stringify({ userId: 1, date: '2024-01-01' });
+      const key2 = JSON.stringify({ userId: 2, date: '2024-01-01' });
+      expect(mockDb.get(key1)).toEqual({
         date: '2024-01-01',
         distance: 5.5,
         user_id: 1,
         id: 1
       });
-      expect(mockDb.get('2:2024-01-01')).toEqual({
+      expect(mockDb.get(key2)).toEqual({
         date: '2024-01-01',
         distance: 10.2,
         user_id: 2,
@@ -221,8 +231,9 @@ describe('User Isolation', () => {
       
       expect(response.status).toBe(404);
       
-      // Verify User 1's entry is unchanged
-      expect(mockDb.get('1:2024-01-01').distance).toBe(5.5);
+      // Verify User 1's entry is unchanged using proper composite key
+      const key1 = JSON.stringify({ userId: 1, date: '2024-01-01' });
+      expect(mockDb.get(key1).distance).toBe(5.5);
     });
 
     it('should not allow user to delete another user\'s entry', async () => {
@@ -239,8 +250,9 @@ describe('User Isolation', () => {
       
       expect(response.status).toBe(404);
       
-      // Verify User 1's entry still exists
-      expect(mockDb.has('1:2024-01-01')).toBe(true);
+      // Verify User 1's entry still exists using proper composite key
+      const key1 = JSON.stringify({ userId: 1, date: '2024-01-01' });
+      expect(mockDb.has(key1)).toBe(true);
     });
   });
 
@@ -266,13 +278,13 @@ describe('User Isolation', () => {
         title: '7.5'
       });
 
-      // Calculate totals
+      // Calculate totals with floating-point comparison tolerance
       const total1 = await calculateTotalDistance(mockEnv, user1Id);
       const total2 = await calculateTotalDistance(mockEnv, user2Id);
 
-      // Verify totals are correct and isolated
-      expect(total1).toBe(8.7); // 5.5 + 3.2
-      expect(total2).toBe(17.5); // 10.0 + 7.5
+      // Verify totals are correct and isolated (using toBeCloseTo for floating-point safety)
+      expect(total1).toBeCloseTo(8.7, 2); // 5.5 + 3.2, tolerance of 2 decimal places
+      expect(total2).toBeCloseTo(17.5, 2); // 10.0 + 7.5, tolerance of 2 decimal places
     });
 
     it('should return 0 for user with no entries', async () => {
@@ -284,7 +296,7 @@ describe('User Isolation', () => {
 
       // User 2 has no entries
       const total2 = await calculateTotalDistance(mockEnv, user2Id);
-      expect(total2).toBe(0);
+      expect(total2).toBeCloseTo(0, 2);
     });
   });
 
@@ -303,7 +315,8 @@ describe('User Isolation', () => {
       });
       
       expect(response.status).toBe(200);
-      expect(mockDb.get('1:2024-01-01').distance).toBe(7.5);
+      const key1 = JSON.stringify({ userId: 1, date: '2024-01-01' });
+      expect(mockDb.get(key1).distance).toBe(7.5);
     });
 
     it('should allow user to delete their own entry', async () => {
@@ -319,7 +332,8 @@ describe('User Isolation', () => {
       });
       
       expect(response.status).toBe(200);
-      expect(mockDb.has('1:2024-01-01')).toBe(false);
+      const key1 = JSON.stringify({ userId: 1, date: '2024-01-01' });
+      expect(mockDb.has(key1)).toBe(false);
     });
   });
 
