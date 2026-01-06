@@ -14,7 +14,7 @@ module.exports = defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['html', {open:'never'}],
@@ -52,12 +52,10 @@ module.exports = defineConfig({
     },
   ],
 
-  /* Run your local dev server before starting the tests - only in CI */
-  ...(process.env.CI ? {
-    webServer: {
-      command: 'npm run dev',
-      url: 'http://localhost:8787',
-      reuseExistingServer: false,
-    },
-  } : {}),
+  /* Run your local dev server before starting the tests */
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:8787',
+    reuseExistingServer: !process.env.CI,
+  },
 });

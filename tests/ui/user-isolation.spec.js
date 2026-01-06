@@ -8,6 +8,41 @@
 const { test, expect, setupTest, createTestEvent, generateRealisticTestDistance } = require('./helpers/common');
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
+// Helper to create authenticated context with improved performance
+async function createAuthenticatedContext(browser, username) {
+    const authToken = `TEST_MOCK_TOKEN_${username}`;
+    // Clean up data before creating context/page to ensure clean state
+    await cleanupAllTestData('http://localhost:8787', authToken);
+    
+    const context = await browser.newContext({
+         storageState: {
+            cookies: [],
+            origins: [{
+                origin: 'http://localhost:8787',
+                localStorage: [{ name: 'sessionToken', value: authToken }]
+            }]
+         }
+    });
+    const page = await context.newPage();
+    await page.goto('http://localhost:8787/');
+    
+    // Close existing popups if any (similar to setupTest)
+    try {
+        const existingPopup = page.locator('.modal-overlay');
+        if (await existingPopup.isVisible({ timeout: 1000 })) {
+            const closeButton = page.locator('text=Close').last();
+            if (await closeButton.isVisible({ timeout: 1000 })) {
+                await closeButton.click();
+            } else {
+                await page.keyboard.press('Escape');
+            }
+            await expect(existingPopup).toBeHidden({ timeout: 2000 });
+        }
+    } catch (e) {}
+    
+    return { context, page, authToken };
+}
+
 test.describe('User Isolation - Multi-User Scenarios', () => {
     // Constants for day offsets to improve readability
     const TODAY = 0;
@@ -15,26 +50,15 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     const ONE_WEEK = 7;
     
     test('Different users should see only their own progress entries', async ({ browser }) => {
-        // Create two different browser contexts for two users
-        const context1 = await browser.newContext();
-        const context2 = await browser.newContext();
-        
-        const page1 = await context1.newPage();
-        const page2 = await context2.newPage();
-        
         // Generate unique usernames for this test
-        const timestamp = Date.now();
-        const username1 = `isolation_test_user1_${timestamp}`;
-        const username2 = `isolation_test_user2_${timestamp}`;
+        const timestamp = Date.now().toString().substring(6); // Use last 7 digits
+        const username1 = `iso_u1_${timestamp}`; // ~14 chars
+        const username2 = `iso_u2_${timestamp}`; // ~14 chars
         
-        const authToken1 = `TEST_MOCK_TOKEN_${username1}`;
-        const authToken2 = `TEST_MOCK_TOKEN_${username2}`;
+        const { context: context1, page: page1, authToken: authToken1 } = await createAuthenticatedContext(browser, username1);
+        const { context: context2, page: page2, authToken: authToken2 } = await createAuthenticatedContext(browser, username2);
         
         try {
-            // Setup both users and cleanup their data
-            await setupTest({ page: page1, authToken: authToken1 });
-            await setupTest({ page: page2, authToken: authToken2 });
-            
             // User 1 creates a progress entry
             const user1Distance = generateRealisticTestDistance();
             await createTestEvent(page1, user1Distance);
@@ -47,6 +71,9 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             await page1.reload();
             await page1.waitForLoadState('networkidle');
             
+            // Navigate to next week to see the event created by createTestEvent
+            await page1.click('#next-btn');
+
             // Check that User 1's distance is visible
             await expect(page1.locator('.event-label', { hasText: `${user1Distance} km` })).toBeVisible({ timeout: 5000 });
             
@@ -57,6 +84,9 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             await page2.reload();
             await page2.waitForLoadState('networkidle');
             
+            // Navigate to next week to see the event created by createTestEvent
+            await page2.click('#next-btn');
+
             // Check that User 2's distance is visible
             await expect(page2.locator('.event-label', { hasText: `${user2Distance} km` })).toBeVisible({ timeout: 5000 });
             
@@ -76,26 +106,17 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     });
     
     test('Different users should have separate total distances', async ({ browser }) => {
-        // Create two different browser contexts for two users
-        const context1 = await browser.newContext();
-        const context2 = await browser.newContext();
-        
-        const page1 = await context1.newPage();
-        const page2 = await context2.newPage();
+        test.setTimeout(60000); // Increase timeout for multiple user creations
         
         // Generate unique usernames for this test
-        const timestamp = Date.now();
-        const username1 = `isolation_totals_user1_${timestamp}`;
-        const username2 = `isolation_totals_user2_${timestamp}`;
+        const timestamp = Date.now().toString().substring(6);
+        const username1 = `iso_tot_u1_${timestamp}`;
+        const username2 = `iso_tot_u2_${timestamp}`;
         
-        const authToken1 = `TEST_MOCK_TOKEN_${username1}`;
-        const authToken2 = `TEST_MOCK_TOKEN_${username2}`;
+        const { context: context1, page: page1, authToken: authToken1 } = await createAuthenticatedContext(browser, username1);
+        const { context: context2, page: page2, authToken: authToken2 } = await createAuthenticatedContext(browser, username2);
         
         try {
-            // Setup both users and cleanup their data
-            await setupTest({ page: page1, authToken: authToken1 });
-            await setupTest({ page: page2, authToken: authToken2 });
-            
             // User 1 adds multiple entries
             const user1Distance1 = 5.5;
             const user1Distance2 = 3.2;
@@ -120,16 +141,26 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
                 year: tomorrowDate.getFullYear()
             };
             
+            // User 1 adds multiple entries
+            const p1Promise1 = page1.waitForResponse(response => response.url().includes('/api/calendar-progress') && response.status() === 200);
             await createTestEvent(page1, user1Distance1, todayDateInfo);
-            await page1.waitForLoadState('networkidle'); // Wait for first event to be saved
+            await p1Promise1;
+            
+            const p1Promise2 = page1.waitForResponse(response => response.url().includes('/api/calendar-progress') && response.status() === 200);
             await createTestEvent(page1, user1Distance2, tomorrowDateInfo);
+            await p1Promise2;
             
             // User 2 adds a different set of entries
             const user2Distance1 = 10.0;
             const user2Distance2 = 7.5;
+            
+            const p2Promise1 = page2.waitForResponse(response => response.url().includes('/api/calendar-progress') && response.status() === 200);
             await createTestEvent(page2, user2Distance1, todayDateInfo);
-            await page2.waitForLoadState('networkidle'); // Wait for first event to be saved
+            await p2Promise1;
+            
+            const p2Promise2 = page2.waitForResponse(response => response.url().includes('/api/calendar-progress') && response.status() === 200);
             await createTestEvent(page2, user2Distance2, tomorrowDateInfo);
+            await p2Promise2;
             
             // Reload and wait for totals to update
             await page1.reload();
@@ -161,26 +192,15 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     });
     
     test("Users cannot modify each other's progress entries", async ({ browser }) => {
-        // Create two different browser contexts for two users
-        const context1 = await browser.newContext();
-        const context2 = await browser.newContext();
-        
-        const page1 = await context1.newPage();
-        const page2 = await context2.newPage();
-        
         // Generate unique usernames for this test
-        const timestamp = Date.now();
-        const username1 = `isolation_modify_user1_${timestamp}`;
-        const username2 = `isolation_modify_user2_${timestamp}`;
+        const timestamp = Date.now().toString().substring(6);
+        const username1 = `iso_mod_u1_${timestamp}`;
+        const username2 = `iso_mod_u2_${timestamp}`;
         
-        const authToken1 = `TEST_MOCK_TOKEN_${username1}`;
-        const authToken2 = `TEST_MOCK_TOKEN_${username2}`;
+        const { context: context1, page: page1, authToken: authToken1 } = await createAuthenticatedContext(browser, username1);
+        const { context: context2, page: page2, authToken: authToken2 } = await createAuthenticatedContext(browser, username2);
         
         try {
-            // Setup both users and cleanup their data
-            await setupTest({ page: page1, authToken: authToken1 });
-            await setupTest({ page: page2, authToken: authToken2 });
-            
             // User 1 creates a progress entry
             const originalDistance = 5.5;
             const testDate = new Date();
@@ -215,6 +235,10 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             // Verify User 1's entry is unchanged
             await page1.reload();
             await page1.waitForLoadState('networkidle');
+            
+            // Navigate to the week where the event is
+            await page1.click('#next-btn');
+            
             await expect(page1.locator('.event-label', { hasText: `${originalDistance} km` })).toBeVisible({ timeout: 5000 });
             
         } finally {
@@ -230,26 +254,15 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     });
     
     test('Two users can have entries on the same date without conflicts', async ({ browser }) => {
-        // Create two different browser contexts for two users
-        const context1 = await browser.newContext();
-        const context2 = await browser.newContext();
-        
-        const page1 = await context1.newPage();
-        const page2 = await context2.newPage();
-        
         // Generate unique usernames for this test
-        const timestamp = Date.now();
-        const username1 = `isolation_samedate_user1_${timestamp}`;
-        const username2 = `isolation_samedate_user2_${timestamp}`;
+        const timestamp = Date.now().toString().substring(6);
+        const username1 = `iso_sam_u1_${timestamp}`;
+        const username2 = `iso_sam_u2_${timestamp}`;
         
-        const authToken1 = `TEST_MOCK_TOKEN_${username1}`;
-        const authToken2 = `TEST_MOCK_TOKEN_${username2}`;
+        const { context: context1, page: page1, authToken: authToken1 } = await createAuthenticatedContext(browser, username1);
+        const { context: context2, page: page2, authToken: authToken2 } = await createAuthenticatedContext(browser, username2);
         
         try {
-            // Setup both users and cleanup their data
-            await setupTest({ page: page1, authToken: authToken1 });
-            await setupTest({ page: page2, authToken: authToken2 });
-            
             // Both users create entries for the same date (7 days from now)
             const user1Distance = 8.5;
             const user2Distance = 12.3;
@@ -273,10 +286,18 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             // Both should succeed without conflicts
             await page1.reload();
             await page1.waitForLoadState('networkidle');
+            
+            // Navigate to next week
+            await page1.click('#next-btn');
+
             await expect(page1.locator('.event-label', { hasText: `${user1Distance} km` })).toBeVisible({ timeout: 5000 });
             
             await page2.reload();
             await page2.waitForLoadState('networkidle');
+
+            // Navigate to next week
+            await page2.click('#next-btn');
+            
             await expect(page2.locator('.event-label', { hasText: `${user2Distance} km` })).toBeVisible({ timeout: 5000 });
             
         } finally {

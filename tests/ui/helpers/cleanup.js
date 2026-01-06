@@ -26,7 +26,14 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787', token = 'TE
       return 0;
     }
     
-    const events = await response.json();
+    let events = [];
+    try {
+      events = await response.json();
+    } catch(e) {
+      // Ignore JSON parse errors (empty body, etc)
+      await apiContext.dispose();
+      return 0;
+    }
     
     let cleanedCount = 0;
     
