@@ -1,27 +1,27 @@
-import { renderHtml } from '../src/renderHtml';
+import { renderHtml } from '../../src/renderHtml';
 import { 
   isValidDateFormat, 
   isValidDistance, 
   safeJsonParse, 
   isValidMethod 
-} from '../src/validators';
+} from '../../src/validators';
 import { 
   validateSession,
   handleRegister,
   handleLogin,
   handleLogout,
   handleSessionValidation
-} from '../src/auth-handlers';
+} from '../../src/auth-handlers';
 
 // Mock the modules at module level
-jest.mock('../src/renderHtml');
-jest.mock('../src/validators');
-jest.mock('../src/goals-handlers');
-jest.mock('../src/auth-handlers');
+jest.mock('../../src/renderHtml');
+jest.mock('../../src/validators');
+jest.mock('../../src/goals-handlers');
+jest.mock('../../src/auth-handlers');
 
 // Import after mocking
-import worker from '../src/index';
-import { calculateTotalDistance, handleGoalsGet } from '../src/goals-handlers';
+import worker from '../../src/index';
+import { calculateTotalDistance, handleGoalsGet } from '../../src/goals-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockIsValidDateFormat = jest.mocked(isValidDateFormat);

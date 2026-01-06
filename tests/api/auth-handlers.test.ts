@@ -4,12 +4,13 @@ import {
   handleLogin, 
   handleLogout, 
   handleSessionValidation, 
-  validateSession 
-} from '../src/auth-handlers';
-import * as authUtils from '../src/auth-utils';
+  validateSession,
+  handleUpdateProfile
+} from '../../src/auth-handlers';
+import * as authUtils from '../../src/auth-utils';
 
 // Mock auth-utils
-jest.mock('../src/auth-utils', () => ({
+jest.mock('../../src/auth-utils', () => ({
   generateSalt: jest.fn(),
   hashPassword: jest.fn(),
   verifyPassword: jest.fn(),
@@ -597,6 +598,300 @@ describe('Auth Handlers', () => {
       if (!result.valid) {
         expect(result.error.status).toBe(500);
       }
+    });
+  });
+
+  describe('handleSessionValidation (Mock Auth)', () => {
+    beforeEach(() => {
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+    });
+
+    it('should validate mock token correctly', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+      
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1 }] });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.username).toBe('testuser');
+      expect(data.userId).toBe(1);
+    });
+
+    it('should create user if missing during mock auth', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_newuser');
+      
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+      const mockRun = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
+      mockBind.mockReturnValue({ all: mockAll, run: mockRun });
+      
+      mockAll.mockResolvedValueOnce({ results: [] });
+      mockRun.mockResolvedValueOnce({ meta: { last_row_id: 2 } });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.userId).toBe(2);
+      expect(data.username).toBe('newuser');
+    });
+
+    it('should reject invalid username in mock token', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_bad!user');
+      (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      expect(response.status).toBe(400);
+      
+      (authUtils.isValidUsername as jest.Mock).mockReturnValue(true); 
+    });
+
+    it('should handle database errors during mock auth', async () => {
+        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+        
+        mockEnv.DB.prepare.mockImplementation(() => {
+            throw new Error('DB Error');
+        });
+
+        const response = await handleSessionValidation(mockRequest, mockEnv);
+        expect(response.status).toBe(500);
+    });
+  });
+
+  describe('validateSession (Mock Auth)', () => {
+    beforeEach(() => {
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+    });
+
+    it('should return valid session for mock token', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+      
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
+
+      const result = await validateSession(mockRequest, mockEnv);
+      expect(result.valid).toBe(true);
+      expect(result.userId).toBe(1);
+    });
+
+    it('should reject invalid username in mock token for validateSession', async () => {
+       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_bad!user');
+       (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
+
+       const result = await validateSession(mockRequest, mockEnv);
+       expect(result.valid).toBe(false);
+       expect(result.error).toBeDefined();
+
+       (authUtils.isValidUsername as jest.Mock).mockReturnValue(true);
+    });
+
+     it('should handle database errors during mock auth in validateSession', async () => {
+        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+        
+        mockEnv.DB.prepare.mockImplementation(() => {
+            throw new Error('DB Error');
+        });
+
+        const result = await validateSession(mockRequest, mockEnv);
+        expect(result.valid).toBe(false);
+        expect(result.error!.status).toBe(500);
+    });
+  });
+
+  describe('handleUpdateProfile', () => {
+    it('should fail if session is invalid', async () => {
+      mockRequest.headers.get.mockReturnValue(null); // No header = invalid session
+      const response = await handleUpdateProfile(mockRequest, mockEnv, {});
+      expect(response.status).toBe(401);
+    });
+
+    it('should fail if no fields provided', async () => {
+       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+       mockEnv.ALLOW_TEST_AUTH = 'true';
+       
+       const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
+       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
+       mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+
+       const response = await handleUpdateProfile(mockRequest, mockEnv, {});
+       expect(response.status).toBe(400);
+    });
+
+    it('should update username successfully', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+      
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'oldname' }] });
+      mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'newname', email: 'old@example.com' }] });
+
+      const body = { username: 'newname' };
+      const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.username).toBe('newname');
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE users SET username = ?'));
+    });
+
+    it('should update email successfully', async () => {
+        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+        mockEnv.ALLOW_TEST_AUTH = 'true';
+        
+        const mockPrepare = mockEnv.DB.prepare;
+        const mockBind = jest.fn();
+        const mockRun = jest.fn();
+        const mockAll = jest.fn();
+  
+        mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+        mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+  
+        mockAll.mockResolvedValueOnce({ results: [{ id: 1 }] });
+        mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
+        mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'new@example.com' }] });
+  
+        const body = { email: 'new@example.com' };
+        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const data = await response.json();
+  
+        expect(response.status).toBe(200);
+        expect(data.email).toBe('new@example.com');
+    });
+
+    it('should return 404 if user not found during update', async () => {
+         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+         mockEnv.ALLOW_TEST_AUTH = 'true';
+         
+         const mockPrepare = mockEnv.DB.prepare;
+         const mockBind = jest.fn();
+         const mockRun = jest.fn();
+         const mockAll = jest.fn();
+   
+         mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+         mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+   
+         mockAll.mockResolvedValueOnce({ results: [{ id: 1 }] });
+         mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
+   
+         const body = { username: 'newname' };
+         const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+         expect(response.status).toBe(404);
+    });
+
+    it('should return 400 for invalid username', async () => {
+        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+        mockEnv.ALLOW_TEST_AUTH = 'true';
+        
+        const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
+        const mockBind = jest.fn().mockReturnValue({ all: mockAll });
+        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        
+        (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
+
+        const body = { username: 'bad' };
+        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        expect(response.status).toBe(400);
+
+        (authUtils.isValidUsername as jest.Mock).mockReturnValue(true);
+    });
+
+    it('should return 400 for invalid email', async () => {
+        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+        mockEnv.ALLOW_TEST_AUTH = 'true';
+        
+        const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
+        const mockBind = jest.fn().mockReturnValue({ all: mockAll });
+        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        
+        (authUtils.isValidEmail as jest.Mock).mockReturnValue(false);
+
+        const body = { email: 'bad' };
+        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        expect(response.status).toBe(400);
+
+        (authUtils.isValidEmail as jest.Mock).mockReturnValue(true);
+    });
+
+    it('should handle unique constraint violations (username)', async () => {
+        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+        mockEnv.ALLOW_TEST_AUTH = 'true';
+        
+        const mockPrepare = mockEnv.DB.prepare;
+        const mockBind = jest.fn();
+        const mockRun = jest.fn();
+        const mockAll = jest.fn();
+  
+        mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+        mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+  
+        mockAll.mockResolvedValueOnce({ results: [{ id: 1 }] });
+        mockRun.mockRejectedValue(new Error('UNIQUE constraint failed: users.username'));
+  
+        const body = { username: 'taken' };
+        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        expect(response.status).toBe(409);
+        const data = await response.json();
+        expect(data.error).toBe('Username already exists');
+    });
+
+    it('should handle unique constraint violations (email)', async () => {
+        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+        mockEnv.ALLOW_TEST_AUTH = 'true';
+        
+        const mockPrepare = mockEnv.DB.prepare;
+        const mockBind = jest.fn();
+        const mockRun = jest.fn();
+        const mockAll = jest.fn();
+  
+        mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+        mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+  
+        mockAll.mockResolvedValueOnce({ results: [{ id: 1 }] });
+        mockRun.mockRejectedValue(new Error('UNIQUE constraint failed: users.email'));
+  
+        const body = { email: 'taken@example.com' };
+        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        expect(response.status).toBe(409);
+        const data = await response.json();
+        expect(data.error).toBe('Email already registered');
+    });
+
+    it('should handle generic database errors during update', async () => {
+        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+        mockEnv.ALLOW_TEST_AUTH = 'true';
+        
+        const mockPrepare = mockEnv.DB.prepare;
+        mockPrepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
+
+        const body = { username: 'newname' };
+        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        expect(response.status).toBe(500);
     });
   });
 });

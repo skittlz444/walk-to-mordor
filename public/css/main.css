@@ -2,6 +2,7 @@
 @import url("./calendar.css");
 @import url("./progress.css");
 @import url("./goals.css");
+@import url("./profile.css");
 
 /* General application layout */
 body {
@@ -39,16 +40,16 @@ h1 {
 }
 
 
-/* Logout button styles */
+/* Profile button styles - opens profile modal (replaced logout button) */
 .header-controls {
   position: absolute;
   top: 1rem;
   right: 1rem;
 }
 
-.logout-btn {
+.profile-btn {
   padding: 0.5rem 1rem;
-  background: #16c79a;
+  background: #006048; /* Darker teal for AA contrast */
   color: white;
   border: none;
   border-radius: 4px;
@@ -58,10 +59,10 @@ h1 {
   transition: background 0.2s;
 }
 
-.logout-btn:hover {
+.profile-btn:hover {
   background: #0f3460;
 }
 
-.logout-btn:active {
+.profile-btn:active {
   transform: translateY(1px);
 }

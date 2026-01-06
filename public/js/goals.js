@@ -1,6 +1,11 @@
 // Goals domain functions
 
 function showGoalModal(goal, currentDistance, isCongratulations = false) {
+  // Prevent stacking modals - if one is already open, don't open another
+  if (document.querySelector('.modal-overlay')) {
+    return;
+  }
+
   const isCompleted = Number(currentDistance) >= goal.distance;
   const distanceStyle = isCompleted ? 'text-decoration: line-through; color: #888;' : 'color: #FFD700;';
   const distanceToGo = isCompleted ? 0 : goal.distance - Number(currentDistance);

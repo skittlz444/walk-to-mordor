@@ -10,7 +10,8 @@ This project includes comprehensive testing with code coverage reporting to ensu
 2. **Complete Database Cleanup** - Data is cleaned up per-user before and after tests.
 3. **Realistic Test Data** - Use realistic walking distances (1-50km) instead of large unrealistic numbers.
 4. **Popup Interference Prevention** - UI tests include popup cleanup hooks to prevent cross-test interference.
-5. **Comprehensive Coverage** - Test both success flows and error conditions extensively.
+5. **Accessibility Compliance** - Automated accessibility testing via `@axe-core/playwright` to ensure WCAG standards.
+6. **Comprehensive Coverage** - Test both success flows and error conditions extensively.
 
 ### Test Data Strategy (Updated 2026)
 
@@ -40,7 +41,7 @@ This project includes comprehensive testing with code coverage reporting to ensu
 
 ### Complete Database Cleanup System
 
-#### Cleanup Helper (`tests/helpers/cleanup.js`)
+#### Cleanup Helper (`tests/ui/helpers/cleanup.js`)
 The centralized cleanup system provides complete database clearing for guaranteed test isolation:
 
 1. **Scoped Data Removal** - Deletes events for the specific test user.
@@ -50,37 +51,20 @@ The centralized cleanup system provides complete database clearing for guarantee
 
 #### Usage in Tests
 ```javascript
-const { cleanupAllTestData } = require('./helpers/cleanup');
+const { test, expect, setupTest } = require('./helpers/common');
 
-// Playwright fixture handles setup and teardown automatically
-const test = base.extend({
-  authToken: async ({ }, use) => {
-    const uniqueId = Math.random().toString(36).substring(7);
-    const username = `testuser_${uniqueId}`;
-    const token = `TEST_MOCK_TOKEN_${username}`;
-    await use(token);
-    // Cleanup after test
-    await cleanupAllTestData('http://localhost:8787', token);
-  },
-});
-
-// UI tests use the authToken fixture
-test.beforeEach(async ({ page, authToken }) => {
-  // Ensure clean state for this user
-  await cleanupAllTestData('http://localhost:8787', authToken);
-  
-  // Set mock session token in browser
-  await page.evaluate((token) => {
-    localStorage.setItem('sessionToken', token);
-  }, authToken);
+// setupTest handles auth, cleanup, and navigation automatically
+test('example test', async ({ page }) => {
+    await setupTest({ page });
+    // Test logic...
 });
 ```
 
 ## Test Structure
 
 ### Test Types
-1. **Unit & Integration Tests** - Test individual functions, modules, and API handlers in isolation (90 tests)
-2. **UI Tests** - End-to-end browser testing with Playwright (128 tests)
+1. **Unit & Integration Tests** - Located in `tests/api/`, test individual functions, modules, and API handlers in isolation.
+2. **UI Tests** - Located in `tests/ui/`, end-to-end browser testing with Playwright, organized by component (Goals, Progress, Navigation, Profile, System).
 3. **Total Tests** - 218+ tests across all categories
 
 ### Cache Version Testing
@@ -121,8 +105,11 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 - `tests/cache-version.test.js` - Cache version management scripts
 
 #### UI Tests (Playwright)
-- `tests/ui.success.spec.js` - Success flows (36 tests)
-- `tests/ui.edge-cases.spec.js` - Edge cases and advanced features (92 tests)
+- `tests/ui/goals.spec.js` - Goals visualization and interaction
+- `tests/ui/navigation.spec.js` - Navigation and responsiveness
+- `tests/ui/profile.spec.js` - User profile management
+- `tests/ui/progress.spec.js` - Walking activity tracking
+- `tests/ui/system.spec.js` - System health, network, and accessibility
 
 #### Helper Files
 - `tests/helpers/cleanup.js` - Centralized test data cleanup utility
@@ -151,19 +138,8 @@ npm run test:ui             # UI tests - All browser scenarios
 
 ### Category-Specific Tests
 ```bash
-npm test                   # Unit tests only (90 tests) - Fast feedback
+npm test                   # Unit tests only (Jest)
 npm run test:ui            # UI tests - All browser scenarios
-```
-
-### Flow-Based Testing (Development Workflow)
-```bash
-npm run test:quick         # Fast feedback - Success flows only
-```
-
-### Granular Test Execution
-```bash
-npm run test:ui:success    # UI success flows
-npm run test:ui:edge-cases # UI edge cases
 ```
 
 ### Development Tools
@@ -171,13 +147,13 @@ npm run test:ui:edge-cases # UI edge cases
 npm run test:watch         # Watch mode for unit tests
 npm run test:coverage      # All tests with coverage reporting
 npm run test:ui:headed     # UI tests with visible browser
+npm run test:ui:report     # View test run report
 ```
 
 ### UI Tests Only
 ```bash
-npm run test:ui:all        # All UI tests
-npm run test:ui:success    # UI success flows
-npm run test:ui:edge-cases # UI edge cases
+npm run test:ui            # All UI tests
+npx playwright test tests/ui/goals.spec.js  # specific test file
 ```
 Runs end-to-end browser tests with Playwright.
 

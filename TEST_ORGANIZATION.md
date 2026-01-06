@@ -34,7 +34,7 @@ The test suite has been successfully organized into separate files with comprehe
 #### 3. Centralized Cleanup System
 
 **User-Scoped Database Cleanup:**
-The cleanup helper (`tests/helpers/cleanup.js`) provides targeted database clearing:
+The cleanup helper (`tests/ui/helpers/cleanup.js`) provides targeted database clearing:
 
 1. **Scoped Data Removal** - Deletes events only for the authenticated test user.
 2. **Safe API Operations** - Uses proper DELETE endpoints with error handling.
@@ -42,7 +42,19 @@ The cleanup helper (`tests/helpers/cleanup.js`) provides targeted database clear
 4. **Error Resilience** - Continues cleanup even if individual operations fail.
 5. **Popup Cleanup** - UI tests also clear popups before each test to prevent interference.
 
-**Usage Pattern:**
+**Usage Pattern (Standard):**
+```javascript
+const { test, expect, setupTest } = require('./helpers/common');
+
+test('example test', async ({ page, authToken }) => {
+    // Standard setup handles auth, cleanup, and navigation
+    await setupTest({ page, authToken });
+    
+    // Test logic...
+});
+```
+
+**Usage Pattern (Manual):**
 ```javascript
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
@@ -70,34 +82,42 @@ test.beforeEach(async ({ page, authToken }) => {
 ## File Structure & Organization
 
 ### Unit & Integration Tests (Jest)
-- **`tests/auth-handlers.test.ts`** - Authentication logic tests
-- **`tests/auth-utils.test.ts`** - Auth utility function tests
-- **`tests/goals-handlers.test.ts`** - Goals API handler tests
-- **`tests/progress-handlers.test.ts`** - Progress API handler tests
-- **`tests/index.test.ts`** - Main worker entry point tests
-- **`tests/renderHtml.test.ts`** - HTML rendering tests
-- **`tests/validators.test.ts`** - Input validation tests
+Located in `tests/api/`:
+- **`tests/api/auth-handlers.test.ts`** - Authentication logic tests
+- **`tests/api/auth-utils.test.ts`** - Auth utility function tests
+- **`tests/api/goals-handlers.test.ts`** - Goals API handler tests
+- **`tests/api/progress-handlers.test.ts`** - Progress API handler tests
+- **`tests/api/index.test.ts`** - Main worker entry point tests
+- **`tests/api/renderHtml.test.ts`** - HTML rendering tests
+- **`tests/api/validators.test.ts`** - Input validation tests
 
 ### UI Tests (Playwright)
-- **`tests/ui.success.spec.js`** - Core UI functionality tests
-  - Calendar rendering and navigation
-  - Event CRUD operations (Create, Read, Update, Delete)
-  - Form validation and user feedback
-  - Navigation between months/years
-  - Responsive design validation
-  - Basic user workflows
-  - Congratulations popup handling with realistic distances
+Located in `tests/ui/`:
+- **`tests/ui/goals.spec.js`** - Goal visualization and milestone tests
+  - Progress tracking
+  - Milestone popups
+  - Goal completion scenarios
+  
+- **`tests/ui/progress.spec.js`** - Walking activity management
+  - Event creation, editing, and deletion
+  - Distance logging
+  - Progress updates
+  
+- **`tests/ui/navigation.spec.js`** - Navigation and Responsive Design
+  - Mobile/Desktop views
+  - Calendar navigation
+  - Menu interactions
 
-- **`tests/ui.edge-cases.spec.js`** - Complex features and edge case tests
-  - Goal popup functionality and interactions
-  - Advanced calendar navigation
-  - Error handling in UI
-  - Browser compatibility testing
-  - Accessibility features
-  - Performance scenarios
-  - Network request handling
-  - API error handling and validation (via UI)
-  - Popup interference prevention
+- **`tests/ui/profile.spec.js`** - User Profile Management
+  - Profile updates
+  - Account settings
+  - Auth state management
+  
+- **`tests/ui/system.spec.js`** - System & Network Tests
+  - Automated Accessibility (WCAG) scanning
+  - API endpoint availability
+  - Error handling
+  - Network resilience
 
 ### Unit Tests
 - **`tests/validators.test.ts`** - 22 validation function tests

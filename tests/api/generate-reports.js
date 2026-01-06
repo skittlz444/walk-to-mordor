@@ -14,7 +14,7 @@ const path = require('path');
 function generateAPITestReport() {
   console.log('🔧 Generating API test HTML report...');
   
-  const reportDir = path.join(__dirname, '../test-results');
+  const reportDir = path.join(__dirname, '../../test-results');
   const outputFile = path.join(reportDir, 'api-report.html');
   
   // Ensure directory exists
@@ -297,7 +297,7 @@ function main() {
       generateCoverageJUnit();
       break;
     default:
-      console.log('Usage: node tests/generate-reports.js <command>');
+      console.log('Usage: node tests/api/generate-reports.js <command>');
       console.log('Commands:');
       console.log('  api-report     - Generate API test HTML report');
       console.log('  coverage-junit - Generate coverage JUnit XML report');

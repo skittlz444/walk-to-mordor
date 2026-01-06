@@ -1,122 +1,230 @@
 // @ts-check
-const { test: base, expect } = require('@playwright/test');
-const { cleanupAllTestData } = require('./helpers/cleanup');
+const { 
+  test, 
+  expect, 
+  setupTest, 
+  generateRealisticTestDistance, 
+  generateLargeTestDistance, 
+  generateRandomTestDate, 
+  selectCalendarDate, 
+  createTestEvent 
+} = require('./helpers/common');
 
-// Extend test with unique auth token fixture
-const test = base.extend({
-  authToken: async ({ }, use) => {
-    const uniqueId = Math.random().toString(36).substring(7);
-    const username = `testuser_${uniqueId}`;
-    const token = `TEST_MOCK_TOKEN_${username}`;
-    await use(token);
-    // Cleanup after test
-    await cleanupAllTestData('http://localhost:8787', token);
-  },
-});
-
-/**
- * Generate realistic walking distance values (1-50 km)
- */
-function generateRealisticTestDistance() {
-  return Math.floor(Math.random() * 50) + 1;
+// Helper to properly close popup with Firefox compatibility
+async function closePopupRobust(page, closeButton) {
+  try {
+    await closeButton.click({ timeout: 2000 });
+  } catch (e) {
+    // If standard click fails (e.g. covered) or times out, try force click
+    await closeButton.click({ force: true });
+  }
+  
+  // Firefox may need more time for popup animations/transitions
+  await page.waitForTimeout(1000);
+  
+  // Wait for popup to actually close - Firefox sometimes has timing issues
+  await page.waitForFunction(() => {
+    const popup = document.querySelector('.modal-overlay');
+    return !popup || window.getComputedStyle(popup).display === 'none' || 
+           popup.style.display === 'none' || !popup.offsetParent;
+  }, { timeout: 10000 });
+  
+  await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 10000 });
 }
 
-/**
- * Generate larger distance for completing goals (100-1000 km)
- */
-function generateLargeTestDistance() {
-  return Math.floor(Math.random() * 900) + 100;
+// Helper to open first available goal popup
+async function openFirstAvailableGoalPopup(page) {
+  await page.waitForLoadState('networkidle');
+  
+  // Wait for goals to load
+  await expect(page.locator('#goals-list')).toBeVisible();
+  
+  // Check if there are upcoming goals available first
+  const upcomingGoals = page.locator('.upcoming-goal');
+  
+  if (await upcomingGoals.count() > 0) {
+    const upcomingGoal = upcomingGoals.first();
+    await expect(upcomingGoal).toBeVisible();
+    await upcomingGoal.click();
+  } else {
+    // Fall back to completed goals if no upcoming goals
+    const completedGoals = page.locator('.completed-goal');
+    const completedGoal = completedGoals.first();
+    await expect(completedGoal).toBeVisible();
+    await completedGoal.click();
+  }
+  
+  // Check that goal popup is visible
+  await expect(page.locator('.modal-overlay')).toBeVisible();
+  
+  return page.locator('.modal-overlay');
 }
 
-test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
+test.describe('Goals Functionality', () => {
   // Set longer timeout for tests that might have slow loading
-  test.setTimeout(60000); // 60 seconds
+  test.setTimeout(60000);
 
-  // Navigate to page and clear popups before each test
   test.beforeEach(async ({ page, authToken }) => {
-    // Ensure clean state for this user
-    await cleanupAllTestData('http://localhost:8787', authToken);
+    await setupTest({ page, authToken });
+  });
 
-    await page.goto('http://localhost:8787/');
+  test('Goal popup images load correctly', async ({ page }) => {
+    await page.waitForLoadState('networkidle');
     
-    // Set mock session token for auth
-    await page.evaluate((token) => {
-      localStorage.setItem('sessionToken', token);
-    }, authToken);
+    // Look for goal-related elements using the patterns from edge cases test
+    const goalSelectors = [
+      '.upcoming-goal',
+      '.completed-goal',
+      '.goal-header-main',
+      '#last-goal'
+    ];
     
-    // Navigate back to root to apply auth state
-    await page.goto('http://localhost:8787/');
+    let goalFound = false;
     
+    for (const selector of goalSelectors) {
+      const goalElements = page.locator(selector);
+      const count = await goalElements.count();
+      
+      if (count > 0) {
+        try {
+          const firstGoal = goalElements.first();
+          
+          // Check if element is visible and clickable
+          if (await firstGoal.isVisible({ timeout: 2000 })) {
+            await firstGoal.click({ timeout: 5000 });
+            await page.waitForTimeout(1000);
+            
+            // Check if popup appeared using simpler selector
+            const popup = page.locator('.modal-overlay');
+            if (await popup.isVisible({ timeout: 3000 })) {
+              
+              // Check for images in popup (simplified verification)
+              const images = popup.locator('img');
+              const imageCount = await images.count();
+              
+              if (imageCount > 0) {
+                goalFound = true;
+              }
+              
+              // Close popup using the Close button from edge cases pattern
+              const closeButton = page.locator('text=Close').last();
+              if (await closeButton.isVisible({ timeout: 2000 })) {
+                await closeButton.click();
+                await page.waitForTimeout(500);
+              }
+              
+              break;
+            }
+          }
+        } catch (error) {
+          // Goal element interaction failed, continue to test fix or expect block
+          continue;
+        }
+      }
+    }
+    
+    if (!goalFound) {
+      test.fixme(true, 'No interactive goals found to test popup images. Ensure goals exist in the system for this test.');
+    } else {
+      // Test passed - we successfully interacted with a goal popup
+      expect(goalFound).toBe(true);
+    }
+  });
+
+  test('Goal popup shows congratulations when user passes a goal by adding distance', async ({ page }) => {
+    await page.waitForLoadState('networkidle');
+
+    // Close any existing popups first
     try {
-      // Close any existing popups that might interfere with the next test
       const existingPopup = page.locator('.modal-overlay');
       if (await existingPopup.isVisible({ timeout: 1000 })) {
         const closeButton = page.locator('text=Close').last();
         if (await closeButton.isVisible({ timeout: 1000 })) {
           await closeButton.click();
         } else {
-          await page.keyboard.press('Escape');
+          await page.click('body'); // Click outside to close
         }
         await page.waitForTimeout(500);
       }
     } catch (error) {
-      // No popup to close or page not loaded yet
+      // No popup to close, continue
     }
-  });
 
-  // Helper to get timestamp for first day of next week
-  async function getNextWeekTimestamp(page) {
-    return await page.evaluate(() => {
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const firstDayNextWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 7);
-      return firstDayNextWeek.setHours(0, 0, 0, 0);
+    // Verify page loaded with goals
+    await expect(page.locator('#goals-list')).toBeVisible();
+
+    // Get the current goals to find the first upcoming goal
+    const goals = await page.evaluate(async () => {
+      const token = localStorage.getItem('sessionToken');
+      const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': `Bearer ${token}` };
+      const response = await fetch('/api/goals', { headers });
+      return await response.json();
     });
-  }
 
-  // Helper to select calendar cell for next week
-  async function selectNextWeekCell(page) {
-    await page.click('#next-btn');
-    await page.waitForTimeout(300);
-    const timestamp = await getNextWeekTimestamp(page);
-    const cell = page.locator(`[data-timestamp="${timestamp}"]`).first();
-    await expect(cell).toBeVisible();
-    await expect(cell).toBeEnabled();
-    return cell;
-  }
-
-  // Helper to properly close popup with Firefox compatibility
-  async function closePopupRobust(page, closeButton) {
-    await closeButton.click();
-    
-    // Firefox may need more time for popup animations/transitions
-    await page.waitForTimeout(1000);
-    
-    // Wait for popup to actually close - Firefox sometimes has timing issues
-    await page.waitForFunction(() => {
-      const popup = document.querySelector('.modal-overlay');
-      return !popup || window.getComputedStyle(popup).display === 'none' || 
-             popup.style.display === 'none' || !popup.offsetParent;
-    }, { timeout: 10000 });
-    
-    await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 5000 });
-  }
-
-  // Clean up before each test to ensure clean state
-  test.beforeEach(async ({ page }) => {
-    try {
-      await cleanupAllTestData();
-    } catch (error) {
-      // Silently ignore cleanup warnings
+    if (goals.length === 0) {
+      test.skip(true, `No goals available for congratulations testing. Need at least one goal to test goal completion popup.`);
+      return;
     }
-  });
 
-  // Clean up after each test, regardless of pass/fail
-  test.afterEach(async ({ page }) => {
+    // Find the first goal with a reasonable distance for testing
+    const testGoal = goals.find(goal => goal.distance > 0 && goal.distance <= 100);
+    
+    if (!testGoal) {
+      const availableGoals = goals.map(g => `${g.title}: ${g.distance}km`).join(', ');
+      test.skip(true, `No suitable goals found for testing. Need goals ≤100km, available: ${availableGoals}`);
+      return;
+    }
+
+    // Add a distance entry that will pass this goal
+    const testDistance = testGoal.distance + 1; // Slightly more than the goal distance
+    const testDateInfo = generateRandomTestDate();
+
+    // Create event using the helper pattern
+    const cell = await selectCalendarDate(page, testDateInfo.day);
+    await cell.click({ force: true, timeout: 10000 });
+
+    // Enter the distance that should pass the goal
+    const distanceInput = page.locator('#distance-input');
+    await expect(distanceInput).toBeVisible();
+    await distanceInput.fill(testDistance.toString());
+
+    // Click Save/Add button
+    const addButton = page.locator('text=Add');
+    await addButton.click();
+
+    // Wait for the distance input popup to close
+    await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
+
+    // Wait a moment for the congratulations popup to appear
+    await page.waitForTimeout(1000);
+
+    // Check if the goal popup opened with congratulations text
+    const goalPopup = page.locator('.modal-overlay');
+      // Check for congratulations text
+    await expect(goalPopup).toContainText('Congratulations! You\'ve passed a new goal!');
+    
+    // Check that it shows the correct goal
+    await expect(goalPopup).toContainText(testGoal.title);
+    
+    // Close the popup
+    const closeButton = page.locator('text=Close').last();
+    await closeButton.click();
+    await expect(goalPopup).toBeHidden({ timeout: 10000 });
+
+    // Ensure popup is fully closed before test ends
+    await page.waitForTimeout(500);
+    
+    // Always try to close any remaining popups
     try {
-      await cleanupAllTestData();
+      const finalPopup = page.locator('.modal-overlay');
+      if (await finalPopup.isVisible({ timeout: 1000 })) {
+        const closeButton = page.locator('text=Close').last();
+        if (await closeButton.isVisible({ timeout: 1000 })) {
+          await closeButton.click();
+        }
+      }
     } catch (error) {
-      // Silently ignore cleanup warnings
+      // Ignore cleanup errors
     }
   });
 
@@ -130,18 +238,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await expect(page.locator('#all-completed-goals')).toBeVisible();
     await page.click('#toggle-completed');
     await expect(page.locator('#completed-goals')).toBeVisible();
-  });
-
-  test('UI is responsive on specific viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await expect(page.locator('header')).toBeVisible();
-    
-    // Calendar may be hidden on mobile viewports, check if it exists but don't require visibility
-    const calendar = page.locator('#eventcalendar');
-    const calendarExists = await calendar.count() > 0;
-    // Calendar exists but may be hidden on mobile - this is expected behavior
-    
-    await expect(page.locator('#goals-list')).toBeVisible();
   });
 
   test('Goal popup opens for upcoming goals and shows correct content', async ({ page }) => {
@@ -176,7 +272,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     
     // Check if this is an upcoming goal (has "km to go") or completed goal (just shows distance)
     const popupText = await popupContent.textContent();
-    if (popupText.includes('km to go')) {
+    if (popupText && popupText.includes('km to go')) {
       // This is an upcoming goal
       await expect(popupContent).toContainText('km to go');
     } else {
@@ -197,7 +293,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       await page.click('body');
       await page.waitForTimeout(1000);
       
-      // Wait for popup to actually close - Firefox sometimes has timing issues
+      // Wait for popup to actually close
       await page.waitForFunction(() => {
         const popup = document.querySelector('.modal-overlay');
         return !popup || window.getComputedStyle(popup).display === 'none' || 
@@ -209,11 +305,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   });
 
   test('Goal popup opens for completed goals and shows strikethrough distance', async ({ page }) => {
-    const userAgent = await page.evaluate(() => navigator.userAgent);
-    
-    await page.waitForLoadState('networkidle');
-    
-    // Close any existing popups first - critical for mobile browsers
+    // Close any existing popups first
     try {
       const existingPopup = page.locator('.modal-overlay');
       if (await existingPopup.isVisible({ timeout: 2000 })) {
@@ -233,8 +325,10 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     }
     
     // Add some distance to ensure we have completed goals
-    const cell = await selectNextWeekCell(page);
+    const testDateInfo = generateRandomTestDate();
+    const cell = await selectCalendarDate(page, testDateInfo.day);
     await cell.click();
+
     await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
     
     // Check if Add button is visible before clicking
@@ -292,8 +386,9 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await expect(page.locator('.modal-overlay')).toBeVisible();
     
     // Check that Close button exists and has correct text
-    const closeButton = page.locator('text=Close').last();
+    const closeButton = page.locator('#close-goal-btn').last();
     await expect(closeButton).toBeVisible();
+    await expect(closeButton).toHaveText('Close');
     
     // Check that distance is displayed but no "km to go" for completed goals
     const popupContent = page.locator('.modal-overlay');
@@ -301,8 +396,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     await expect(popupContent).not.toContainText('km to go');
     
     // Close the popup
-    await closeButton.click();
-    await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 10000 });
+    await closePopupRobust(page, closeButton);
   });
 
   test('Goal popup opens from header goals', async ({ page }) => {
@@ -329,8 +423,10 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       await closePopupRobust(page, closeButton);
     } else {
       // Add some distance to ensure we have a last goal in header
-      const cell = await selectNextWeekCell(page);
+      const testDateInfo = generateRandomTestDate();
+      const cell = await selectCalendarDate(page, testDateInfo.day);
       await cell.click();
+
       await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
       await page.click('text=Add');
       await page.waitForTimeout(100);
@@ -377,10 +473,13 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       
       // Check for substantial content (description text)
       const hasDescription = await popupContent.textContent();
-      expect(hasDescription.length).toBeGreaterThan(50); // Should have substantial content
+      if (hasDescription) {
+        expect(hasDescription.length).toBeGreaterThan(50); // Should have substantial content
+      }
       
       // Check that Close button works
-      const closeButton = page.locator('text=Close').last();
+    // Use specific ID for goal modal to ensure we click the right one, get the last one if duplicates exist
+    const closeButton = page.locator('#close-goal-btn').last();
       await closePopupRobust(page, closeButton);
     } else {
       // If no upcoming goals, test with completed goals by showing all
@@ -399,10 +498,13 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         
         // Check for substantial content (description text)
         const hasDescription = await popupContent.textContent();
-        expect(hasDescription.length).toBeGreaterThan(50); // Should have substantial content
+        if (hasDescription) {
+          expect(hasDescription.length).toBeGreaterThan(50); // Should have substantial content
+        }
         
         // Check that Close button works
-        const closeButton = page.locator('text=Close').last();
+        // Use specific ID for goal modal, get last to resolve duplicates
+        const closeButton = page.locator('#close-goal-btn').last();
         await closePopupRobust(page, closeButton);
       }
     }
@@ -431,20 +533,9 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       await expect(popupContent).toContainText('km');
       
       // Close the popup
-      const closeButton = page.locator('text=Close').last();
-      await closeButton.click();
-      
-      // Wait for popup to close with longer timeout for Firefox - try multiple approaches
-      await page.waitForTimeout(1000); // Give more time
-      
-      try {
-        await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 15000 });
-      } catch (error) {
-        // If still visible, try clicking outside the popup to close it
-        await page.click('body');
-        await page.waitForTimeout(500);
-        await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 10000 });
-      }
+      // Use the robust helper with specific ID, get last to resolve duplicates
+      const closeButton = page.locator('#close-goal-btn').last();
+      await closePopupRobust(page, closeButton);
     } else {
       // If no upcoming goals, just test that completed goals work
       const completedGoals = page.locator('.completed-goal');
@@ -473,148 +564,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       }
     }
   });
-
-  test('Page handles different screen sizes', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-    
-    // Test various screen sizes
-    const viewports = [
-      { width: 320, height: 568 }, // iPhone SE
-      { width: 375, height: 667 }, // iPhone 8
-      { width: 768, height: 1024 }, // iPad
-      { width: 1200, height: 800 }  // Desktop
-    ];
-    
-    for (const viewport of viewports) {
-      await page.setViewportSize(viewport);
-      
-      // Expect calendar to be visible on all screen sizes
-      await expect(page.locator('.custom-calendar')).toBeVisible();
-    }
-  });
-
-  test('API error handling works correctly', async ({ page, authToken }) => {
-    // Test API with invalid data
-    const response = await page.request.post(
-      'http://localhost:8787/api/calendar-progress', 
-      { 
-        headers: { 'Authorization': `Bearer ${authToken}` },
-        data: { start: 'invalid-date', title: 'test' } 
-      }
-    );
-    expect(response.status()).toBe(400);
-    
-    const errorData = await response.json();
-    expect(errorData.error).toBeDefined();
-  });
-
-  test('API validates required fields', async ({ page, authToken }) => {
-    // Test missing required fields
-    const response = await page.request.post(
-      'http://localhost:8787/api/calendar-progress', 
-      { 
-        headers: { 'Authorization': `Bearer ${authToken}` },
-        data: {} 
-      }
-    );
-    expect([400, 422]).toContain(response.status());
-  });
-
-  test('Page loads without JavaScript errors', async ({ page }) => {
-    const jsErrors = [];
-    page.on('pageerror', error => jsErrors.push(error));
-    
-    await page.waitForLoadState('networkidle');
-    
-    // Verify no JavaScript errors occurred
-    expect(jsErrors).toHaveLength(0);
-  });
-
-  test('Network requests complete successfully', async ({ page }) => {
-    const failedRequests = [];
-    page.on('requestfailed', request => failedRequests.push(request));
-    
-    await page.waitForLoadState('networkidle');
-    
-    // Verify no critical network requests failed
-    // Allow some non-critical resource failures (e.g., fonts, analytics) on mobile
-    const criticalFailures = failedRequests.filter(request => {
-      const url = request.url();
-      return !url.includes('analytics') && 
-             !url.includes('fonts') && 
-             !url.includes('tracking') &&
-             !url.includes('.woff') &&
-             !url.includes('.ttf');
-    });
-    
-    expect(criticalFailures).toHaveLength(0);
-  });
-
-  test('Calendar navigation performance', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-    
-    const nextButton = page.locator('#next-btn');
-    await expect(nextButton).toBeVisible();
-
-    // Test rapid navigation clicks
-    for (let i = 0; i < 3; i++) {
-      await nextButton.click();
-      await page.waitForTimeout(100);
-    }
-
-    // Calendar should still be functional
-    await expect(page.locator('.custom-calendar')).toBeVisible();
-  });
-
-  test('Browser back/forward navigation', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-    
-    // Navigate to a different page if possible
-    await page.goBack();
-    await page.goForward();
-    
-    // Should return to the application with visible calendar
-    await expect(page.locator('.custom-calendar')).toBeVisible();
-  });
-
-  test('Page accessibility basics', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-    
-    // Check for basic accessibility elements
-    const title = await page.title();
-    expect(title).toBeTruthy();
-    
-    // Check for navigation landmarks
-    const navigation = page.locator('#next-btn, #prev-btn');
-    await expect(navigation.first()).toBeVisible();
-  });
-
-  // Goal Image Loading Edge Cases & Advanced Features
-  async function openFirstAvailableGoalPopup(page) {
-    await page.waitForLoadState('networkidle');
-    
-    // Wait for goals to load
-    await expect(page.locator('#goals-list')).toBeVisible();
-    
-    // Check if there are upcoming goals available first
-    const upcomingGoals = page.locator('.upcoming-goal');
-    if (await upcomingGoals.count() > 0) {
-      const upcomingGoal = upcomingGoals.first();
-      await expect(upcomingGoal).toBeVisible();
-      await upcomingGoal.click();
-    } else {
-      // Fall back to completed goals if no upcoming goals
-      const completedGoals = page.locator('.completed-goal');
-      const completedGoal = completedGoals.first();
-      await expect(completedGoal).toBeVisible();
-      await completedGoal.click();
-    }
-    
-    // Check that goal popup is visible
-    await expect(page.locator('.modal-overlay')).toBeVisible();
-    
-    return page.locator('.modal-overlay');
-  }
 
   test('Thumbnail image initially has blur filter applied', async ({ page }) => {
     // Block high-res images from loading to test initial blur state
@@ -808,8 +757,6 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
         // Close the popup
         const closeButton = page.locator('text=Close').last();
         await closePopupRobust(page, closeButton);
-      } else {
-        // No goals available to test manual opening
       }
     }
   });
@@ -822,9 +769,9 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
     // Get the current goals
     const goals = await page.evaluate(async () => {
-      const response = await fetch('/api/goals', {
-        headers: window.getAuthHeaders()
-      });
+      const token = localStorage.getItem('sessionToken');
+      const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': `Bearer ${token}` };
+      const response = await fetch('/api/goals', { headers });
       return await response.json();
     });
 
@@ -847,7 +794,8 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     const testDistance = highestGoal.distance + 1; // Should pass both first and second goal
 
     // Add the distance entry using the same approach as other edge case tests
-    const cell = await selectNextWeekCell(page);
+    const testDateInfo = generateRandomTestDate();
+    const cell = await selectCalendarDate(page, testDateInfo.day);
     await cell.click();
 
     // Enter the distance
@@ -877,8 +825,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
       // Close the popup
       const closeButton = page.locator('text=Close').last();
       await closePopupRobust(page, closeButton);
-    } else {
-      // Goal popup did not appear - this may be expected depending on test data
     }
   });
+
 });

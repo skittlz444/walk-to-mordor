@@ -378,3 +378,90 @@ export async function validateSession(request: Request, env: any): Promise<
     };
   }
 }
+
+/**
+ * Handle user profile update (username and/or email)
+ */
+export async function handleUpdateProfile(request: Request, env: any, body: any) {
+  // Validate session
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+
+  const { username, email } = body || {};
+
+  // At least one field must be provided
+  if (!username && !email) {
+    return createErrorResponse('At least one field (username or email) must be provided', 400);
+  }
+
+  // Validate username if provided
+  if (username && !isValidUsername(username)) {
+    return createErrorResponse('Invalid username. Must be 3-30 characters and contain only letters, numbers, and underscores', 400);
+  }
+
+  // Validate email if provided
+  if (email && !isValidEmail(email)) {
+    return createErrorResponse('Invalid email format', 400);
+  }
+
+  try {
+    const userId = sessionValidation.userId;
+
+    // Build update query dynamically based on provided fields
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (username) {
+      updates.push('username = ?');
+      values.push(username);
+    }
+
+    if (email) {
+      updates.push('email = ?');
+      values.push(email);
+    }
+
+    // Add updated_at timestamp
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(userId); // Add userId for WHERE clause
+
+    const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+    
+    const result = await env.DB.prepare(query).bind(...values).run();
+
+    if (result.meta.changes === 0) {
+      return createErrorResponse('User not found', 404);
+    }
+
+    // Get updated user info
+    const { results } = await env.DB.prepare(
+      'SELECT id, username, email FROM users WHERE id = ?'
+    ).bind(userId).all();
+
+    const updatedUser = results[0] as any;
+
+    return createSuccessResponse({
+      message: 'Profile updated successfully',
+      username: updatedUser.username,
+      email: updatedUser.email
+    }, 200);
+  } catch (error: any) {
+    console.error('Database error during profile update:', error);
+    
+    // Handle unique constraint violations
+    if (error.message?.includes('UNIQUE constraint') || 
+        error.cause?.message?.includes('UNIQUE constraint')) {
+      if (error.message?.includes('username') || error.cause?.message?.includes('username')) {
+        return createErrorResponse('Username already exists', 409);
+      }
+      if (error.message?.includes('email') || error.cause?.message?.includes('email')) {
+        return createErrorResponse('Email already registered', 409);
+      }
+      return createErrorResponse('Username or email already exists', 409);
+    }
+    
+    return createErrorResponse('Internal server error during profile update', 500);
+  }
+}

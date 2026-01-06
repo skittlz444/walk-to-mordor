@@ -44,24 +44,27 @@ export function renderHtml() {
       <body>
       <header>
         <div class="header-controls">
-          <button id="logout-btn" class="logout-btn" onclick="logout()">Logout</button>
+          <button id="profile-btn" class="profile-btn" aria-haspopup="dialog" onclick="showProfileModal()">Profile</button>
         </div>
         <h1>Total distance travelled</h1>
         <div id="total-distance-value">Loading...</div>
         <div id="last-goal"></div>
       </header>
-      <section id="goals-section">
-        <div id="goals-list"></div>
-      </section>
-      <div id="eventcalendar-container">
-        <div id="eventcalendar"></div>
-      </div>
+      <main>
+        <section id="goals-section">
+          <div id="goals-list"></div>
+        </section>
+        <div id="eventcalendar-container">
+          <div id="eventcalendar"></div>
+        </div>
+      </main>
       
       <!-- Scripts -->
       <script src="/js/validators.js"></script>
       <script src="/js/calendar.js"></script>
       <script src="/js/progress.js"></script>
       <script src="/js/goals.js"></script>
+      <script src="/js/profile.js"></script>
       <script src="/js/main.js"></script>
       </body>
     </html>
