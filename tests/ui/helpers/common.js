@@ -27,6 +27,14 @@ async function setupTest({ page, authToken }) {
     // Navigate back to root to apply auth state
     await page.goto('http://localhost:8787/');
     
+    // Wait for the calendar to be initialized (proof of successful login and app load)
+    // This helps avoid race conditions where tests try to interact with elements before the app is ready
+    try {
+      await page.waitForSelector('#next-btn', { state: 'visible', timeout: 10000 });
+    } catch (e) {
+      console.log('Setup wait warning: Calendar next button did not appear', e.message);
+    }
+    
     try {
       // Close any existing popups that might interfere with the next test
       const existingPopup = page.locator('.modal-overlay');
@@ -66,10 +74,26 @@ function generateRandomTestDate() {
   };
 }
 
-async function selectCalendarDate(page, targetDay) {
+async function selectCalendarDate(page, dateInfo) {
+    // Attempt to find cell by specific date attribute first if provided
+    if (dateInfo && typeof dateInfo === 'object' && dateInfo.date) {
+        const dateSelector = `[data-date="${dateInfo.date}"]`;
+        if (await page.locator(dateSelector).count() > 0 && await page.locator(dateSelector).isVisible()) {
+            return page.locator(dateSelector).first();
+        }
+    }
+
     try {
-      await page.click('#next-btn');
+      await page.click('#next-btn', { timeout: 2000 });
       await page.waitForTimeout(300);
+      
+      // If we have a specific date object, try finding it again after navigation
+      if (dateInfo && typeof dateInfo === 'object' && dateInfo.date) {
+         const dateSelector = `[data-date="${dateInfo.date}"]`;
+         if (await page.locator(dateSelector).count() > 0 && await page.locator(dateSelector).isVisible()) {
+             return page.locator(dateSelector).first();
+         }
+      }
       
       const timestamp = await page.evaluate(() => {
         const now = new Date();
@@ -106,7 +130,7 @@ async function createTestEvent(page, distance, dateInfo) {
       }
     } catch (error) {}
     
-    const cell = await selectCalendarDate(page, testDateInfo.day);
+    const cell = await selectCalendarDate(page, testDateInfo);
     
     try {
       await cell.click({ force: true, timeout: 10000 });
@@ -133,7 +157,13 @@ async function createTestEvent(page, distance, dateInfo) {
         }
        if (!clicked) await page.keyboard.press('Enter');
     }
-    await page.waitForTimeout(2000);
+    
+    // Wait for modal to close (use detached to ensure it's gone)
+    try {
+        await page.waitForSelector('.modal-overlay', { state: 'detached', timeout: 5000 });
+    } catch (e) {
+        // Fallback or ignore if already gone
+    }
     
     return { distance: testDistance, dateInfo: testDateInfo };
 }
