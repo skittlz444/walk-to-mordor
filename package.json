@@ -37,7 +37,7 @@
     "check": "tsc && wrangler deploy --dry-run",
     "build": "node public/js/update-cache-version.js",
     "deploy": "npm run build && wrangler deploy",
-    "dev": "npm run build:sw:reset &&pnpm seedLocalD1 && wrangler dev --var ALLOW_TEST_AUTH:true",
+    "dev": "npm run build:sw:reset && npm run seedLocalD1 && wrangler dev --var ALLOW_TEST_AUTH:true",
     "predeploy": "wrangler d1 migrations apply DB --remote",
     "seedLocalD1": "wrangler d1 migrations apply DB --local",
     "test": "jest",

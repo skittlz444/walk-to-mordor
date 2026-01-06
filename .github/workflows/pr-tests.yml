@@ -40,7 +40,7 @@ jobs:
         
       - name: Generate coverage JUnit XML
         if: always()
-        run: node tests/generate-reports.js coverage-junit
+        run: node tests/api/generate-reports.js coverage-junit
         
       - name: Upload coverage reports
         uses: actions/upload-artifact@v6
