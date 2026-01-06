@@ -111,7 +111,8 @@ function handleSaveDistance() {
     fetch('/api/calendar-progress', {
       method: 'PUT',
       headers: { 
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...window.getAuthHeaders()
       },
       body: JSON.stringify({ start: selectedDate, title: distance })
     }).then(response => response).then(() => {
@@ -141,7 +142,8 @@ function handleSaveDistance() {
     fetch('/api/calendar-progress', {
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...window.getAuthHeaders()
       },
       body: JSON.stringify({ start: selectedDate, title: distance })
     }).then(response => response).then(() => {
@@ -169,7 +171,8 @@ function handleDeleteDistance() {
   fetch('/api/calendar-progress', {
     method: 'DELETE',
     headers: { 
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...window.getAuthHeaders()
     },
     body: JSON.stringify({ start: selectedDate })
   }).then(response => response).then(() => {
@@ -197,7 +200,9 @@ function formatDateLocal(date) {
 
 async function fetchAndUpdateTotalDistance() {
   try {
-    const response = await fetch('/api/total-distance');
+    const response = await fetch('/api/total-distance', {
+      headers: window.getAuthHeaders()
+    });
     if (response.ok) {
       const data = await response.json();
       document.getElementById('total-distance-value').textContent = `${data.totalDistance} km`;

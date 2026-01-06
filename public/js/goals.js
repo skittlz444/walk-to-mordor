@@ -80,7 +80,9 @@ function makeGoalClickable(element, goal, currentDistance) {
 }
 
 function renderGoals(currentDistance) {
-  fetch('/api/goals')
+  fetch('/api/goals', {
+    headers: window.getAuthHeaders()
+  })
     .then(res => {
       if (!res.ok) {
         throw new Error(`Goals API error: ${res.status} ${res.statusText}`);
@@ -245,7 +247,9 @@ function renderGoals(currentDistance) {
 }
 
 function checkForNewlyPassedGoals(previousTotal, newTotal) {
-  return fetch('/api/goals')
+  return fetch('/api/goals', {
+    headers: window.getAuthHeaders()
+  })
     .then(res => {
       if (!res.ok) {
         throw new Error(`Goals API error: ${res.status} ${res.statusText}`);

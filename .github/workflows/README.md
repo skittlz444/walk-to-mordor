@@ -72,7 +72,7 @@ No manual intervention required. All tests run against the local development ser
 - Look for port conflicts (8787)
 
 **Coverage reports missing**:
-- Ensure `npm run test:coverage:unit` works locally
+- Ensure `npm run test:coverage` works locally
 - Check that Jest is configured properly
 - Verify coverage files are generated in `coverage/` directory
 

@@ -196,3 +196,5 @@ test-results/.last-run.json
 # Temporary artifacts and build outputs
 artifacts/
 test-summary/
+.tmp/
+tests/.tmp/

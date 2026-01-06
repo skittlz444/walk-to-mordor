@@ -10,10 +10,14 @@ const { request } = require('@playwright/test');
  * This ensures a clean state for each test run without worrying about data interference
  * @param {string} baseUrl - The base URL of the application (default: http://localhost:8787)
  */
-async function cleanupAllTestData(baseUrl = 'http://localhost:8787') {
+async function cleanupAllTestData(baseUrl = 'http://localhost:8787', token = 'TEST_MOCK_TOKEN') {
   try {
-    // No authentication needed - create API context without auth headers
-    const apiContext = await request.newContext();
+    // Use mock auth token
+    const apiContext = await request.newContext({
+      extraHTTPHeaders: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
     
     // Get all events
     const response = await apiContext.get(`${baseUrl}/api/calendar-progress`);

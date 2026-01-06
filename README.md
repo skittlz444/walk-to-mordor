@@ -92,12 +92,12 @@ Error responses:
 ```
 
 ### Test Coverage
-- 90+ comprehensive test cases across unit, API, and UI testing
+- 218+ comprehensive test cases across unit and UI testing
 - 96%+ code coverage with automated validation
 - Valid edge cases (zero values, decimals, large numbers)
 - Invalid input validation (malformed JSON, wrong types, out of range)
 - HTTP method validation and database error conditions
-- Automatic test data cleanup and isolation
+- Automatic test data cleanup and user isolation via Mock Auth
 
 ## Features
 
@@ -184,7 +184,8 @@ Built with modern web technologies for performance, reliability, and scalability
 
 4. **Run tests** (optional):
    ```bash
-   npm run test:unit      # Fast unit tests (3 seconds)
+   npm test               # Fast unit tests (3 seconds)
+   npm run test:ui        # Complete E2E UI tests (requires running server)
    npm run test:coverage  # Unit tests with coverage report
    ```
 

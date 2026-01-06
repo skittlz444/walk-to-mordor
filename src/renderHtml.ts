@@ -43,6 +43,9 @@ export function renderHtml() {
       </head>
       <body>
       <header>
+        <div class="header-controls">
+          <button id="logout-btn" class="logout-btn" onclick="logout()">Logout</button>
+        </div>
         <h1>Total distance travelled</h1>
         <div id="total-distance-value">Loading...</div>
         <div id="last-goal"></div>

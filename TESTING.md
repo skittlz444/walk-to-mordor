@@ -6,18 +6,26 @@ This project includes comprehensive testing with code coverage reporting to ensu
 ## Testing Methodology
 
 ### Core Principles
-1. **Complete Database Cleanup** - All database entries are cleared before and after tests for complete isolation
-2. **Realistic Test Data** - Use realistic walking distances (1-50km) instead of large unrealistic numbers
-3. **Popup Interference Prevention** - UI tests include popup cleanup hooks to prevent cross-test interference
-4. **Comprehensive Coverage** - Test both success flows and error conditions extensively
+1. **User Isolation** - Each test runs with a unique mock user (`TEST_MOCK_TOKEN_<username>`) to ensure complete data isolation and allow parallel execution.
+2. **Complete Database Cleanup** - Data is cleaned up per-user before and after tests.
+3. **Realistic Test Data** - Use realistic walking distances (1-50km) instead of large unrealistic numbers.
+4. **Popup Interference Prevention** - UI tests include popup cleanup hooks to prevent cross-test interference.
+5. **Comprehensive Coverage** - Test both success flows and error conditions extensively.
 
-### Test Data Strategy (Updated 2024)
+### Test Data Strategy (Updated 2026)
+
+#### User Isolation Approach
+- **Unique Users**: Every test generates a unique username and auth token.
+- **Parallel Execution**: Tests can run in parallel without data collisions.
+- **Mock Authentication**: Uses a special `TEST_MOCK_TOKEN` prefix to bypass complex auth flows during testing.
+- **Security Guard**: The mock authentication logic in `src/auth-handlers.ts` is strictly guarded by the `ALLOW_TEST_AUTH` environment variable. It is **completely disabled** in production environments where this variable is unset.
+- **Optimized Hashing**: Test users use a dummy password hash to avoid CPU-intensive PBKDF2 operations during high-concurrency test runs.
+- **Development Mode**: Localy development (`npm run dev`) automatically sets `ALLOW_TEST_AUTH:true` to enable running tests.
 
 #### Complete Database Cleanup Approach
-- **Pre-Test Cleanup**: Complete database clearing before test execution
-- **Post-Test Cleanup**: Complete database clearing after test completion
-- **No Pattern Matching**: Eliminates complexity of pattern-based cleanup systems
-- **Guaranteed Isolation**: Each test run starts with completely clean database state
+- **Per-User Cleanup**: Cleanup is scoped to the specific test user.
+- **Pre-Test Cleanup**: Ensures a clean slate for the user before test execution.
+- **Post-Test Cleanup**: Removes user data after test completion.
 
 #### Distance Values
 - **Realistic Distances**: `1-50 km` - Represents actual walking distances for normal tests
@@ -35,37 +43,45 @@ This project includes comprehensive testing with code coverage reporting to ensu
 #### Cleanup Helper (`tests/helpers/cleanup.js`)
 The centralized cleanup system provides complete database clearing for guaranteed test isolation:
 
-1. **Complete Data Removal** - Deletes ALL entries from progress table
-2. **Safe API Cleanup** - Uses proper DELETE endpoints with authentication
-3. **Comprehensive Logging** - Reports number of entries removed for verification
-4. **Error Handling** - Continues cleanup even if individual operations fail
+1. **Scoped Data Removal** - Deletes events for the specific test user.
+2. **Safe API Cleanup** - Uses proper DELETE endpoints with authentication.
+3. **Comprehensive Logging** - Reports number of entries removed for verification.
+4. **Error Handling** - Continues cleanup even if individual operations fail.
 
 #### Usage in Tests
 ```javascript
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
-beforeAll(async () => {
-  await cleanupAllTestData(); // Complete database cleanup before tests
+// Playwright fixture handles setup and teardown automatically
+const test = base.extend({
+  authToken: async ({ }, use) => {
+    const uniqueId = Math.random().toString(36).substring(7);
+    const username = `testuser_${uniqueId}`;
+    const token = `TEST_MOCK_TOKEN_${username}`;
+    await use(token);
+    // Cleanup after test
+    await cleanupAllTestData('http://localhost:8787', token);
+  },
 });
 
-afterAll(async () => {
-  await cleanupAllTestData(); // Complete database cleanup after tests
-});
-
-// UI tests also include popup cleanup to prevent interference
-beforeEach(async ({ page }) => {
-  // Close any existing popups that might interfere with tests
-  // Handles congratulations popups and goal dialogs
+// UI tests use the authToken fixture
+test.beforeEach(async ({ page, authToken }) => {
+  // Ensure clean state for this user
+  await cleanupAllTestData('http://localhost:8787', authToken);
+  
+  // Set mock session token in browser
+  await page.evaluate((token) => {
+    localStorage.setItem('sessionToken', token);
+  }, authToken);
 });
 ```
 
 ## Test Structure
 
 ### Test Types
-1. **Unit Tests** - Test individual functions and modules in isolation (90 tests)
-2. **API Tests** - Test API endpoints with real Cloudflare Workers environment (28 tests)
-3. **UI Tests** - End-to-end browser testing with Playwright
-4. **Total Tests** - 118+ tests across all categories
+1. **Unit & Integration Tests** - Test individual functions, modules, and API handlers in isolation (90 tests)
+2. **UI Tests** - End-to-end browser testing with Playwright (128 tests)
+3. **Total Tests** - 218+ tests across all categories
 
 ### Cache Version Testing
 
@@ -94,23 +110,23 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 
 ### Test Files
 
-#### Unit Tests
-- `tests/validators.test.ts` - Validation functions (22 tests)
-- `tests/renderHtml.test.ts` - HTML rendering (8 tests)
-- `tests/index.test.ts` - Main handler logic (37 tests)
-- `tests/goals-handlers.test.ts` - Goals handler functions (5 tests)
-- `tests/cache-version.test.js` - Cache version management scripts (16 tests)
+#### Unit & Integration Tests (Jest)
+- `tests/auth-handlers.test.ts` - Authentication logic
+- `tests/auth-utils.test.ts` - Auth utilities
+- `tests/goals-handlers.test.ts` - Goals API handlers
+- `tests/progress-handlers.test.ts` - Progress API handlers
+- `tests/index.test.ts` - Main worker logic
+- `tests/renderHtml.test.ts` - HTML rendering
+- `tests/validators.test.ts` - Validation functions
+- `tests/cache-version.test.js` - Cache version management scripts
 
-#### API Integration Tests  
-- `tests/api.success.test.js` - Success flows and happy path scenarios (9 tests)
-- `tests/api.errors.test.js` - Error handling and edge cases (19 tests)
-
-#### UI End-to-End Tests
-- `tests/ui.success.spec.js` - Core UI functionality
-- `tests/ui.edge-cases.spec.js` - Complex features and edge cases
+#### UI Tests (Playwright)
+- `tests/ui.success.spec.js` - Success flows (36 tests)
+- `tests/ui.edge-cases.spec.js` - Edge cases and advanced features (92 tests)
 
 #### Helper Files
 - `tests/helpers/cleanup.js` - Centralized test data cleanup utility
+- `tests/helpers/test-auth.js` - Authentication helper for tests
 
 ## Code Coverage
 
@@ -129,28 +145,23 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 
 ### All Tests
 ```bash
-npm test                    # Runs unit tests (90) + API tests (28) + UI tests
-npm run test:all           # Alternative command for complete test suite
+npm test                    # Runs unit tests (90)
+npm run test:ui             # UI tests - All browser scenarios
 ```
 
 ### Category-Specific Tests
 ```bash
-npm run test:unit          # Unit tests only (90 tests) - Fast feedback
-npm run test:api:all       # API tests only (28 tests) - Both success and error cases
-npm run test:ui:all        # UI tests - All browser scenarios
+npm test                   # Unit tests only (90 tests) - Fast feedback
+npm run test:ui            # UI tests - All browser scenarios
 ```
 
 ### Flow-Based Testing (Development Workflow)
 ```bash
 npm run test:quick         # Fast feedback - Success flows only
-npm run test:success       # All success flows (API + UI)
-npm run test:errors        # All error and edge case scenarios
 ```
 
 ### Granular Test Execution
 ```bash
-npm run test:api:success   # API success flows (9 tests)
-npm run test:api:errors    # API error handling (19 tests)
 npm run test:ui:success    # UI success flows
 npm run test:ui:edge-cases # UI edge cases
 ```
@@ -325,19 +336,19 @@ npm run test:unit          # Quick validation of logic changes
 
 #### Before Committing Changes
 ```bash  
-npm run test:success       # Verify all success flows work
-npm run test:api:all       # Ensure API changes don't break functionality
+npm test                   # Verify unit tests pass
+npm run test:ui            # Verify UI flows work
 ```
 
 #### Before Releasing
 ```bash
-npm run test:all           # Complete test suite validation
+npm test                   # Complete unit test suite validation
 npm run test:coverage      # Verify coverage requirements met
+npm run test:ui            # Complete UI test suite validation
 ```
 
 #### Debugging Specific Issues
 ```bash
-npm run test:api:errors    # Focus on API error handling
 npm run test:ui:edge-cases # Focus on complex UI scenarios
 npm run test:ui:headed     # Debug UI tests with visible browser
 ```

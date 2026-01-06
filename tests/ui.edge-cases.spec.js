@@ -1,6 +1,18 @@
-const { test, expect } = require('@playwright/test');
+// @ts-check
+const { test: base, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
+// Extend test with unique auth token fixture
+const test = base.extend({
+  authToken: async ({ }, use) => {
+    const uniqueId = Math.random().toString(36).substring(7);
+    const username = `testuser_${uniqueId}`;
+    const token = `TEST_MOCK_TOKEN_${username}`;
+    await use(token);
+    // Cleanup after test
+    await cleanupAllTestData('http://localhost:8787', token);
+  },
+});
 
 /**
  * Generate realistic walking distance values (1-50 km)
@@ -20,17 +32,19 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
   // Set longer timeout for tests that might have slow loading
   test.setTimeout(60000); // 60 seconds
 
-  // Clear all data before and after tests for clean state
-  test.beforeAll(async () => {
-    await cleanupAllTestData();
-  });
-
-  test.afterAll(async () => {
-    await cleanupAllTestData();
-  });
-
   // Navigate to page and clear popups before each test
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, authToken }) => {
+    // Ensure clean state for this user
+    await cleanupAllTestData('http://localhost:8787', authToken);
+
+    await page.goto('http://localhost:8787/');
+    
+    // Set mock session token for auth
+    await page.evaluate((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+    
+    // Navigate back to root to apply auth state
     await page.goto('http://localhost:8787/');
     
     try {
@@ -272,7 +286,7 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     
     await expect(goalToClick).toBeVisible();
     
-    await goalToClick.click();
+    await goalToClick.click({ force: true });
     
     // Check that goal popup is visible
     await expect(page.locator('.modal-overlay')).toBeVisible();
@@ -479,11 +493,14 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     }
   });
 
-  test('API error handling works correctly', async ({ page }) => {
+  test('API error handling works correctly', async ({ page, authToken }) => {
     // Test API with invalid data
     const response = await page.request.post(
       'http://localhost:8787/api/calendar-progress', 
-      { data: { start: 'invalid-date', title: 'test' } }
+      { 
+        headers: { 'Authorization': `Bearer ${authToken}` },
+        data: { start: 'invalid-date', title: 'test' } 
+      }
     );
     expect(response.status()).toBe(400);
     
@@ -491,11 +508,14 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
     expect(errorData.error).toBeDefined();
   });
 
-  test('API validates required fields', async ({ page }) => {
+  test('API validates required fields', async ({ page, authToken }) => {
     // Test missing required fields
     const response = await page.request.post(
       'http://localhost:8787/api/calendar-progress', 
-      { data: {} }
+      { 
+        headers: { 'Authorization': `Bearer ${authToken}` },
+        data: {} 
+      }
     );
     expect([400, 422]).toContain(response.status());
   });
@@ -802,7 +822,9 @@ test.describe('Walk to Mordor UI - Edge Cases & Advanced Features', () => {
 
     // Get the current goals
     const goals = await page.evaluate(async () => {
-      const response = await fetch('/api/goals');
+      const response = await fetch('/api/goals', {
+        headers: window.getAuthHeaders()
+      });
       return await response.json();
     });
 
