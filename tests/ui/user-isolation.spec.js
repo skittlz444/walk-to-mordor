@@ -37,11 +37,11 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
             // User 1 creates a progress entry
             const user1Distance = generateRealisticTestDistance();
-            await createTestEvent(page1, user1Distance, authToken1);
+            await createTestEvent(page1, user1Distance);
             
             // User 2 creates a different progress entry for the same date
             const user2Distance = generateRealisticTestDistance();
-            await createTestEvent(page2, user2Distance, authToken2);
+            await createTestEvent(page2, user2Distance);
             
             // Verify User 1 sees their own distance but not User 2's
             await page1.reload();
@@ -99,16 +99,37 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             // User 1 adds multiple entries
             const user1Distance1 = 5.5;
             const user1Distance2 = 3.2;
-            await createTestEvent(page1, user1Distance1, authToken1, TODAY);
+            
+            // Create date info for today
+            const todayDate = new Date();
+            todayDate.setDate(todayDate.getDate() + TODAY);
+            const todayDateInfo = {
+                date: todayDate.toISOString().split('T')[0],
+                day: todayDate.getDate(),
+                month: todayDate.getMonth(),
+                year: todayDate.getFullYear()
+            };
+            
+            // Create date info for tomorrow
+            const tomorrowDate = new Date();
+            tomorrowDate.setDate(tomorrowDate.getDate() + TOMORROW);
+            const tomorrowDateInfo = {
+                date: tomorrowDate.toISOString().split('T')[0],
+                day: tomorrowDate.getDate(),
+                month: tomorrowDate.getMonth(),
+                year: tomorrowDate.getFullYear()
+            };
+            
+            await createTestEvent(page1, user1Distance1, todayDateInfo);
             await page1.waitForLoadState('networkidle'); // Wait for first event to be saved
-            await createTestEvent(page1, user1Distance2, authToken1, TOMORROW);
+            await createTestEvent(page1, user1Distance2, tomorrowDateInfo);
             
             // User 2 adds a different set of entries
             const user2Distance1 = 10.0;
             const user2Distance2 = 7.5;
-            await createTestEvent(page2, user2Distance1, authToken2, TODAY);
+            await createTestEvent(page2, user2Distance1, todayDateInfo);
             await page2.waitForLoadState('networkidle'); // Wait for first event to be saved
-            await createTestEvent(page2, user2Distance2, authToken2, TOMORROW);
+            await createTestEvent(page2, user2Distance2, tomorrowDateInfo);
             
             // Reload and wait for totals to update
             await page1.reload();
@@ -163,10 +184,16 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             // User 1 creates a progress entry
             const originalDistance = 5.5;
             const testDate = new Date();
-            testDate.setDate(testDate.getDate() + 7); // Next week
+            testDate.setDate(testDate.getDate() + ONE_WEEK);
             const dateString = testDate.toISOString().split('T')[0];
+            const nextWeekDateInfo = {
+                date: dateString,
+                day: testDate.getDate(),
+                month: testDate.getMonth(),
+                year: testDate.getFullYear()
+            };
             
-            await createTestEvent(page1, originalDistance, authToken1, ONE_WEEK);
+            await createTestEvent(page1, originalDistance, nextWeekDateInfo);
             await page1.waitForLoadState('networkidle');
             
             // User 2 attempts to modify User 1's entry via API
@@ -227,10 +254,20 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             const user1Distance = 8.5;
             const user2Distance = 12.3;
             
-            await createTestEvent(page1, user1Distance, authToken1, ONE_WEEK);
+            // Create a shared dateInfo object for a date ONE_WEEK days from now
+            const nextWeekDate = new Date();
+            nextWeekDate.setDate(nextWeekDate.getDate() + ONE_WEEK);
+            const nextWeekDateInfo = {
+                date: nextWeekDate.toISOString().split('T')[0],
+                day: nextWeekDate.getDate(),
+                month: nextWeekDate.getMonth(),
+                year: nextWeekDate.getFullYear()
+            };
+            
+            await createTestEvent(page1, user1Distance, nextWeekDateInfo);
             await page1.waitForLoadState('networkidle');
             
-            await createTestEvent(page2, user2Distance, authToken2, ONE_WEEK);
+            await createTestEvent(page2, user2Distance, nextWeekDateInfo);
             await page2.waitForLoadState('networkidle');
             
             // Both should succeed without conflicts
