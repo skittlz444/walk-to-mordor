@@ -121,9 +121,6 @@ test.describe('User Profile Modal', () => {
         await page.click('#profile-btn');
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
-        // Get current username from input
-        const originalUsername = await page.inputValue('#profile-username');
-
         // Update username (keeping same email)
         const newUsername = 'updateduser_' + Math.random().toString(36).substring(7);
         await page.fill('#profile-username', newUsername);

@@ -40,7 +40,7 @@ h1 {
 }
 
 
-/* Profile button styles (replaced logout button) */
+/* Profile button styles - opens profile modal (replaced logout button) */
 .header-controls {
   position: absolute;
   top: 1rem;

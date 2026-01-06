@@ -22,6 +22,13 @@ async function showProfileModal() {
     console.error('Error fetching user info:', error);
   }
 
+  // Helper function to escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // Create modal overlay
   const modalOverlay = document.createElement('div');
   modalOverlay.className = 'modal-overlay';
@@ -35,12 +42,12 @@ async function showProfileModal() {
         <div class="modal-body">
           <div class="form-group">
             <label for="profile-username">Username:</label>
-            <input type="text" id="profile-username" value="${currentUsername}" placeholder="Enter username" />
+            <input type="text" id="profile-username" value="${escapeHtml(currentUsername)}" placeholder="Enter username" />
             <small class="field-hint">3-30 characters, letters, numbers, and underscores only</small>
           </div>
           <div class="form-group">
             <label for="profile-email">Email:</label>
-            <input type="email" id="profile-email" value="${currentEmail}" placeholder="Enter email" />
+            <input type="email" id="profile-email" value="${escapeHtml(currentEmail)}" placeholder="Enter email" />
             <small class="field-hint">Valid email address</small>
           </div>
           <div id="profile-error" class="error-message"></div>
@@ -123,7 +130,7 @@ async function handleSaveProfile() {
       
       // Close modal after a short delay
       setTimeout(() => {
-        document.querySelector('.modal-overlay').remove();
+        document.querySelector('.modal-overlay')?.remove();
       }, 1500);
     } else {
       errorDiv.textContent = data.error || 'Failed to update profile';

@@ -44,7 +44,7 @@ export function renderHtml() {
       <body>
       <header>
         <div class="header-controls">
-          <button id="profile-btn" class="profile-btn" onclick="showProfileModal()">Profile</button>
+          <button id="profile-btn" class="profile-btn" aria-haspopup="dialog" onclick="showProfileModal()">Profile</button>
         </div>
         <h1>Total distance travelled</h1>
         <div id="total-distance-value">Loading...</div>

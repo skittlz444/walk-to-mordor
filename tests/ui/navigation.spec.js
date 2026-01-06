@@ -24,7 +24,6 @@ test.describe('Navigation & Responsiveness', () => {
     // Get initial calendar title (e.g., "January 2024")
     const titleLocator = page.locator('#calendar-title');
     await expect(titleLocator).toBeVisible();
-    const initialTitle = await titleLocator.innerText();
 
     // Navigate to next week/month
     await page.click('#next-btn');
@@ -40,7 +39,6 @@ test.describe('Navigation & Responsiveness', () => {
     // Easier check: The DOM should update.
     
     // We can also check if the active dates change.
-    const initialFirstDate = await page.locator('.day-number').first().innerText();
     
     // Navigate back to initial
     await page.click('#prev-btn');
@@ -51,7 +49,6 @@ test.describe('Navigation & Responsiveness', () => {
     // Let's just verify 'next' works.
     await page.click('#next-btn');
     await page.waitForTimeout(300);
-    const nextTitle = await titleLocator.innerText();
     
     // It's possible title stays same if it's the same month, let's just assert the buttons are interactive
     // and don't throw errors.

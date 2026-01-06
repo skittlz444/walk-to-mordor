@@ -73,7 +73,7 @@ test.describe('Progress Tracking', () => {
     const testDistance = generateRealisticTestDistance();
     
     // Create event using helper function
-    const eventData = await createTestEvent(page, testDistance);
+    await createTestEvent(page, testDistance);
     
     // Wait for event to be processed
     await page.waitForTimeout(1000);
@@ -114,7 +114,7 @@ test.describe('Progress Tracking', () => {
     const editedDistance = generateRealisticTestDistance();
     
     // Create initial event
-    const eventData = await createTestEvent(page, initialDistance);
+    await createTestEvent(page, initialDistance);
     
     // Wait for initial event to be processed
     await page.waitForTimeout(1000);
@@ -139,7 +139,6 @@ test.describe('Progress Tracking', () => {
     // Fallback to UI verification for initial event
     if (!initialEventVerified) {
       await expect(page.locator(`text=${initialDistance}`).first()).toBeVisible({ timeout: 3000 });
-      initialEventVerified = true;
     }
     
     // Look for edit functionality
