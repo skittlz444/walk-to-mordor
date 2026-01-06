@@ -35,6 +35,12 @@ describe('User Isolation', () => {
   let user2Id = 2;
   let mockDb: Map<string, any>;
 
+  // SQL query constants for more maintainable mocking
+  const SQL_INSERT_PROGRESS = 'INSERT INTO progress (date, distance, user_id) VALUES (?, ?, ?)';
+  const SQL_UPDATE_PROGRESS = 'UPDATE progress SET distance = ? WHERE date = ? AND user_id = ?';
+  const SQL_DELETE_PROGRESS = 'DELETE FROM progress WHERE date = ? AND user_id = ?';
+  const SQL_SELECT_PROGRESS = 'SELECT * FROM progress WHERE user_id = ?';
+
   beforeEach(() => {
     jest.clearAllMocks();
     
@@ -54,7 +60,7 @@ describe('User Isolation', () => {
               return {
                 run: jest.fn(async () => {
                   // Simulate INSERT
-                  if (sql.includes('INSERT INTO progress')) {
+                  if (sql === SQL_INSERT_PROGRESS) {
                     const [date, distance, userId] = params;
                     const key = `${userId}:${date}`;
                     if (mockDb.has(key)) {
@@ -65,7 +71,7 @@ describe('User Isolation', () => {
                   }
                   
                   // Simulate UPDATE
-                  if (sql.includes('UPDATE progress')) {
+                  if (sql === SQL_UPDATE_PROGRESS) {
                     const [distance, date, userId] = params;
                     const key = `${userId}:${date}`;
                     if (mockDb.has(key)) {
@@ -77,7 +83,7 @@ describe('User Isolation', () => {
                   }
                   
                   // Simulate DELETE
-                  if (sql.includes('DELETE FROM progress')) {
+                  if (sql === SQL_DELETE_PROGRESS) {
                     const [date, userId] = params;
                     const key = `${userId}:${date}`;
                     if (mockDb.has(key)) {
@@ -91,7 +97,7 @@ describe('User Isolation', () => {
                 }),
                 all: jest.fn(async () => {
                   // Simulate SELECT with user_id filter
-                  if (sql.includes('SELECT * FROM progress WHERE user_id = ?')) {
+                  if (sql === SQL_SELECT_PROGRESS) {
                     const [userId] = params;
                     const results: any[] = [];
                     mockDb.forEach((value, key) => {

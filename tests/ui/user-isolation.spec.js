@@ -96,14 +96,14 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             const user1Distance1 = 5.5;
             const user1Distance2 = 3.2;
             await createTestEvent(page1, user1Distance1, authToken1, 0); // today
-            await page1.waitForTimeout(1000); // Wait between creates
+            await page1.waitForLoadState('networkidle'); // Wait for first event to be saved
             await createTestEvent(page1, user1Distance2, authToken1, 1); // tomorrow
             
             // User 2 adds a different set of entries
             const user2Distance1 = 10.0;
             const user2Distance2 = 7.5;
             await createTestEvent(page2, user2Distance1, authToken2, 0); // today
-            await page2.waitForTimeout(1000); // Wait between creates
+            await page2.waitForLoadState('networkidle'); // Wait for first event to be saved
             await createTestEvent(page2, user2Distance2, authToken2, 1); // tomorrow
             
             // Reload and wait for totals to update
@@ -135,7 +135,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
         }
     });
     
-    test('Users cannot modify each other\'s progress entries', async ({ browser }) => {
+    test("Users cannot modify each other's progress entries", async ({ browser }) => {
         // Create two different browser contexts for two users
         const context1 = await browser.newContext();
         const context2 = await browser.newContext();
@@ -163,7 +163,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             const dateString = testDate.toISOString().split('T')[0];
             
             await createTestEvent(page1, originalDistance, authToken1, 7);
-            await page1.waitForTimeout(1000);
+            await page1.waitForLoadState('networkidle');
             
             // User 2 attempts to modify User 1's entry via API
             // (Direct API call since UI doesn't show other users' data)
@@ -224,10 +224,10 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             const user2Distance = 12.3;
             
             await createTestEvent(page1, user1Distance, authToken1, 7);
-            await page1.waitForTimeout(1000);
+            await page1.waitForLoadState('networkidle');
             
             await createTestEvent(page2, user2Distance, authToken2, 7);
-            await page2.waitForTimeout(1000);
+            await page2.waitForLoadState('networkidle');
             
             // Both should succeed without conflicts
             await page1.reload();
