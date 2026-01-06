@@ -185,6 +185,7 @@ Built with modern web technologies for performance, reliability, and scalability
 4. **Run tests** (optional):
    ```bash
    npm test               # Fast unit tests (3 seconds)
+   npm run test:ui        # Complete E2E UI tests (requires running server)
    npm run test:coverage  # Unit tests with coverage report
    ```
 

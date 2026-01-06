@@ -10,7 +10,7 @@ The test suite has been successfully organized into separate files with comprehe
 #### 1. User Isolation Strategy
 - **Unique Test Users**: Each test runs with a unique, randomly generated username and auth token.
 - **Parallel Execution**: Tests can run concurrently without data interference.
-- **Mock Authentication**: The backend supports `TEST_MOCK_TOKEN_<username>` to automatically create and authenticate test users.
+- **Mock Authentication**: The backend supports `TEST_MOCK_TOKEN_<username>` to automatically create and authenticate test users (requires `ALLOW_TEST_AUTH=true`).
 - **Performance Optimization**: Test users use a simplified password hashing mechanism to prevent timeouts during parallel execution.
 
 #### 2. Test Data Conventions

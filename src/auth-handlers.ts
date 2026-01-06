@@ -190,6 +190,48 @@ export async function handleSessionValidation(request: Request, env: any) {
 
   const sessionId = authHeader.substring(7);
 
+  // Mock Authentication (TEST ONLY) - Guarded by environment variable
+  if (env.ALLOW_TEST_AUTH === 'true' && sessionId.startsWith('TEST_MOCK_TOKEN_')) {
+    try {
+      const username = sessionId.replace('TEST_MOCK_TOKEN_', '');
+      
+      // Check if user exists
+      let { results } = await env.DB.prepare(
+        'SELECT id, username, email, approved FROM users WHERE username = ?'
+      ).bind(username).all();
+
+      let user;
+      if (results.length === 0) {
+        // Create test user
+        const salt = 'test_salt';
+        const passwordHash = 'dummy_hash_for_testing'; // Optimized for tests
+        
+        const result = await env.DB.prepare(
+          'INSERT INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
+        ).bind(username, `${username}@example.com`, passwordHash, salt).run();
+        
+        user = {
+          id: result.meta.last_row_id,
+          username,
+          email: `${username}@example.com`,
+          approved: 1
+        };
+      } else {
+        user = results[0];
+      }
+
+      return createSuccessResponse({
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+      }, 200);
+    } catch (error: any) {
+      console.error('Database error during mock auth:', error);
+      return createErrorResponse('Internal server error during mock auth', 500);
+    }
+  }
+
   try {
     const { results } = await env.DB.prepare(
       'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
@@ -242,6 +284,46 @@ export async function validateSession(request: Request, env: any): Promise<
   }
 
   const sessionId = authHeader.substring(7);
+
+  // Mock Authentication (TEST ONLY) - Guarded by environment variable
+  if (env.ALLOW_TEST_AUTH === 'true' && sessionId.startsWith('TEST_MOCK_TOKEN_')) {
+    try {
+      const username = sessionId.replace('TEST_MOCK_TOKEN_', '');
+      
+      // Check if user exists
+      let { results } = await env.DB.prepare(
+        'SELECT id, username, email, approved FROM users WHERE username = ?'
+      ).bind(username).all();
+
+      let user;
+      if (results.length === 0) {
+        // Create test user
+        const salt = 'test_salt';
+        const passwordHash = 'dummy_hash_for_testing'; // Optimized for tests
+        
+        const result = await env.DB.prepare(
+          'INSERT INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
+        ).bind(username, `${username}@example.com`, passwordHash, salt).run();
+        
+        user = {
+          id: result.meta.last_row_id,
+          username,
+          email: `${username}@example.com`,
+          approved: 1
+        };
+      } else {
+        user = results[0];
+      }
+
+      return { valid: true, userId: user.id };
+    } catch (error: any) {
+      console.error('Database error during mock auth:', error);
+      return { 
+        valid: false, 
+        error: createErrorResponse('Internal server error during mock auth', 500) 
+      };
+    }
+  }
 
   try {
     const { results } = await env.DB.prepare(

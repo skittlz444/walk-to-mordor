@@ -17,9 +17,10 @@ This project includes comprehensive testing with code coverage reporting to ensu
 #### User Isolation Approach
 - **Unique Users**: Every test generates a unique username and auth token.
 - **Parallel Execution**: Tests can run in parallel without data collisions.
-- **Mock Authentication (Test-Only)**: Uses a special `TEST_MOCK_TOKEN` prefix available only in the test helper module (`tests/helpers/mock-auth.ts`) to bypass complex auth flows during testing. This mock authentication is **NOT** available in production code - it exists only in the test helper module.
+- **Mock Authentication**: Uses a special `TEST_MOCK_TOKEN` prefix to bypass complex auth flows during testing.
+- **Security Guard**: The mock authentication logic in `src/auth-handlers.ts` is strictly guarded by the `ALLOW_TEST_AUTH` environment variable. It is **completely disabled** in production environments where this variable is unset.
 - **Optimized Hashing**: Test users use a dummy password hash to avoid CPU-intensive PBKDF2 operations during high-concurrency test runs.
-- **Security Note**: The mock authentication functionality is isolated to test code only. Production code in `src/auth-handlers.ts` does not contain any mock authentication logic and requires valid session tokens from the database.
+- **Development Mode**: Localy development (`npm run dev`) automatically sets `ALLOW_TEST_AUTH:true` to enable running tests.
 
 #### Complete Database Cleanup Approach
 - **Per-User Cleanup**: Cleanup is scoped to the specific test user.

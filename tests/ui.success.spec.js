@@ -595,7 +595,7 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
       try {
         const response = await page.request.get(endpoint, {
           headers: {
-            'Authorization': 'Bearer TEST_MOCK_TOKEN'
+            'Authorization': 'Bearer TEST_MOCK_TOKEN_api_test'
           }
         });
         if (response.ok()) {
@@ -636,7 +636,8 @@ test.describe('Walk to Mordor UI - Success Flows', () => {
 
     // Get the current goals to find the first upcoming goal
     const goals = await page.evaluate(async () => {
-      const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': 'Bearer TEST_MOCK_TOKEN' };
+      const token = localStorage.getItem('sessionToken');
+      const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': `Bearer ${token}` };
       const response = await fetch('/api/goals', { headers });
       return await response.json();
     });
