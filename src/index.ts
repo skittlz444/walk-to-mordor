@@ -23,6 +23,7 @@ import {
   handleLogin,
   handleLogout,
   handleSessionValidation,
+  handleUpdateProfile,
   validateSession
 } from "./auth-handlers";
 
@@ -85,6 +86,8 @@ export default {
         return handleLogout(request, env, body);
       } else if (url.pathname === "/api/session" && method === "GET") {
         return handleSessionValidation(request, env);
+      } else if (url.pathname === "/api/profile" && method === "PUT") {
+        return handleUpdateProfile(request, env, body);
       }
       
       // Protected endpoints (authentication required)
@@ -160,6 +163,8 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/login":
     case "/api/logout":
       return ['POST'];
+    case "/api/profile":
+      return ['PUT'];
     default:
       return ['GET'];
   }

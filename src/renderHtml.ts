@@ -44,7 +44,7 @@ export function renderHtml() {
       <body>
       <header>
         <div class="header-controls">
-          <button id="logout-btn" class="logout-btn" onclick="logout()">Logout</button>
+          <button id="profile-btn" class="profile-btn" onclick="showProfileModal()">Profile</button>
         </div>
         <h1>Total distance travelled</h1>
         <div id="total-distance-value">Loading...</div>
@@ -62,6 +62,7 @@ export function renderHtml() {
       <script src="/js/calendar.js"></script>
       <script src="/js/progress.js"></script>
       <script src="/js/goals.js"></script>
+      <script src="/js/profile.js"></script>
       <script src="/js/main.js"></script>
       </body>
     </html>
