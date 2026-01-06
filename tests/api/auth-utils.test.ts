@@ -8,7 +8,10 @@ import {
   isValidPassword,
   isValidUsername,
   getSessionExpiry,
-  isSessionExpired
+  isSessionExpired,
+  generatePasswordResetToken,
+  getPasswordResetExpiry,
+  isPasswordResetTokenExpired
 } from '../../src/auth-utils';
 
 describe('Authentication Utilities', () => {
@@ -194,6 +197,51 @@ describe('Authentication Utilities', () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       expect(isSessionExpired(tomorrow.toISOString())).toBe(false);
+    });
+  });
+
+  describe('generatePasswordResetToken', () => {
+    it('should generate a 64-character hex string', () => {
+      const token = generatePasswordResetToken();
+      expect(token).toHaveLength(64);
+      expect(token).toMatch(/^[0-9a-f]+$/);
+    });
+
+    it('should generate unique tokens', () => {
+      const token1 = generatePasswordResetToken();
+      const token2 = generatePasswordResetToken();
+      expect(token1).not.toBe(token2);
+    });
+  });
+
+  describe('getPasswordResetExpiry', () => {
+    it('should return expiry 1 hour in the future', () => {
+      const expiry = getPasswordResetExpiry();
+      const expiryDate = new Date(expiry);
+      const now = new Date();
+      const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+      
+      // Allow 5 seconds tolerance for test execution time
+      expect(expiryDate.getTime()).toBeGreaterThan(now.getTime() + 59 * 60 * 1000);
+      expect(expiryDate.getTime()).toBeLessThan(oneHourFromNow.getTime() + 5000);
+    });
+  });
+
+  describe('isPasswordResetTokenExpired', () => {
+    it('should return false for future expiry', () => {
+      const futureDate = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+      expect(isPasswordResetTokenExpired(futureDate.toISOString())).toBe(false);
+    });
+
+    it('should return true for past expiry', () => {
+      const pastDate = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+      expect(isPasswordResetTokenExpired(pastDate.toISOString())).toBe(true);
+    });
+
+    it('should return true for current time (edge case)', () => {
+      // Token that expires right now should be considered expired
+      const now = new Date(Date.now() - 1000); // 1 second ago to ensure it's past
+      expect(isPasswordResetTokenExpired(now.toISOString())).toBe(true);
     });
   });
 });

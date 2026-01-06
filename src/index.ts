@@ -1,5 +1,6 @@
 import { renderHtml } from "./renderHtml";
 import { renderAuthPage } from "./renderAuthPage";
+import { renderPasswordResetRequestPage, renderPasswordResetPage } from "./renderPasswordResetPage";
 import { 
   isValidDateFormat, 
   isValidDistance, 
@@ -24,6 +25,8 @@ import {
   handleLogout,
   handleSessionValidation,
   handleUpdateProfile,
+  handlePasswordResetRequest,
+  handlePasswordReset,
   validateSession
 } from "./auth-handlers";
 
@@ -88,6 +91,10 @@ export default {
         return handleSessionValidation(request, env);
       } else if (url.pathname === "/api/profile" && method === "PUT") {
         return handleUpdateProfile(request, env, body);
+      } else if (url.pathname === "/api/password-reset-request" && method === "POST") {
+        return handlePasswordResetRequest(request, env, body);
+      } else if (url.pathname === "/api/password-reset" && method === "POST") {
+        return handlePasswordReset(request, env, body);
       }
       
       // Protected endpoints (authentication required)
@@ -141,6 +148,24 @@ export default {
       });
     }
     
+    // Password reset request page
+    if (url.pathname === "/password-reset" || url.pathname === "/wtm/password-reset") {
+      return new Response(renderPasswordResetRequestPage(), {
+        headers: {
+          "content-type": "text/html",
+        },
+      });
+    }
+    
+    // Password reset with token page
+    if (url.pathname === "/reset-password" || url.pathname === "/wtm/reset-password") {
+      return new Response(renderPasswordResetPage(), {
+        headers: {
+          "content-type": "text/html",
+        },
+      });
+    }
+    
     // Main app page - will check auth in JavaScript
     return new Response(renderHtml(), {
       headers: {
@@ -162,6 +187,8 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/register":
     case "/api/login":
     case "/api/logout":
+    case "/api/password-reset-request":
+    case "/api/password-reset":
       return ['POST'];
     case "/api/profile":
       return ['PUT'];

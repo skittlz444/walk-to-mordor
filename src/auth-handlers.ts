@@ -8,7 +8,10 @@ import {
   isValidPassword,
   isValidUsername,
   getSessionExpiry,
-  isSessionExpired
+  isSessionExpired,
+  generatePasswordResetToken,
+  getPasswordResetExpiry,
+  isPasswordResetTokenExpired
 } from './auth-utils';
 import { createErrorResponse, createSuccessResponse } from './validators';
 
@@ -463,5 +466,132 @@ export async function handleUpdateProfile(request: Request, env: any, body: any)
     }
     
     return createErrorResponse('Internal server error during profile update', 500);
+  }
+}
+
+/**
+ * Handle password reset request - generates a reset token
+ */
+export async function handlePasswordResetRequest(request: Request, env: any, body: any) {
+  const { email } = body || {};
+
+  // Validate required field
+  if (!email) {
+    return createErrorResponse('Missing required field: email', 400);
+  }
+
+  // Validate email format
+  if (!isValidEmail(email)) {
+    return createErrorResponse('Invalid email format', 400);
+  }
+
+  try {
+    // Get user from database
+    const { results } = await env.DB.prepare(
+      'SELECT id, username, email FROM users WHERE email = ?'
+    ).bind(email).all();
+
+    // For security, return success even if user doesn't exist
+    // This prevents email enumeration attacks
+    if (results.length === 0) {
+      return createSuccessResponse({
+        message: 'If an account with that email exists, a password reset token has been generated. In a production system, this would be sent via email. For now, check the database for the token.'
+      }, 200);
+    }
+
+    const user = results[0] as any;
+
+    // Generate reset token
+    const token = generatePasswordResetToken();
+    const expiresAt = getPasswordResetExpiry();
+
+    // Store reset token in database
+    await env.DB.prepare(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
+    ).bind(user.id, token, expiresAt).run();
+
+    // In a production system, we would send an email here
+    // For now, return the token in the response (development only)
+    // TODO: Implement email service integration
+    return createSuccessResponse({
+      message: 'If an account with that email exists, a password reset token has been generated. In a production system, this would be sent via email. For now, check the database for the token.',
+      // Include token only for development/testing purposes
+      // Remove this in production when email is implemented
+      token,
+      username: user.username
+    }, 200);
+  } catch (error: any) {
+    console.error('Database error during password reset request:', error);
+    return createErrorResponse('Internal server error during password reset request', 500);
+  }
+}
+
+/**
+ * Handle password reset - verify token and set new password
+ */
+export async function handlePasswordReset(request: Request, env: any, body: any) {
+  const { token, password } = body || {};
+
+  // Validate required fields
+  if (!token) {
+    return createErrorResponse('Missing required field: token', 400);
+  }
+  if (!password) {
+    return createErrorResponse('Missing required field: password', 400);
+  }
+
+  // Validate password
+  const passwordValidation = isValidPassword(password);
+  if (!passwordValidation.valid) {
+    return createErrorResponse(passwordValidation.errors.join('; '), 400);
+  }
+
+  try {
+    // Get token from database
+    const { results } = await env.DB.prepare(
+      'SELECT id, user_id, expires_at, used FROM password_reset_tokens WHERE token = ?'
+    ).bind(token).all();
+
+    if (results.length === 0) {
+      return createErrorResponse('Invalid password reset token', 400);
+    }
+
+    const resetToken = results[0] as any;
+
+    // Check if token has already been used
+    if (resetToken.used) {
+      return createErrorResponse('This password reset token has already been used', 400);
+    }
+
+    // Check if token is expired
+    if (isPasswordResetTokenExpired(resetToken.expires_at)) {
+      return createErrorResponse('This password reset token has expired', 400);
+    }
+
+    // Generate new salt and hash password
+    const salt = await generateSalt();
+    const passwordHash = await hashPassword(password, salt);
+
+    // Update user's password
+    await env.DB.prepare(
+      'UPDATE users SET password_hash = ?, salt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(passwordHash, salt, resetToken.user_id).run();
+
+    // Mark token as used
+    await env.DB.prepare(
+      'UPDATE password_reset_tokens SET used = 1 WHERE id = ?'
+    ).bind(resetToken.id).run();
+
+    // Invalidate all existing sessions for this user (force re-login)
+    await env.DB.prepare(
+      'DELETE FROM sessions WHERE user_id = ?'
+    ).bind(resetToken.user_id).run();
+
+    return createSuccessResponse({
+      message: 'Password has been reset successfully. Please log in with your new password.'
+    }, 200);
+  } catch (error: any) {
+    console.error('Database error during password reset:', error);
+    return createErrorResponse('Internal server error during password reset', 500);
   }
 }
