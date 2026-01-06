@@ -132,11 +132,6 @@ test.describe('User Profile Modal', () => {
     // Wait for success message
     await expect(page.locator('.success-message')).toBeVisible();
     await expect(page.locator('.success-message')).toContainText('Profile updated successfully');
-    
-    // Success! The update worked. Note: In a real app with real sessions,
-    // the user would continue with their existing session after username change.
-    // Our mock auth ties tokens to usernames which makes re-verification complex,
-    // but the API call succeeded as evidenced by the success message.
   });
 
   test('should update email successfully', async ({ page }) => {
@@ -184,9 +179,6 @@ test.describe('User Profile Modal', () => {
     // Wait for success message
     await expect(page.locator('.success-message')).toBeVisible();
     await expect(page.locator('.success-message')).toContainText('Profile updated successfully');
-    
-    // Success! Both fields were updated successfully.
-    // The API call succeeded as evidenced by the success message.
   });
 
   test('should show error for invalid email format', async ({ page }) => {
