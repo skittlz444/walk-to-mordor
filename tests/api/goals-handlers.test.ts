@@ -1,4 +1,4 @@
-import { handleGoalsGet, calculateTotalDistance } from '../src/goals-handlers';
+import { handleGoalsGet, calculateTotalDistance } from '../../src/goals-handlers';
 
 describe('Goals Handlers', () => {
   let mockEnv: any;

@@ -40,8 +40,8 @@
     "**/tests/**/*.test.ts"
   ],
   "testPathIgnorePatterns": [
-    "tests/ui.success.spec.js",
-    "tests/ui.edge-cases.spec.js"
+    "/node_modules/",
+    "/tests/ui/"
   ],
   "verbose": true,
   "setupFilesAfterEnv": [],

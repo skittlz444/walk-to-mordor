@@ -1,4 +1,4 @@
-import { renderHtml } from '../src/renderHtml';
+import { renderHtml } from '../../src/renderHtml';
 
 describe('renderHtml', () => {
   it('should render HTML with standard structure', () => {

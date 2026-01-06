@@ -14,7 +14,7 @@ const path = require('path');
 function generateAPITestReport() {
   console.log('🔧 Generating API test HTML report...');
   
-  const reportDir = path.join(__dirname, '../test-results');
+  const reportDir = path.join(__dirname, '../../test-results');
   const outputFile = path.join(reportDir, 'api-report.html');
   
   // Ensure directory exists

@@ -50,12 +50,14 @@ export function renderHtml() {
         <div id="total-distance-value">Loading...</div>
         <div id="last-goal"></div>
       </header>
-      <section id="goals-section">
-        <div id="goals-list"></div>
-      </section>
-      <div id="eventcalendar-container">
-        <div id="eventcalendar"></div>
-      </div>
+      <main>
+        <section id="goals-section">
+          <div id="goals-list"></div>
+        </section>
+        <div id="eventcalendar-container">
+          <div id="eventcalendar"></div>
+        </div>
+      </main>
       
       <!-- Scripts -->
       <script src="/js/validators.js"></script>

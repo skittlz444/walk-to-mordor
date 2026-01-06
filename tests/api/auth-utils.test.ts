@@ -9,7 +9,7 @@ import {
   isValidUsername,
   getSessionExpiry,
   isSessionExpired
-} from '../src/auth-utils';
+} from '../../src/auth-utils';
 
 describe('Authentication Utilities', () => {
   describe('generateSalt', () => {

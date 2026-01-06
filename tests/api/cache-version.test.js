@@ -18,13 +18,13 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const { promisify } = require('util');
-const { updateCacheVersion } = require('../public/js/update-cache-version');
-const { resetCacheVersion } = require('../public/js/reset-cache-version');
+const { updateCacheVersion } = require('../../public/js/update-cache-version');
+const { resetCacheVersion } = require('../../public/js/reset-cache-version');
 
 const execAsync = promisify(exec);
 
 describe('Cache Version Management Scripts', () => {
-  const SW_PATH = path.join(__dirname, '..', 'public', 'sw.js');
+  const SW_PATH = path.join(__dirname, '..', '..', 'public', 'sw.js');
   const BACKUP_PATH = path.join(__dirname, 'temp-sw-backup.js');
   const BUILD_TIMESTAMP_PLACEHOLDER = '{{BUILD_TIMESTAMP}}';
   
@@ -296,7 +296,7 @@ describe('Cache Version Management Scripts', () => {
       fs.writeFileSync(SW_PATH, placeholderContent, 'utf8');
       
       // Act
-      const { stdout } = await execAsync('node public/js/update-cache-version.js', { cwd: path.join(__dirname, '..') });
+      const { stdout } = await execAsync('node public/js/update-cache-version.js', { cwd: path.join(__dirname, '../..') });
       
       // Assert
       expect(stdout).toMatch(/✅ Updated service worker cache version to: walk-to-mordor-\d{8}-\d{6}/);
@@ -314,7 +314,7 @@ describe('Cache Version Management Scripts', () => {
       fs.writeFileSync(SW_PATH, contentWithoutPlaceholder, 'utf8');
       
       // Act
-      const { stdout } = await execAsync('node public/js/update-cache-version.js', { cwd: path.join(__dirname, '..') });
+      const { stdout } = await execAsync('node public/js/update-cache-version.js', { cwd: path.join(__dirname, '../..') });
       
       // Assert
       expect(stdout).toContain('⚠️  Build timestamp placeholder not found in service worker');

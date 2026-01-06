@@ -4,14 +4,14 @@ import {
   handleProgressPut, 
   handleProgressDelete, 
   handleProgressGet 
-} from '../src/progress-handlers';
-import { validateSession } from '../src/auth-handlers';
-import * as validators from '../src/validators';
+} from '../../src/progress-handlers';
+import { validateSession } from '../../src/auth-handlers';
+import * as validators from '../../src/validators';
 
 // Mock dependencies
-jest.mock('../src/auth-handlers');
-jest.mock('../src/validators', () => ({
-  ...jest.requireActual('../src/validators'),
+jest.mock('../../src/auth-handlers');
+jest.mock('../../src/validators', () => ({
+  ...jest.requireActual('../../src/validators'),
   isValidDateFormat: jest.fn(),
   isValidDistance: jest.fn(),
   safeJsonParse: jest.fn()

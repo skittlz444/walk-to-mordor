@@ -5,11 +5,11 @@ import {
   handleLogout, 
   handleSessionValidation, 
   validateSession 
-} from '../src/auth-handlers';
-import * as authUtils from '../src/auth-utils';
+} from '../../src/auth-handlers';
+import * as authUtils from '../../src/auth-utils';
 
 // Mock auth-utils
-jest.mock('../src/auth-utils', () => ({
+jest.mock('../../src/auth-utils', () => ({
   generateSalt: jest.fn(),
   hashPassword: jest.fn(),
   verifyPassword: jest.fn(),
