@@ -195,6 +195,11 @@ export async function handleSessionValidation(request: Request, env: any) {
     try {
       const username = sessionId.replace('TEST_MOCK_TOKEN_', '');
       
+      // Validate username to prevent potential misuse
+      if (!isValidUsername(username)) {
+        return createErrorResponse('Invalid username format in test token', 400);
+      }
+      
       // Check if user exists
       let { results } = await env.DB.prepare(
         'SELECT id, username, email, approved FROM users WHERE username = ?'
@@ -289,6 +294,14 @@ export async function validateSession(request: Request, env: any): Promise<
   if (env.ALLOW_TEST_AUTH === 'true' && sessionId.startsWith('TEST_MOCK_TOKEN_')) {
     try {
       const username = sessionId.replace('TEST_MOCK_TOKEN_', '');
+      
+      // Validate username to prevent potential misuse
+      if (!isValidUsername(username)) {
+        return { 
+          valid: false, 
+          error: createErrorResponse('Invalid username format in test token', 400) 
+        };
+      }
       
       // Check if user exists
       let { results } = await env.DB.prepare(

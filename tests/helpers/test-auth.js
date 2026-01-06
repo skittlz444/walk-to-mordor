@@ -8,7 +8,7 @@ let sessionToken = null;
 let testUsername = null;
 
 /**
- * Create a test user and authenticate
+ * Create a test user and authenticate using mock auth tokens
  * @param {string} baseUrl - The base URL of the application (default: http://localhost:8787)
  * @returns {Promise<void>}
  */
@@ -16,84 +16,32 @@ async function createTestUserAndAuth(baseUrl = 'http://localhost:8787') {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 10000);
   testUsername = `api_test_user_${timestamp}_${random}`;
-  const email = `${testUsername}@example.com`;
-  const password = 'TestUser123!';
 
-  // Register
-  const registerRes = await request(baseUrl)
-    .post('/api/register')
-    .send({ username: testUsername, email, password });
-
-  if (registerRes.status !== 200 && registerRes.status !== 201) {
-    console.error('Registration failed:', registerRes.body);
-    throw new Error(`Failed to register test user: ${JSON.stringify(registerRes.body)}`);
-  }
-
-  // Login
-  let loginRes = await request(baseUrl)
-    .post('/api/login')
-    .send({ username: testUsername, password });
-
-  if (loginRes.status === 403) {
-    // User needs approval. Since we are in a test environment, we can manually approve the user.
-    // This assumes we are running locally with wrangler.
-    const { execSync } = require('child_process');
-    const fs = require('fs');
-    const path = require('path');
-    
-    try {
-      // We need to use the exact same database as the running worker.
-      // Assuming local dev environment.
-      console.log(`Approving user ${testUsername}...`);
-      
-      // Create a temporary SQL file for the parameterized query
-      const tmpDir = path.join(__dirname, '../../.tmp');
-      if (!fs.existsSync(tmpDir)) {
-        fs.mkdirSync(tmpDir, { recursive: true });
-      }
-      
-      const tmpFile = path.join(tmpDir, `approve_user_${Date.now()}.sql`);
-      // Use parameterized query by writing to a file
-      // Note: wrangler d1 execute doesn't support direct parameterization, 
-      // but we sanitize the username to prevent SQL injection
-      const sanitizedUsername = testUsername.replace(/'/g, "''"); // SQL escape single quotes
-      fs.writeFileSync(tmpFile, `UPDATE users SET approved = 1 WHERE username = '${sanitizedUsername}';`);
-      
-      // Execute the SQL file
-      execSync(`npx wrangler d1 execute DB --local --file="${tmpFile}"`);
-      
-      // Clean up temporary file
-      fs.unlinkSync(tmpFile);
-      
-      // Try login again
-      loginRes = await request(baseUrl)
-        .post('/api/login')
-        .send({ username: testUsername, password });
-    } catch (e) {
-      console.error('Failed to auto-approve test user:', e.message);
-    }
-  }
-
-  if (loginRes.status === 200) {
-    sessionToken = loginRes.body.sessionId;
-  } else {
-    console.error('Login failed:', loginRes.body);
-    throw new Error('Failed to authenticate test user');
+  // Use mock authentication token for testing
+  // This bypasses registration and approval since ALLOW_TEST_AUTH=true in test environment
+  sessionToken = `TEST_MOCK_TOKEN_${testUsername}`;
+  
+  // Verify the mock token works by calling the session endpoint
+  const sessionRes = await request(baseUrl)
+    .get('/api/session')
+    .set('Authorization', `Bearer ${sessionToken}`);
+  
+  if (sessionRes.status !== 200) {
+    console.error('Mock auth session validation failed:', sessionRes.body);
+    throw new Error(`Failed to create test user with mock auth: ${JSON.stringify(sessionRes.body)}`);
   }
 }
 
 /**
- * Cleanup test user (logout)
+ * Cleanup test user
+ * Note: Mock auth tokens are stateless and don't require explicit cleanup
  * @param {string} baseUrl - The base URL of the application
  */
 async function cleanupTestUser(baseUrl = 'http://localhost:8787') {
-  if (sessionToken) {
-    await request(baseUrl)
-      .post('/api/logout')
-      .send({ sessionId: sessionToken });
-    sessionToken = null;
-    testUsername = null;
-  }
+  // Mock auth tokens don't need explicit logout since they're not stored in sessions table
+  // Just clear the local state
+  sessionToken = null;
+  testUsername = null;
 }
 
 /**
