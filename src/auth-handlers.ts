@@ -14,6 +14,7 @@ import {
   isPasswordResetTokenExpired
 } from './auth-utils';
 import { createErrorResponse, createSuccessResponse } from './validators';
+import { sendPasswordResetEmail } from './email-utils';
 
 /**
  * Handle user registration
@@ -495,7 +496,7 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
     // This prevents email enumeration attacks
     if (results.length === 0) {
       return createSuccessResponse({
-        message: 'If an account with that email exists, a password reset token has been generated. In a production system, this would be sent via email. For now, check the database for the token.'
+        message: 'If an account with that email exists, a password reset link has been sent to your email address.'
       }, 200);
     }
 
@@ -510,15 +511,22 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
       'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
     ).bind(user.id, token, expiresAt).run();
 
-    // In a production system, we would send an email here
-    // For now, return the token in the response (development only)
-    // TODO: Implement email service integration
+    // Send password reset email
+    const emailResult = await sendPasswordResetEmail(
+      env,
+      user.email,
+      user.username,
+      token
+    );
+
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.error);
+      // Still return success to prevent email enumeration
+      // The token is stored in DB, so user can potentially reset via direct link if they have it
+    }
+
     return createSuccessResponse({
-      message: 'If an account with that email exists, a password reset token has been generated. In a production system, this would be sent via email. For now, check the database for the token.',
-      // Include token only for development/testing purposes
-      // Remove this in production when email is implemented
-      token,
-      username: user.username
+      message: 'If an account with that email exists, a password reset link has been sent to your email address.'
     }, 200);
   } catch (error: any) {
     console.error('Database error during password reset request:', error);

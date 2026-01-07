@@ -35,11 +35,12 @@ This implementation adds user authentication to the Walk to Mordor application, 
 - **Request Reset**: User can request a password reset by providing their email
 - **Token Generation**: System generates a secure, time-limited (1 hour) reset token
 - **Token Storage**: Reset tokens stored in `password_reset_tokens` table
+- **Email Delivery**: Password reset link sent via Cloudflare Email Routing
 - **Password Update**: Valid tokens allow users to set a new password
 - **Session Invalidation**: All existing sessions are invalidated when password is reset
 - **Security**: Reset tokens are single-use and expire after 1 hour
 - **Email Enumeration Protection**: Same success message for valid and invalid emails
-- **Development Mode**: Tokens displayed in response for testing (to be replaced with email in production)
+- **Production Ready**: Emails sent via Cloudflare Workers Email Routing API
 
 ### 6. Security Features
 - **Password Hashing**: PBKDF2 with 100,000 iterations and SHA-256
@@ -214,12 +215,13 @@ New users (except the first) require approval before they can log in:
 - Email enumeration protection ✅
 - Single-use password reset tokens ✅
 - Session invalidation on password reset ✅
+- Email delivery via Cloudflare Email Routing ✅
 
 ### Future Enhancements
 - Rate limiting for login/registration
 - Account lockout after failed attempts
-- ~~Password reset functionality~~ ✅ Implemented
-- Email delivery for password reset tokens (currently development-only display)
+- ~~Password reset functionality~~ ✅ Implemented with email delivery
+- Email verification for new accounts
 - Two-factor authentication
 - Session refresh tokens
 - HTTPS enforcement (handled at infrastructure level)
@@ -254,6 +256,7 @@ The system handles migration automatically:
 ### Backend
 - `src/auth-utils.ts` - Authentication utilities
 - `src/auth-handlers.ts` - Auth API handlers
+- `src/email-utils.ts` - Email sending utilities via Cloudflare Email Routing ✅
 - `src/renderAuthPage.ts` - Login page HTML
 - `src/renderPasswordResetPage.ts` - Password reset pages HTML ✅
 - `src/index.ts` - Updated with auth routes
@@ -262,6 +265,7 @@ The system handles migration automatically:
 - `migrations/0008_create_authentication.sql` - Database schema
 - `migrations/0009_link_existing_progress.sql` - Migration placeholder
 - `migrations/0010_create_password_reset_tokens.sql` - Password reset tokens table ✅
+- `wrangler.json` - Added EMAIL binding configuration ✅
 
 ### Frontend
 - `public/js/auth.js` - Login/registration JavaScript
@@ -281,17 +285,17 @@ The system handles migration automatically:
 
 ## Known Limitations
 
-1. ~~No password reset functionality~~ ✅ Password reset implemented
+1. ~~No password reset functionality~~ ✅ Password reset implemented with email delivery
 2. No email verification
 3. No rate limiting on login attempts
 4. Manual approval process requires database access
 5. Some existing unit tests need updating for auth context
-6. Email delivery for password reset not implemented (tokens shown in development mode)
+6. ~~Email delivery for password reset not implemented (tokens shown in development mode)~~ ✅ Email delivery via Cloudflare Email Routing implemented
 
 ## Future Improvements
 
-1. ~~Add password reset via email~~ ✅ Implemented (without email delivery)
-2. Implement email delivery service for password reset tokens
+1. ~~Add password reset via email~~ ✅ Implemented with Cloudflare Email Routing
+2. ~~Implement email delivery service for password reset tokens~~ ✅ Implemented
 3. Implement email verification
 4. Add rate limiting
 5. Create admin UI for user approval

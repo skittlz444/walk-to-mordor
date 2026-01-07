@@ -10,6 +10,7 @@ import {
   handlePasswordReset
 } from '../../src/auth-handlers';
 import * as authUtils from '../../src/auth-utils';
+import * as emailUtils from '../../src/email-utils';
 
 // Mock auth-utils
 jest.mock('../../src/auth-utils', () => ({
@@ -25,6 +26,11 @@ jest.mock('../../src/auth-utils', () => ({
   generatePasswordResetToken: jest.fn(),
   getPasswordResetExpiry: jest.fn(),
   isPasswordResetTokenExpired: jest.fn()
+}));
+
+// Mock email-utils
+jest.mock('../../src/email-utils', () => ({
+  sendPasswordResetEmail: jest.fn()
 }));
 
 describe('Auth Handlers', () => {
@@ -47,6 +53,7 @@ describe('Auth Handlers', () => {
     (authUtils.generatePasswordResetToken as jest.Mock).mockReturnValue('mock-reset-token');
     (authUtils.getPasswordResetExpiry as jest.Mock).mockReturnValue('2026-01-06T17:00:00Z');
     (authUtils.isPasswordResetTokenExpired as jest.Mock).mockReturnValue(false);
+    (emailUtils.sendPasswordResetEmail as jest.Mock).mockResolvedValue({ success: true });
 
     // Mock DB
     mockEnv = {
@@ -926,8 +933,13 @@ describe('Auth Handlers', () => {
       const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.message).toContain('password reset token');
-      expect(data.token).toBe('mock-reset-token');
+      expect(data.message).toContain('password reset link');
+      expect(emailUtils.sendPasswordResetEmail).toHaveBeenCalledWith(
+        mockEnv,
+        'test@example.com',
+        'testuser',
+        'mock-reset-token'
+      );
     });
 
     it('should return success even for non-existent email (security)', async () => {

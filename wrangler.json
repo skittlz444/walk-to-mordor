@@ -17,6 +17,11 @@
 			"database_id": "7411c32e-f4f5-4fc6-ab39-c403416f048c"
 		}
 	],
+	"send_email": [
+		{
+			"name": "EMAIL"
+		}
+	],
 	"observability": {
 		"enabled": true
 	},

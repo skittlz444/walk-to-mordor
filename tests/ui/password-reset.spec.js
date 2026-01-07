@@ -77,7 +77,7 @@ test.describe('Password Reset', () => {
         const successDiv = page.locator('#reset-success');
         await expect(successDiv).toBeVisible({ timeout: 5000 });
         const successText = await successDiv.textContent();
-        expect(successText).toContain('password reset token');
+        expect(successText).toContain('password reset link');
     });
 
     test('should display password reset form with token', async ({ page }) => {

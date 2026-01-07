@@ -53,18 +53,6 @@
       if (response.ok) {
         successDiv.textContent = data.message;
         
-        // For development/testing: show the token and provide a link
-        if (data.token) {
-          const resetLink = `/reset-password?token=${data.token}`;
-          successDiv.innerHTML = `
-            ${data.message}
-            <br><br>
-            <strong>Development Mode:</strong> Your reset token is: <code>${data.token}</code>
-            <br>
-            <a href="${resetLink}" class="btn-link">Click here to reset your password</a>
-          `;
-        }
-        
         // Clear form
         e.target.reset();
       } else {

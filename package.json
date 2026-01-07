@@ -49,5 +49,8 @@
     "test:ui:report": "playwright show-report",
     "build:sw": "node public/js/update-cache-version.js",
     "build:sw:reset": "node public/js/reset-cache-version.js"
+  },
+  "dependencies": {
+    "mimetext": "^3.0.27"
   }
 }
