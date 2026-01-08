@@ -1,19 +1,27 @@
-import { renderHtml } from '../src/renderHtml';
+import { renderHtml } from '../../src/renderHtml';
 import { 
   isValidDateFormat, 
   isValidDistance, 
   safeJsonParse, 
   isValidMethod 
-} from '../src/validators';
+} from '../../src/validators';
+import { 
+  validateSession,
+  handleRegister,
+  handleLogin,
+  handleLogout,
+  handleSessionValidation
+} from '../../src/auth-handlers';
 
 // Mock the modules at module level
-jest.mock('../src/renderHtml');
-jest.mock('../src/validators');
-jest.mock('../src/goals-handlers');
+jest.mock('../../src/renderHtml');
+jest.mock('../../src/validators');
+jest.mock('../../src/goals-handlers');
+jest.mock('../../src/auth-handlers');
 
 // Import after mocking
-import worker from '../src/index';
-import { calculateTotalDistance, handleGoalsGet } from '../src/goals-handlers';
+import worker from '../../src/index';
+import { calculateTotalDistance, handleGoalsGet } from '../../src/goals-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockIsValidDateFormat = jest.mocked(isValidDateFormat);
@@ -22,6 +30,11 @@ const mockSafeJsonParse = jest.mocked(safeJsonParse);
 const mockIsValidMethod = jest.mocked(isValidMethod);
 const mockCalculateTotalDistance = jest.mocked(calculateTotalDistance);
 const mockHandleGoalsGet = jest.mocked(handleGoalsGet);
+const mockValidateSession = jest.mocked(validateSession);
+const mockHandleRegister = jest.mocked(handleRegister);
+const mockHandleLogin = jest.mocked(handleLogin);
+const mockHandleLogout = jest.mocked(handleLogout);
+const mockHandleSessionValidation = jest.mocked(handleSessionValidation);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -70,6 +83,7 @@ describe('Cloudflare Worker Index', () => {
     mockIsValidDistance.mockReturnValue(true);
     mockIsValidMethod.mockReturnValue(true);
     mockSafeJsonParse.mockResolvedValue({ success: true, data: {} });
+    mockValidateSession.mockResolvedValue({ valid: true, userId: 1 });
 
     // Setup handler mocks
     mockCalculateTotalDistance.mockResolvedValue(10);
@@ -77,6 +91,11 @@ describe('Cloudflare Worker Index', () => {
       status: 200, 
       headers: { 'content-type': 'application/json' } 
     }));
+
+    mockHandleRegister.mockResolvedValue(new Response('Registered', { status: 201 }));
+    mockHandleLogin.mockResolvedValue(new Response('Logged In', { status: 200 }));
+    mockHandleLogout.mockResolvedValue(new Response('Logged Out', { status: 200 }));
+    mockHandleSessionValidation.mockResolvedValue(new Response('Valid Session', { status: 200 }));
 
     // Create simple mock environment
     mockEnv = {
@@ -123,7 +142,41 @@ describe('Cloudflare Worker Index', () => {
     console.error = originalConsoleError;
     console.log = originalConsoleLog;
   });
+    it('should route to handleRegister', async () => {
+      const request = createRequest('http://localhost/api/register', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleRegister).toHaveBeenCalled();
+      expect(response.status).toBe(201);
+    });
 
+    it('should route to handleLogin', async () => {
+      const request = createRequest('http://localhost/api/login', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleLogin).toHaveBeenCalled();
+      expect(response.status).toBe(200);
+    });
+
+    it('should route to handleLogout', async () => {
+      const request = createRequest('http://localhost/api/logout', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleLogout).toHaveBeenCalled();
+      expect(response.status).toBe(200);
+    });
+
+    it('should route to handleSessionValidation', async () => {
+      const request = createRequest('http://localhost/api/session', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleSessionValidation).toHaveBeenCalled();
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for invalid method on auth endpoints', async () => {
+      const request = createRequest('http://localhost/api/login', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('POST');
+    });
   it('should call renderHtml for main page', async () => {
     const request = createRequest('https://example.com/');
     const response = await worker.fetch(request, mockEnv);

@@ -52,9 +52,9 @@ function createCalendarGrid() {
         <div class="calendar-center">
           <div class="calendar-view-toggle">
             <div class="view-toggle-group">
-              <input type="radio" name="view-toggle" id="month-view" value="month" ${currentView === 'month' ? 'checked' : ''}>
+              <input type="radio" name="view-toggle" id="month-view" value="month" aria-label="Month view" ${currentView === 'month' ? 'checked' : ''}>
               <label for="month-view"><i class="fa-solid fa-calendar-days"></i></label>
-              <input type="radio" name="view-toggle" id="week-view" value="week" ${currentView === 'week' ? 'checked' : ''}>
+              <input type="radio" name="view-toggle" id="week-view" value="week" aria-label="Week view" ${currentView === 'week' ? 'checked' : ''}>
               <label for="week-view"><i class="fa-solid fa-calendar-week"></i></label>
             </div>
           </div>
@@ -62,8 +62,8 @@ function createCalendarGrid() {
         </div>
         <div class="calendar-nav">
           <div class="nav-buttons">
-            <button class="nav-btn" id="prev-btn"><i class="fas fa-chevron-left"></i></button>
-            <button class="nav-btn" id="next-btn"><i class="fas fa-chevron-right"></i></button>
+            <button class="nav-btn" id="prev-btn" aria-label="Previous"><i class="fas fa-chevron-left"></i></button>
+            <button class="nav-btn" id="next-btn" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
           </div>
           <button class="today-btn" id="today-btn">Today</button>
         </div>
@@ -245,7 +245,9 @@ function addCellEventListeners() {
 }
 
 function updateCalendarAndTotal() {
-  fetch('/api/calendar-progress')
+  fetch('/api/calendar-progress', {
+    headers: window.getAuthHeaders()
+  })
     .then(res => res.json())
     .then(fetchedEvents => {
       events = fetchedEvents.map(ev => ({

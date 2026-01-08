@@ -1,6 +1,11 @@
 // Goals domain functions
 
 function showGoalModal(goal, currentDistance, isCongratulations = false) {
+  // Prevent stacking modals - if one is already open, don't open another
+  if (document.querySelector('.modal-overlay')) {
+    return;
+  }
+
   const isCompleted = Number(currentDistance) >= goal.distance;
   const distanceStyle = isCompleted ? 'text-decoration: line-through; color: #888;' : 'color: #FFD700;';
   const distanceToGo = isCompleted ? 0 : goal.distance - Number(currentDistance);
@@ -80,7 +85,9 @@ function makeGoalClickable(element, goal, currentDistance) {
 }
 
 function renderGoals(currentDistance) {
-  fetch('/api/goals')
+  fetch('/api/goals', {
+    headers: window.getAuthHeaders()
+  })
     .then(res => {
       if (!res.ok) {
         throw new Error(`Goals API error: ${res.status} ${res.statusText}`);
@@ -245,7 +252,9 @@ function renderGoals(currentDistance) {
 }
 
 function checkForNewlyPassedGoals(previousTotal, newTotal) {
-  return fetch('/api/goals')
+  return fetch('/api/goals', {
+    headers: window.getAuthHeaders()
+  })
     .then(res => {
       if (!res.ok) {
         throw new Error(`Goals API error: ${res.status} ${res.statusText}`);

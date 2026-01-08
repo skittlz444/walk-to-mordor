@@ -5,7 +5,7 @@ import {
   isValidMethod,
   createErrorResponse,
   createSuccessResponse
-} from '../src/validators';
+} from '../../src/validators';
 
 describe('Validators', () => {
   describe('isValidDateFormat', () => {

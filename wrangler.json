@@ -1,5 +1,8 @@
 {
 	"compatibility_date": "2025-04-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"main": "src/index.ts",
 	"name": "walk-to-mordor",
 	"upload_source_maps": true,
@@ -15,6 +18,15 @@
 			"binding": "DB",
 			"database_name": "walk-to-mordor",
 			"database_id": "7411c32e-f4f5-4fc6-ab39-c403416f048c"
+		}
+	],
+	"send_email": [
+		{
+			"name": "EMAIL",
+			"allowed_destination_addresses": [
+				"info@haydencarson.com",
+				"staceyipad@gmail.com"
+			]
 		}
 	],
 	"observability": {
