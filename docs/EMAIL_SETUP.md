@@ -35,17 +35,23 @@ msg.setSender({
 
 ### 3. Wrangler Configuration
 
-The email binding is already configured in `wrangler.json`:
+Update `wrangler.json` to configure the email binding with allowed destination addresses (whitelist):
 
 ```json
 "send_email": [
   {
-    "name": "EMAIL"
+    "name": "EMAIL",
+    "allowed_destination_addresses": [
+      "friend1@example.com",
+      "friend2@example.com",
+      "friend3@example.com"
+      // Add more emails here as needed
+    ]
   }
 ]
 ```
 
-This creates an `EMAIL` binding available in your Worker's `env` object.
+This creates an `EMAIL` binding available in your Worker's `env` object and restricts email sending to only the listed addresses for security.
 
 ### 4. Deploy
 

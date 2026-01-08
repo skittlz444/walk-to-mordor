@@ -8,7 +8,8 @@ export async function sendPasswordResetEmail(
   env: any,
   recipientEmail: string,
   recipientName: string,
-  resetToken: string
+  resetToken: string,
+  origin: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if email binding is available
@@ -17,8 +18,8 @@ export async function sendPasswordResetEmail(
       return { success: false, error: 'Email service not configured' };
     }
 
-    // Create reset URL - use the domain from the request or a configured domain
-    const resetUrl = `https://wtm.haydencarson.com/reset-password?token=${resetToken}`;
+    // Create reset URL
+    const resetUrl = `${origin}/reset-password?token=${resetToken}`;
     
     // Create MIME message
     const msg = createMimeMessage();

@@ -502,6 +502,30 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
 
     const user = results[0] as any;
 
+    // Rate limiting: Check recent reset requests (max 3 per hour)
+    const { results: recentRequests } = await env.DB.prepare(
+      `SELECT count(*) as count FROM password_reset_tokens 
+       WHERE user_id = ? AND created_at > datetime('now', '-1 hour')`
+    ).bind(user.id).all();
+
+    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= 3) {
+      console.warn(`Rate limit exceeded for user ${user.id}`);
+      // Return success to hide this failure to prevent enumeration
+      return createSuccessResponse({
+        message: 'If an account with that email exists, a password reset link has been sent to your email address.'
+      }, 200);
+    }
+
+    // Cleanup expired/used tokens
+    try {
+      await env.DB.prepare(
+        'DELETE FROM password_reset_tokens WHERE expires_at < ? OR used = 1'
+      ).bind(new Date().toISOString()).run();
+    } catch (cleanupError) {
+      console.warn('Failed to cleanup expired tokens:', cleanupError);
+      // Continue execution
+    }
+
     // Generate reset token
     const token = generatePasswordResetToken();
     const expiresAt = getPasswordResetExpiry();
@@ -512,11 +536,13 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
     ).bind(user.id, token, expiresAt).run();
 
     // Send password reset email
+    const origin = new URL(request.url).origin;
     const emailResult = await sendPasswordResetEmail(
       env,
       user.email,
       user.username,
-      token
+      token,
+      origin
     );
 
     if (!emailResult.success) {

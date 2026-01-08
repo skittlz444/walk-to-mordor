@@ -206,7 +206,7 @@ Built with modern web technologies for performance, reliability, and scalability
 3. **Configure Email Routing** (for password reset functionality):
    - Enable Cloudflare Email Routing on your domain
    - Verify destination email addresses
-   - See [EMAIL_SETUP.md](EMAIL_SETUP.md) for detailed configuration instructions
+   - See [EMAIL_SETUP.md](docs/EMAIL_SETUP.md) for detailed configuration instructions
 
 4. **Deploy to Cloudflare Workers**:
    ```bash

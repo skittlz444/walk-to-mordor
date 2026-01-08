@@ -71,7 +71,8 @@ describe('Auth Handlers', () => {
     mockRequest = {
       headers: {
         get: jest.fn()
-      }
+      },
+      url: 'https://wtm.haydencarson.com/api/auth/some-action'
     };
   });
 
@@ -922,6 +923,22 @@ describe('Auth Handlers', () => {
           })
         })
       });
+
+      // Mock rate limit check
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn().mockResolvedValue({
+            results: [{ count: 0 }]
+          })
+        })
+      });
+
+      // Mock cleanup
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          run: jest.fn().mockResolvedValue({ meta: { changes: 0 } })
+        })
+      });
       
       // Mock token insert
       mockEnv.DB.prepare.mockReturnValueOnce({
@@ -938,7 +955,8 @@ describe('Auth Handlers', () => {
         mockEnv,
         'test@example.com',
         'testuser',
-        'mock-reset-token'
+        'mock-reset-token',
+        'https://wtm.haydencarson.com'
       );
     });
 
