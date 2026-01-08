@@ -5,7 +5,7 @@
  * These tests verify that different users cannot see or modify each other's data
  * at the end-to-end level with real API and database interactions.
  */
-const { test, expect, setupTest, createTestEvent, generateRealisticTestDistance } = require('./helpers/common');
+const { test, expect, createTestEvent, generateRealisticTestDistance } = require('./helpers/common');
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
 // Helper to create authenticated context with improved performance
