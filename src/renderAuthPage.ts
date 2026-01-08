@@ -52,6 +52,9 @@ export function renderAuthPage() {
                 <button type="submit" class="btn-primary">Login</button>
               </form>
               <p class="auth-toggle">
+                <a href="/password-reset">Forgot your password?</a>
+              </p>
+              <p class="auth-toggle">
                 Don't have an account? <a href="#" id="show-register">Register here</a>
               </p>
             </div>

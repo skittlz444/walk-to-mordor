@@ -8,9 +8,13 @@ import {
   isValidPassword,
   isValidUsername,
   getSessionExpiry,
-  isSessionExpired
+  isSessionExpired,
+  generatePasswordResetToken,
+  getPasswordResetExpiry,
+  isPasswordResetTokenExpired
 } from './auth-utils';
 import { createErrorResponse, createSuccessResponse } from './validators';
+import { sendPasswordResetEmail } from './email-utils';
 
 /**
  * Handle user registration
@@ -463,5 +467,165 @@ export async function handleUpdateProfile(request: Request, env: any, body: any)
     }
     
     return createErrorResponse('Internal server error during profile update', 500);
+  }
+}
+
+/**
+ * Handle password reset request - generates a reset token
+ */
+export async function handlePasswordResetRequest(request: Request, env: any, body: any) {
+  const { email } = body || {};
+
+  // Validate required field
+  if (!email) {
+    return createErrorResponse('Missing required field: email', 400);
+  }
+
+  // Validate email format
+  if (!isValidEmail(email)) {
+    return createErrorResponse('Invalid email format', 400);
+  }
+
+  try {
+    // Get user from database
+    const { results } = await env.DB.prepare(
+      'SELECT id, username, email FROM users WHERE email = ?'
+    ).bind(email).all();
+
+    // For security, return success even if user doesn't exist
+    // This prevents email enumeration attacks
+    if (results.length === 0) {
+      return createSuccessResponse({
+        message: 'If an account with that email exists, a password reset link has been sent to your email address.'
+      }, 200);
+    }
+
+    const user = results[0] as any;
+
+    // Rate limiting: Check recent reset requests (max 3 per hour)
+    const { results: recentRequests } = await env.DB.prepare(
+      `SELECT count(*) as count FROM password_reset_tokens 
+       WHERE user_id = ? AND created_at > datetime('now', '-1 hour')`
+    ).bind(user.id).all();
+
+    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= 3) {
+      console.warn(`Rate limit exceeded for user ${user.id}`);
+      // Return success to hide this failure to prevent enumeration
+      return createSuccessResponse({
+        message: 'If an account with that email exists, a password reset link has been sent to your email address.'
+      }, 200);
+    }
+
+    // Cleanup expired/used tokens
+    try {
+      await env.DB.prepare(
+        'DELETE FROM password_reset_tokens WHERE expires_at < ? OR used = 1'
+      ).bind(new Date().toISOString()).run();
+    } catch (cleanupError) {
+      console.warn('Failed to cleanup expired tokens:', cleanupError);
+      // Continue execution
+    }
+
+    // Generate reset token
+    const token = generatePasswordResetToken();
+    const expiresAt = getPasswordResetExpiry();
+
+    // Store reset token in database
+    await env.DB.prepare(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
+    ).bind(user.id, token, expiresAt).run();
+
+    // Send password reset email
+    const origin = new URL(request.url).origin;
+    const emailResult = await sendPasswordResetEmail(
+      env,
+      user.email,
+      user.username,
+      token,
+      origin
+    );
+
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.error);
+      // Still return success to prevent email enumeration
+      // The token is stored in DB, so user can potentially reset via direct link if they have it
+    }
+
+    return createSuccessResponse({
+      message: 'If an account with that email exists, a password reset link has been sent to your email address.'
+    }, 200);
+  } catch (error: any) {
+    console.error('Database error during password reset request:', error);
+    return createErrorResponse('Internal server error during password reset request', 500);
+  }
+}
+
+/**
+ * Handle password reset - verify token and set new password
+ */
+export async function handlePasswordReset(request: Request, env: any, body: any) {
+  const { token, password } = body || {};
+
+  // Validate required fields
+  if (!token) {
+    return createErrorResponse('Missing required field: token', 400);
+  }
+  if (!password) {
+    return createErrorResponse('Missing required field: password', 400);
+  }
+
+  // Validate password
+  const passwordValidation = isValidPassword(password);
+  if (!passwordValidation.valid) {
+    return createErrorResponse(passwordValidation.errors.join('; '), 400);
+  }
+
+  try {
+    // Get token from database
+    const { results } = await env.DB.prepare(
+      'SELECT id, user_id, expires_at, used FROM password_reset_tokens WHERE token = ?'
+    ).bind(token).all();
+
+    if (results.length === 0) {
+      return createErrorResponse('Invalid password reset token', 400);
+    }
+
+    const resetToken = results[0] as any;
+
+    // Check if token has already been used
+    if (resetToken.used) {
+      return createErrorResponse('This password reset token has already been used', 400);
+    }
+
+    // Check if token is expired
+    if (isPasswordResetTokenExpired(resetToken.expires_at)) {
+      return createErrorResponse('This password reset token has expired', 400);
+    }
+
+    // Generate new salt and hash password
+    const salt = await generateSalt();
+    const passwordHash = await hashPassword(password, salt);
+
+    // Update user's password
+    await env.DB.prepare(
+      'UPDATE users SET password_hash = ?, salt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(passwordHash, salt, resetToken.user_id).run();
+
+    // Mark token as used
+    await env.DB.prepare(
+      'UPDATE password_reset_tokens SET used = 1 WHERE id = ?'
+    ).bind(resetToken.id).run();
+
+    // Invalidate all existing sessions for this user (force re-login)
+    await env.DB.prepare(
+      'DELETE FROM sessions WHERE user_id = ?'
+    ).bind(resetToken.user_id).run();
+
+    return createSuccessResponse({
+      message: 'Password has been reset successfully. Please log in with your new password.'
+    }, 200);
+  } catch (error: any) {
+    console.error('Database error during password reset:', error);
+    return createErrorResponse('Internal server error during password reset', 500);
   }
 }

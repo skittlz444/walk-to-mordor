@@ -131,3 +131,28 @@ export function getSessionExpiry(): string {
 export function isSessionExpired(expiresAt: string): boolean {
   return new Date(expiresAt) < new Date();
 }
+
+/**
+ * Generate a secure password reset token
+ */
+export function generatePasswordResetToken(): string {
+  const buffer = new Uint8Array(32);
+  crypto.getRandomValues(buffer);
+  return Array.from(buffer, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Get password reset token expiry (1 hour from now)
+ */
+export function getPasswordResetExpiry(): string {
+  const expiryDate = new Date();
+  expiryDate.setHours(expiryDate.getHours() + 1);
+  return expiryDate.toISOString();
+}
+
+/**
+ * Check if a password reset token is expired
+ */
+export function isPasswordResetTokenExpired(expiresAt: string): boolean {
+  return new Date(expiresAt) < new Date();
+}

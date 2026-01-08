@@ -5,9 +5,12 @@ import {
   handleLogout, 
   handleSessionValidation, 
   validateSession,
-  handleUpdateProfile
+  handleUpdateProfile,
+  handlePasswordResetRequest,
+  handlePasswordReset
 } from '../../src/auth-handlers';
 import * as authUtils from '../../src/auth-utils';
+import * as emailUtils from '../../src/email-utils';
 
 // Mock auth-utils
 jest.mock('../../src/auth-utils', () => ({
@@ -19,7 +22,15 @@ jest.mock('../../src/auth-utils', () => ({
   isValidPassword: jest.fn(),
   isValidUsername: jest.fn(),
   getSessionExpiry: jest.fn(),
-  isSessionExpired: jest.fn()
+  isSessionExpired: jest.fn(),
+  generatePasswordResetToken: jest.fn(),
+  getPasswordResetExpiry: jest.fn(),
+  isPasswordResetTokenExpired: jest.fn()
+}));
+
+// Mock email-utils
+jest.mock('../../src/email-utils', () => ({
+  sendPasswordResetEmail: jest.fn()
 }));
 
 describe('Auth Handlers', () => {
@@ -39,6 +50,10 @@ describe('Auth Handlers', () => {
     (authUtils.isValidUsername as jest.Mock).mockReturnValue(true);
     (authUtils.getSessionExpiry as jest.Mock).mockReturnValue('2026-02-01T00:00:00Z');
     (authUtils.isSessionExpired as jest.Mock).mockReturnValue(false);
+    (authUtils.generatePasswordResetToken as jest.Mock).mockReturnValue('mock-reset-token');
+    (authUtils.getPasswordResetExpiry as jest.Mock).mockReturnValue('2026-01-06T17:00:00Z');
+    (authUtils.isPasswordResetTokenExpired as jest.Mock).mockReturnValue(false);
+    (emailUtils.sendPasswordResetEmail as jest.Mock).mockResolvedValue({ success: true });
 
     // Mock DB
     mockEnv = {
@@ -56,7 +71,8 @@ describe('Auth Handlers', () => {
     mockRequest = {
       headers: {
         get: jest.fn()
-      }
+      },
+      url: 'https://wtm.haydencarson.com/api/auth/some-action'
     };
   });
 
@@ -892,6 +908,213 @@ describe('Auth Handlers', () => {
         const body = { username: 'newname' };
         const response = await handleUpdateProfile(mockRequest, mockEnv, body);
         expect(response.status).toBe(500);
+    });
+  });
+
+  describe('handlePasswordResetRequest', () => {
+    it('should generate reset token for valid email', async () => {
+      const body = { email: 'test@example.com' };
+      
+      // Mock user exists
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn().mockResolvedValue({
+            results: [{ id: 1, username: 'testuser', email: 'test@example.com' }]
+          })
+        })
+      });
+
+      // Mock rate limit check
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn().mockResolvedValue({
+            results: [{ count: 0 }]
+          })
+        })
+      });
+
+      // Mock cleanup
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          run: jest.fn().mockResolvedValue({ meta: { changes: 0 } })
+        })
+      });
+      
+      // Mock token insert
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          run: jest.fn().mockResolvedValue({ meta: { last_row_id: 1 } })
+        })
+      });
+
+      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.message).toContain('password reset link');
+      expect(emailUtils.sendPasswordResetEmail).toHaveBeenCalledWith(
+        mockEnv,
+        'test@example.com',
+        'testuser',
+        'mock-reset-token',
+        'https://wtm.haydencarson.com'
+      );
+    });
+
+    it('should return success even for non-existent email (security)', async () => {
+      const body = { email: 'nonexistent@example.com' };
+      
+      // Mock user doesn't exist
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn().mockResolvedValue({ results: [] })
+        })
+      });
+
+      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.message).toContain('If an account with that email exists');
+    });
+
+    it('should return 400 for missing email', async () => {
+      const response = await handlePasswordResetRequest(mockRequest, mockEnv, {});
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for invalid email format', async () => {
+      (authUtils.isValidEmail as jest.Mock).mockReturnValue(false);
+      const body = { email: 'invalid-email' };
+      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      expect(response.status).toBe(400);
+    });
+
+    it('should handle database errors gracefully', async () => {
+      const body = { email: 'test@example.com' };
+      mockEnv.DB.prepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
+      
+      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe('handlePasswordReset', () => {
+    it('should reset password with valid token', async () => {
+      const body = { token: 'valid-token', password: 'NewPassword123!' };
+      
+      // Mock token validation
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn().mockResolvedValue({
+            results: [{ id: 1, user_id: 1, expires_at: '2026-02-01T00:00:00Z', used: 0 }]
+          })
+        })
+      });
+      
+      // Mock password update
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          run: jest.fn().mockResolvedValue({ meta: { changes: 1 } })
+        })
+      });
+      
+      // Mock token mark as used
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          run: jest.fn().mockResolvedValue({ meta: { changes: 1 } })
+        })
+      });
+      
+      // Mock session deletion
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          run: jest.fn().mockResolvedValue({ meta: { changes: 0 } })
+        })
+      });
+
+      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.message).toContain('Password has been reset successfully');
+    });
+
+    it('should return 400 for missing token', async () => {
+      const body = { password: 'NewPassword123!' };
+      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for missing password', async () => {
+      const body = { token: 'valid-token' };
+      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for invalid password', async () => {
+      (authUtils.isValidPassword as jest.Mock).mockReturnValue({ 
+        valid: false, 
+        errors: ['Password must be at least 8 characters long'] 
+      });
+      const body = { token: 'valid-token', password: 'weak' };
+      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for invalid token', async () => {
+      const body = { token: 'invalid-token', password: 'NewPassword123!' };
+      
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn().mockResolvedValue({ results: [] })
+        })
+      });
+
+      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('Invalid password reset token');
+    });
+
+    it('should return 400 for already used token', async () => {
+      const body = { token: 'used-token', password: 'NewPassword123!' };
+      
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn().mockResolvedValue({
+            results: [{ id: 1, user_id: 1, expires_at: '2026-02-01T00:00:00Z', used: 1 }]
+          })
+        })
+      });
+
+      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('already been used');
+    });
+
+    it('should return 400 for expired token', async () => {
+      (authUtils.isPasswordResetTokenExpired as jest.Mock).mockReturnValue(true);
+      const body = { token: 'expired-token', password: 'NewPassword123!' };
+      
+      mockEnv.DB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn().mockResolvedValue({
+            results: [{ id: 1, user_id: 1, expires_at: '2020-01-01T00:00:00Z', used: 0 }]
+          })
+        })
+      });
+
+      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('expired');
+    });
+
+    it('should handle database errors gracefully', async () => {
+      const body = { token: 'valid-token', password: 'NewPassword123!' };
+      mockEnv.DB.prepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
+      
+      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      expect(response.status).toBe(500);
     });
   });
 });
