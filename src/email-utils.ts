@@ -1,6 +1,10 @@
 // Email sending utilities using Cloudflare Email Routing
 import { createMimeMessage } from 'mimetext';
 
+// Email configuration constants
+const EMAIL_SENDER_ADDRESS = 'noreply@haydencarson.com';
+const EMAIL_SENDER_NAME = 'Walk to Mordor';
+
 /**
  * Send password reset email with token
  */
@@ -26,8 +30,8 @@ export async function sendPasswordResetEmail(
     
     // Set sender - must be from the domain with Email Routing enabled
     msg.setSender({ 
-      name: 'Walk to Mordor', 
-      addr: 'noreply@haydencarson.com' 
+      name: EMAIL_SENDER_NAME, 
+      addr: EMAIL_SENDER_ADDRESS
     });
     
     // Set recipient
@@ -102,7 +106,7 @@ Walk to Mordor Team`
     
     // Create email message
     const message = new EmailMessage(
-      'noreply@haydencarson.com',
+      EMAIL_SENDER_ADDRESS,
       recipientEmail,
       msg.asRaw()
     );
