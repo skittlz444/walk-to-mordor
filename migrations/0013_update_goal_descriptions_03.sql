@@ -32,7 +32,7 @@ UPDATE goals SET description = 'The Fellowship picks their way down the steepeni
 -- Goal: Climb up North side of Hollin ridge (Distance: 686)
 UPDATE goals SET description = 'The Fellowship ascends the steep, heather-covered slopes of the ridge, their boots crunching on loose stones as they climb. To the west, the land of Hollin falls away in brown undulations, seemingly empty of all living things. Aragorn presses forward with urgency, seeking the high ground to survey the path towards the distant mountains. The silence of Eregion feels heavy here, an ancient quiet that seems to hold its breath as the travellers pass.' WHERE distance = 686 * 1.60934;
 
--- Goal: Top of Hollin Ridge. Crebain fly over. - Boarder of Eregion (Distance: 690)
+-- Goal: Top of Hollin Ridge. Crebain fly over. - Border of Eregion (Distance: 690)
 UPDATE goals SET description = 'Samwise Gamgee points out a strange, flying shadow moving against the wind, which Legolas swiftly identifies as a regiment of Crebain from Dunland. At Aragorn''s urgent cry, the Company scrambles frantically into the deep heather and hollows of the red stone, pressing themselves flat to escape detection. The air fills with the rushing sound of wings and harsh, croaking cries as the black crows wheel overhead, searching the land for intruders. Fear grips the travellers as they lie motionless, listening to the spies of Saruman pass dangerously close to their hiding place.' WHERE distance = 690 * 1.60934;
 
 -- Goal: Sense something flying overhead before dawn. Cross a small stream (Distance: 708)
