@@ -649,12 +649,14 @@ describe('Auth Handlers', () => {
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       const mockRun = jest.fn();
+      const mockFirst = jest.fn();
 
-      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
-      mockBind.mockReturnValue({ all: mockAll, run: mockRun });
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun, first: mockFirst });
+      mockBind.mockReturnValue({ all: mockAll, run: mockRun, first: mockFirst });
       
       mockAll.mockResolvedValueOnce({ results: [] });
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 2 } });
+      mockFirst.mockResolvedValueOnce({ id: 2, username: 'newuser', email: 'newuser@example.com', approved: 1 });
 
       const response = await handleSessionValidation(mockRequest, mockEnv);
       const data = await response.json();
