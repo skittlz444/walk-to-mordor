@@ -46,7 +46,7 @@ This workflow guides the process of updating goal descriptions in the Walk to Mo
 > **NOTE**: The sub-agent should be tasked with generating a description for **only ONE goal at a time**.
 
 Provide the sub-agent with:
-1. The SINGLE goal's distance value and title
+1. The **SINGLE** goal's distance value and title
 2. The anchoring milestones (before and after)
 3. The titles of the goals immediately before and after
 4. Example of a GOOD description (from reference document)

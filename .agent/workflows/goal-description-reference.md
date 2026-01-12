@@ -12,10 +12,10 @@ This document contains reference information for the goal description update pro
 
 | Field | Value |
 |-------|-------|
-| **Last goal updated** | Find Balin's tomb. Attacked by orcs and a troll (838 miles) |
-| **Last distance value** | 838 |
-| **Goals completed** | 56 / 171 |
-| **Current migration file** | migrations/0013_update_goal_descriptions_03.sql |
+| **Last goal updated** | Hills also appear on the west (1220 miles) |
+| **Last distance value** | 1220 |
+| **Goals completed** | 77 / 171 |
+| **Current migration file** | migrations/0015_update_goal_descriptions_05.sql |
 | **Last updated** | 2026-01-12 |
 
 ---
