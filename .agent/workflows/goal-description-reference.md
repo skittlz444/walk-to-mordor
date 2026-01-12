@@ -188,7 +188,7 @@ migrations/00XX_update_goal_descriptions_YY.sql
 ```
 
 Where:
-- `XX` = Next available migration number (currently would be 0011)
+- `XX` = Next available migration number (currently would be 0012)
 - `YY` = Batch number (01, 02, 03, etc.)
 
 Each file should contain **20 UPDATE statements** (except possibly the last file).
