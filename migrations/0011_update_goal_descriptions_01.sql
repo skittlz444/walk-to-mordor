@@ -1,6 +1,6 @@
 -- Migration number: 0011 	 2026-01-12T00:00:00.000Z
 
--- Batch 01: Update goal descriptions for improved accuracy (Goals 4-8)
+-- Batch 01: Update goal descriptions for improved accuracy (Goals 4-23)
 
 -- Goal: Reach Stock Road (Distance: 15)
 UPDATE goals SET description = 'Before the fear of the road truly set in, the hobbits wandered through the winding lanes and hedgerows of the Green Hill Country. The journey took them deep into the heart of Tookland, where the air was still filled with the comfortable, earthy familiarity of the Shire. Yet, as they pressed on towards the Stock Road, the safety of Bag End felt increasingly distant. They were no longer merely walking boundaries; they were stepping out of their known world into the wider, wilder lands.' WHERE distance = 15 * 1.60934;
