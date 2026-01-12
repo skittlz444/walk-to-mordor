@@ -219,12 +219,12 @@ export async function handleSessionValidation(request: Request, env: any) {
           'INSERT INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
         ).bind(username, `${username}@example.com`, passwordHash, salt).run();
         
-        user = {
-          id: result.meta.last_row_id,
-          username,
-          email: `${username}@example.com`,
-          approved: 1
-        };
+        // Fetch the created user to ensure we have the correct ID
+        const createdUser = await env.DB.prepare(
+          'SELECT id, username, email, approved FROM users WHERE username = ?'
+        ).bind(username).first();
+        
+        user = createdUser;
       } else {
         user = results[0];
       }
@@ -322,12 +322,12 @@ export async function validateSession(request: Request, env: any): Promise<
           'INSERT INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
         ).bind(username, `${username}@example.com`, passwordHash, salt).run();
         
-        user = {
-          id: result.meta.last_row_id,
-          username,
-          email: `${username}@example.com`,
-          approved: 1
-        };
+        // Fetch the created user to ensure we have the correct ID
+        const createdUser = await env.DB.prepare(
+          'SELECT id, username, email, approved FROM users WHERE username = ?'
+        ).bind(username).first();
+        
+        user = createdUser;
       } else {
         user = results[0];
       }
