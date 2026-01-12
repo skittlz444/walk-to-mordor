@@ -72,6 +72,10 @@ GUIDELINES:
 - Avoid generic phrases like "a part of their journey" or "a testament to their resolve"
 - Do NOT repeat structural patterns from other descriptions
 - Focus on what makes THIS moment unique in the story
+- **Use ONLY 3rd Person Limited perspective ("The hobbits", "Frodo", "Sam", "The company", "The Fellowship")**
+- **Do NOT use 1st or 2nd person perspective ("I", "We", "You", "Your")**
+- **Ensure the subject is established with a proper noun ("The hobbits", "The company", "Frodo") BEFORE using pronouns like "they" or "them". Do not start the description with "They" or "Them".**
+- **Use British English spelling (e.g., 'travellers' instead of 'travelers', 'grey' instead of 'gray', 'colour' instead of 'color', 'honour' instead of 'honor').**
 
 EXAMPLES:
 [Include GOOD and BAD examples from reference document]

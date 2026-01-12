@@ -12,10 +12,10 @@ This document contains reference information for the goal description update pro
 
 | Field | Value |
 |-------|-------|
-| **Last goal updated** | Camp (271 miles) |
-| **Last distance value** | 271 |
-| **Goals completed** | 23 / 171 |
-| **Current migration file** | migrations/0011_update_goal_descriptions_01.sql |
+| **Last goal updated** | Reached the top of a rise, heading Southeast (528 miles) |
+| **Last distance value** | 528 |
+| **Goals completed** | 36 / 171 |
+| **Current migration file** | migrations/0012_update_goal_descriptions_02.sql |
 | **Last updated** | 2026-01-12 |
 
 ---
