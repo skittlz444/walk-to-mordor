@@ -41,7 +41,7 @@ This workflow guides the process of updating a specific goal description in the 
 
 > **IMPORTANT**: Use a sub-agent for this step to avoid context window bloat and to prevent the new description from being influenced by previous descriptions.
 > **NOTE**: The sub-agent should be tasked with generating a description for **only ONE goal at a time**.
-> **NOTE**: If asked to update multiple goals, use a SEPARATE su-bagent for EACH goal.
+> **NOTE**: If asked to update multiple goals, use a SEPARATE sub-agent for EACH goal.
 
 Provide the sub-agent with:
 1. The **Target Goal's** distance and title.
