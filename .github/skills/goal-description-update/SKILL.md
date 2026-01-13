@@ -1,42 +1,39 @@
 ---
-name: Update Goal Descriptions
-description: Process for updating Walk to Mordor goal descriptions to be more accurate to the book and less repetitive. Use when asked to update or improve goal descriptions.
+name: Targeted Goal Description Update
+description: Process for creating or updating a description for a specific goal in the Walk to Mordor application. Use when asked to update a specific goal's description.
 ---
 
-# Goal Description Update Process
+# Targeted Goal Description Update Process
 
-This workflow guides the process of updating goal descriptions in the Walk to Mordor application to make them:
-- More accurate to the specific part of the book where each goal takes place
-- Less repetitive, generic, and bland
-- Properly anchored to known book milestones
+This workflow guides the process of updating a specific goal description in the Walk to Mordor application.
 
 ## Pre-requisites
 
 - Access to the reference information document: `.agent/workflows/goal-description-reference.md`
-- Familiarity with the goal structure in `migrations/0003_init_goals.sql`
+- Access to `migrations/0003_init_goals.sql` for goal reference.
 
 ---
 
-## Step 1: Identify the Next Goal to Update
+## Step 1: Identify the Target Goal
 
-1. Open the reference document (`.agent/workflows/goal-description-reference.md`)
-2. Check the **Progress Tracking** section for the last goal that was updated
-   - **Note:** Migration `0004` contains initial descriptions but should be considered a baseline/legacy state. If the reference document shows "Not started", begin from Goal 4 (Distance 15) as the first few goals in 0004 are often already high quality. Verify against "Good" examples if in doubt.
-3. Open `migrations/0003_init_goals.sql` to find the NEXT goal after the last completed one
-4. Record:
-   - Goal distance (e.g., `135 * 1.60934`)  
-   - Goal title (e.g., "Reach Bree and meet Strider")
-   - The goal title BEFORE this one
-   - The goal title AFTER this one
+1. Determine which goal the user wants to update.
+   - If the user provides a name or approximate location, search `migrations/0003_init_goals.sql` or `migrations/0019_update_goal_descriptions_09.sql` (or other description updates) to find the matching goal.
+   - You need the **Distance** value to uniquely identify the goal.
+2. Once identified, record:
+   - Goal Distance (e.g., `135`)
+   - Goal Title
+   - The goal title/distance immediately BEFORE this one.
+   - The goal title/distance immediately AFTER this one.
 
 ---
 
 ## Step 2: Identify Anchoring Milestones
 
-1. Using the reference document's **Book Milestones** section, identify:
-   - The milestone that occurs DIRECTLY BEFORE the target goal
-   - The milestone that occurs DIRECTLY AFTER the target goal
-2. These milestones help anchor the goal within the narrative and ensure the description is contextually accurate
+1. Open the reference document (`.agent/workflows/goal-description-reference.md`).
+2. Consult the **Book Milestones** section.
+3. Identify:
+   - The milestone that occurs DIRECTLY BEFORE the target goal.
+   - The milestone that occurs DIRECTLY AFTER the target goal.
 
 ---
 
@@ -44,13 +41,13 @@ This workflow guides the process of updating goal descriptions in the Walk to Mo
 
 > **IMPORTANT**: Use a sub-agent for this step to avoid context window bloat and to prevent the new description from being influenced by previous descriptions.
 > **NOTE**: The sub-agent should be tasked with generating a description for **only ONE goal at a time**.
+> **NOTE**: If asked to update multiple goals, use a SEPARATE su-bagent for EACH goal.
 
 Provide the sub-agent with:
-1. The **SINGLE** goal's distance value and title
-2. The anchoring milestones (before and after)
-3. The titles of the goals immediately before and after
-4. Example of a GOOD description (from reference document)
-5. Example of a BAD description (from reference document)
+1. The **Target Goal's** distance and title.
+2. The context goals (previous and next titles).
+3. The anchoring milestones (before and after).
+4. Reference to GOOD/BAD examples (from reference document).
 
 **Sub-agent prompt template:**
 ```
@@ -86,47 +83,27 @@ Return ONLY the new description text, nothing else.
 
 ---
 
-## Step 4: Save the Description Update
+## Step 4: Create Migration File
 
-1. Check the latest migration file for goal description updates:
-   - Look for files matching pattern: `migrations/00XX_update_goal_descriptions_*.sql`
-   - If no such file exists OR the latest one already has 20 goals, create a new one
+1. Create a new migration file in the `migrations/` folder.
+   - Name format: `migrations/00XX_update_description_[short_goal_name].sql`
+   - Use the next available migration number.
+   - If a migration file for this specific request already exists (e.g. user is iterating), update it. Otherwise, create new.
 
-2. **If creating a new migration file:**
+2. **File Content:**
    ```sql
    -- Migration number: 00XX    [TIMESTAMP]
-   
-   -- Batch X: Update goal descriptions for improved accuracy
    
    -- Goal: [GOAL TITLE] (Distance: [DISTANCE value])
    UPDATE goals SET description = '[NEW DESCRIPTION]' WHERE distance = [DISTANCE] * 1.60934;
    ```
 
 3. **If adding to an existing migration file:**
-   - Count the number of UPDATE statements in the file
-   - If < 20, append the new UPDATE statement **preceded by a comment** with the goal title and distance
-   - If >= 20, create a new migration file instead
-
----
-
-## Step 5: Update Progress Tracking
-
-1. Open `.agent/workflows/goal-description-reference.md`
-2. Update the **Progress Tracking** section:
-   - Change "Last goal updated" to the goal you just completed
-   - Increment the "Goals completed" counter
-   - Update the timestamp
-
----
-
-## Repeat
-
-Continue from Step 1 for the next goal until all goals have been updated.
+   - Do not add Migration Number to an existing migration file, but update it's timestamp
 
 ---
 
 ## Notes
 
-- Each migration file should contain exactly 20 goals (except possibly the last one)
 - The sub-agent isolation is critical to prevent description patterns from becoming repetitive
 - When in doubt about book accuracy, refer to the milestone bracketing to determine the narrative context

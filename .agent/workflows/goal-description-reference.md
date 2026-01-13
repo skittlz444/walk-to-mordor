@@ -1,22 +1,10 @@
 ---
-description: Reference information for goal description updates including progress, examples, and milestones
+description: Reference information for goal description updates including examples, and milestones
 ---
 
 # Goal Description Update Reference
 
 This document contains reference information for the goal description update process.
-
----
-
-## Progress Tracking
-
-| Field | Value |
-|-------|-------|
-| **Last goal updated** | Sam arrives at Bag End at sunset: Home (3991 miles) |
-| **Last distance value** | 3991 |
-| **Goals completed** | 171 / 171 |
-| **Current migration file** | migrations/0019_update_goal_descriptions_09.sql |
-| **Last updated** | 2026-01-13 |
 
 ---
 
@@ -173,10 +161,9 @@ These are definite, well-known events from The Lord of the Rings that can be use
 ## Goal List Quick Reference
 
 For the complete list of goals with their distances and titles, see:
-- `migrations/0003_init_goals.sql` - Original goal definitions
-- `migrations/0004_add_goal_descriptions.sql` - Current descriptions
-
-Total goals: **171**
+- `migrations/0003_init_goals.sql` - Original goal definitions (Distances and Titles)
+- `migrations/0004_add_goal_descriptions.sql` - Initial descriptions
+- Check the latest `migrations/00XX_update_*.sql` files for the most recent text.
 
 ---
 
@@ -184,11 +171,10 @@ Total goals: **171**
 
 New migration files for description updates should follow:
 ```
-migrations/00XX_update_goal_descriptions_YY.sql
+migrations/00XX_update_description_[short_goal_name].sql
 ```
 
 Where:
-- `XX` = Next available migration number (currently would be 0012)
-- `YY` = Batch number (01, 02, 03, etc.)
-
-Each file should contain **20 UPDATE statements** (except possibly the last file).
+- `XX` = Next available migration number
+- `short_goal_name` = A short, descriptive slug for the goal (e.g., `weathertop`, `bree`)
+> If multiple goals have been asked to be updated, use a batch number `YY` instead of `[short_goal_name]`
