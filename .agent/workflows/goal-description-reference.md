@@ -12,10 +12,10 @@ This document contains reference information for the goal description update pro
 
 | Field | Value |
 |-------|-------|
-| **Last goal updated** | Destroy the ring in Mount Doom (1779 miles) |
-| **Last distance value** | 1779 |
-| **Goals completed** | 96 / 171 |
-| **Current migration file** | migrations/0015_update_goal_descriptions_05.sql |
+| **Last goal updated** | Camp at base of an out-thrust hill of Methedras (2539 miles) |
+| **Last distance value** | 2539 |
+| **Goals completed** | 116 / 171 |
+| **Current migration file** | migrations/0016_update_goal_descriptions_06.sql |
 | **Last updated** | 2026-01-13 |
 
 ---
