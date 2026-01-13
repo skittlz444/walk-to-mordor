@@ -12,10 +12,10 @@ This document contains reference information for the goal description update pro
 
 | Field | Value |
 |-------|-------|
-| **Last goal updated** | Cross The Last Bridge (3199 miles) |
-| **Last distance value** | 3199 |
-| **Goals completed** | 136 / 171 |
-| **Current migration file** | migrations/0017_update_goal_descriptions_07.sql |
+| **Last goal updated** | Reach the crest of the Far Downs (3669 miles) |
+| **Last distance value** | 3669 |
+| **Goals completed** | 156 / 171 |
+| **Current migration file** | migrations/0018_update_goal_descriptions_08.sql |
 | **Last updated** | 2026-01-13 |
 
 ---
