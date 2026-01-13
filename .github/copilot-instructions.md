@@ -8,8 +8,9 @@ The underlying infrastructure for this project is built on Cloudflare Workers, u
 
 Both the api and site are deployed to a single Worker with route-based request handling.
 
-## IDE Tools
-You have access to a number of IDE tools when running in VS Code, including direct file editing, this means you NEVER have to use terminal commands to edit files. You also have access to sub-agents for context isolation in tasks that benefit from it, and to-do lists for task management.
+## Tools
+Prioritize `create_file`, `edit_file` and `replace_string_in_file`, NEVER use `run_in_terminal` for file manipulation.
+You have access to a number of IDE tools when running in VS Code, including direct file editing, this means you **NEVER** have to use terminal commands to edit files. You also have access to sub-agents for context isolation in tasks that benefit from it, and to-do lists for task management.
 
 ## MCP Servers
 You have access to a number of powerful MCP Servers for development and testing, including:
