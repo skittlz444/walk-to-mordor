@@ -12,10 +12,10 @@ This document contains reference information for the goal description update pro
 
 | Field | Value |
 |-------|-------|
-| **Last goal updated** | Camp at base of an out-thrust hill of Methedras (2539 miles) |
-| **Last distance value** | 2539 |
-| **Goals completed** | 116 / 171 |
-| **Current migration file** | migrations/0016_update_goal_descriptions_06.sql |
+| **Last goal updated** | Cross The Last Bridge (3199 miles) |
+| **Last distance value** | 3199 |
+| **Goals completed** | 136 / 171 |
+| **Current migration file** | migrations/0017_update_goal_descriptions_07.sql |
 | **Last updated** | 2026-01-13 |
 
 ---
