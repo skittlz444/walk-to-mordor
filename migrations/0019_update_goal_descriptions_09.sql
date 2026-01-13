@@ -1,4 +1,4 @@
--- Migration number: 0019    2026-01-13
+-- Migration number: 0019    2026-01-13T01:00:00.000Z
 
 -- Batch 09: Update goal descriptions for improved accuracy
 
