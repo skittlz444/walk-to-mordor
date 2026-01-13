@@ -12,11 +12,11 @@ This document contains reference information for the goal description update pro
 
 | Field | Value |
 |-------|-------|
-| **Last goal updated** | Find Balin's tomb. Attacked by orcs and a troll (838 miles) |
-| **Last distance value** | 838 |
-| **Goals completed** | 56 / 171 |
-| **Current migration file** | migrations/0013_update_goal_descriptions_03.sql |
-| **Last updated** | 2026-01-12 |
+| **Last goal updated** | Destroy the ring in Mount Doom (1779 miles) |
+| **Last distance value** | 1779 |
+| **Goals completed** | 96 / 171 |
+| **Current migration file** | migrations/0015_update_goal_descriptions_05.sql |
+| **Last updated** | 2026-01-13 |
 
 ---
 

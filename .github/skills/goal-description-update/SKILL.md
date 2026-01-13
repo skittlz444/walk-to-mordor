@@ -46,7 +46,7 @@ This workflow guides the process of updating goal descriptions in the Walk to Mo
 > **NOTE**: The sub-agent should be tasked with generating a description for **only ONE goal at a time**.
 
 Provide the sub-agent with:
-1. The SINGLE goal's distance value and title
+1. The **SINGLE** goal's distance value and title
 2. The anchoring milestones (before and after)
 3. The titles of the goals immediately before and after
 4. Example of a GOOD description (from reference document)
@@ -55,6 +55,7 @@ Provide the sub-agent with:
 **Sub-agent prompt template:**
 ```
 Create a new goal description for the Walk to Mordor fitness app for a SINGLE goal.
+> If you have been presented with more than one goal, exit early, returning an ERROR to the parent agent that you can only process one goal.
 
 GOAL INFORMATION:
 - Distance: [DISTANCE VALUE]
