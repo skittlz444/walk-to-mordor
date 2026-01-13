@@ -4,6 +4,7 @@
   width: 100vw;
   max-width: 700px;
   margin: 0 auto 2em auto;
+  padding-bottom: 200px; /* Add padding to prevent calendar from covering last goals */
   text-align: center;
 }
 
