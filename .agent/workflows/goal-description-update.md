@@ -99,7 +99,7 @@ Return ONLY the new description text, nothing else.
    ```
 
 3. **If adding to an existing migration file:**
-   - Do not add Migration Number to an existing migration file, but update it's timestamp
+   - Do not add Migration Number to an existing migration file, but update its timestamp
 
 ---
 
