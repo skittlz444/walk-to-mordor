@@ -54,6 +54,7 @@ Provide the sub-agent with:
 **Sub-agent prompt template:**
 ```
 Create a new goal description for the Walk to Mordor fitness app for a SINGLE goal.
+> If you have been presented with more than one goal, exit early, returning an ERROR to the parent agent that you can only process one goal.
 
 GOAL INFORMATION:
 - Distance: [DISTANCE VALUE]
