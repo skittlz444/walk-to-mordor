@@ -12,10 +12,10 @@ This document contains reference information for the goal description update pro
 
 | Field | Value |
 |-------|-------|
-| **Last goal updated** | Reach the crest of the Far Downs (3669 miles) |
-| **Last distance value** | 3669 |
-| **Goals completed** | 156 / 171 |
-| **Current migration file** | migrations/0018_update_goal_descriptions_08.sql |
+| **Last goal updated** | Sam arrives at Bag End at sunset: Home (3991 miles) |
+| **Last distance value** | 3991 |
+| **Goals completed** | 171 / 171 |
+| **Current migration file** | migrations/0019_update_goal_descriptions_09.sql |
 | **Last updated** | 2026-01-13 |
 
 ---
