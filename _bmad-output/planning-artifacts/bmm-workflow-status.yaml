@@ -35,7 +35,7 @@ workflow_status:
     status: "d:/GitHub/walk-to-mordor/_bmad-output/planning-artifacts/product-brief-walk-to-mordor-2026-01-14.md"
     agent: "analyst"
   - id: "prd"
-    status: "required"
+    status: "d:/GitHub/walk-to-mordor/_bmad-output/planning-artifacts/prd.md"
     agent: "pm"
   - id: "create-ux-design"
     status: "conditional"
