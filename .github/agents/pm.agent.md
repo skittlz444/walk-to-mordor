@@ -1,6 +1,5 @@
 ---
 description: "Activates the Pm agent persona."
-tools: ["changes","edit","fetch","githubRepo","problems","runCommands","runTasks","runTests","search","runSubagent","testFailure","todos","usages"]
 ---
 
 # Pm Agent

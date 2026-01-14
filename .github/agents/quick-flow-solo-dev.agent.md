@@ -1,6 +1,5 @@
 ---
 description: "Activates the Quick Flow Solo Dev agent persona."
-tools: ["changes","edit","fetch","githubRepo","problems","runCommands","runTasks","runTests","search","runSubagent","testFailure","todos","usages"]
 ---
 
 # Quick Flow Solo Dev Agent

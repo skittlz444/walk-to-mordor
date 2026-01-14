@@ -49,7 +49,7 @@ A free, accessible, and deeply immersive PWA that tracks distance not just as ki
 
 ### Key Differentiators
 
-*   **Deep Lore Integration:** 191+ story milestones with rich descriptions from the books, creating a true companion experience.
+*   **Deep Lore Integration:** 171 story milestones with rich descriptions from the books, creating a true companion experience.
 *   **Accessibility:** A PWA that works on any device without paywalls or specialized hardware.
 *   **Future Vision:** Plans for interactive map visualization and "Fellowship" (multiplayer) features to drive camaraderie.
 *   **Emotional Resonance:** Connects the physical effort of exercise to the epic struggle of the characters.
@@ -101,7 +101,7 @@ Users typically discover the app through niche communities (LOTR fan groups, sub
 
 #### Long-term Retention
 *   **The Return Journey:** After reaching Mount Doom, the "Journey Home" offers another 1-2 years of engagement.
-*   **Completionism:** Unlocking every single one of the 191+ milestones.
+*   **Completionism:** Unlocking every single one of the 171 milestones.
 
 ---
 
@@ -141,7 +141,7 @@ Users typically discover the app through niche communities (LOTR fan groups, sub
 *   **User Management:** Secure Authentication (Register/Login/Reset) with user data isolation.
 *   **Activity Logging:** Calendar-based interface for manually logging daily walking/running distance.
 *   **Progress Tracking:** Calculation of total cumulative distance (Note: % progress is hidden to avoid demotivation early on).
-*   **Narrative Milestones:** 191+ goals with rich text descriptions from the source material, covering the full round trip (Shire -> Mordor -> Shire).
+*   **Narrative Milestones:** 171 goals with rich text descriptions from the source material, covering the full round trip (Shire -> Mordor -> Shire).
 *   **Visual Immersion:** High-quality imagery associated with milestones to provide visual rewards (served from `public` assets).
 *   **Infrastructure:** Scalable PWA deployed on Cloudflare Workers with D1 database.
 
