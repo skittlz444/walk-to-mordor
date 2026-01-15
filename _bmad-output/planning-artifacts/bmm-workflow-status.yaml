@@ -44,7 +44,7 @@ workflow_status:
     status: "docs/architecture.md"
     agent: "architect"
   - id: "create-epics-and-stories"
-    status: "required"
+    status: "_bmad-output/planning-artifacts/epics.md"
     agent: "pm"
   - id: "test-design"
     status: "optional"
