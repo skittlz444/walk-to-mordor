@@ -129,7 +129,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ## Epic List
 
-### Epic 1: Phase 1 Polish & Completion
+### Epic 1: Phase 1 Polish & Completion (Issue #150)
 
 **Goal:** Complete all remaining Phase 1 polish items - autonomous registration via email confirmation, intermediary goals to improve narrative pacing, missing milestone photos, UX improvements, and frontend infrastructure setup for future development.
 
@@ -147,7 +147,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-### Epic 2: Interactive Journey Map (Phase 2 Atlas)
+### Epic 2: Interactive Journey Map (Phase 2 Atlas) (Issue #151)
 
 **Goal:** Users can view their journey progress on an interactive, zoomable map of Middle-earth, see their breadcrumb trail, and click waypoints to explore unlocked milestones.
 
@@ -159,7 +159,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-### Epic 3: Fellowship Features (Phase 3)
+### Epic 3: Fellowship Features (Phase 3) (Issue #152)
 
 **Goal:** Users can create/join parties (Fellowships), view combined group progress, and share their journey with friends for social motivation.
 
@@ -177,7 +177,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-### Epic 4: Admin Portal (Post-Fellowship)
+### Epic 4: Admin Portal (Post-Fellowship) (Issue #153)
 
 **Goal:** Dedicated admin interface for content management - updating milestone descriptions, managing goals, and viewing system metrics.
 
@@ -187,7 +187,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-### Epic 5: Races (Competitive Events)
+### Epic 5: Races (Competitive Events) (Issue #154)
 
 **Goal:** Time-limited competitive events where users can join races and compete for progress within a specific timeframe.
 
@@ -203,7 +203,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ### Epic 1: Phase 1 Polish & Completion
 
-#### Story 1.1: Preact Infrastructure Setup
+#### Story 1.1: Preact Infrastructure Setup (Issue #155)
 
 **Priority:** P0 (Blocker)
 
@@ -226,7 +226,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 1.2: Email Service Migration
+#### Story 1.2: Email Service Migration (Issue #156)
 
 **Priority:** P0 (Blocker for Auth Stories)
 
@@ -249,7 +249,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 1.3: Email Confirmation Flow
+#### Story 1.3: Email Confirmation Flow (Issue #149)
 
 **Priority:** P1
 
@@ -271,7 +271,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 1.4: Intermediary Goals System
+#### Story 1.4: Intermediary Goals System (Issue #140)
 
 **Priority:** P1
 
@@ -292,7 +292,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 1.5: Missing Milestone Images
+#### Story 1.5: Missing Milestone Images (Issue #105)
 
 **Priority:** P2
 
@@ -312,7 +312,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 1.6: Image Optimization Script
+#### Story 1.6: Image Optimization Script (Issue #157)
 
 **Priority:** P2
 
@@ -333,7 +333,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 1.7: UX Polish - Modal & Input Improvements
+#### Story 1.7: UX Polish - Modal & Input Improvements (Issue #158)
 
 **Priority:** P2
 
@@ -353,7 +353,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 1.8: UX Polish - Goals Display Improvements
+#### Story 1.8: UX Polish - Goals Display Improvements (Issue #159)
 
 **Priority:** P2
 
@@ -372,7 +372,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 1.9: UX Polish - Profile Icon & CSS Variables
+#### Story 1.9: UX Polish - Profile Icon & CSS Variables (Issue #160)
 
 **Priority:** P3
 
@@ -393,7 +393,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ### Epic 2: Interactive Journey Map
 
-#### Story 2.1: Map Page Shell & Navigation
+#### Story 2.1: Map Page Shell & Navigation (Issue #161)
 
 **Priority:** P1
 
@@ -411,7 +411,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 2.2: Map Canvas & Base Image Layer
+#### Story 2.2: Map Canvas & Base Image Layer (Issue #162)
 
 **Priority:** P1
 
@@ -435,7 +435,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 2.3: Journey Path Rendering
+#### Story 2.3: Journey Path Rendering (Issue #163)
 
 **Priority:** P1
 
@@ -455,7 +455,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 2.4: Current Position Marker
+#### Story 2.4: Current Position Marker (Issue #164)
 
 **Priority:** P1
 
@@ -475,7 +475,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 2.5: Waypoint Markers (Milestones on Map)
+#### Story 2.5: Waypoint Markers (Milestones on Map) (Issue #165)
 
 **Priority:** P1
 
@@ -497,7 +497,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 2.6: Waypoint Detail Popup
+#### Story 2.6: Waypoint Detail Popup (Issue #166)
 
 **Priority:** P2
 
@@ -517,7 +517,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 2.7: Map State Management
+#### Story 2.7: Map State Management (Issue #167)
 
 **Priority:** P2
 
@@ -537,7 +537,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 2.8: Map Visual Testing
+#### Story 2.8: Map Visual Testing (Issue #168)
 
 **Priority:** P2
 
@@ -559,7 +559,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ### Epic 3: Fellowship Features
 
-#### Story 3.1: Fellowship Database Schema
+#### Story 3.1: Fellowship Database Schema (Issue #169)
 
 **Priority:** P0 (Blocker)
 
@@ -582,7 +582,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.2: Create Fellowship API
+#### Story 3.2: Create Fellowship API (Issue #170)
 
 **Priority:** P1
 
@@ -604,7 +604,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.3: Invite & Join Fellowship API
+#### Story 3.3: Invite & Join Fellowship API (Issue #171)
 
 **Priority:** P1
 
@@ -626,7 +626,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.4: Fellowship Progress Calculation API
+#### Story 3.4: Fellowship Progress Calculation API (Issue #172)
 
 **Priority:** P1
 
@@ -651,7 +651,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.5: Leave Fellowship API
+#### Story 3.5: Leave Fellowship API (Issue #173)
 
 **Priority:** P1
 
@@ -671,7 +671,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.6: Fellowship UI - Dashboard Integration
+#### Story 3.6: Fellowship UI - Dashboard Integration (Issue #174)
 
 **Priority:** P1
 
@@ -690,7 +690,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.7: Fellowship UI - Management Page
+#### Story 3.7: Fellowship UI - Management Page (Issue #175)
 
 **Priority:** P2
 
@@ -712,7 +712,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.8: Fellowship Progress Activity Feed
+#### Story 3.8: Fellowship Progress Activity Feed (Issue #176)
 
 **Priority:** P2
 
@@ -732,7 +732,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.9: Fellowship Notifications - Party Milestones
+#### Story 3.9: Fellowship Notifications - Party Milestones (Issue #177)
 
 **Priority:** P3
 
@@ -751,7 +751,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.10: Fellowship Privacy & Authorization
+#### Story 3.10: Fellowship Privacy & Authorization (Issue #178)
 
 **Priority:** P1
 
@@ -771,9 +771,9 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-### Epic 4: Admin Portal
+### Epic 4: Admin Portal (Issue #153)
 
-#### Story 4.1: Admin Authentication & Authorization
+#### Story 4.1: Admin Authentication & Authorization (Issue #179)
 
 **Priority:** P0 (Blocker)
 
@@ -791,7 +791,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 4.2: Admin Dashboard Shell
+#### Story 4.2: Admin Dashboard Shell (Issue #180)
 
 **Priority:** P1
 
@@ -808,7 +808,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 4.3: Goal Management - List View
+#### Story 4.3: Goal Management - List View (Issue #181)
 
 **Priority:** P1
 
@@ -826,7 +826,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 4.4: Goal Management - Edit Goal
+#### Story 4.4: Goal Management - Edit Goal (Issue #182)
 
 **Priority:** P1
 
@@ -851,7 +851,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 4.5: Goal Management - Image Upload to R2
+#### Story 4.5: Goal Management - Image Upload to R2 (Issue #183)
 
 **Priority:** P2
 
@@ -877,7 +877,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 4.6: Goal Management - Add Intermediary Goal
+#### Story 4.6: Goal Management - Add Intermediary Goal (Issue #184)
 
 **Priority:** P2
 
@@ -900,7 +900,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ### Epic 5: Races (Competitive Events)
 
-#### Story 5.1: Race Database Schema
+#### Story 5.1: Race Database Schema (Issue #185)
 
 **Priority:** P0 (Blocker)
 
@@ -920,7 +920,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 5.2: Race Management API (Admin)
+#### Story 5.2: Race Management API (Admin) (Issue #186)
 
 **Priority:** P1
 
@@ -938,7 +938,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 5.3: Race Join & Leave API
+#### Story 5.3: Race Join & Leave API (Issue #187)
 
 **Priority:** P1
 
@@ -957,7 +957,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 5.4: Race Leaderboard API
+#### Story 5.4: Race Leaderboard API (Issue #188)
 
 **Priority:** P1
 
@@ -975,7 +975,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 5.5: Race UI - Discovery & Join
+#### Story 5.5: Race UI - Discovery & Join (Issue #189)
 
 **Priority:** P2
 
@@ -993,7 +993,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 5.6: Race UI - Leaderboard & Progress
+#### Story 5.6: Race UI - Leaderboard & Progress (Issue #190)
 
 **Priority:** P2
 
@@ -1015,20 +1015,20 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ## Summary
 
-| Epic | Stories | Priority Range |
-|------|---------|----------------|
-| Epic 1: Phase 1 Polish | 9 | P0-P3 |
-| Epic 2: Interactive Map | 8 | P1-P2 |
-| Epic 3: Fellowship | 10 | P0-P3 |
-| Epic 4: Admin Portal | 6 | P0-P2 |
-| Epic 5: Races | 6 | P0-P2 |
-| **Total** | **39** | |
+| Epic | Issue # | Stories | Priority Range |
+|------|---------|---------|----------------|
+| Epic 1: Phase 1 Polish | #150 | 9 | P0-P3 |
+| Epic 2: Interactive Map | #151 | 8 | P1-P2 |
+| Epic 3: Fellowship | #152 | 10 | P0-P3 |
+| Epic 4: Admin Portal | #153 | 6 | P0-P2 |
+| Epic 5: Races | #154 | 6 | P0-P2 |
+| **Total** | | **39** | |
 
 ### Recommended Implementation Order
 
-1. **Epic 1** (Stories 1.1-1.2 first as blockers, then remaining)
-2. **Epic 2** (After Preact infrastructure)
-3. **Epic 3** (Core Fellowship features)
-4. **Epic 5** (Races, leverages Fellowship patterns)
-5. **Epic 4** (Admin portal, can be parallelized with Epic 3)
+1. **Epic 1** (#150) - Stories 1.1-1.2 first as blockers, then remaining
+2. **Epic 2** (#151) - After Preact infrastructure
+3. **Epic 3** (#152) - Core Fellowship features
+4. **Epic 5** (#154) - Races, leverages Fellowship patterns
+5. **Epic 4** (#153) - Admin portal, can be parallelized with Epic 3
 
