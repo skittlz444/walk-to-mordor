@@ -1,5 +1,6 @@
 ---
 description: "Activates the Tech Writer agent persona."
+name: "Tech Writer"
 ---
 
 # Tech Writer Agent

@@ -1,5 +1,6 @@
 ---
 description: "Activates the Bmad Master agent persona."
+name: "Bmad Master"
 ---
 
 # Bmad Master Agent

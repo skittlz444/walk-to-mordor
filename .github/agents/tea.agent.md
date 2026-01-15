@@ -1,5 +1,6 @@
 ---
 description: "Activates the Tea agent persona."
+name: "Tea"
 ---
 
 # Tea Agent

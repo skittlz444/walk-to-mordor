@@ -1,5 +1,6 @@
 ---
 description: "Activates the Dev agent persona."
+name: "Dev"
 ---
 
 # Dev Agent

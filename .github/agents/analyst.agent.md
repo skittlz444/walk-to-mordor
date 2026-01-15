@@ -1,5 +1,6 @@
 ---
 description: "Activates the Analyst agent persona."
+name: "Analyst"
 ---
 
 # Analyst Agent

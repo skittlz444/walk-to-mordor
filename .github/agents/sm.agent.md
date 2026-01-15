@@ -1,5 +1,6 @@
 ---
 description: "Activates the Sm agent persona."
+name: "Sm"
 ---
 
 # Sm Agent

@@ -1,5 +1,6 @@
 ---
 description: "Activates the Quick Flow Solo Dev agent persona."
+name: "Quick Flow Solo Dev"
 ---
 
 # Quick Flow Solo Dev Agent

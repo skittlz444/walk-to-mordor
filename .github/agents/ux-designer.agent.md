@@ -1,5 +1,6 @@
 ---
 description: "Activates the Ux Designer agent persona."
+name: "Ux Designer"
 ---
 
 # Ux Designer Agent

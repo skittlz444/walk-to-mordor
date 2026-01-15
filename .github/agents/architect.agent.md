@@ -1,5 +1,6 @@
 ---
 description: "Activates the Architect agent persona."
+name: "Architect"
 ---
 
 # Architect Agent

@@ -1,5 +1,6 @@
 ---
 description: "Activates the Pm agent persona."
+name: "Pm"
 ---
 
 # Pm Agent
