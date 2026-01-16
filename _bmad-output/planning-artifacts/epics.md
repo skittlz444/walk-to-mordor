@@ -591,7 +591,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Acceptance Criteria:**
 - [ ] POST `/api/party` - Create new party
 - [ ] Request body: { name: string }
-- [ ] Generate unique invite code (8 char alphanumeric)
+- [ ] Generate unique invite code (8 char alphanumeric) - **Must be cryptographically secure/non-enumerable**
 - [ ] Set creator as leader in party_members with `distance_at_join` = current total distance
 - [ ] Return party details including invite code
 - [ ] Validate: name required, max 50 chars
@@ -619,6 +619,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Validate: Cannot join own party twice
 - [ ] Return 404 for invalid invite codes
 - [ ] Return 403 if user already in a different party
+- [ ] **Security:** Verify implicit opt-in (joining is the consent action)
+- [ ] **Security:** Validate Invite Code integrity (prevent enumeration/brute-force)
 
 **FRs:** FR_PARTY_02, FR_PARTY_03
 
@@ -641,6 +643,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Include breakdown by member: { user_id, display_name, contribution }
 - [ ] For incremental mode, `contribution` = current total - distance_at_join
 - [ ] Cache calculation for 5 minutes (invalidate on new log)
+- [ ] **Security:** Validate session user is a member of `party_id` (IDOR Prevention)
+- [ ] **Privacy:** Ensure individual progress is ONLY exposed to confirmed party members
 
 **FRs:** FR_PARTY_04, FR_PARTY_05
 
@@ -662,7 +666,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Set member status to 'left' (soft delete, preserve history)
 - [ ] If leader leaves: transfer leadership to oldest member, or dissolve if empty
 - [ ] Return success confirmation
-- [ ] Validate: User must be member of party
+- [ ] Validate: User must be member of party (IDOR Check)
 - [ ] Recalculate party progress after member leaves (exclude left members)
 
 **FRs:** FR_PARTY_06
@@ -753,21 +757,15 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 #### Story 3.10: Fellowship Privacy & Authorization (Issue #178)
 
-**Priority:** P1
+**Status:** Deprecated / Merged into Stories 3.2, 3.3, 3.4, 3.5
 
-**Description:** Ensure proper authorization and privacy controls for Fellowship features.
-
-**Acceptance Criteria:**
-- [ ] All party endpoints validate user membership
-- [ ] Party data only visible to members
-- [ ] Invite code is only secret (not enumerable)
-- [ ] User's individual progress remains private (not exposed via party)
-- [ ] Party progress is opt-in (members chose to join)
-- [ ] IDOR prevention: verify party_id access on every request
-
-**NFRs:** NFR_SEC_02, NFR_PRIV_01
-
-**Dependencies:** Story 3.2
+**Requirements Distributed:**
+- All party endpoints validate user membership -> Distributed to individual API stories
+- Party data only visible to members -> Distributed to Story 3.4
+- Invite code is only secret -> Distributed to Story 3.2
+- User's individual progress remains private -> Distributed to Story 3.4
+- Party progress is opt-in -> Distributed to Story 3.3
+- IDOR prevention -> Distributed to all API stories
 
 ---
 
