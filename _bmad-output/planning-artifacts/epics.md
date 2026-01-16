@@ -345,7 +345,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] **Distance Input Clarity**: Input field must clearly indicate "km" via suffix or placeholder.
 - [ ] **Quick Entry**: Add "+1km" and "+5km" buttons that increment the input value.
 - [ ] **Touch Friendliness**: All interactive elements must be ≥44x44 CSS pixels.
-- [ ] **Mobile Viewport**: Layout must be broken-proof on small screens (iPhone SE / 320px).
+- [ ] **Mobile Viewport**: Layout must not break and must remain functional on small screens (iPhone SE / 320px).
 
 **FRs:** UX_MODAL_01, UX_INPUT_01, UX_ENTRY_01
 
