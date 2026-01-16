@@ -29,7 +29,7 @@ so that **I feel constantly rewarded and immersed in the journey regardless of w
 
 - [ ] **Image Optimization & Formatting**
   - [ ] Convert all images (new and legacy) to **WebP**.
-  - [ ] Generate **High-Res** versions (Max 1920px width, Quality 85, <25MB).
+  - [ ] Generate **High-Res** versions (Max 2560px width, Quality 90, <25MB).
   - [ ] Generate **Thumbnail** versions (Max 400px width, Quality 60, <20KB).
   - [ ] Place in `public/img/highres/` and `public/img/thumbnails/`.
 
