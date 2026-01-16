@@ -16,7 +16,7 @@ so that **I can quickly record my kilometers without friction or confusion**.
 2.  **Distance Input Clarity**: The distance input field must clearly indicate "km" as the unit, either via a visible suffix or a persistent placeholder.
 3.  **Quick Entry Buttons**: Add "+1km" and "+5km" buttons next to the input field. Clicking them increments the current input value (or sets it if empty).
 4.  **Touch Friendliness**: All interactive elements (buttons, inputs) must meet a minimum target size of 44x44 CSS pixels for mobile usability.
-5.  **Mobile Viewport**: Layout must remain broken-proof on small screens (iPhone SE / 320px width).
+5.  **Mobile Viewport**: Layout must not break and must maintain its layout on small screens (iPhone SE / 320px width).
 
 ## Tasks / Subtasks
 
