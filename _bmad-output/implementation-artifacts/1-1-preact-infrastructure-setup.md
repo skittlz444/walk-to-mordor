@@ -32,7 +32,7 @@ so that **we can build modern, interactive UI components (like the Map) using an
 
 - [ ] **Initialize Client Project**
   - [ ] Create `client/` folder structure.
-  - [ ] Add devDependencies to root `package.json` for `preact`, `vite`, etc. (Monorepo-lite style prefered for simplicity, or separate if needed).
+  - [ ] Add devDependencies to root `package.json` for `preact`, `vite`, etc. (Monorepo-lite style preferred for simplicity, or separate if needed).
 - [ ] **Install Dependencies**
   - [ ] Runtime: `npm install preact @preact/signals`
   - [ ] Dev: `npm install -D vite @preact/preset-vite typescript @types/node`
