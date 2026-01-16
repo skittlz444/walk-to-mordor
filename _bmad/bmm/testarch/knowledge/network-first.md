@@ -211,7 +211,7 @@ test('order times out after 10 seconds', async ({ page }) => {
   // Stub delayed response (never resolves within timeout)
   await page.route(
     '**/api/orders',
-    (route) => new Promise(() => {}), // Never resolves - simulates timeout
+    (route) => new Promise(() => {}), // Intentional: unresolved promise to simulate network timeout in tests; do NOT use this pattern in production code
   );
 
   await page.goto('/checkout');
