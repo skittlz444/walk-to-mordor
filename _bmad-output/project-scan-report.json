@@ -1,0 +1,35 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-01-14T05:10:00.000Z",
+    "last_updated": "2026-01-14T05:10:00.000Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "exhaustive",
+  "project_root": "D:/GitHub/walk-to-mordor",
+  "output_folder": "D:/GitHub/walk-to-mordor/_bmad-output",
+  "completed_steps": [
+    "step_1",
+    "step_2",
+    "step_3",
+    "step_4",
+    "step_5"
+  ],
+  "current_step": "complete",
+  "findings": {
+    "project_type": "web",
+    "architecture": "monolith",
+    "database": "d1",
+    "frontend": "ssr-vanilla"
+  },
+  "outputs_generated": [
+    "project-scan-report.json",
+    "docs/index.md",
+    "docs/architecture.md",
+    "docs/data-models.md",
+    "docs/api-reference.md",
+    "docs/ui-overview.md",
+    "docs/project-summary.md"
+  ],
+  "resume_instructions": "Starting from step 1"
+}

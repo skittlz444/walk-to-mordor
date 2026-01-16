@@ -1,1 +1,0 @@
-/goal-description-update update the next goal description, sub-agent's aren't available in this ide, so do not use them, browser subagent is not a suitable subagent. perform the subagent tasks directly in the main agent, and only update a single goal description
