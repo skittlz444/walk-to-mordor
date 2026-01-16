@@ -342,7 +342,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Acceptance Criteria:**
 - [ ] **Modal Button Styling**: "Add Walk" and "Cancel" buttons must have background colors, padding, and hover states matching auth buttons (no transparent text-only buttons).
-- [ ] **Distance Input Clarity**: Input field must clear indicate "km" via suffix or placeholder.
+- [ ] **Distance Input Clarity**: Input field must clearly indicate "km" via suffix or placeholder.
 - [ ] **Quick Entry**: Add "+1km" and "+5km" buttons that increment the input value.
 - [ ] **Touch Friendliness**: All interactive elements must be ≥44x44 CSS pixels.
 - [ ] **Mobile Viewport**: Layout must be broken-proof on small screens (iPhone SE / 320px).
