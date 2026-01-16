@@ -8,7 +8,7 @@ Issue: #149
 ## Story
 
 As a **New User**,
-I want **to confirm my email address addresses after registration**,
+I want **to confirm my email address after registration**,
 so that **I can activate my account autonomously without waiting for manual administrator approval.**
 
 ## Acceptance Criteria
