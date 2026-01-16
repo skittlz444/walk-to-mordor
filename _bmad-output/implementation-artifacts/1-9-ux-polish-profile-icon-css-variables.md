@@ -66,7 +66,7 @@ so that **the application feels polished, immersive, and I can easily access my 
 
 ### References
 - [UX Design Specification](docs/ux-design.md#current-design-system)
-- [Epic 1 Definitions](planning-artifacts/epics.md)
+- [Epic 1 Definitions](_bmad-output/planning-artifacts/epics.md)
 
 ## Dev Agent Record
 
