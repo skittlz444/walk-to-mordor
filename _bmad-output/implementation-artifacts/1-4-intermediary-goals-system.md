@@ -19,7 +19,8 @@ so that **I can improve the narrative pacing and density of the journey without 
 5.  **Sorting Logic**: The application (backend and frontend) must strictly sort goals by `distance ASC`. No `sort_order` column is needed.
 6.  **Code Updates**:
     - `src/goals-handlers.ts`: Return `image_id` in the API response.
-    - `public/js/goals.js`: Use `goal.image_id` to construct image URLs (`/img/highres/${image_id}.jpg`). If `image_id` is null, do not render the image container.
+    - `public/js/goals.js`: Use `goal.image_id` to construct image URLs (`/img/highres/${image_id}.jpg`). If `image_id` is null, do not render the image container. 
+    > Note that the image format will be updated from jpg to webp in future stories. Should not affect the implementation in this ticket.
 
 ## Tasks / Subtasks
 
