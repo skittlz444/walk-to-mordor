@@ -68,7 +68,6 @@
   },
   "dependencies": {
     "@preact/signals": "^2.5.1",
-    "mimetext": "^3.0.27",
     "preact": "^10.28.2"
   }
 }

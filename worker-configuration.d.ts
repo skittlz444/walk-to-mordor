@@ -7,8 +7,8 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		DB: D1Database;
-		EMAIL: SendEmail;
 		ASSETS: Fetcher;
+		RESEND_API_KEY: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

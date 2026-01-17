@@ -1,9 +1,111 @@
-// Email sending utilities using Cloudflare Email Routing
-import { createMimeMessage } from 'mimetext';
+// Email sending utilities using Resend API
+import { 
+  getPasswordResetEmailHtml, 
+  getPasswordResetEmailText,
+  getConfirmationEmailHtml,
+  getConfirmationEmailText 
+} from './email-templates';
 
 // Email configuration constants
 const EMAIL_SENDER_ADDRESS = 'noreply@haydencarson.com';
 const EMAIL_SENDER_NAME = 'Walk to Mordor';
+const RESEND_API_URL = 'https://api.resend.com/emails';
+
+/**
+ * Options for sending an email
+ */
+export interface EmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}
+
+/**
+ * Result of sending an email
+ */
+export interface EmailResult {
+  success: boolean;
+  error?: string;
+  messageId?: string;
+}
+
+/**
+ * Core function to send email via Resend API
+ * Uses fetch() for Edge compatibility
+ */
+export async function sendEmail(
+  env: any,
+  options: EmailOptions
+): Promise<EmailResult> {
+  try {
+    // Check if API key is configured
+    if (!env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY not configured in environment');
+      return { 
+        success: false, 
+        error: 'Email service not configured. Please contact administrator.' 
+      };
+    }
+
+    // Prepare the request payload for Resend API
+    const payload = {
+      from: `${EMAIL_SENDER_NAME} <${EMAIL_SENDER_ADDRESS}>`,
+      to: [options.to],
+      subject: options.subject,
+      html: options.html,
+      text: options.text || undefined
+    };
+
+    // Send email via Resend API
+    const response = await fetch(RESEND_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    // Handle rate limiting (429)
+    if (response.status === 429) {
+      console.warn('Resend API rate limit hit');
+      return {
+        success: false,
+        error: 'Too many email requests. Please try again later.'
+      };
+    }
+
+    // Parse response
+    const result = await response.json() as any;
+
+    // Check for errors
+    if (!response.ok) {
+      console.error('Resend API error:', {
+        status: response.status,
+        error: result
+      });
+      
+      return {
+        success: false,
+        error: result.message || `Email service error (${response.status}). Please try again later.`
+      };
+    }
+
+    // Success
+    return {
+      success: true,
+      messageId: result.id
+    };
+
+  } catch (error: any) {
+    console.error('Error sending email via Resend:', error);
+    return {
+      success: false,
+      error: 'Failed to send email. Please try again later.'
+    };
+  }
+}
 
 /**
  * Send password reset email with token
@@ -15,108 +117,49 @@ export async function sendPasswordResetEmail(
   resetToken: string,
   origin: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Check if email binding is available
-    if (!env.EMAIL) {
-      console.warn('Email binding not configured. Skipping email send.');
-      return { success: false, error: 'Email service not configured' };
-    }
+  // Create reset URL
+  const resetUrl = `${origin}/reset-password?token=${resetToken}`;
+  
+  // Use email templates
+  const html = getPasswordResetEmailHtml(resetUrl);
+  const text = getPasswordResetEmailText(resetUrl);
+  
+  // Send via core sendEmail function
+  const result = await sendEmail(env, {
+    to: recipientEmail,
+    subject: 'Password Reset Request - Walk to Mordor',
+    html,
+    text
+  });
 
-    // Create reset URL
-    const resetUrl = `${origin}/reset-password?token=${resetToken}`;
-    
-    // Create MIME message
-    const msg = createMimeMessage();
-    
-    // Set sender - must be from the domain with Email Routing enabled
-    msg.setSender({ 
-      name: EMAIL_SENDER_NAME, 
-      addr: EMAIL_SENDER_ADDRESS
-    });
-    
-    // Set recipient
-    msg.setRecipient(recipientEmail);
-    
-    // Set subject
-    msg.setSubject('Password Reset Request - Walk to Mordor');
-    
-    // Add plain text message
-    msg.addMessage({
-      contentType: 'text/plain',
-      data: `Hello ${recipientName},
+  return {
+    success: result.success,
+    error: result.error
+  };
+}
 
-You have requested to reset your password for Walk to Mordor.
+/**
+ * Send email confirmation link
+ */
+export async function sendConfirmationEmail(
+  env: any,
+  recipientEmail: string,
+  confirmLink: string
+): Promise<{ success: boolean; error?: string }> {
+  // Use email templates
+  const html = getConfirmationEmailHtml(confirmLink);
+  const text = getConfirmationEmailText(confirmLink);
+  
+  // Send via core sendEmail function
+  const result = await sendEmail(env, {
+    to: recipientEmail,
+    subject: 'Confirm Your Email - Walk to Mordor',
+    html,
+    text
+  });
 
-Please click the link below to reset your password:
-${resetUrl}
-
-This link will expire in 1 hour.
-
-If you did not request a password reset, please ignore this email.
-
-Best regards,
-Walk to Mordor Team`
-    });
-    
-    // Add HTML message (optional, for better formatting)
-    msg.addMessage({
-      contentType: 'text/html',
-      data: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background-color: #0f3460; color: white; padding: 20px; text-align: center; }
-    .content { padding: 20px; background-color: #f9f9f9; }
-    .button { display: inline-block; padding: 12px 24px; background-color: #e94560; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; }
-    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>🧙‍♂️ Walk to Mordor</h1>
-    </div>
-    <div class="content">
-      <h2>Password Reset Request</h2>
-      <p>Hello ${recipientName},</p>
-      <p>You have requested to reset your password for Walk to Mordor.</p>
-      <p>Click the button below to reset your password:</p>
-      <p style="text-align: center;">
-        <a href="${resetUrl}" class="button">Reset Password</a>
-      </p>
-      <p>Or copy and paste this link into your browser:</p>
-      <p style="word-break: break-all; background-color: #fff; padding: 10px; border: 1px solid #ddd;">${resetUrl}</p>
-      <p><strong>This link will expire in 1 hour.</strong></p>
-      <p>If you did not request a password reset, please ignore this email.</p>
-    </div>
-    <div class="footer">
-      <p>Best regards,<br>Walk to Mordor Team</p>
-    </div>
-  </div>
-</body>
-</html>`
-    });
-
-    // Import EmailMessage from cloudflare:email
-    // Note: This is a Cloudflare Workers built-in module
-    const { EmailMessage } = await import('cloudflare:email');
-    
-    // Create email message
-    const message = new EmailMessage(
-      EMAIL_SENDER_ADDRESS,
-      recipientEmail,
-      msg.asRaw()
-    );
-
-    // Send email using the EMAIL binding
-    await env.EMAIL.send(message);
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error sending password reset email:', error);
-    return { success: false, error: error.message };
-  }
+  return {
+    success: result.success,
+    error: result.error
+  };
 }
