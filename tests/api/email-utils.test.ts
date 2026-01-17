@@ -7,9 +7,7 @@ global.fetch = mockFetch;
 
 describe('Email Utilities', () => {
   const mockEnv = {
-    RESEND_API_KEY: 'mock_resend_api_key',
-    // Mock other env vars if needed
-    EMAIL: { send: jest.fn() } as any // Keep specific typing if Env type requires it
+    RESEND_API_KEY: 'mock_resend_api_key'
   };
 
   beforeEach(() => {

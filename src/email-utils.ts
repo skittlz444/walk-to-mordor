@@ -6,11 +6,6 @@ import {
   getConfirmationEmailText 
 } from './email-templates';
 
-// Import Env type for proper typing
-type Env = {
-  RESEND_API_KEY: string;
-};
-
 // Email configuration constants
 const EMAIL_SENDER_ADDRESS = 'noreply@haydencarson.com';
 const EMAIL_SENDER_NAME = 'Walk to Mordor';

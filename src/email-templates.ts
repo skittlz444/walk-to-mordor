@@ -2,15 +2,23 @@
 // Uses simple template strings for compatibility with various email clients
 
 /**
- * Generate HTML email for password reset
+ * HTML escape utility to prevent XSS in email templates
  */
-export function getPasswordResetEmailHtml(resetLink: string): string {
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
+function escapeHtml(text: string): string {
+  const htmlEscapeMap: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEscapeMap[char]);
+}
+
+/**
+ * Common email styles shared across all templates
+ */
+const EMAIL_STYLES = `
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
     .header { background-color: #0f3460; color: white; padding: 20px; text-align: center; border-radius: 4px 4px 0 0; }
@@ -18,7 +26,19 @@ export function getPasswordResetEmailHtml(resetLink: string): string {
     .button { display: inline-block; padding: 12px 24px; background-color: #e94560; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; font-weight: bold; }
     .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
     .link-box { word-break: break-all; background-color: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0; }
-  </style>
+`;
+
+/**
+ * Generate HTML email for password reset
+ */
+export function getPasswordResetEmailHtml(resetLink: string): string {
+  const escapedLink = escapeHtml(resetLink);
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${EMAIL_STYLES}</style>
 </head>
 <body>
   <div class="container">
@@ -30,10 +50,10 @@ export function getPasswordResetEmailHtml(resetLink: string): string {
       <p>You have requested to reset your password for Walk to Mordor.</p>
       <p>Click the button below to reset your password:</p>
       <p style="text-align: center;">
-        <a href="${resetLink}" class="button">Reset Password</a>
+        <a href="${escapedLink}" class="button">Reset Password</a>
       </p>
       <p>Or copy and paste this link into your browser:</p>
-      <div class="link-box">${resetLink}</div>
+      <div class="link-box">${escapedLink}</div>
       <p><strong>This link will expire in 1 hour.</strong></p>
       <p>If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
     </div>
@@ -68,20 +88,13 @@ Walk to Mordor Team`;
  * Generate HTML email for email confirmation
  */
 export function getConfirmationEmailHtml(confirmLink: string): string {
+  const escapedLink = escapeHtml(confirmLink);
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background-color: #0f3460; color: white; padding: 20px; text-align: center; border-radius: 4px 4px 0 0; }
-    .content { padding: 30px 20px; background-color: #f9f9f9; border: 1px solid #ddd; border-top: none; }
-    .button { display: inline-block; padding: 12px 24px; background-color: #e94560; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; font-weight: bold; }
-    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-    .link-box { word-break: break-all; background-color: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0; }
-  </style>
+  <style>${EMAIL_STYLES}</style>
 </head>
 <body>
   <div class="container">
@@ -93,10 +106,10 @@ export function getConfirmationEmailHtml(confirmLink: string): string {
       <p>Thank you for signing up. We're excited to have you join us on this epic journey!</p>
       <p>Click the button below to confirm your email address:</p>
       <p style="text-align: center;">
-        <a href="${confirmLink}" class="button">Confirm Email</a>
+        <a href="${escapedLink}" class="button">Confirm Email</a>
       </p>
       <p>Or copy and paste this link into your browser:</p>
-      <div class="link-box">${confirmLink}</div>
+      <div class="link-box">${escapedLink}</div>
       <p>Once confirmed, you can start tracking your progress to Mordor!</p>
     </div>
     <div class="footer">
