@@ -6,6 +6,11 @@ import {
   getConfirmationEmailText 
 } from './email-templates';
 
+// Import Env type for proper typing
+type Env = {
+  RESEND_API_KEY: string;
+};
+
 // Email configuration constants
 const EMAIL_SENDER_ADDRESS = 'noreply@haydencarson.com';
 const EMAIL_SENDER_NAME = 'Walk to Mordor';
@@ -35,7 +40,7 @@ export interface EmailResult {
  * Uses fetch() for Edge compatibility
  */
 export async function sendEmail(
-  env: any,
+  env: Env,
   options: EmailOptions
 ): Promise<EmailResult> {
   try {
@@ -109,9 +114,10 @@ export async function sendEmail(
 
 /**
  * Send password reset email with token
+ * @param recipientName - Currently unused but maintained for API compatibility and future personalization
  */
 export async function sendPasswordResetEmail(
-  env: any,
+  env: Env,
   recipientEmail: string,
   recipientName: string,
   resetToken: string,
@@ -142,7 +148,7 @@ export async function sendPasswordResetEmail(
  * Send email confirmation link
  */
 export async function sendConfirmationEmail(
-  env: any,
+  env: Env,
   recipientEmail: string,
   confirmLink: string
 ): Promise<{ success: boolean; error?: string }> {
