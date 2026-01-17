@@ -67,6 +67,7 @@ export function getPasswordResetEmailHtml(resetLink: string): string {
 
 /**
  * Generate plain text email for password reset
+ * Note: No HTML escaping needed for plain text emails as they are not parsed as HTML
  */
 export function getPasswordResetEmailText(resetLink: string): string {
   return `Password Reset Request - Walk to Mordor
@@ -122,6 +123,7 @@ export function getConfirmationEmailHtml(confirmLink: string): string {
 
 /**
  * Generate plain text email for email confirmation
+ * Note: No HTML escaping needed for plain text emails as they are not parsed as HTML
  */
 export function getConfirmationEmailText(confirmLink: string): string {
   return `Welcome to Walk to Mordor!
