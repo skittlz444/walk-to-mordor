@@ -60,9 +60,9 @@
     "test:ui": "playwright test",
     "test:ui:headed": "playwright test --headed",
     "test:ui:report": "playwright show-report",
-    "test:client": "vitest run -c client/vitest.config.ts",
-    "test:client:watch": "vitest -c client/vitest.config.ts",
-    "test:client:coverage": "vitest run -c client/vitest.config.ts --coverage",
+    "test:client": "vitest run --root client",
+    "test:client:watch": "vitest --root client",
+    "test:client:coverage": "vitest run --coverage --root client",
     "build:sw": "node public/js/update-cache-version.js",
     "build:sw:reset": "node public/js/reset-cache-version.js"
   },

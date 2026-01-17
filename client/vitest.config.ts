@@ -5,8 +5,6 @@ import preact from '@preact/preset-vite';
 export default defineConfig({
   plugins: [preact()],
   test: {
-    // Explicitly set root to dirname so running from parent folder works
-    root: __dirname, 
     environment: 'happy-dom',
     globals: true,
     setupFiles: './setup-tests.ts',
