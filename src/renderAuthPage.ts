@@ -48,6 +48,7 @@ export function renderAuthPage() {
                   <label for="login-password">Password</label>
                   <input type="password" id="login-password" name="password" required autocomplete="current-password" />
                 </div>
+                <div id="login-success" class="success-message"></div>
                 <div id="login-error" class="error-message"></div>
                 <button type="submit" class="btn-primary">Login</button>
               </form>

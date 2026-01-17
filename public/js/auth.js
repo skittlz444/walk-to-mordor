@@ -46,7 +46,9 @@
     e.preventDefault();
     
     const errorDiv = document.getElementById('login-error');
+    const successDiv = document.getElementById('login-success');
     errorDiv.textContent = '';
+    if (successDiv) successDiv.textContent = '';
     
     const formData = new FormData(e.target);
     const username = formData.get('username');
@@ -71,10 +73,60 @@
         window.location.href = '/';
       } else {
         errorDiv.textContent = data.error || 'Login failed';
+        
+        // If email not verified, show resend option
+        if (response.status === 403 && data.error.includes('Email not verified')) {
+          const resendBtn = document.createElement('button');
+          resendBtn.textContent = 'Resend Confirmation Email';
+          resendBtn.className = 'resend-btn';
+          resendBtn.style.marginTop = '10px';
+          resendBtn.addEventListener('click', () => handleResendConfirmation(username));
+          errorDiv.appendChild(document.createElement('br'));
+          errorDiv.appendChild(resendBtn);
+        }
       }
     } catch (error) {
       errorDiv.textContent = 'Network error. Please try again.';
       console.error('Login error:', error);
+    }
+  }
+  
+  // Handle resend confirmation email
+  async function handleResendConfirmation(username) {
+    const errorDiv = document.getElementById('login-error');
+    const successDiv = document.getElementById('login-success');
+    
+    // Get email from username by trying to find it
+    // Since we only have username at login, we'll need to get email first
+    // For now, show a message asking them to use their email
+    errorDiv.textContent = '';
+    
+    const email = prompt('Please enter your email address to resend the confirmation:');
+    if (!email) return;
+    
+    try {
+      const response = await fetch(`${API_BASE}/auth/resend-confirmation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        if (successDiv) {
+          successDiv.textContent = data.message;
+          successDiv.style.display = 'block';
+        }
+        errorDiv.textContent = '';
+      } else {
+        errorDiv.textContent = data.error || 'Failed to resend confirmation';
+      }
+    } catch (error) {
+      errorDiv.textContent = 'Network error. Please try again.';
+      console.error('Resend confirmation error:', error);
     }
   }
   
@@ -104,13 +156,13 @@
       const data = await response.json();
       
       if (response.ok) {
-        if (data.requiresApproval) {
-          successDiv.textContent = data.message;
-          // Clear form
-          e.target.reset();
-        } else {
-          // First user - automatically approved
-          successDiv.textContent = data.message + ' Redirecting to login...';
+        successDiv.textContent = data.message;
+        // Clear form
+        e.target.reset();
+        
+        if (!data.requiresApproval && !data.requiresEmailConfirmation) {
+          // First user - automatically approved and verified
+          successDiv.textContent += ' Redirecting to login...';
           setTimeout(() => {
             showLogin();
           }, 2000);
@@ -126,6 +178,18 @@
   
   // Initialize event listeners
   function init() {
+    // Check for verified parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('verified') === 'true') {
+      const successDiv = document.getElementById('login-success');
+      if (successDiv) {
+        successDiv.textContent = 'Email verified! You can now log in.';
+        successDiv.style.display = 'block';
+      }
+      // Remove the parameter from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     // Form submissions
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     document.getElementById('register-form').addEventListener('submit', handleRegister);

@@ -27,6 +27,8 @@ import {
   handleUpdateProfile,
   handlePasswordResetRequest,
   handlePasswordReset,
+  handleConfirmEmail,
+  handleResendConfirmation,
   validateSession
 } from "./auth-handlers";
 
@@ -95,6 +97,10 @@ export default {
         return handlePasswordResetRequest(request, env, body);
       } else if (url.pathname === "/api/password-reset" && method === "POST") {
         return handlePasswordReset(request, env, body);
+      } else if (url.pathname === "/api/auth/confirm-email" && method === "GET") {
+        return handleConfirmEmail(request, env);
+      } else if (url.pathname === "/api/auth/resend-confirmation" && method === "POST") {
+        return handleResendConfirmation(request, env, body);
       }
       
       // Protected endpoints (authentication required)
@@ -183,12 +189,14 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/goals":
     case "/api/total-distance":
     case "/api/session":
+    case "/api/auth/confirm-email":
       return ['GET'];
     case "/api/register":
     case "/api/login":
     case "/api/logout":
     case "/api/password-reset-request":
     case "/api/password-reset":
+    case "/api/auth/resend-confirmation":
       return ['POST'];
     case "/api/profile":
       return ['PUT'];
