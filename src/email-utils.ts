@@ -35,6 +35,17 @@ export interface EmailResult {
   messageId?: string;
 }
 
+// Resend API Response Types
+interface ResendSuccess {
+  id: string;
+}
+
+interface ResendError {
+  name: string;
+  message: string;
+  statusCode?: number;
+}
+
 /**
  * Core function to send email via Resend API
  * Uses fetch() for Edge compatibility
@@ -82,25 +93,27 @@ export async function sendEmail(
     }
 
     // Parse response
-    const result = await response.json() as any;
+    const result = await response.json() as ResendSuccess | ResendError;
 
     // Check for errors
     if (!response.ok) {
+      const errorResult = result as ResendError;
       console.error('Resend API error:', {
         status: response.status,
-        error: result
+        error: errorResult
       });
       
       return {
         success: false,
-        error: result.message || `Email service error (${response.status}). Please try again later.`
+        error: errorResult.message || `Email service error (${response.status}). Please try again later.`
       };
     }
 
     // Success
+    const successResult = result as ResendSuccess;
     return {
       success: true,
-      messageId: result.id
+      messageId: successResult.id
     };
 
   } catch (error: any) {
