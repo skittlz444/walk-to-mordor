@@ -275,16 +275,16 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Priority:** P1
 
-**Description:** Enable insertion of new narrative milestones between existing goals to improve story pacing and density, without breaking existing user progress.
+**Description:** Enable insertion of new narrative milestones between existing goals to improve story pacing and density, ensuring no narrative gaps exceed 70km.
 
 **Acceptance Criteria:**
-- [ ] Add `sort_order` column to goals table for flexible ordering
-- [ ] Create migration script to populate `sort_order` for existing goals
-- [ ] Update goal queries to ORDER BY sort_order, not by distance alone
-- [ ] Create admin SQL script template for inserting intermediary goals
-- [ ] Verify existing user progress is unaffected after intermediary insertion
-- [ ] Document the process for adding intermediary goals in `docs/`
-- [ ] Add 5+ intermediary goals as sample content (e.g., early Shire sections)
+- [ ] Add `image_id` column to goals table (TEXT) to explicitly link images
+- [ ] Create migration script to populate `image_id` for existing goals (using ID cast to text)
+- [ ] Analyze existing goals to identify any distance gaps greater than 70km (~43 miles)
+- [ ] Insert new intermediary goals (with `image_id` as NULL) to ensure no gap exceeds this threshold
+- [ ] Verify sorting logic (ensure strict `ORDER BY distance ASC` is used)
+- [ ] Update frontend to handle goals with NULL `image_id` gracefully
+- [ ] Document the process for adding intermediary goals
 
 **FRs:** FR_ADM_02
 
@@ -296,19 +296,20 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Priority:** P2
 
-**Description:** Identify and add missing images for all 171 milestones, ensuring every goal has associated high-quality imagery.
+**Description:** Identify and add missing images for all 171 milestones, ensuring every goal has associated high-quality imagery served via WebP with optimized loading.
 
 **Acceptance Criteria:**
-- [ ] Audit all 171 goals for missing `image_url` values
-- [ ] Source/generate images for missing milestones (license-appropriate)
-- [ ] Optimize all new images to WebP format, <25MB each (NFR_CONST_01)
-- [ ] Create thumbnail versions for list views (< 100KB)
-- [ ] Update database with correct image paths
-- [ ] Verify all milestone detail views display images correctly
+- [ ] Audit all 171 goals and ensure every single one has a valid `image_id` (no NULLs).
+- [ ] Source/generate images for missing milestones (license-appropriate).
+- [ ] Optimize all images (new and existing) to WebP format (<25MB high-res).
+- [ ] Create thumbnail versions (<20KB, ~400px, Quality 60) for lazy loading (blur-up).
+- [ ] Update database `image_id`s to use clean slugs (e.g., `woody-end`) instead of IDs.
+- [ ] Update frontend to use WebP, implement lazy loading/blur-up pattern, and handle detail vs list views.
+- [ ] **Refactoring Decision**: Refactor to Preact only if state complexity warrants it; otherwise, minimally patch legacy JS.
 
 **FRs:** FR_LORE_05
 
-**Dependencies:** None
+**Dependencies:** Story 1.4 (Intermediary Goals)
 
 ---
 
@@ -321,8 +322,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Acceptance Criteria:**
 - [ ] Create Node.js script in `scripts/optimize-images.js`
 - [ ] Input: source images folder, Output: optimized WebP + thumbnails
-- [ ] Generate high-res WebP (max 1920px width, quality 85)
-- [ ] Generate thumbnail WebP (max 400px width, quality 80)
+- [ ] Generate high-res WebP (max 2560px width, quality 90) - Only downscale if > 4K
+- [ ] Generate thumbnail WebP (max 400px width, quality 60, <20KB target) for lazy loading (blur-up)
 - [ ] Log optimization stats (original size → compressed size)
 - [ ] Add npm script: `npm run optimize:images`
 - [ ] Document usage in README or docs
@@ -340,12 +341,11 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Description:** Implement UX improvements for the Add Walk modal: styled buttons, km suffix, and quick entry buttons.
 
 **Acceptance Criteria:**
-- [ ] Add background color + padding to modal buttons (match auth button styling)
-- [ ] Add "km" suffix or placeholder to distance input field
-- [ ] Add +1km and +5km quick entry buttons that populate input
-- [ ] Quick buttons should add to existing value if present
-- [ ] Ensure touch targets ≥44x44 CSS pixels (NFR_ACC_02)
-- [ ] Test on mobile viewport
+- [ ] **Modal Button Styling**: "Add Walk" and "Cancel" buttons must have background colors, padding, and hover states matching auth buttons (no transparent text-only buttons).
+- [ ] **Distance Input Clarity**: Input field must clearly indicate "km" via suffix or placeholder.
+- [ ] **Quick Entry**: Add "+1km" and "+5km" buttons that increment the input value.
+- [ ] **Touch Friendliness**: All interactive elements must be ≥44x44 CSS pixels.
+- [ ] **Mobile Viewport**: Layout must not break and must remain functional on small screens (iPhone SE / 320px).
 
 **FRs:** UX_MODAL_01, UX_INPUT_01, UX_ENTRY_01
 
@@ -357,16 +357,15 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Priority:** P2
 
-**Description:** Enhance goals/milestones display with section headers, next goal emphasis, and progress bar.
+**Description:** Enhance goals display with next goal emphasis and segment progress bar.
 
 **Acceptance Criteria:**
-- [ ] Add location-based section headers ("The Shire", "Bree", "Rivendell", etc.)
-- [ ] Make first upcoming/next goal visually larger/highlighted
-- [ ] Add simple progress bar showing percentage to next milestone
-- [ ] Progress bar positioned under total distance display
-- [ ] Ensure proper contrast (NFR_ACC_01 - WCAG AA)
+- [ ] **Next Goal Emphasis**: Visually highlight the immediate next upcoming goal.
+- [ ] **Next Goal Progress Bar**: Display a progress bar on the next goal card showing progress from the previous milestone to the current one.
+- [ ] **Responsiveness**: Ensure highlights and progress bar render correctly on mobile.
+- [ ] **Accessibility**: Ensure proper contrast (WCAG AA).
 
-**FRs:** UX_GOAL_01, UX_GOAL_02, UX_PROG_01
+**FRs:** UX_GOAL_01, UX_PROG_01
 
 **Dependencies:** None
 

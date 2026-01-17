@@ -1,5 +1,7 @@
 # Development Guidelines & Project Context
 
+- **Repository**: https://github.com/skittlz444/walk-to-mordor
+
 ## Infrastructure & Architecture
 The underlying infrastructure for this project is built on Cloudflare Workers, utilizing Wrangler for deployment and management.
 - **Runtime**: Cloudflare Workers (Single Worker Monolith).

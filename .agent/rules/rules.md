@@ -1,5 +1,7 @@
 # Project Context & Development Rules
 
+- **Repository**: https://github.com/skittlz444/walk-to-mordor
+
 ## Technology Stack
 - **Runtime**: Cloudflare Workers (Single Worker Monolith)
 - **Database**: D1 (SQLite)
