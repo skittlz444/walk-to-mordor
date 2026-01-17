@@ -694,6 +694,14 @@ Set up the `client/` directory with a Vite build step for Preact, integrated int
 
 ---
 
+## Related Documentation
+
+- **[Frontend Development Guide](./frontend-guide.md)**: Complete guide for working with Preact islands
+- **[Data Models](./data-models.md)**: Database schema and relationships
+- **[API Reference](./api-reference.md)**: Backend API endpoints
+
+---
+
 **Architecture Status:** READY FOR IMPLEMENTATION ✅
 
 **Next Phase:** Begin implementation using the architectural decisions and patterns documented herein.
