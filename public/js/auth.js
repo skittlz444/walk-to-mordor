@@ -96,11 +96,10 @@
     const errorDiv = document.getElementById('login-error');
     const successDiv = document.getElementById('login-success');
     
-    // Get email from username by trying to find it
-    // Since we only have username at login, we'll need to get email first
-    // For now, show a message asking them to use their email
     errorDiv.textContent = '';
     
+    // TODO: Replace prompt() with a proper modal for better UX and accessibility
+    // For MVP, using prompt() as a minimal solution
     const email = prompt('Please enter your email address to resend the confirmation:');
     if (!email) return;
     

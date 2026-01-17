@@ -19,6 +19,10 @@ import {
 import { createErrorResponse, createSuccessResponse } from './validators';
 import { sendPasswordResetEmail, sendConfirmationEmail } from './email-utils';
 
+// Rate limit constants
+const PASSWORD_RESET_RATE_LIMIT = 3; // Maximum password reset emails per hour
+const EMAIL_CONFIRMATION_RATE_LIMIT = 3; // Maximum confirmation emails per hour
+
 /**
  * Handle user registration
  */
@@ -66,7 +70,7 @@ export async function handleRegister(request: Request, env: any, body: any) {
     // Insert new user (first user is automatically approved and verified)
     const result = await env.DB.prepare(
       'INSERT INTO users (username, email, password_hash, salt, approved, email_verified) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(username, email, passwordHash, salt, isFirstUser ? 1 : 1, isFirstUser ? 1 : 0).run();
+    ).bind(username, email, passwordHash, salt, 1, isFirstUser ? 1 : 0).run();
 
     const userId = result.meta.last_row_id;
 
@@ -534,13 +538,13 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
 
     const user = results[0] as any;
 
-    // Rate limiting: Check recent reset requests (max 3 per hour)
+    // Rate limiting: Check recent reset requests
     const { results: recentRequests } = await env.DB.prepare(
       `SELECT count(*) as count FROM password_reset_tokens 
        WHERE user_id = ? AND created_at > datetime('now', '-1 hour')`
     ).bind(user.id).all();
 
-    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= 3) {
+    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= PASSWORD_RESET_RATE_LIMIT) {
       console.warn(`Rate limit exceeded for user ${user.id}`);
       // Return success to hide this failure to prevent enumeration
       return createSuccessResponse({
@@ -768,13 +772,13 @@ export async function handleResendConfirmation(request: Request, env: any, body:
 
     const user = results[0] as any;
 
-    // Rate limiting: Check recent confirmation requests (max 3 per hour)
+    // Rate limiting: Check recent confirmation requests
     const { results: recentRequests } = await env.DB.prepare(
       `SELECT count(*) as count FROM email_confirmation_tokens 
        WHERE user_id = ? AND created_at > datetime('now', '-1 hour')`
     ).bind(user.id).all();
 
-    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= 3) {
+    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= EMAIL_CONFIRMATION_RATE_LIMIT) {
       console.warn(`Rate limit exceeded for user ${user.id}`);
       // Return success to hide this failure
       return createSuccessResponse({
