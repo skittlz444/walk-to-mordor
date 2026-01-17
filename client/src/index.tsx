@@ -1,0 +1,50 @@
+import { render } from 'preact';
+import { HelloWorld } from './islands/HelloWorld';
+
+// Island registry - maps island names to their components
+const islands = {
+  HelloWorld,
+};
+
+// Type for island names
+type IslandName = keyof typeof islands;
+
+/**
+ * Discovers and hydrates all Preact islands on the page.
+ * Islands are identified by elements with a `data-island` attribute.
+ * 
+ * Example usage in HTML:
+ * <div id="preact-root" data-island="HelloWorld"></div>
+ */
+function hydrateIslands() {
+  // Find all elements with data-island attribute
+  const islandElements = document.querySelectorAll('[data-island]');
+  
+  islandElements.forEach((element) => {
+    const islandName = element.getAttribute('data-island') as IslandName;
+    
+    if (!islandName) {
+      console.warn('Island element found without island name:', element);
+      return;
+    }
+
+    const IslandComponent = islands[islandName];
+    
+    if (!IslandComponent) {
+      console.error(`Island component "${islandName}" not found in registry`);
+      return;
+    }
+
+    // Render the island component into the target element
+    render(<IslandComponent />, element);
+    
+    console.log(`✅ Hydrated island: ${islandName}`);
+  });
+}
+
+// Initialize islands when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', hydrateIslands);
+} else {
+  hydrateIslands();
+}

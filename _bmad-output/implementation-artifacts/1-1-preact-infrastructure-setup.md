@@ -1,7 +1,8 @@
 # Story 1.1: Preact Infrastructure Setup
 
-Status: ready-for-dev
+Status: ✅ completed
 Issue: #155
+Completed: 2026-01-17
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -13,20 +14,20 @@ so that **we can build modern, interactive UI components (like the Map) using an
 
 ## Acceptance Criteria
 
-- [ ] **Directory Structure**: Create `client/` structure: `client/src/`, `client/src/components/`, `client/src/islands/`, `client/src/utils/`, `client/src/stores/`.
-- [ ] **Build Configuration**: Configure **Vite** (recommended per Architecture) or esbuild for Preact compilation.
-    - [ ] Must alias `react` → `preact/compat` and `react-dom` → `preact/compat` (Required for future Konva usage).
-    - [ ] Build output must target `public/js/client/` (or similar asset path served by Worker).
-- [ ] **TypeScript**: Configure `client/tsconfig.json` (explicitly separate from root) to support JSX/TSX.
-- [ ] **Scripts**: Add npm scripts to root `package.json`:
-    - [ ] `npm run build:client`
-    - [ ] `npm run dev:client` (watch mode)
-- [ ] **Proof of Concept**: Create a sample "HelloWorld" Preact island component.
-    - [ ] Create `client/src/islands/HelloWorld.tsx`.
-    - [ ] **Must demonstrate Signal usage** (e.g., a simple counter or toggle) to verify state management setup.
-    - [ ] Mount it to a `<div id="preact-root">` in a test HTML page or existing page (temporary).
-- [ ] **Documentation**: Document the island mounting pattern in a new `docs/frontend-guide.md` linked from architecture.
-- [ ] **Verification**: Verify the built JS file loads correctly in the browser and renders interaction.
+- [x] **Directory Structure**: Create `client/` structure: `client/src/`, `client/src/components/`, `client/src/islands/`, `client/src/utils/`, `client/src/stores/`.
+- [x] **Build Configuration**: Configure **Vite** (recommended per Architecture) or esbuild for Preact compilation.
+    - [x] Must alias `react` → `preact/compat` and `react-dom` → `preact/compat` (Required for future Konva usage).
+    - [x] Build output must target `public/js/client/` (or similar asset path served by Worker).
+- [x] **TypeScript**: Configure `client/tsconfig.json` (explicitly separate from root) to support JSX/TSX.
+- [x] **Scripts**: Add npm scripts to root `package.json`:
+    - [x] `npm run build:client`
+    - [x] `npm run dev:client` (watch mode)
+- [x] **Proof of Concept**: Create a sample "HelloWorld" Preact island component.
+    - [x] Create `client/src/islands/HelloWorld.tsx`.
+    - [x] **Must demonstrate Signal usage** (e.g., a simple counter or toggle) to verify state management setup.
+    - [x] Mount it to a `<div id="preact-root">` in a test HTML page or existing page (temporary).
+- [x] **Documentation**: Document the island mounting pattern in a new `docs/frontend-guide.md` linked from architecture.
+- [x] **Verification**: Verify the built JS file loads correctly in the browser and renders interaction.
 
 ## Tasks / Subtasks
 
@@ -90,17 +91,29 @@ client/                     # Frontend Source (Preact)
 ## Dev Agent Record
 
 ### Agent Model Used
-Gemini 3 Pro (Preview)
+Claude 3.7 Sonnet (2026-01-17)
 
 ### Completion Notes List
-- [ ] Confirmed strict mode TypeScript.
-- [ ] Validated `preact/compat` alias works.
-- [ ] Checked that `public/` assets are correctly served by Worker after build.
+- [x] Confirmed strict mode TypeScript with `client/tsconfig.json`
+- [x] Validated `preact/compat` alias works in `client/vite.config.ts`
+- [x] Checked that `public/` assets are correctly served by Worker after build
+- [x] Successfully built client bundle to `public/js/client/islands.js` (23KB)
+- [x] Created and tested HelloWorld island with Signal-based counter and toggle
+- [x] Verified island hydration in browser with interactive testing
+- [x] Created comprehensive `docs/frontend-guide.md` with examples and best practices
+- [x] Added Playwright UI tests for island hydration and interactivity
+- [x] Linked frontend guide from `docs/architecture.md`
 
 ### File List
-- `package.json` (Root updates)
-- `client/vite.config.ts`
-- `client/tsconfig.json`
-- `client/src/index.tsx`
-- `client/src/islands/HelloWorld.tsx`
-- `docs/frontend-guide.md`
+- `package.json` (Root updates - added preact dependencies and build scripts)
+- `package-lock.json` (Dependency lock file)
+- `client/vite.config.ts` (Vite build config with react aliases)
+- `client/tsconfig.json` (TypeScript config for client)
+- `client/src/vite-env.d.ts` (Vite environment types)
+- `client/src/index.tsx` (Island hydration entry point)
+- `client/src/islands/HelloWorld.tsx` (Proof-of-concept island with Signals)
+- `docs/frontend-guide.md` (Comprehensive developer documentation)
+- `docs/architecture.md` (Updated with link to frontend guide)
+- `public/islands-test.html` (Test page for island verification)
+- `public/js/client/islands.js` (Built bundle - 23KB)
+- `tests/ui/islands.spec.js` (Playwright tests for islands)
