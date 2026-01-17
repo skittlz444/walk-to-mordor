@@ -87,18 +87,11 @@ jobs:
           retention-days: 30
 
       - name: Report Coverage
-        if: always()
+        if: always() && steps.client-tests.outcome != 'skipped'
         uses: davelosert/vitest-coverage-report-action@v2
         with:
-          json-summary-path: |
-            ./coverage/coverage-summary.json
-            ./coverage/client/coverage-summary.json
-          json-final-path: |
-            ./coverage/coverage-final.json
-            ./coverage/client/coverage-final.json
-          name: |
-            API Coverage
-            Client Coverage
+          json-summary-path: './coverage/client/coverage-summary.json'
+          name: 'Client Coverage'
 
       - name: Check for test failures
         if: always()
