@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preact Islands Test - Walk to Mordor</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #0f0f0f;
+      color: #ffffff;
+    }
+    .page-header {
+      max-width: 800px;
+      margin: 0 auto 40px;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+    }
+    .page-header h1 {
+      margin: 0 0 8px 0;
+      font-size: 2em;
+    }
+    .page-header p {
+      margin: 0;
+      opacity: 0.9;
+    }
+    .island-container {
+      max-width: 800px;
+      margin: 0 auto 20px;
+    }
+    .info-box {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 16px;
+      background-color: #1a1a1a;
+      border-left: 4px solid #646cff;
+      border-radius: 4px;
+    }
+    .info-box h3 {
+      margin: 0 0 8px 0;
+      color: #646cff;
+    }
+    .info-box p {
+      margin: 4px 0;
+      color: #cccccc;
+      line-height: 1.6;
+    }
+    .info-box code {
+      background-color: #2a2a2a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #ffa500;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>🚀 Preact Islands Test</h1>
+    <p>Demonstrating Islands Architecture with Preact & Signals</p>
+  </div>
+
+  <div class="info-box">
+    <h3>ℹ️ About This Test Page</h3>
+    <p>This page demonstrates the new <strong>Preact Islands Architecture</strong> setup for Walk to Mordor.</p>
+    <p>• Islands are identified by the <code>data-island="Name"</code> attribute</p>
+    <p>• The hydration script (<code>islands.js</code>) automatically discovers and renders them</p>
+    <p>• State management uses <strong>Preact Signals</strong> for reactive updates</p>
+  </div>
+
+  <!-- Island Mount Point -->
+  <div class="island-container">
+    <div id="preact-root" data-island="HelloWorld"></div>
+  </div>
+
+  <div class="info-box">
+    <h3>✅ What's Working</h3>
+    <p>• Vite build pipeline compiling Preact + TypeScript</p>
+    <p>• React compatibility aliases for future Konva.js integration</p>
+    <p>• Signal-based state management (counter & toggle)</p>
+    <p>• Island auto-discovery and hydration</p>
+  </div>
+
+  <!-- Load the built Preact islands bundle -->
+  <script type="module" src="/js/client/islands.js"></script>
+</body>
+</html>
