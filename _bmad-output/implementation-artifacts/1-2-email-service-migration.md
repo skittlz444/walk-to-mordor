@@ -85,3 +85,34 @@ Gemini 3 Pro (Preview)
 - `src/email-templates.ts` (New)
 - `docs/email-setup.md` (Update/Create)
 - `docs/email-testing.md` (New)
+
+---
+
+## Dev Agent Record
+
+### 2026-01-18 - Fix Broken Tests (Email Migration)
+
+#### Implemented
+- Updated method `tests/api/email-utils.test.ts` to support the migration from Cloudflare Email Routing (`env.EMAIL`) to Resend API (`fetch` + `RESEND_API_KEY`).
+- Added tests for `sendConfirmationEmail` which was previously uncovered in `email-utils.ts`.
+
+#### Tests Created/Updated
+- `tests/api/email-utils.test.ts`:
+  - `sendPasswordResetEmail`:
+    - `should return error if RESEND_API_KEY is missing`
+    - `should send email successfully with valid parameters` (Mocking `fetch`)
+    - `should handle Resend API errors (non-200 response)`
+    - `should handle fetch failures (network error)`
+    - `should handle rate limits (429)`
+  - `sendConfirmationEmail`:
+    - `should send email successfully with valid parameters`
+    - `should handle API errors`
+
+#### Decisions
+- Removed `jest.mock('cloudflare:email')` as it is no longer used by the new implementation.
+- Mocked `global.fetch` to simulate Resend API responses.
+- Used `mockEnv` with `RESEND_API_KEY` to simulate environment variables.
+
+#### Status
+- All tests passing (10/10 suites).
+- Coverage: 93.28%.
