@@ -163,7 +163,13 @@ export async function handleLogin(request: Request, env: any, body: any) {
 
     // Check if email is verified
     if (!user.email_verified) {
-      return createErrorResponse('Email not verified. Please check your email for the confirmation link.', 403);
+      return new Response(JSON.stringify({ 
+        error: 'Email not verified. Please check your email for the confirmation link.',
+        email: user.email // Return email so client can offer resend
+      }), {
+        status: 403,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     // Check if user is approved
@@ -672,15 +678,10 @@ export async function handlePasswordReset(request: Request, env: any, body: any)
 export async function handleConfirmEmail(request: Request, env: any) {
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
+  const origin = new URL(request.url).origin;
 
   if (!token) {
-    return new Response(
-      'Missing confirmation token. Please use the link from your email.',
-      { 
-        status: 400,
-        headers: { 'Content-Type': 'text/plain' }
-      }
-    );
+    return Response.redirect(`${origin}/login.html?error=Missing%20confirmation%20token`, 302);
   }
 
   try {
@@ -690,13 +691,7 @@ export async function handleConfirmEmail(request: Request, env: any) {
     ).bind(token).all();
 
     if (results.length === 0) {
-      return new Response(
-        'Invalid or expired confirmation token. Please request a new confirmation email.',
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'text/plain' }
-        }
-      );
+      return Response.redirect(`${origin}/login.html?error=Invalid%20or%20expired%20token`, 302);
     }
 
     const confirmToken = results[0] as any;
@@ -708,13 +703,7 @@ export async function handleConfirmEmail(request: Request, env: any) {
         'DELETE FROM email_confirmation_tokens WHERE id = ?'
       ).bind(confirmToken.id).run();
       
-      return new Response(
-        'Confirmation token has expired. Please request a new confirmation email.',
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'text/plain' }
-        }
-      );
+      return Response.redirect(`${origin}/login.html?error=Confirmation%20token%20has%20expired`, 302);
     }
 
     // Update user's email_verified status
@@ -728,17 +717,10 @@ export async function handleConfirmEmail(request: Request, env: any) {
     ).bind(confirmToken.id).run();
 
     // Redirect to login page with verified parameter
-    const origin = new URL(request.url).origin;
     return Response.redirect(`${origin}/login.html?verified=true`, 302);
   } catch (error: any) {
     console.error('Database error during email confirmation:', error);
-    return new Response(
-      'Internal server error during email confirmation. Please try again later.',
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'text/plain' }
-      }
-    );
+    return Response.redirect(`${origin}/login.html?error=Internal%20server%20error`, 302);
   }
 }
 
@@ -786,9 +768,10 @@ export async function handleResendConfirmation(request: Request, env: any, body:
       }, 200);
     }
 
-    // Delete old confirmation tokens for this user
+    // Delete old confirmation tokens for this user that are older than 24 hours
+    // We keep recent ones to maintain the rate limit history window (1 hour)
     await env.DB.prepare(
-      'DELETE FROM email_confirmation_tokens WHERE user_id = ?'
+      "DELETE FROM email_confirmation_tokens WHERE user_id = ? AND created_at < datetime('now', '-24 hours')"
     ).bind(user.id).run();
 
     // Generate new confirmation token

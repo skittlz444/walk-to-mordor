@@ -1174,19 +1174,18 @@ describe('Auth Handlers', () => {
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM email_confirmation_tokens'));
     });
 
-    it('should return error if token is missing', async () => {
+    it('should redirect with error if token is missing', async () => {
       const mockRequest = {
         url: 'https://wtm.haydencarson.com/api/auth/confirm-email'
       };
 
       const response = await handleConfirmEmail(mockRequest, mockEnv);
 
-      expect(response.status).toBe(400);
-      const text = await response.text();
-      expect(text).toContain('Missing confirmation token');
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login.html?error=Missing');
     });
 
-    it('should return error if token is invalid', async () => {
+    it('should redirect with error if token is invalid', async () => {
       const mockRequest = {
         url: 'https://wtm.haydencarson.com/api/auth/confirm-email?token=invalid-token'
       };
@@ -1203,12 +1202,11 @@ describe('Auth Handlers', () => {
 
       const response = await handleConfirmEmail(mockRequest, mockEnv);
 
-      expect(response.status).toBe(400);
-      const text = await response.text();
-      expect(text).toContain('Invalid or expired');
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login.html?error=Invalid');
     });
 
-    it('should return error if token is expired', async () => {
+    it('should redirect with error if token is expired', async () => {
       const mockRequest = {
         url: 'https://wtm.haydencarson.com/api/auth/confirm-email?token=expired-token'
       };
@@ -1234,9 +1232,8 @@ describe('Auth Handlers', () => {
 
       const response = await handleConfirmEmail(mockRequest, mockEnv);
 
-      expect(response.status).toBe(400);
-      const text = await response.text();
-      expect(text).toContain('expired');
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login.html?error=Confirmation');
     });
   });
 
