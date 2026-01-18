@@ -250,37 +250,48 @@ export function AuthForms() {
                     )}
                 </div>
             )}
-            !success.value && (
-                        <div style={{ marginTop: '10px' }}>
-                            {!showResendInput.value && (
-                                <button 
-                                    type="button" 
-                                    className="resend-btn" 
-                                    style={{ background: 'none', border: '1px solid currentColor', padding: '5px 10px', cursor: 'pointer', color: 'inherit' }}
-                                    onClick={handleResendConfirmation}
-                                >
-                                    Resend Confirmation Email
-                                </button>
-                            )}
-                            
-                            {showResendInput.value && (
-                                <div className="resend-input-group" style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
-                                    <input 
-                                        type="email" 
-                                        placeholder="Confirm your email"
-                                        value={email}
-                                        onInput={(e) => email.value = (e.currentTarget as HTMLInputElement).value}
-                                        style={{ flex: 1, padding: '5px' }}
-                                    />
-                                    <button 
-                                        type="button"
-                                        onClick={handleResendConfirmation}
-                                        style={{ padding: '5px 10px' }}
-                                    >
-                                        Send
-                                    </button>
-                                </div>
-                            )} href="#" onClick={(e) => { e.preventDefault(); switchView('register'); }}>Register here</a>
+            {!success.value && (
+              <div style={{ marginTop: '10px' }}>
+                {!showResendInput.value ? (
+                  <button 
+                    type="button" 
+                    className="resend-btn" 
+                    style={{ background: 'none', border: '1px solid currentColor', padding: '5px 10px', cursor: 'pointer', color: 'inherit', width: '100%', fontSize: '0.9em' }}
+                    onClick={handleResendConfirmation}
+                  >
+                    Resend Confirmation Email
+                  </button>
+                ) : (
+                  <div className="resend-input-group" style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                    <input 
+                      type="email" 
+                      placeholder="Confirm your email"
+                      value={email}
+                      onInput={(e) => email.value = (e.currentTarget as HTMLInputElement).value}
+                      style={{ flex: 1, padding: '5px' }}
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleResendConfirmation}
+                      style={{ padding: '5px 10px' }}
+                    >
+                      Send
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button type="submit" className="btn-primary" disabled={isLoading.value} style={{ marginTop: '15px' }}>
+              {isLoading.value ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+
+          <p className="auth-toggle">
+            <a href="#" onClick={(e) => { e.preventDefault(); switchView('forgot-password'); }}>Forgot Password?</a>
+          </p>
+          <p className="auth-toggle">
+            Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); switchView('register'); }}>Register here</a>
           </p>
         </div>
       )}
