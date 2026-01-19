@@ -64,7 +64,7 @@ test.describe('Password Reset', () => {
         await page.click('#register-form button[type="submit"]');
         
         // Wait for success
-        await page.waitForSelector('#register-success', { timeout: 5000 });
+        await page.waitForSelector('.success-message', { timeout: 5000 });
         
         // Now go to password reset page
         await page.goto('/password-reset');
@@ -74,7 +74,7 @@ test.describe('Password Reset', () => {
         await page.click('button[type="submit"]');
         
         // Wait for success message
-        const successDiv = page.locator('#reset-success');
+        const successDiv = page.locator('.success-message');
         await expect(successDiv).toBeVisible({ timeout: 5000 });
         const successText = await successDiv.textContent();
         expect(successText).toContain('password reset link');
@@ -170,7 +170,7 @@ test.describe('Password Reset', () => {
         // Verify the "Forgot your password?" link exists
         const forgotPasswordLink = page.locator('a[href="/password-reset"]');
         await expect(forgotPasswordLink).toBeVisible();
-        await expect(forgotPasswordLink).toHaveText('Forgot your password?');
+        await expect(forgotPasswordLink).toHaveText('Forgot Password?');
         
         // Click the link and verify navigation
         await forgotPasswordLink.click();

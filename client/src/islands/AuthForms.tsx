@@ -288,10 +288,10 @@ export function AuthForms() {
           </form>
 
           <p className="auth-toggle">
-            <a href="#" onClick={(e) => { e.preventDefault(); switchView('forgot-password'); }}>Forgot Password?</a>
+            <a href="/password-reset">Forgot Password?</a>
           </p>
           <p className="auth-toggle">
-            Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); switchView('register'); }}>Register here</a>
+            Don't have an account? <a href="#" id="show-register" onClick={(e) => { e.preventDefault(); switchView('register'); }}>Register here</a>
           </p>
         </div>
       )}
@@ -300,7 +300,7 @@ export function AuthForms() {
       {view.value === 'register' && (
         <div id="register-form-container" className="auth-form active">
           <h2>Register</h2>
-          <form onSubmit={handleRegister}>
+          <form id="register-form" onSubmit={handleRegister}>
             <div className="form-group">
               <label htmlFor="register-username">Username</label>
               <input 

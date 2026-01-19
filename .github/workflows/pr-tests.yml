@@ -44,14 +44,14 @@ jobs:
           echo "Setting up local D1 database for testing..."
           npm run seedLocalD1
 
-      - name: Run Unit Tests & Coverage
-        id: unit-tests
-        run: npm run test:coverage
-        continue-on-error: true
-
       - name: Run E2E Tests
         id: e2e-tests
         run: npm run test:ui
+        continue-on-error: true
+
+      - name: Run Unit Tests & Coverage
+        id: unit-tests
+        run: npm run test:coverage
         continue-on-error: true
 
       - name: Run Client Unit Tests
