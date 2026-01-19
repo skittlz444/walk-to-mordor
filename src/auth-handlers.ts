@@ -681,7 +681,7 @@ export async function handleConfirmEmail(request: Request, env: any) {
   const origin = new URL(request.url).origin;
 
   if (!token) {
-    return Response.redirect(`${origin}/login.html?error=Missing%20confirmation%20token`, 302);
+    return Response.redirect(`${origin}/login?error=Missing%20confirmation%20token`, 302);
   }
 
   try {
@@ -691,7 +691,7 @@ export async function handleConfirmEmail(request: Request, env: any) {
     ).bind(token).all();
 
     if (results.length === 0) {
-      return Response.redirect(`${origin}/login.html?error=Invalid%20or%20expired%20token`, 302);
+      return Response.redirect(`${origin}/login?error=Invalid%20or%20expired%20token`, 302);
     }
 
     const confirmToken = results[0] as any;
@@ -703,7 +703,7 @@ export async function handleConfirmEmail(request: Request, env: any) {
         'DELETE FROM email_confirmation_tokens WHERE id = ?'
       ).bind(confirmToken.id).run();
       
-      return Response.redirect(`${origin}/login.html?error=Confirmation%20token%20has%20expired`, 302);
+      return Response.redirect(`${origin}/login?error=Confirmation%20token%20has%20expired`, 302);
     }
 
     // Update user's email_verified status
@@ -717,10 +717,10 @@ export async function handleConfirmEmail(request: Request, env: any) {
     ).bind(confirmToken.id).run();
 
     // Redirect to login page with verified parameter
-    return Response.redirect(`${origin}/login.html?verified=true`, 302);
+    return Response.redirect(`${origin}/login?verified=true`, 302);
   } catch (error: any) {
     console.error('Database error during email confirmation:', error);
-    return Response.redirect(`${origin}/login.html?error=Internal%20server%20error`, 302);
+    return Response.redirect(`${origin}/login?error=Internal%20server%20error`, 302);
   }
 }
 

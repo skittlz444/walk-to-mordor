@@ -232,16 +232,15 @@ export function AuthForms() {
               />
             </div>
             
-            {success.value && <div className="success-message" style={{ display: 'block' }}>{success.value}</div>}
+            {success.value && <div className="success-message auth-message-visible">{success.value}</div>}
             {error.value && (
-                <div className="error-message" style={{ display: 'block' }}>
+                <div className="error-message auth-message-visible">
                     {error.value}
                     {error.value.includes('verified') && (
-                        <div>
+                        <div className="resend-button-container">
                             <button 
                                 type="button" 
                                 className="resend-btn" 
-                                style={{ marginTop: '10px', background: 'none', border: '1px solid currentColor', padding: '5px 10px', cursor: 'pointer', color: 'inherit' }}
                                 onClick={handleResendConfirmation}
                             >
                                 Resend Confirmation Email
@@ -250,30 +249,29 @@ export function AuthForms() {
                     )}
                 </div>
             )}
-            {!success.value && (
-              <div style={{ marginTop: '10px' }}>
+            {!success.value && !error.value.includes('verified') && (
+              <div className="resend-section">
                 {!showResendInput.value ? (
                   <button 
                     type="button" 
-                    className="resend-btn" 
-                    style={{ background: 'none', border: '1px solid currentColor', padding: '5px 10px', cursor: 'pointer', color: 'inherit', width: '100%', fontSize: '0.9em' }}
+                    className="resend-btn resend-btn-full" 
                     onClick={handleResendConfirmation}
                   >
                     Resend Confirmation Email
                   </button>
                 ) : (
-                  <div className="resend-input-group" style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                  <div className="resend-input-group">
                     <input 
                       type="email" 
                       placeholder="Confirm your email"
                       value={email}
                       onInput={(e) => email.value = (e.currentTarget as HTMLInputElement).value}
-                      style={{ flex: 1, padding: '5px' }}
+                      className="resend-email-input"
                     />
                     <button 
                       type="button"
                       onClick={handleResendConfirmation}
-                      style={{ padding: '5px 10px' }}
+                      className="resend-send-btn"
                     >
                       Send
                     </button>
@@ -282,7 +280,7 @@ export function AuthForms() {
               </div>
             )}
 
-            <button type="submit" className="btn-primary" disabled={isLoading.value} style={{ marginTop: '15px' }}>
+            <button type="submit" className="btn-primary btn-submit" disabled={isLoading.value}>
               {isLoading.value ? 'Logging in...' : 'Login'}
             </button>
           </form>
@@ -357,8 +355,8 @@ export function AuthForms() {
                 </div>
             )}
 
-            {error.value && <div className="error-message" style={{ display: 'block' }}>{error.value}</div>}
-            {success.value && <div className="success-message" style={{ display: 'block' }}>{success.value}</div>}
+            {error.value && <div className="error-message auth-message-visible">{error.value}</div>}
+            {success.value && <div className="success-message auth-message-visible">{success.value}</div>}
 
             <button type="submit" className="btn-primary" disabled={isLoading.value}>
                 {isLoading.value ? 'Registering...' : 'Register'}
@@ -387,8 +385,8 @@ export function AuthForms() {
                     />
                 </div>
                 
-                {error.value && <div className="error-message" style={{ display: 'block' }}>{error.value}</div>}
-                {success.value && <div className="success-message" style={{ display: 'block' }}>{success.value}</div>}
+                {error.value && <div className="error-message auth-message-visible">{error.value}</div>}
+                {success.value && <div className="success-message auth-message-visible">{success.value}</div>}
                 
                 <button type="submit" className="btn-primary" disabled={isLoading.value}>
                     {isLoading.value ? 'Sending...' : 'Send Reset Link'}

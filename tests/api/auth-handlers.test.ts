@@ -1182,7 +1182,7 @@ describe('Auth Handlers', () => {
       const response = await handleConfirmEmail(mockRequest, mockEnv);
 
       expect(response.status).toBe(302);
-      expect(response.headers.get('Location')).toContain('/login.html?error=Missing');
+      expect(response.headers.get('Location')).toContain('/login?error=Missing');
     });
 
     it('should redirect with error if token is invalid', async () => {
@@ -1203,7 +1203,7 @@ describe('Auth Handlers', () => {
       const response = await handleConfirmEmail(mockRequest, mockEnv);
 
       expect(response.status).toBe(302);
-      expect(response.headers.get('Location')).toContain('/login.html?error=Invalid');
+      expect(response.headers.get('Location')).toContain('/login?error=Invalid');
     });
 
     it('should redirect with error if token is expired', async () => {
@@ -1233,7 +1233,7 @@ describe('Auth Handlers', () => {
       const response = await handleConfirmEmail(mockRequest, mockEnv);
 
       expect(response.status).toBe(302);
-      expect(response.headers.get('Location')).toContain('/login.html?error=Confirmation');
+      expect(response.headers.get('Location')).toContain('/login?error=Confirmation');
     });
   });
 
