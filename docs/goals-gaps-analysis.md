@@ -94,7 +94,9 @@ This file contains the analysis of gaps greater than 70km between consecutive go
 
 ## CSV Data
 
-A machine-readable CSV file with this data is available at `/tmp/goals_gaps_analysis.csv` in the following format:
+A machine-readable CSV file with this data was generated during analysis at `/tmp/goals_gaps_analysis.csv`. This was a temporary analysis file and is not included in the repository. The complete gap information is available in the markdown format above.
+
+CSV format used for analysis:
 
 ```
 Gap_Number,Gap_KM,Gap_Miles,Before_KM,Before_Miles,Before_Title,Before_Special,After_KM,After_Miles,After_Title,After_Special
