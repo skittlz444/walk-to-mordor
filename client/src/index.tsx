@@ -1,9 +1,11 @@
 import { render } from 'preact';
 import { HelloWorld } from './islands/HelloWorld';
+import { AuthForms } from './islands/AuthForms';
 
 // Island registry - maps island names to their components
 const islands = {
   HelloWorld,
+  AuthForms,
 };
 
 // Type for island names

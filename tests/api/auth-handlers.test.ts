@@ -7,7 +7,9 @@ import {
   validateSession,
   handleUpdateProfile,
   handlePasswordResetRequest,
-  handlePasswordReset
+  handlePasswordReset,
+  handleConfirmEmail,
+  handleResendConfirmation
 } from '../../src/auth-handlers';
 import * as authUtils from '../../src/auth-utils';
 import * as emailUtils from '../../src/email-utils';
@@ -25,12 +27,16 @@ jest.mock('../../src/auth-utils', () => ({
   isSessionExpired: jest.fn(),
   generatePasswordResetToken: jest.fn(),
   getPasswordResetExpiry: jest.fn(),
-  isPasswordResetTokenExpired: jest.fn()
+  isPasswordResetTokenExpired: jest.fn(),
+  generateEmailConfirmationToken: jest.fn(),
+  getEmailConfirmationExpiry: jest.fn(),
+  isEmailConfirmationTokenExpired: jest.fn()
 }));
 
 // Mock email-utils
 jest.mock('../../src/email-utils', () => ({
-  sendPasswordResetEmail: jest.fn()
+  sendPasswordResetEmail: jest.fn(),
+  sendConfirmationEmail: jest.fn()
 }));
 
 describe('Auth Handlers', () => {
@@ -53,7 +59,11 @@ describe('Auth Handlers', () => {
     (authUtils.generatePasswordResetToken as jest.Mock).mockReturnValue('mock-reset-token');
     (authUtils.getPasswordResetExpiry as jest.Mock).mockReturnValue('2026-01-06T17:00:00Z');
     (authUtils.isPasswordResetTokenExpired as jest.Mock).mockReturnValue(false);
+    (authUtils.generateEmailConfirmationToken as jest.Mock).mockReturnValue('mock-confirm-token');
+    (authUtils.getEmailConfirmationExpiry as jest.Mock).mockReturnValue('2026-01-18T17:00:00Z');
+    (authUtils.isEmailConfirmationTokenExpired as jest.Mock).mockReturnValue(false);
     (emailUtils.sendPasswordResetEmail as jest.Mock).mockResolvedValue({ success: true });
+    (emailUtils.sendConfirmationEmail as jest.Mock).mockResolvedValue({ success: true });
 
     // Mock DB
     mockEnv = {
@@ -116,7 +126,7 @@ describe('Auth Handlers', () => {
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE progress'));
     });
 
-    it('should register a new user successfully (subsequent user pending approval)', async () => {
+    it('should register a new user successfully (subsequent user needs email confirmation)', async () => {
       const body = {
         username: 'testuser2',
         email: 'test2@example.com',
@@ -135,13 +145,22 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ count: 1 }] });
       // Second call: insert user
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 2 } });
+      // Third call: insert email confirmation token
+      mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
 
       const response = await handleRegister(mockRequest, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.message).toContain('wait for approval');
-      expect(data.requiresApproval).toBe(true);
+      expect(data.message).toContain('check your email');
+      expect(data.requiresEmailConfirmation).toBe(true);
+      
+      // Verify email confirmation was sent
+      expect(emailUtils.sendConfirmationEmail).toHaveBeenCalledWith(
+        mockEnv,
+        'test2@example.com',
+        expect.stringContaining('mock-confirm-token')
+      );
     });
 
     it('should return 400 if email is missing', async () => {
@@ -277,7 +296,7 @@ describe('Auth Handlers', () => {
       mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
       mockBind.mockReturnValue({ all: mockAll, run: mockRun });
 
-      // Mock user lookup
+      // Mock user lookup - include email_verified
       mockAll.mockResolvedValueOnce({ 
         results: [{ 
           id: 1, 
@@ -285,7 +304,8 @@ describe('Auth Handlers', () => {
           email: 'test@example.com', 
           password_hash: 'hash', 
           salt: 'salt', 
-          approved: 1 
+          approved: 1,
+          email_verified: 1
         }] 
       });
 
@@ -1117,6 +1137,310 @@ describe('Auth Handlers', () => {
       
       const response = await handlePasswordReset(mockRequest, mockEnv, body);
       expect(response.status).toBe(500);
+    });
+  });
+
+  describe('handleConfirmEmail', () => {
+    it('should confirm email with valid token', async () => {
+      const mockRequest = {
+        url: 'https://wtm.haydencarson.com/api/auth/confirm-email?token=valid-token'
+      };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      // First call: get token
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 1,
+          user_id: 5,
+          expires_at: '2026-01-18T17:00:00Z'
+        }]
+      });
+
+      const response = await handleConfirmEmail(mockRequest, mockEnv);
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('?verified=true');
+      
+      // Verify DB operations
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT'));
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE users'));
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM email_confirmation_tokens'));
+    });
+
+    it('should redirect with error if token is missing', async () => {
+      const mockRequest = {
+        url: 'https://wtm.haydencarson.com/api/auth/confirm-email'
+      };
+
+      const response = await handleConfirmEmail(mockRequest, mockEnv);
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login?error=Missing');
+    });
+
+    it('should redirect with error if token is invalid', async () => {
+      const mockRequest = {
+        url: 'https://wtm.haydencarson.com/api/auth/confirm-email?token=invalid-token'
+      };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      // Token not found
+      mockAll.mockResolvedValueOnce({ results: [] });
+
+      const response = await handleConfirmEmail(mockRequest, mockEnv);
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login?error=Invalid');
+    });
+
+    it('should redirect with error if token is expired', async () => {
+      const mockRequest = {
+        url: 'https://wtm.haydencarson.com/api/auth/confirm-email?token=expired-token'
+      };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      // Token found but expired
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 1,
+          user_id: 5,
+          expires_at: '2026-01-16T17:00:00Z'
+        }]
+      });
+      
+      (authUtils.isEmailConfirmationTokenExpired as jest.Mock).mockReturnValueOnce(true);
+
+      const response = await handleConfirmEmail(mockRequest, mockEnv);
+
+      expect(response.status).toBe(302);
+      expect(response.headers.get('Location')).toContain('/login?error=Confirmation');
+    });
+  });
+
+  describe('handleResendConfirmation', () => {
+    it('should resend confirmation email for unverified user', async () => {
+      const body = { email: 'test@example.com' };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      // First call: get user
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 5,
+          username: 'testuser',
+          email: 'test@example.com',
+          email_verified: 0
+        }]
+      });
+      
+      // Second call: check rate limit
+      mockAll.mockResolvedValueOnce({ results: [{ count: 0 }] });
+
+      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.message).toContain('confirmation link has been sent');
+      
+      // Verify email was sent
+      expect(emailUtils.sendConfirmationEmail).toHaveBeenCalled();
+    });
+
+    it('should return success even if user not found (security)', async () => {
+      const body = { email: 'nonexistent@example.com' };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      // User not found
+      mockAll.mockResolvedValueOnce({ results: [] });
+
+      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.message).toContain('confirmation link has been sent');
+      
+      // Email should NOT be sent
+      expect(emailUtils.sendConfirmationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should return success even if user already verified (security)', async () => {
+      const body = { email: 'verified@example.com' };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      // User already verified
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 5,
+          username: 'testuser',
+          email: 'verified@example.com',
+          email_verified: 1
+        }]
+      });
+
+      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.message).toContain('confirmation link has been sent');
+      
+      // Email should NOT be sent
+      expect(emailUtils.sendConfirmationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should respect rate limiting', async () => {
+      const body = { email: 'test@example.com' };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      // First call: get user
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 5,
+          username: 'testuser',
+          email: 'test@example.com',
+          email_verified: 0
+        }]
+      });
+      
+      // Second call: check rate limit (3 requests already made)
+      mockAll.mockResolvedValueOnce({ results: [{ count: 3 }] });
+
+      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      // Should still return success for security
+      expect(data.message).toContain('confirmation link has been sent');
+      
+      // Email should NOT be sent due to rate limit
+      expect(emailUtils.sendConfirmationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should return error if email is missing', async () => {
+      const body = {};
+
+      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toContain('Missing required field');
+    });
+
+    it('should return error if email is invalid', async () => {
+      const body = { email: 'invalid-email' };
+      (authUtils.isValidEmail as jest.Mock).mockReturnValueOnce(false);
+
+      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toContain('Invalid email');
+    });
+  });
+
+  describe('handleLogin - email verification check', () => {
+    it('should reject login if email not verified', async () => {
+      const body = { username: 'testuser', password: 'Password123!' };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      // User found but email not verified
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 5,
+          username: 'testuser',
+          email: 'test@example.com',
+          password_hash: 'mock-hash',
+          salt: 'mock-salt',
+          approved: 1,
+          email_verified: 0
+        }]
+      });
+
+      const response = await handleLogin(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(403);
+      expect(data.error).toContain('Email not verified');
+    });
+
+    it('should allow login if email is verified', async () => {
+      const body = { username: 'testuser', password: 'Password123!' };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      // User found and email verified
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 5,
+          username: 'testuser',
+          email: 'test@example.com',
+          password_hash: 'mock-hash',
+          salt: 'mock-salt',
+          approved: 1,
+          email_verified: 1
+        }]
+      });
+
+      const response = await handleLogin(mockRequest, mockEnv, body);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.sessionId).toBeDefined();
     });
   });
 });

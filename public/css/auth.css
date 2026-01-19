@@ -172,3 +172,68 @@
     padding: 1.5rem;
   }
 }
+
+/* Email confirmation resend styles */
+.auth-message-visible {
+  display: block !important;
+}
+
+.resend-button-container {
+  margin-top: 10px;
+}
+
+.resend-btn {
+  background: none;
+  border: 1px solid currentColor;
+  padding: 5px 10px;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 4px;
+  font-size: 0.9em;
+  transition: background 0.2s, color 0.2s;
+}
+
+.resend-btn:hover {
+  background: rgba(15, 52, 96, 0.1);
+}
+
+.resend-btn-full {
+  width: 100%;
+}
+
+.resend-section {
+  margin-top: 10px;
+}
+
+.resend-input-group {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.resend-email-input {
+  flex: 1;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.resend-send-btn {
+  padding: 5px 10px;
+  background: #0f3460;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background 0.2s;
+}
+
+.resend-send-btn:hover {
+  background: #16c79a;
+}
+
+.btn-submit {
+  margin-top: 15px;
+}

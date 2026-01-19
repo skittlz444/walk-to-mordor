@@ -11,10 +11,17 @@ import {
   isSessionExpired,
   generatePasswordResetToken,
   getPasswordResetExpiry,
-  isPasswordResetTokenExpired
+  isPasswordResetTokenExpired,
+  generateEmailConfirmationToken,
+  getEmailConfirmationExpiry,
+  isEmailConfirmationTokenExpired
 } from './auth-utils';
 import { createErrorResponse, createSuccessResponse } from './validators';
-import { sendPasswordResetEmail } from './email-utils';
+import { sendPasswordResetEmail, sendConfirmationEmail } from './email-utils';
+
+// Rate limit constants
+const PASSWORD_RESET_RATE_LIMIT = 3; // Maximum password reset emails per hour
+const EMAIL_CONFIRMATION_RATE_LIMIT = 3; // Maximum confirmation emails per hour
 
 /**
  * Handle user registration
@@ -60,23 +67,47 @@ export async function handleRegister(request: Request, env: any, body: any) {
     const salt = await generateSalt();
     const passwordHash = await hashPassword(password, salt);
 
-    // Insert new user (first user is automatically approved)
+    // Insert new user (first user is automatically approved and verified)
     const result = await env.DB.prepare(
-      'INSERT INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, ?)'
-    ).bind(username, email, passwordHash, salt, isFirstUser ? 1 : 0).run();
+      'INSERT INTO users (username, email, password_hash, salt, approved, email_verified) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(username, email, passwordHash, salt, 1, isFirstUser ? 1 : 0).run();
+
+    const userId = result.meta.last_row_id;
 
     // If this is the first user, link existing progress entries to them
     if (isFirstUser) {
       await env.DB.prepare(
         'UPDATE progress SET user_id = ? WHERE user_id IS NULL'
-      ).bind(result.meta.last_row_id).run();
+      ).bind(userId).run();
+      
+      return createSuccessResponse({
+        message: 'Registration successful! You are the first user and have been automatically approved.',
+        requiresApproval: false,
+        username
+      }, 201);
+    }
+
+    // For non-first users, generate email confirmation token and send email
+    const token = generateEmailConfirmationToken();
+    const expiresAt = getEmailConfirmationExpiry();
+
+    await env.DB.prepare(
+      'INSERT INTO email_confirmation_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
+    ).bind(userId, token, expiresAt).run();
+
+    // Send confirmation email
+    const origin = new URL(request.url).origin;
+    const confirmLink = `${origin}/api/auth/confirm-email?token=${token}`;
+    const emailResult = await sendConfirmationEmail(env, email, confirmLink);
+
+    if (!emailResult.success) {
+      console.error('Failed to send confirmation email:', emailResult.error);
+      // Continue anyway - user can request resend later
     }
 
     return createSuccessResponse({
-      message: isFirstUser 
-        ? 'Registration successful! You are the first user and have been automatically approved.'
-        : 'Registration successful! Please wait for approval from the site owner before you can access the application.',
-      requiresApproval: !isFirstUser,
+      message: 'Account created! Please check your email to confirm your account.',
+      requiresEmailConfirmation: true,
       username
     }, 201);
   } catch (error: any) {
@@ -115,7 +146,7 @@ export async function handleLogin(request: Request, env: any, body: any) {
   try {
     // Get user from database
     const { results } = await env.DB.prepare(
-      'SELECT id, username, email, password_hash, salt, approved FROM users WHERE username = ?'
+      'SELECT id, username, email, password_hash, salt, approved, email_verified FROM users WHERE username = ?'
     ).bind(username).all();
 
     if (results.length === 0) {
@@ -128,6 +159,17 @@ export async function handleLogin(request: Request, env: any, body: any) {
     const passwordValid = await verifyPassword(password, user.salt, user.password_hash);
     if (!passwordValid) {
       return createErrorResponse('Invalid username or password', 401);
+    }
+
+    // Check if email is verified
+    if (!user.email_verified) {
+      return new Response(JSON.stringify({ 
+        error: 'Email not verified. Please check your email for the confirmation link.',
+        email: user.email // Return email so client can offer resend
+      }), {
+        status: 403,
+        headers: { "content-type": "application/json" },
+      });
     }
 
     // Check if user is approved
@@ -502,13 +544,13 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
 
     const user = results[0] as any;
 
-    // Rate limiting: Check recent reset requests (max 3 per hour)
+    // Rate limiting: Check recent reset requests
     const { results: recentRequests } = await env.DB.prepare(
       `SELECT count(*) as count FROM password_reset_tokens 
        WHERE user_id = ? AND created_at > datetime('now', '-1 hour')`
     ).bind(user.id).all();
 
-    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= 3) {
+    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= PASSWORD_RESET_RATE_LIMIT) {
       console.warn(`Rate limit exceeded for user ${user.id}`);
       // Return success to hide this failure to prevent enumeration
       return createSuccessResponse({
@@ -627,5 +669,133 @@ export async function handlePasswordReset(request: Request, env: any, body: any)
   } catch (error: any) {
     console.error('Database error during password reset:', error);
     return createErrorResponse('Internal server error during password reset', 500);
+  }
+}
+
+/**
+ * Handle email confirmation - verify token and activate account
+ */
+export async function handleConfirmEmail(request: Request, env: any) {
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token');
+  const origin = new URL(request.url).origin;
+
+  if (!token) {
+    return Response.redirect(`${origin}/login?error=Missing%20confirmation%20token`, 302);
+  }
+
+  try {
+    // Get token from database
+    const { results } = await env.DB.prepare(
+      'SELECT id, user_id, expires_at FROM email_confirmation_tokens WHERE token = ?'
+    ).bind(token).all();
+
+    if (results.length === 0) {
+      return Response.redirect(`${origin}/login?error=Invalid%20or%20expired%20token`, 302);
+    }
+
+    const confirmToken = results[0] as any;
+
+    // Check if token is expired
+    if (isEmailConfirmationTokenExpired(confirmToken.expires_at)) {
+      // Clean up expired token
+      await env.DB.prepare(
+        'DELETE FROM email_confirmation_tokens WHERE id = ?'
+      ).bind(confirmToken.id).run();
+      
+      return Response.redirect(`${origin}/login?error=Confirmation%20token%20has%20expired`, 302);
+    }
+
+    // Update user's email_verified status
+    await env.DB.prepare(
+      'UPDATE users SET email_verified = 1 WHERE id = ?'
+    ).bind(confirmToken.user_id).run();
+
+    // Delete used token
+    await env.DB.prepare(
+      'DELETE FROM email_confirmation_tokens WHERE id = ?'
+    ).bind(confirmToken.id).run();
+
+    // Redirect to login page with verified parameter
+    return Response.redirect(`${origin}/login?verified=true`, 302);
+  } catch (error: any) {
+    console.error('Database error during email confirmation:', error);
+    return Response.redirect(`${origin}/login?error=Internal%20server%20error`, 302);
+  }
+}
+
+/**
+ * Handle resend confirmation email
+ */
+export async function handleResendConfirmation(request: Request, env: any, body: any) {
+  const { email } = body || {};
+
+  if (!email) {
+    return createErrorResponse('Missing required field: email', 400);
+  }
+
+  if (!isValidEmail(email)) {
+    return createErrorResponse('Invalid email format', 400);
+  }
+
+  try {
+    // Get user from database
+    const { results } = await env.DB.prepare(
+      'SELECT id, username, email, email_verified FROM users WHERE email = ?'
+    ).bind(email).all();
+
+    // For security, return success even if user doesn't exist or is already verified
+    // This prevents email enumeration attacks
+    if (results.length === 0 || (results[0] as any).email_verified === 1) {
+      return createSuccessResponse({
+        message: 'If your email is registered and not yet verified, a new confirmation link has been sent.'
+      }, 200);
+    }
+
+    const user = results[0] as any;
+
+    // Rate limiting: Check recent confirmation requests
+    const { results: recentRequests } = await env.DB.prepare(
+      `SELECT count(*) as count FROM email_confirmation_tokens 
+       WHERE user_id = ? AND created_at > datetime('now', '-1 hour')`
+    ).bind(user.id).all();
+
+    if (recentRequests && recentRequests[0] && (recentRequests[0] as any).count >= EMAIL_CONFIRMATION_RATE_LIMIT) {
+      console.warn(`Rate limit exceeded for user ${user.id}`);
+      // Return success to hide this failure
+      return createSuccessResponse({
+        message: 'If your email is registered and not yet verified, a new confirmation link has been sent.'
+      }, 200);
+    }
+
+    // Delete old confirmation tokens for this user that are older than 24 hours
+    // We keep recent ones to maintain the rate limit history window (1 hour)
+    await env.DB.prepare(
+      "DELETE FROM email_confirmation_tokens WHERE user_id = ? AND created_at < datetime('now', '-24 hours')"
+    ).bind(user.id).run();
+
+    // Generate new confirmation token
+    const token = generateEmailConfirmationToken();
+    const expiresAt = getEmailConfirmationExpiry();
+
+    await env.DB.prepare(
+      'INSERT INTO email_confirmation_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
+    ).bind(user.id, token, expiresAt).run();
+
+    // Send confirmation email
+    const origin = new URL(request.url).origin;
+    const confirmLink = `${origin}/api/auth/confirm-email?token=${token}`;
+    const emailResult = await sendConfirmationEmail(env, email, confirmLink);
+
+    if (!emailResult.success) {
+      console.error('Failed to send confirmation email:', emailResult.error);
+    }
+
+    return createSuccessResponse({
+      message: 'If your email is registered and not yet verified, a new confirmation link has been sent.'
+    }, 200);
+  } catch (error: any) {
+    console.error('Database error during resend confirmation:', error);
+    return createErrorResponse('Internal server error during resend confirmation', 500);
   }
 }

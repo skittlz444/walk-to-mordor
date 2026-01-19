@@ -60,11 +60,11 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
         
         try {
             // User 1 creates a progress entry
-            const user1Distance = generateRealisticTestDistance();
+            const user1Distance = 10;
             await createTestEvent(page1, user1Distance);
             
             // User 2 creates a different progress entry for the same date
-            const user2Distance = generateRealisticTestDistance();
+            const user2Distance = 20;
             await createTestEvent(page2, user2Distance);
             
             // Verify User 1 sees their own distance but not User 2's

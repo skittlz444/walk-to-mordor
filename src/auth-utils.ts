@@ -156,3 +156,26 @@ export function getPasswordResetExpiry(): string {
 export function isPasswordResetTokenExpired(expiresAt: string): boolean {
   return new Date(expiresAt) < new Date();
 }
+
+/**
+ * Generate a secure email confirmation token
+ */
+export function generateEmailConfirmationToken(): string {
+  return crypto.randomUUID();
+}
+
+/**
+ * Get email confirmation token expiry (24 hours from now)
+ */
+export function getEmailConfirmationExpiry(): string {
+  const expiryDate = new Date();
+  expiryDate.setHours(expiryDate.getHours() + 24);
+  return expiryDate.toISOString();
+}
+
+/**
+ * Check if an email confirmation token is expired
+ */
+export function isEmailConfirmationTokenExpired(expiresAt: string): boolean {
+  return new Date(expiresAt) < new Date();
+}
