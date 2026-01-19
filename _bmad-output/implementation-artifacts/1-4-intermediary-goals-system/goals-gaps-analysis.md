@@ -11,26 +11,32 @@ This file contains the analysis of gaps greater than 70km between consecutive go
 ### Gap #1: 72.42 km (45.00 miles)
 - **Before:** 651.78 km (405 miles) - Meet Glorfindel
 - **After:** 724.20 km (450 miles) - Attacked by Nazgul at the Ford of Bruinen
+- **Proposed Intermediary:** 700.06 km (435 miles) - Camp under Glorfindel's Watch
 
 ### Gap #2: 72.42 km (45.00 miles)
 - **Before:** 1385.64 km (861 miles) - Cross the Silverlode on ropes
 - **After:** 1458.06 km (906 miles) - Reach the hill of Cerin Amroth
+- **Proposed Intermediary:** 1421.85 km (883.5 miles) - Camp in the Naith of Lórien
 
 ### Gap #3: 70.81 km (44.00 miles)
 - **Before:** 2467.12 km (1533 miles) - Led to Henneth Annûn
 - **After:** 2537.93 km (1577 miles) - End of the forest
+- **Proposed Intermediary:** 2502.53 km (1555 miles) - Camp under the holm-oaks in Ithilien
 
 ### Gap #4: 75.64 km (47.00 miles)
 - **Before:** 2657.02 km (1651 miles) - Stagnant pool of water
 - **After:** 2732.66 km (1698 miles) - Out on the plain, drawing near Isenmouthe
+- **Proposed Intermediary:** 2695.65 km (1675 miles) - Camp within sight of the fortress of Durthang
 
 ### Gap #5: 91.73 km (57.00 miles)
 - **Before:** 2732.66 km (1698 miles) - Out on the plain, drawing near Isenmouthe
 - **After:** 2824.39 km (1755 miles) - The Dreadful Nightfall
+- **Proposed Intermediary:** 2763.24 km (1717 miles) - Frodo and Sam cast away their orc-gear
 
 ### Gap #6: 80.47 km (50.00 miles)
 - **Before:** 3056.14 km (1899 miles) - Reach the Gates of Minas Tirith
 - **After:** 3136.60 km (1949 miles) - Camp by road north of the Drúadan Forest
+- **Proposed Intermediary:** 3096.37 km (1924 miles) - Camp in the green lands of Anórien
 
 ### Gap #7: 82.08 km (51.00 miles)
 - **Before:** 3136.60 km (1949 miles) - Camp by road north of the Drúadan Forest
