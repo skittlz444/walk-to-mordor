@@ -9,8 +9,8 @@ export async function handleGoalsGet(request: Request, env: any) {
   }
   
   try {
-    const { results } = await env.DB.prepare("SELECT * FROM goals").all();
-    // Return all goals as array of {distance, title, special}
+    const { results } = await env.DB.prepare("SELECT * FROM goals ORDER BY distance ASC").all();
+    // Return all goals as array of {distance, title, special, image_id}
     return new Response(JSON.stringify(results), {
       headers: { "content-type": "application/json" },
     });

@@ -24,15 +24,15 @@ function showGoalModal(goal, currentDistance, isCongratulations = false) {
             <div style="${distanceStyle} font-size: 1.1em; margin-bottom: 0.5em; text-align: center;">${goal.distance.toFixed(2)} km</div>
             ${!isCompleted ? `<div style="color: #aaa; font-size: 1em; margin-bottom: 1em; text-align: center;">${distanceToGo.toFixed(2)} km to go</div>` : ''}
             <div id="goal-image-container" style="margin-bottom: 1em; text-align: center;">
-              ${goal.id ? `
+              ${goal.image_id ? `
                 <div style="position: relative; max-width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
                   <img id="goal-thumb-image" 
-                       src="/img/thumbs/${goal.id}-thumb.jpg" 
+                       src="/img/thumbs/${goal.image_id}-thumb.jpg" 
                        alt="Goal image" 
                        style="width: 100%; height: auto; filter: blur(2px); transition: filter 0.3s ease;"
                        onerror="this.onerror=null;this.src='/img/thumbs/0-thumb.jpg';">
                   <img id="goal-highres-image" 
-                       src="/img/highres/${goal.id}.jpg" 
+                       src="/img/highres/${goal.image_id}.jpg" 
                        alt="Goal image" 
                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s ease;"
                        onload="this.style.opacity = '1'; document.getElementById('goal-thumb-image').style.filter = 'none';"

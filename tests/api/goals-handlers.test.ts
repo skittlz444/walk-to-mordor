@@ -22,8 +22,8 @@ describe('Goals Handlers', () => {
   describe('handleGoalsGet', () => {
     it('should return goals successfully', async () => {
       const mockResults = [
-        { distance: 100, title: 'Rivendell', special: true },
-        { distance: 200, title: 'Lothlorien', special: false }
+        { distance: 100, title: 'Rivendell', special: true, image_id: '1' },
+        { distance: 200, title: 'Lothlorien', special: false, image_id: '2' }
       ];
 
       // Mock session validation
