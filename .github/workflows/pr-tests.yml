@@ -86,12 +86,20 @@ jobs:
           path: coverage/
           retention-days: 30
 
-      - name: Report Coverage
+      - name: Report Client Coverage
         if: always() && steps.client-tests.outcome != 'skipped'
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           json-summary-path: './coverage/client/coverage-summary.json'
           name: 'Client Coverage'
+
+      - name: Report Backend Coverage
+        if: always() && steps.unit-tests.outcome != 'skipped'
+        uses: romeovs/lcov-reporter-action@v0.4.0
+        with:
+          lcov-file: './coverage/lcov.info'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          title: 'Backend Coverage'
 
       - name: Check for test failures
         if: always()
