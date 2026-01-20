@@ -103,34 +103,9 @@ This file contains the analysis of gaps greater than 70km between consecutive go
 - **After:** 5816.15 km (3614 miles) - Camp in the open lands
 - **Proposed Intermediary:** 5774.32 km (3588 miles) - Travel through the Green Hill Country
 
-## CSV Data
-
-A machine-readable CSV file with this data is available at [goals-gaps-analysis.csv](goals-gaps-analysis.csv).
-
 ## Implementation Notes
 
 1. **Current Status:** The schema update (`image_id` column) has been implemented in migration `0021_add_image_id_to_goals.sql`
 2. **Future Work:** A separate migration will be needed to insert intermediary goals into these gaps
 3. **Image Handling:** New intermediary goals should have `image_id` set to NULL
 4. **Special Field:** New intermediary goals should have `special` set to NULL unless they represent significant narrative moments
-
-## Suggested Intermediary Goals (from Story Definition)
-
-The story document suggested these specific intermediary goals:
-
-1. **Woody End** (~23 miles / 37 km): Between Stock Road (15 mi / 24 km) and Black Rider (32 mi / 51 km)
-   - Gap: ~27 km (under 70km threshold, so not in this analysis)
-
-2. **The High Hay** (~80 miles / 129 km): Between Crickhollow (73 mi / 117 km) and Old Forest (87 mi / 140 km)
-   - Gap: ~23 km (under 70km threshold, so not in this analysis)
-
-3. **Fog on the Downs** (~106 miles / 171 km): Between Bombadil (98 mi / 158 km) and Wights (115 mi / 185 km)
-   - Gap: ~27 km (under 70km threshold, so not in this analysis)
-
-4. **The East Road** (~125 miles / 201 km): Between Wights (115 mi / 185 km) and Bree (135 mi / 217 km)
-   - Gap: ~32 km (under 70km threshold, so not in this analysis)
-
-5. **Emyn Muil Foothills** (~1167 miles / 1878 km): Between Camp (1155 mi / 1859 km) and Lowlands (1180 mi / 1899 km)
-   - Gap: ~40 km (under 70km threshold, so not in this analysis)
-
-**Note:** The suggested intermediary goals from the story document are all in areas with gaps under 70km, so they are not included in this analysis. However, they may still be valuable for narrative pacing.
