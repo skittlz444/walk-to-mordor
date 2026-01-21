@@ -58,6 +58,11 @@ jobs:
         id: client-tests
         run: npm run test:client:coverage
         continue-on-error: true
+
+      - name: Run Legacy UI Coverage
+        id: legacy-tests
+        run: npm run test:legacy:coverage
+        continue-on-error: true
         
       - name: Upload Playwright Report
         if: always()
@@ -86,12 +91,16 @@ jobs:
           path: coverage/
           retention-days: 30
 
-      - name: Report Coverage
-        if: always() && steps.client-tests.outcome != 'skipped'
-        uses: davelosert/vitest-coverage-report-action@v2
+      - name: Generate Coverage Comment
+        if: always()
+        run: node .github/scripts/generate-coverage-comment.js
+
+      - name: Post Coverage Comment
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          json-summary-path: './coverage/client/coverage-summary.json'
-          name: 'Client Coverage'
+          header: coverage-report
+          path: coverage-comment.md
 
       - name: Check for test failures
         if: always()

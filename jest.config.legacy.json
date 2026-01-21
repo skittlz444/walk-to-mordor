@@ -1,0 +1,22 @@
+{
+  "testEnvironment": "node",
+  "collectCoverage": true,
+  "coverageDirectory": "coverage/legacy",
+  "coverageReporters": [
+    "lcov",
+    "json-summary"
+  ],
+  "reporters": ["default"],
+  "collectCoverageFrom": [
+    "public/js/**/*.js",
+    "!public/js/client/**",
+    "!coverage/**"
+  ],
+  "testMatch": [
+    "**/tests/**/*.test.js"
+  ],
+  "testPathIgnorePatterns": [
+    "/node_modules/"
+  ],
+  "verbose": false
+}
