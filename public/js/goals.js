@@ -12,13 +12,21 @@ function showGoalModal(goal, currentDistance, isCongratulations = false) {
   document.body.appendChild(modalContainer);
 
   // Import Preact render function (loaded via islands.js)
-  const { render, h } = window.preact || {};
-  const { GoalModal } = window.preactIslands || {};
+  const preact = window.preact;
+  const islands = window.preactIslands;
 
-  if (!render || !h || !GoalModal) {
-    console.error('Preact or GoalModal island not loaded');
+  if (!preact || !preact.render || !preact.h) {
+    console.error('Preact library not loaded. Ensure islands.js is loaded before goals.js');
     return;
   }
+
+  if (!islands || !islands.GoalModal) {
+    console.error('GoalModal island not found in registry. Check island registration in client/src/index.tsx');
+    return;
+  }
+
+  const { render, h } = preact;
+  const { GoalModal } = islands;
 
   // Render the GoalModal island with props
   const onClose = () => {

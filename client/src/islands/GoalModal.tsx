@@ -34,7 +34,7 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, on
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handleOverlayClick = (e: MouseEvent) => {
+  const handleOverlayClick = (e: preact.JSX.TargetedEvent<HTMLDivElement, MouseEvent>) => {
     if ((e.target as HTMLElement).classList.contains('modal-overlay')) {
       onClose();
     }
