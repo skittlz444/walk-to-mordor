@@ -104,7 +104,7 @@ describe('GoalModal', () => {
     expect(highResImages[1].src).toContain('/img/highres/1.jpg');
   });
 
-  it('does not render images when image_id is null', () => {
+  it('renders placeholder image when image_id is null', () => {
     const goalWithoutImage = { ...mockGoal, image_id: null };
     
     render(
@@ -116,7 +116,41 @@ describe('GoalModal', () => {
       />
     );
 
-    expect(screen.queryByAltText('Goal image')).toBeFalsy();
+    // Should render images with placeholder (id='0')
+    const images = screen.getAllByAltText('Goal image') as HTMLImageElement[];
+    expect(images.length).toBe(2);
+    expect(images[0].src).toContain('/img/thumbs/0-thumb.jpg');
+    expect(images[1].src).toContain('/img/highres/0.jpg');
+  });
+
+  it('falls back to placeholder when image fails to load', () => {
+    const goalWithBadImage = { ...mockGoal, image_id: '999' };
+    
+    render(
+      <GoalModal
+        goal={goalWithBadImage}
+        currentDistance={50}
+        isCongratulations={false}
+        onClose={mockOnClose}
+      />
+    );
+
+    const images = screen.getAllByAltText('Goal image') as HTMLImageElement[];
+    
+    // Trigger error on thumbnail
+    const thumbImage = images[0];
+    const errorEvent = new Event('error');
+    thumbImage.dispatchEvent(errorEvent);
+    
+    // Should fallback to placeholder
+    expect(thumbImage.src).toContain('/img/thumbs/0-thumb.jpg');
+    
+    // Trigger error on high-res image
+    const highResImage = images[1];
+    highResImage.dispatchEvent(errorEvent);
+    
+    // Should fallback to placeholder
+    expect(highResImage.src).toContain('/img/highres/0.jpg');
   });
 
   it('calls onClose when Close button is clicked', () => {
