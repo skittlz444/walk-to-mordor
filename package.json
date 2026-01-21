@@ -58,6 +58,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:legacy:coverage": "jest --coverage --config jest.config.legacy.json --passWithNoTests",
     "test:ui": "playwright test",
     "test:ui:headed": "playwright test --headed",
     "test:ui:report": "playwright show-report",
