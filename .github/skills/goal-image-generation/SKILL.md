@@ -233,7 +233,7 @@ Once the prompt is validated, generate the images using the `generate_image` too
 
 ### Thumbnail Image
 After generating the high-res image:
-1. Use the same prompt or generate from the high-res image
+1. Generate from the high-res image or use a downscaling script
 2. Maximum dimension: 400px
 3. Quality: 60
 4. Target size: <20KB
