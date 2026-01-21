@@ -66,6 +66,8 @@ export function renderHtml() {
       <script src="/js/goals.js"></script>
       <script src="/js/profile.js"></script>
       <script src="/js/main.js"></script>
+      <!-- Preact Islands -->
+      <script type="module" src="/js/client/islands.js"></script>
       </body>
     </html>
 `;
