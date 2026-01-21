@@ -198,4 +198,5 @@ artifacts/
 test-summary/
 .tmp/
 tests/.tmp/
+public/js/client/
 .dev.vars
