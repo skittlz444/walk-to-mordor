@@ -27,6 +27,17 @@ const workerCoverage = readJSON('coverage/coverage-summary.json');
 const clientCoverage = readJSON('coverage/client/coverage-summary.json');
 const legacyCoverage = readJSON('coverage/legacy/coverage-summary.json');
 
+// Fail fast if no coverage data is available at all
+if (!workerCoverage && !clientCoverage && !legacyCoverage) {
+  console.error(
+    '❌ No coverage summary files found. Coverage generation may have failed. ' +
+    'Expected at least one of:\n' +
+    '  - coverage/coverage-summary.json\n' +
+    '  - coverage/client/coverage-summary.json\n' +
+    '  - coverage/legacy/coverage-summary.json'
+  );
+  process.exit(1);
+}
 // Build the comment
 let comment = '## 📊 Coverage Report\n\n';
 
