@@ -8,7 +8,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
 // Helper to read JSON safely
 function readJSON(filepath) {
