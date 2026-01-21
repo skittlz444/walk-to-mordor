@@ -1,15 +1,31 @@
-import { render } from 'preact';
+import { render, h } from 'preact';
 import { HelloWorld } from './islands/HelloWorld';
 import { AuthForms } from './islands/AuthForms';
+import { GoalModal } from './islands/GoalModal';
 
 // Island registry - maps island names to their components
 const islands = {
   HelloWorld,
   AuthForms,
+  GoalModal,
 };
 
 // Type for island names
 type IslandName = keyof typeof islands;
+
+// Expose Preact and islands to global scope for vanilla JS integration
+declare global {
+  interface Window {
+    preact: {
+      render: typeof render;
+      h: typeof h;
+    };
+    preactIslands: typeof islands;
+  }
+}
+
+window.preact = { render, h };
+window.preactIslands = islands;
 
 /**
  * Discovers and hydrates all Preact islands on the page.

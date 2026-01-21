@@ -6,71 +6,34 @@ function showGoalModal(goal, currentDistance, isCongratulations = false) {
     return;
   }
 
-  const isCompleted = Number(currentDistance) >= goal.distance;
-  const distanceStyle = isCompleted ? 'text-decoration: line-through; color: #888;' : 'color: #FFD700;';
-  const distanceToGo = isCompleted ? 0 : goal.distance - Number(currentDistance);
-  
-  // Create modal overlay
-  const modalOverlay = document.createElement('div');
-  modalOverlay.className = 'modal-overlay';
-  modalOverlay.innerHTML = `
-    <div class="modal-dialog modal-large">
-      <div class="modal-content">
-        <div class="modal-body goal-modal-scrollable">
-          <div style="padding: 1.5em;">
-            ${isCongratulations ? `<div class="goal-congratulations">🎉 Congratulations! You've passed a new goal! 🎉</div>` : ''}
-            ${goal.special ? `<div style="color: #FFD700; font-size: 1.4em; font-weight: bold; margin-bottom: 0.5em; text-align: center;">${goal.special}</div>` : ''}
-            <div style="color: #fff; font-size: 1.2em; font-weight: bold; margin-bottom: 0.8em; text-align: center;">${goal.title}</div>
-            <div style="${distanceStyle} font-size: 1.1em; margin-bottom: 0.5em; text-align: center;">${goal.distance.toFixed(2)} km</div>
-            ${!isCompleted ? `<div style="color: #aaa; font-size: 1em; margin-bottom: 1em; text-align: center;">${distanceToGo.toFixed(2)} km to go</div>` : ''}
-            <div id="goal-image-container" style="margin-bottom: 1em; text-align: center;">
-              ${goal.image_id ? `
-                <div style="position: relative; max-width: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
-                  <img id="goal-thumb-image" 
-                       src="/img/thumbs/${goal.image_id}-thumb.jpg" 
-                       alt="Goal image" 
-                       style="width: 100%; height: auto; filter: blur(2px); transition: filter 0.3s ease;"
-                       onerror="this.onerror=null;this.src='/img/thumbs/0-thumb.jpg';">
-                  <img id="goal-highres-image" 
-                       src="/img/highres/${goal.image_id}.jpg" 
-                       alt="Goal image" 
-                       style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s ease;"
-                       onload="this.style.opacity = '1'; document.getElementById('goal-thumb-image').style.filter = 'none';"
-                       onerror="this.onerror=null;this.src='/img/highres/0.jpg';">
-                </div>
-              ` : ''}
-            </div>
-            ${goal.description ? `<div style="color: #ccc; font-size: 1em; line-height: 1.4; text-align: justify;">${goal.description}</div>` : ''}
-          </div>
-        </div>
-        <div class="modal-footer modal-footer-full">
-          <div class="modal-footer-btns modal-footer-btns-goal">
-            <button type="button" class="btn btn-secondary" id="close-goal-btn">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  // Create a mount point for the Preact GoalModal island
+  const modalContainer = document.createElement('div');
+  modalContainer.id = 'goal-modal-container';
+  document.body.appendChild(modalContainer);
 
-  document.body.appendChild(modalOverlay);
+  // Import Preact render function (loaded via islands.js)
+  const { render, h } = window.preact || {};
+  const { GoalModal } = window.preactIslands || {};
 
-  // Add event listeners
-  document.getElementById('close-goal-btn').addEventListener('click', closeGoalModal);
-  const closeModalBtn = document.getElementById('close-goal-modal');
-  if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', closeGoalModal);
+  if (!render || !h || !GoalModal) {
+    console.error('Preact or GoalModal island not loaded');
+    return;
   }
 
-  // Close modal when clicking overlay
-  modalOverlay.addEventListener('click', function(e) {
-    if (e.target === modalOverlay) {
-      closeGoalModal();
-    }
-  });
+  // Render the GoalModal island with props
+  const onClose = () => {
+    modalContainer.remove();
+  };
 
-  function closeGoalModal() {
-    modalOverlay.remove();
-  }
+  render(
+    h(GoalModal, {
+      goal: goal,
+      currentDistance: currentDistance,
+      isCongratulations: isCongratulations,
+      onClose: onClose
+    }),
+    modalContainer
+  );
 }
 
 function makeGoalClickable(element, goal, currentDistance) {
