@@ -9,7 +9,7 @@ This workflow guides the process of updating a specific goal description in the 
 
 ## Pre-requisites
 
-- Access to the reference information document: `.agent/workflows/goal-description-reference.md`
+- Access to the reference information document: `.github/skills/goal-description-update/resources/goal-description-reference.md`
 - Access to `migrations/0003_init_goals.sql` for goal reference.
 
 ---
@@ -29,7 +29,7 @@ This workflow guides the process of updating a specific goal description in the 
 
 ## Step 2: Identify Anchoring Milestones
 
-1. Open the reference document (`.agent/workflows/goal-description-reference.md`).
+1. Open the reference document (`.github/skills/goal-description-update/resources/goal-description-reference.md`).
 2. Consult the **Book Milestones** section.
 3. Identify:
    - The milestone that occurs DIRECTLY BEFORE the target goal.
