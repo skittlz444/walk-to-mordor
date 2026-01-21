@@ -2,7 +2,7 @@
 
 function showGoalModal(goal, currentDistance, isCongratulations = false) {
   // Prevent stacking modals - if one is already open, don't open another
-  if (document.querySelector('.modal-overlay')) {
+  if (document.getElementById('goal-modal-container') || document.querySelector('.modal-overlay')) {
     return;
   }
 
@@ -17,11 +17,13 @@ function showGoalModal(goal, currentDistance, isCongratulations = false) {
 
   if (!preact || !preact.render || !preact.h) {
     console.error('Preact library not loaded. Ensure islands.js is loaded before goals.js');
+    modalContainer.remove();
     return;
   }
 
   if (!islands || !islands.GoalModal) {
     console.error('GoalModal island not found in registry. Check island registration in client/src/index.tsx');
+    modalContainer.remove();
     return;
   }
 
@@ -30,6 +32,13 @@ function showGoalModal(goal, currentDistance, isCongratulations = false) {
 
   // Render the GoalModal island with props
   const onClose = () => {
+    // Unmount Preact tree first, then remove mount point.
+    // This improves consistency across browsers (notably Mobile Firefox).
+    try {
+      render(null, modalContainer);
+    } catch (e) {
+      // Ignore unmount errors; removing the container is sufficient cleanup.
+    }
     modalContainer.remove();
   };
 

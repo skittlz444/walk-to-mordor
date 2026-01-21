@@ -114,7 +114,7 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, on
           
           <div class="modal-footer modal-footer-full">
             <div class="modal-footer-btns modal-footer-btns-goal">
-              <button type="button" class="btn btn-secondary" onClick={onClose}>
+              <button id="close-goal-btn" type="button" class="btn btn-secondary" onClick={onClose}>
                 Close
               </button>
             </div>
