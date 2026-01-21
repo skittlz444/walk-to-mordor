@@ -3,15 +3,21 @@ import { HelloWorld } from './islands/HelloWorld';
 import { AuthForms } from './islands/AuthForms';
 import { GoalModal } from './islands/GoalModal';
 
-// Island registry - maps island names to their components
-const islands = {
+// Auto-hydrated islands - these are rendered from data-island attributes
+const autoHydratedIslands = {
+  HelloWorld,
+  AuthForms,
+};
+
+// All islands including those rendered programmatically
+const allIslands = {
   HelloWorld,
   AuthForms,
   GoalModal,
 };
 
-// Type for island names
-type IslandName = keyof typeof islands;
+// Type for auto-hydrated island names
+type IslandName = keyof typeof autoHydratedIslands;
 
 // Expose Preact and islands to global scope for vanilla JS integration
 declare global {
@@ -20,12 +26,13 @@ declare global {
       render: typeof render;
       h: typeof h;
     };
-    preactIslands: typeof islands;
+    preactIslands: typeof allIslands;
   }
 }
 
+// @ts-ignore - Type mismatch is acceptable for global exposure
 window.preact = { render, h };
-window.preactIslands = islands;
+window.preactIslands = allIslands;
 
 /**
  * Discovers and hydrates all Preact islands on the page.
@@ -46,7 +53,7 @@ function hydrateIslands() {
       return;
     }
 
-    const IslandComponent = islands[islandName];
+    const IslandComponent = autoHydratedIslands[islandName];
     
     if (!IslandComponent) {
       console.error(`Island component "${islandName}" not found in registry`);
@@ -54,7 +61,8 @@ function hydrateIslands() {
     }
 
     // Render the island component into the target element
-    render(<IslandComponent />, element);
+    // @ts-ignore - Auto-hydrated islands like HelloWorld and AuthForms don't require props
+    render(h(IslandComponent, null), element);
     
     console.log(`✅ Hydrated island: ${islandName}`);
   });
