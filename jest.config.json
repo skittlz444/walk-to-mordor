@@ -22,8 +22,7 @@
   ],
   "collectCoverageFrom": [
     "src/**/*.{js,ts}",
-    "public/wtm/js/update-cache-version.js",
-    "public/wtm/js/reset-cache-version.js",
+    "public/js/**/*.js",
     "!src/**/*.d.ts",
     "!src/**/node_modules/**",
     "!coverage/**"

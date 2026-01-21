@@ -86,20 +86,27 @@ jobs:
           path: coverage/
           retention-days: 30
 
-      - name: Report Client Coverage
-        if: always() && steps.client-tests.outcome != 'skipped'
-        uses: davelosert/vitest-coverage-report-action@v2
-        with:
-          json-summary-path: './coverage/client/coverage-summary.json'
-          name: 'Client Coverage'
+      - name: Merge Coverage Reports
+        if: always()
+        run: |
+          # Install lcov-result-merger
+          npm install -g lcov-result-merger
+          
+          # Create merged coverage directory
+          mkdir -p coverage/merged
+          
+          # Merge all lcov files
+          lcov-result-merger "coverage/**/lcov.info" "coverage/merged/lcov.info"
+          
+          echo "✅ Coverage reports merged successfully"
 
-      - name: Report Backend Coverage
-        if: always() && steps.unit-tests.outcome != 'skipped'
+      - name: Report Unified Coverage
+        if: always()
         uses: romeovs/lcov-reporter-action@v0.4.0
         with:
-          lcov-file: './coverage/lcov.info'
+          lcov-file: './coverage/merged/lcov.info'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          title: 'Backend Coverage'
+          title: 'Unified Coverage Report'
 
       - name: Check for test failures
         if: always()
