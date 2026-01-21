@@ -13,7 +13,7 @@
     "!coverage/**"
   ],
   "testMatch": [
-    "**/tests/legacy/**/*.test.js"
+    "**/tests/**/*.test.js"
   ],
   "testPathIgnorePatterns": [
     "/node_modules/"
