@@ -22,6 +22,8 @@
   ],
   "collectCoverageFrom": [
     "src/**/*.{js,ts}",
+    "public/js/update-cache-version.js",
+    "public/js/reset-cache-version.js",
     "!src/**/*.d.ts",
     "!src/**/node_modules/**",
     "!coverage/**"

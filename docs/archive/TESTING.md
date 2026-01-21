@@ -118,15 +118,31 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 ## Code Coverage
 
 ### Coverage Configuration
-- **Target**: 80% coverage threshold for statements, branches, functions, and lines
-- **Current Achievement**: 100% coverage for testable modules
-- **Excluded Files**: `src/index.ts` (covered by integration tests in different environment)
+The project uses a three-segment coverage approach to track coverage across different parts of the application:
+
+1. **Worker (Backend)** - TypeScript backend files in `src/`
+   - Target: 80% coverage threshold for statements, branches, functions, and lines
+   - Configuration: `jest.config.json`
+   - Includes cache management scripts: `public/js/update-cache-version.js` and `public/js/reset-cache-version.js`
+
+2. **Client (Preact)** - Frontend components in `client/src/`
+   - Configuration: `client/vitest.config.ts`
+   - Uses Vitest with v8 coverage provider
+   - Reports to: `coverage/client/`
+
+3. **UI (Legacy)** - Vanilla JavaScript files in `public/js/`
+   - Configuration: `jest.config.legacy.json`
+   - Coverage collection for legacy frontend files
+   - Reports to: `coverage/legacy/`
+   - Note: Currently has no tests (passWithNoTests flag enabled)
 
 ### Coverage Reports
+In CI, all three coverage segments are combined into a single PR comment with separate sections for each:
 - **Console**: Summary displayed after test runs
-- **HTML**: Detailed interactive report at `coverage/index.html`
-- **LCOV**: Machine-readable format at `coverage/lcov.info`
-- **JSON**: Raw coverage data at `coverage/coverage-final.json`
+- **HTML**: Detailed interactive reports at `coverage/index.html`, `coverage/client/index.html`, and `coverage/legacy/index.html`
+- **LCOV**: Machine-readable format for each segment
+- **JSON**: Raw coverage data at `coverage/coverage-summary.json`, `coverage/client/coverage-summary.json`, and `coverage/legacy/coverage-summary.json`
+- **PR Comment**: Unified coverage report with three separate sections posted as a sticky comment on pull requests
 
 ## Running Tests
 
@@ -134,6 +150,13 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 ```bash
 npm test                    # Runs unit tests (90)
 npm run test:ui             # UI tests - All browser scenarios
+```
+
+### Coverage Tests
+```bash
+npm run test:coverage           # Worker (Backend) coverage
+npm run test:client:coverage    # Client (Preact) coverage
+npm run test:legacy:coverage    # UI (Legacy) coverage - currently no tests
 ```
 
 ### Category-Specific Tests
