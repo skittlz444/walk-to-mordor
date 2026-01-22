@@ -5,24 +5,61 @@
 
 const { request } = require('@playwright/test');
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRetriableNetworkError(error) {
+  const message = (error && error.message) ? error.message : String(error);
+  return (
+    message.includes('socket hang up') ||
+    message.includes('ECONNRESET') ||
+    message.includes('ETIMEDOUT') ||
+    message.includes('ECONNREFUSED')
+  );
+}
+
+/**
+ * Retry helper with exponential backoff for network operations.
+ * @param {import('@playwright/test').APIRequestContext} apiContext - The API context
+ * @param {string} url - The URL to request
+ * @param {Object} options - Request options
+ * @param {number} retries - Number of retry attempts (default: 3)
+ * @returns {Promise<import('@playwright/test').APIResponse>} The API response
+ * @throws {Error} Throws the last error if all retries fail
+ */
+async function getWithRetry(apiContext, url, options = {}, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await apiContext.get(url, options);
+    } catch (error) {
+      if (!isRetriableNetworkError(error) || attempt === retries) {
+        throw error;
+      }
+      await sleep(250 * attempt);
+    }
+  }
+}
+
 /**
  * Clear ALL distance data from the database before/after tests
  * This ensures a clean state for each test run without worrying about data interference
  * @param {string} baseUrl - The base URL of the application (default: http://localhost:8787)
  */
 async function cleanupAllTestData(baseUrl = 'http://localhost:8787', token = 'TEST_MOCK_TOKEN') {
+  /** @type {import('@playwright/test').APIRequestContext | undefined} */
+  let apiContext;
   try {
     // Use mock auth token
-    const apiContext = await request.newContext({
+    apiContext = await request.newContext({
       extraHTTPHeaders: {
         'Authorization': `Bearer ${token}`
       }
     });
     
     // Get all events
-    const response = await apiContext.get(`${baseUrl}/api/calendar-progress`);
+    const response = await getWithRetry(apiContext, `${baseUrl}/api/calendar-progress`);
     if (!response.ok()) {
-      await apiContext.dispose();
       return 0;
     }
     
@@ -31,7 +68,6 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787', token = 'TE
       events = await response.json();
     } catch(e) {
       // Ignore JSON parse errors (empty body, etc)
-      await apiContext.dispose();
       return 0;
     }
     
@@ -53,8 +89,6 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787', token = 'TE
       }
     }
     
-    await apiContext.dispose();
-    
     return cleanedCount;
     
   } catch (error) {
@@ -63,6 +97,14 @@ async function cleanupAllTestData(baseUrl = 'http://localhost:8787', token = 'TE
       console.error('❌ Cleanup failed:', error.message);
     }
     throw error;
+  } finally {
+    if (apiContext) {
+      try {
+        await apiContext.dispose();
+      } catch (e) {
+        // Ignore dispose errors in tests.
+      }
+    }
   }
 }
 
