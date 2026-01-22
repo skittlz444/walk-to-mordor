@@ -223,8 +223,10 @@ Once the prompt is validated, generate the images using the `generate_image` too
 
 ### High-Resolution Image
 1. Use the validated prompt
-2. Specify dimensions: 2560x2560 pixels
-3. Request high quality (90)
+2. Generate at 1024x1024 pixels (current generator limit)
+3. Upscale to 2560x2560 using the script:
+   - Script: `.github/skills/goal-image-generation/resources/resize-webp.js`
+   - Example: `node .github/skills/goal-image-generation/resources/resize-webp.js public/img/highres/[slug].webp public/img/highres/[slug].webp --width 2560 --height 2560 --quality 90 --upscale --targetKB 0`
 4. Pass reference images for style adherence:
    - `d:\GitHub\walk-to-mordor\public\img\highres\2.jpg`
    - `d:\GitHub\walk-to-mordor\public\img\highres\30.jpg`
@@ -234,6 +236,8 @@ Once the prompt is validated, generate the images using the `generate_image` too
 ### Thumbnail Image
 After generating the high-res image:
 1. Generate from the high-res image or use a downscaling script
+   - Script: `.github/skills/goal-image-generation/resources/resize-webp.js`
+   - Example: `node .github/skills/goal-image-generation/resources/resize-webp.js public/img/highres/[slug].webp public/img/thumbs/[slug]-thumb.webp --max 400 --targetKB 20 --quality 60`
 2. Maximum dimension: 400px
 3. Quality: 60
 4. Target size: <20KB

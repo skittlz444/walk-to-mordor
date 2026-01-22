@@ -24,6 +24,7 @@
     "publish": true
   },
   "devDependencies": {
+    "sharp": "^0.34.5",
     "@axe-core/playwright": "^4.11.0",
     "@playwright/test": "^1.57.0",
     "@preact/preset-vite": "^2.10.2",
