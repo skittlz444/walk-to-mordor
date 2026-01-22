@@ -214,7 +214,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Configure esbuild (or vite) for Preact compilation with `preact/compat` alias for react-konva compatibility
 - [ ] Configure TypeScript for client code (separate tsconfig.client.json if needed)
 - [ ] Create npm scripts: `build:client`, `dev:client` (watch mode)
-- [ ] Create a sample "HelloWorld" Preact island component that renders to a `<div id="preact-root">` placeholder
+- [ ] Create a sample proof-of-concept island component (Note: HelloWorld POC has been removed after validation)
 - [ ] Document the island mounting pattern in `docs/architecture.md`
 - [ ] Verify build outputs to `public/js/islands/` or equivalent assets location
 

@@ -121,11 +121,11 @@ export function GoalCard() {
 Add your island to the registry in `client/src/index.tsx`:
 
 ```tsx
-import { HelloWorld } from './islands/HelloWorld';
 import { GoalCard } from './islands/GoalCard';  // Import your island
+import { AuthForms } from './islands/AuthForms';
 
 const islands = {
-  HelloWorld,
+  AuthForms,
   GoalCard,  // Add to registry
 };
 ```
@@ -304,19 +304,19 @@ export default defineConfig({
 
 ## Testing
 
-### Unit Testing (Jest)
+### Unit Testing (Vitest)
 
-Component unit tests go in `tests/` alongside API tests.
+Component unit tests are located in the same directory as the component files.
 
-**Example**: `tests/HelloWorld.test.tsx`
+**Example**: `client/src/islands/GoalModal.test.tsx`
 
 ```tsx
 import { render } from '@testing-library/preact';
-import { HelloWorld } from '../client/src/islands/HelloWorld';
+import { GoalModal } from './GoalModal';
 
-test('HelloWorld renders with initial state', () => {
-  const { getByText } = render(<HelloWorld />);
-  expect(getByText(/Counter Signal: 0/)).toBeInTheDocument();
+test('GoalModal renders with initial state', () => {
+  const { getByText } = render(<GoalModal />);
+  expect(getByText(/Goal/)).toBeTruthy();
 });
 ```
 
@@ -324,20 +324,19 @@ test('HelloWorld renders with initial state', () => {
 
 End-to-end tests verify island hydration in a real browser.
 
-**Example**: `tests/ui/islands.spec.js`
+**Example**: `tests/ui/auth.spec.js`
 
 ```javascript
 import { test, expect } from '@playwright/test';
 
-test('HelloWorld island hydrates and responds to clicks', async ({ page }) => {
-  await page.goto('/islands-test.html');
+test('AuthForms island hydrates and responds to clicks', async ({ page }) => {
+  await page.goto('/auth');
   
   // Verify hydration
-  await expect(page.locator('[data-island="HelloWorld"]')).toBeVisible();
+  await expect(page.locator('[data-island="AuthForms"]')).toBeVisible();
   
   // Test interactivity
-  await page.click('button:has-text("Increment")');
-  await expect(page.locator('text=Counter Signal: 1')).toBeVisible();
+  await page.click('button:has-text("Sign In")');
 });
 ```
 
