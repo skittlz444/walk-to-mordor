@@ -59,6 +59,9 @@ export function renderHtml() {
         </div>
       </main>
       
+      <!-- Preact Islands - Load before vanilla JS that depends on it -->
+      <script type="module" src="/js/client/islands.js"></script>
+      
       <!-- Scripts -->
       <script src="/js/validators.js"></script>
       <script src="/js/calendar.js"></script>
