@@ -100,8 +100,8 @@ describe('GoalModal', () => {
     );
 
     const highResImages = screen.getAllByAltText('Goal image') as HTMLImageElement[];
-    expect(highResImages[0].src).toContain('/img/thumbs/1-thumb.jpg');
-    expect(highResImages[1].src).toContain('/img/highres/1.jpg');
+    expect(highResImages[0].src).toContain('/img/thumbs/1-thumb.webp');
+    expect(highResImages[1].src).toContain('/img/highres/1.webp');
   });
 
   it('renders placeholder image when image_id is null', () => {
@@ -116,14 +116,44 @@ describe('GoalModal', () => {
       />
     );
 
-    // Should render images with placeholder (id='0')
+    // Should render images with placeholder (id='0') in webp format first
     const images = screen.getAllByAltText('Goal image') as HTMLImageElement[];
     expect(images.length).toBe(2);
-    expect(images[0].src).toContain('/img/thumbs/0-thumb.jpg');
-    expect(images[1].src).toContain('/img/highres/0.jpg');
+    expect(images[0].src).toContain('/img/thumbs/0-thumb.webp');
+    expect(images[1].src).toContain('/img/highres/0.webp');
   });
 
-  it('falls back to placeholder when image fails to load', () => {
+  it('falls back to .jpg when .webp fails to load', () => {
+    const goalWithWebpUnavailable = { ...mockGoal, image_id: '999' };
+    
+    render(
+      <GoalModal
+        goal={goalWithWebpUnavailable}
+        currentDistance={50}
+        isCongratulations={false}
+        onClose={mockOnClose}
+      />
+    );
+
+    const images = screen.getAllByAltText('Goal image') as HTMLImageElement[];
+    
+    // Initially loads .webp
+    expect(images[0].src).toContain('/img/thumbs/999-thumb.webp');
+    expect(images[1].src).toContain('/img/highres/999.webp');
+    
+    // Trigger error on thumbnail - should try .jpg
+    const thumbImage = images[0];
+    const errorEvent = new Event('error');
+    thumbImage.dispatchEvent(errorEvent);
+    expect(thumbImage.src).toContain('/img/thumbs/999-thumb.jpg');
+    
+    // Trigger error on high-res - should try .jpg
+    const highResImage = images[1];
+    highResImage.dispatchEvent(errorEvent);
+    expect(highResImage.src).toContain('/img/highres/999.jpg');
+  });
+
+  it('falls back to placeholder when both .webp and .jpg fail to load', () => {
     const goalWithBadImage = { ...mockGoal, image_id: '999' };
     
     render(
@@ -137,19 +167,23 @@ describe('GoalModal', () => {
 
     const images = screen.getAllByAltText('Goal image') as HTMLImageElement[];
     
-    // Trigger error on thumbnail
+    // Trigger first error on thumbnail (.webp fails, tries .jpg)
     const thumbImage = images[0];
     const errorEvent = new Event('error');
     thumbImage.dispatchEvent(errorEvent);
+    expect(thumbImage.src).toContain('/img/thumbs/999-thumb.jpg');
     
-    // Should fallback to placeholder
+    // Trigger second error on thumbnail (.jpg fails, goes to placeholder)
+    thumbImage.dispatchEvent(errorEvent);
     expect(thumbImage.src).toContain('/img/thumbs/0-thumb.jpg');
     
-    // Trigger error on high-res image
+    // Trigger first error on high-res (.webp fails, tries .jpg)
     const highResImage = images[1];
     highResImage.dispatchEvent(errorEvent);
+    expect(highResImage.src).toContain('/img/highres/999.jpg');
     
-    // Should fallback to placeholder
+    // Trigger second error on high-res (.jpg fails, goes to placeholder)
+    highResImage.dispatchEvent(errorEvent);
     expect(highResImage.src).toContain('/img/highres/0.jpg');
   });
 
