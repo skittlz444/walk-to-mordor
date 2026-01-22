@@ -22,8 +22,8 @@ so that **we can build modern, interactive UI components (like the Map) using an
 - [x] **Scripts**: Add npm scripts to root `package.json`:
     - [x] `npm run build:client`
     - [x] `npm run dev:client` (watch mode)
-- [x] **Proof of Concept**: Create a sample "HelloWorld" Preact island component.
-    - [x] Create `client/src/islands/HelloWorld.tsx`.
+- [x] **Proof of Concept**: Created a sample "HelloWorld" Preact island component (now removed - served its purpose).
+    - [x] Created `client/src/islands/HelloWorld.tsx` (removed after proof-of-concept validation).
     - [x] **Must demonstrate Signal usage** (e.g., a simple counter or toggle) to verify state management setup.
     - [x] Mount it to a `<div id="preact-root">` in a test HTML page or existing page (temporary).
 - [x] **Documentation**: Document the island mounting pattern in a new `docs/frontend-guide.md` linked from architecture.
@@ -47,10 +47,10 @@ so that **we can build modern, interactive UI components (like the Map) using an
   - [ ] Ensure `jsx: "react-jsx"` and `jsxImportSource: "preact"`.
 - [ ] **Create Hydration Logic**
   - [ ] Create `client/src/index.tsx` to handle looking for island roots (e.g., `data-island="Name"`) and mounting components.
-- [ ] **Create Hello World Island**
-  - [ ] `client/src/islands/HelloWorld.tsx`.
+- [ ] **Create Example Island** (Note: HelloWorld proof-of-concept has been removed)
+  - [ ] Create production islands like `client/src/islands/GoalModal.tsx`.
   - [ ] Implement using `@preact/signals` (e.g. `useSignal` for local state).
-  - [ ] Add a test route or modify `index.html` locally to test it.
+  - [ ] Add integration with actual application features.
 - [ ] **Update Documentation**
   - [ ] Create `docs/frontend-guide.md` with instructions on how to create and mount a new Preact component.
 
@@ -98,7 +98,7 @@ Claude 3.7 Sonnet (2026-01-17)
 - [x] Validated `preact/compat` alias works in `client/vite.config.ts`
 - [x] Checked that `public/` assets are correctly served by Worker after build
 - [x] Successfully built client bundle to `public/js/client/islands.js` (23KB)
-- [x] Created and tested HelloWorld island with Signal-based counter and toggle
+- [x] Created and tested HelloWorld island with Signal-based counter and toggle (removed after validation)
 - [x] Verified island hydration in browser with interactive testing
 - [x] Created comprehensive `docs/frontend-guide.md` with examples and best practices
 - [x] Added Playwright UI tests for island hydration and interactivity
@@ -111,9 +111,9 @@ Claude 3.7 Sonnet (2026-01-17)
 - `client/tsconfig.json` (TypeScript config for client)
 - `client/src/vite-env.d.ts` (Vite environment types)
 - `client/src/index.tsx` (Island hydration entry point)
-- `client/src/islands/HelloWorld.tsx` (Proof-of-concept island with Signals)
+- `client/src/islands/HelloWorld.tsx` (Proof-of-concept island with Signals - removed)
 - `docs/frontend-guide.md` (Comprehensive developer documentation)
 - `docs/architecture.md` (Updated with link to frontend guide)
-- `public/islands-test.html` (Test page for island verification)
-- `public/js/client/islands.js` (Built bundle - 23KB)
+- `public/islands-test.html` (Test page for island verification - removed)
+- `public/js/client/islands.js` (Built bundle)
 - `tests/ui/islands.spec.js` (Playwright tests for islands)

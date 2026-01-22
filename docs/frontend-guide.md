@@ -121,12 +121,21 @@ export function GoalCard() {
 Add your island to the registry in `client/src/index.tsx`:
 
 ```tsx
-import { HelloWorld } from './islands/HelloWorld';
 import { GoalCard } from './islands/GoalCard';  // Import your island
+import { AuthForms } from './islands/AuthForms';
+import { GoalModal } from './islands/GoalModal';
 
-const islands = {
-  HelloWorld,
-  GoalCard,  // Add to registry
+// Auto-hydrated islands - these are rendered from data-island attributes
+const autoHydratedIslands = {
+  AuthForms,
+  GoalCard,  // Add to auto-hydrated registry if it should auto-mount via data-island
+};
+
+// All islands including those rendered programmatically
+const allIslands = {
+  AuthForms,
+  GoalCard,
+  GoalModal,
 };
 ```
 
@@ -304,19 +313,19 @@ export default defineConfig({
 
 ## Testing
 
-### Unit Testing (Jest)
+### Unit Testing (Vitest)
 
-Component unit tests go in `tests/` alongside API tests.
+Component unit tests are located in the same directory as the component files.
 
-**Example**: `tests/HelloWorld.test.tsx`
+**Example**: `client/src/islands/GoalModal.test.tsx`
 
 ```tsx
 import { render } from '@testing-library/preact';
-import { HelloWorld } from '../client/src/islands/HelloWorld';
+import { GoalModal } from './GoalModal';
 
-test('HelloWorld renders with initial state', () => {
-  const { getByText } = render(<HelloWorld />);
-  expect(getByText(/Counter Signal: 0/)).toBeInTheDocument();
+test('GoalModal renders with initial state', () => {
+  const { getByText } = render(<GoalModal />);
+  expect(getByText(/Goal/)).toBeTruthy();
 });
 ```
 
@@ -324,20 +333,21 @@ test('HelloWorld renders with initial state', () => {
 
 End-to-end tests verify island hydration in a real browser.
 
-**Example**: `tests/ui/islands.spec.js`
+**Example**: `tests/ui/goals.spec.js`
 
 ```javascript
 import { test, expect } from '@playwright/test';
 
-test('HelloWorld island hydrates and responds to clicks', async ({ page }) => {
-  await page.goto('/islands-test.html');
+test('GoalModal island hydrates and responds to clicks', async ({ page }) => {
+  await page.goto('/');
   
-  // Verify hydration
-  await expect(page.locator('[data-island="HelloWorld"]')).toBeVisible();
+  // Verify hydration and island interaction
+  const goalCard = page.locator('.goal-card').first();
+  await expect(goalCard).toBeVisible();
   
   // Test interactivity
-  await page.click('button:has-text("Increment")');
-  await expect(page.locator('text=Counter Signal: 1')).toBeVisible();
+  await goalCard.click();
+  await expect(page.locator('.modal')).toBeVisible();
 });
 ```
 

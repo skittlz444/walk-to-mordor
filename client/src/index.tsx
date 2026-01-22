@@ -1,17 +1,14 @@
 import { render, h } from 'preact';
-import { HelloWorld } from './islands/HelloWorld';
 import { AuthForms } from './islands/AuthForms';
 import { GoalModal } from './islands/GoalModal';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
-  HelloWorld,
   AuthForms,
 };
 
 // All islands including those rendered programmatically
 const allIslands = {
-  HelloWorld,
   AuthForms,
   GoalModal,
 };
@@ -39,7 +36,7 @@ window.preactIslands = allIslands;
  * Islands are identified by elements with a `data-island` attribute.
  * 
  * Example usage in HTML:
- * <div id="preact-root" data-island="HelloWorld"></div>
+ * <div id="preact-root" data-island="AuthForms"></div>
  */
 function hydrateIslands() {
   // Find all elements with data-island attribute
@@ -61,7 +58,7 @@ function hydrateIslands() {
     }
 
     // Render the island component into the target element
-    // @ts-expect-error - TypeScript incorrectly infers that these islands require props, but HelloWorld/AuthForms accept none
+    // @ts-expect-error - TypeScript incorrectly infers that these islands require props, but AuthForms accepts none
     render(h(IslandComponent, null), element);
     
     console.log(`✅ Hydrated island: ${islandName}`);

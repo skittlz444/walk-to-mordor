@@ -65,7 +65,7 @@ Update `.github/workflows/pr-tests.yml`:
 - Update root `package.json` to proxy commands to `client/`.
 
 ### Step 4: Add Sample Test
-- Add `client/src/islands/HelloWorld.test.tsx` to verify the setup works against the existing `HelloWorld.tsx`.
+- Add unit tests for island components (e.g., `client/src/islands/GoalModal.test.tsx`). Note: The original HelloWorld proof-of-concept island has been removed.
 
 ### Step 5: Update CI
 - Modify `pr-tests.yml` to include the execution of these tests.
