@@ -19,6 +19,15 @@ function isRetriableNetworkError(error) {
   );
 }
 
+/**
+ * Retry helper with exponential backoff for network operations.
+ * @param {import('@playwright/test').APIRequestContext} apiContext - The API context
+ * @param {string} url - The URL to request
+ * @param {Object} options - Request options
+ * @param {number} retries - Number of retry attempts (default: 3)
+ * @returns {Promise<import('@playwright/test').APIResponse>} The API response
+ * @throws {Error} Throws the last error if all retries fail
+ */
 async function getWithRetry(apiContext, url, options = {}, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {

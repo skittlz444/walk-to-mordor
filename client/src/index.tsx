@@ -30,7 +30,7 @@ declare global {
   }
 }
 
-// @ts-ignore - Window augmentation type mismatch: TypeScript requires full Preact export but we only expose render/h for vanilla JS bridge
+// @ts-expect-error - Window augmentation type mismatch: TypeScript requires full Preact export but we only expose render/h for vanilla JS bridge
 window.preact = { render, h };
 window.preactIslands = allIslands;
 
@@ -61,7 +61,7 @@ function hydrateIslands() {
     }
 
     // Render the island component into the target element
-    // @ts-ignore - TypeScript incorrectly infers that these islands require props, but HelloWorld/AuthForms accept none
+    // @ts-expect-error - TypeScript incorrectly infers that these islands require props, but HelloWorld/AuthForms accept none
     render(h(IslandComponent, null), element);
     
     console.log(`✅ Hydrated island: ${islandName}`);

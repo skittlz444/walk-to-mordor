@@ -243,4 +243,21 @@ describe('GoalModal', () => {
     const distanceElement = screen.getByText('100.50 km');
     expect(distanceElement.getAttribute('style')).toContain('color: #FFD700');
   });
+
+  it('calls onClose when Escape key is pressed', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        isCongratulations={false}
+        onClose={mockOnClose}
+      />
+    );
+
+    // Simulate Escape key press
+    const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' });
+    document.dispatchEvent(escapeEvent);
+
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+  });
 });

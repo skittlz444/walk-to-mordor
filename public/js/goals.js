@@ -2,7 +2,7 @@
 
 function showGoalModal(goal, currentDistance, isCongratulations = false) {
   // Prevent stacking modals - if one is already open, don't open another
-  if (document.getElementById('goal-modal-container') || document.querySelector('.modal-overlay')) {
+  if (document.getElementById('goal-modal-container')) {
     return;
   }
 
