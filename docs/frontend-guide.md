@@ -123,10 +123,19 @@ Add your island to the registry in `client/src/index.tsx`:
 ```tsx
 import { GoalCard } from './islands/GoalCard';  // Import your island
 import { AuthForms } from './islands/AuthForms';
+import { GoalModal } from './islands/GoalModal';
 
-const islands = {
+// Auto-hydrated islands - these are rendered from data-island attributes
+const autoHydratedIslands = {
   AuthForms,
-  GoalCard,  // Add to registry
+  GoalCard,  // Add to auto-hydrated registry if it should auto-mount via data-island
+};
+
+// All islands including those rendered programmatically
+const allIslands = {
+  AuthForms,
+  GoalCard,
+  GoalModal,
 };
 ```
 
@@ -324,19 +333,21 @@ test('GoalModal renders with initial state', () => {
 
 End-to-end tests verify island hydration in a real browser.
 
-**Example**: `tests/ui/auth.spec.js`
+**Example**: `tests/ui/goals.spec.js`
 
 ```javascript
 import { test, expect } from '@playwright/test';
 
-test('AuthForms island hydrates and responds to clicks', async ({ page }) => {
-  await page.goto('/auth');
+test('GoalModal island hydrates and responds to clicks', async ({ page }) => {
+  await page.goto('/');
   
-  // Verify hydration
-  await expect(page.locator('[data-island="AuthForms"]')).toBeVisible();
+  // Verify hydration and island interaction
+  const goalCard = page.locator('.goal-card').first();
+  await expect(goalCard).toBeVisible();
   
   // Test interactivity
-  await page.click('button:has-text("Sign In")');
+  await goalCard.click();
+  await expect(page.locator('.modal')).toBeVisible();
 });
 ```
 
