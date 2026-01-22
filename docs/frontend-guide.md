@@ -462,9 +462,6 @@ export function GoalModal() {
     </>
   );
 }
-
-// Note: GoalModal now supports WebP and JPG image formats with automatic fallback
-// Images load as .webp first, then fall back to .jpg if unavailable
 ```
 
 ### Fetching Data
