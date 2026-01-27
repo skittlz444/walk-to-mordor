@@ -70,7 +70,7 @@
     "build:sw:reset": "node public/js/reset-cache-version.js"
   },
   "dependencies": {
-    "@preact/signals": "^2.5.1",
+    "@preact/signals": "^2.6.1",
     "preact": "^10.28.2"
   }
 }
