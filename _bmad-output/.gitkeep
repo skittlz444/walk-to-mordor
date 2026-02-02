@@ -1,0 +1,3 @@
+# This folder is used for BMAD agent output files during development
+# Files in this folder are typically temporary and should not be committed
+# Only permanent documentation should be moved to docs/
