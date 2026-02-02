@@ -221,8 +221,8 @@ function renderGoals(currentDistance) {
           makeGoalClickable(element, completed[index], currentDistance);
         });
 
-        // Upcoming goals (skip index 0 - that's the next goal Preact island)
-        document.querySelectorAll('.upcoming-goal:not(#next-goal-mount .upcoming-goal)').forEach((element, index) => {
+        // Upcoming goals (non-next goals - those without .next-goal class)
+        document.querySelectorAll('.upcoming-goal:not(.next-goal)').forEach((element, index) => {
           // index here corresponds to upcoming.slice(1), so we need index + 1 for the actual upcoming array
           makeGoalClickable(element, upcoming[index + 1], currentDistance);
         });

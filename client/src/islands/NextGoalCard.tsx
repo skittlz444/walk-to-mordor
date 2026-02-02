@@ -1,5 +1,3 @@
-import { useSignal } from '@preact/signals';
-
 interface Goal {
   id: number;
   distance: number;
@@ -30,7 +28,7 @@ export function NextGoalCard({ goal, currentDistance, previousDistance, onClick 
   return (
     <li 
       className="upcoming-goal next-goal"
-      data-goal-id={goal.id}
+      data-goal-index={0}
       onClick={onClick}
       style={{
         margin: '0.7em 0',
