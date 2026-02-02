@@ -219,22 +219,27 @@ async function main() {
   console.log(`Found ${imageFiles.length} image(s) to process.\n`);
   
   // Check for duplicate basenames before processing
-  const basenames = new Set();
-  const duplicates = [];
+  const basenameMap = new Map();
   
   for (const imagePath of imageFiles) {
     const basename = path.basename(imagePath, path.extname(imagePath));
-    if (basenames.has(basename)) {
-      duplicates.push(basename);
-    } else {
-      basenames.add(basename);
+    if (!basenameMap.has(basename)) {
+      basenameMap.set(basename, []);
     }
+    basenameMap.get(basename).push(imagePath);
   }
+  
+  const duplicates = Array.from(basenameMap.entries())
+    .filter(([_, paths]) => paths.length > 1)
+    .map(([basename, paths]) => ({ basename, paths }));
   
   if (duplicates.length > 0) {
     console.error('\n❌ Error: Duplicate image basenames detected!');
-    console.error('The following basenames appear multiple times in different subdirectories:');
-    duplicates.forEach(dup => console.error(`  - ${dup}`));
+    console.error('The following basenames appear multiple times in different locations:\n');
+    duplicates.forEach(({ basename, paths }) => {
+      console.error(`  ${basename}:`);
+      paths.forEach(p => console.error(`    - ${p}`));
+    });
     console.error('\nImages with the same basename will overwrite each other in the output directories.');
     console.error('Please rename the duplicate files before running the optimization script.\n');
     process.exit(1);
