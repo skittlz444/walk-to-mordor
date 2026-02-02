@@ -137,30 +137,103 @@
 }
 
 .btn-primary {
-  background: #007bff;
+  background: #0f3460;
   color: white;
+  padding: 0.75rem 1.5rem;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .btn-primary:hover {
-  background: #0056b3;
+  background: #16c79a;
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
 }
 
 .btn-secondary {
   background: #6c757d;
   color: white;
+  padding: 0.75rem 1.5rem;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .btn-secondary:hover {
   background: #545b62;
 }
 
+.btn-secondary:active {
+  transform: translateY(1px);
+}
+
 .btn-danger {
   background: #dc3545;
   color: white;
+  padding: 0.75rem 1.5rem;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .btn-danger:hover {
   background: #c82333;
+}
+
+.btn-danger:active {
+  transform: translateY(1px);
+}
+
+/* Quick entry buttons */
+.quick-btn {
+  padding: 0.5rem 1rem;
+  background: #444;
+  color: white;
+  border: 1px solid #666;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.quick-btn:hover {
+  background: #555;
+  border-color: #777;
+}
+
+.quick-btn:active {
+  transform: translateY(1px);
+}
+
+/* Distance input with km suffix */
+.input-with-suffix {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input-with-suffix input {
+  flex: 1;
+  padding: 0.75rem;
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.km-suffix {
+  color: #ccc;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0 0.5rem;
+}
+
+.quick-entry-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  justify-content: center;
 }
 
 
@@ -189,5 +262,25 @@
   color: #fff;
   border: none;
   font-weight: 400;
+}
+
+/* Mobile responsiveness for touch targets and layout */
+@media (max-width: 320px) {
+  .quick-entry-group {
+    flex-direction: column;
+  }
+  
+  .quick-btn {
+    width: 100%;
+  }
+  
+  .modal-dialog {
+    width: 95%;
+  }
+  
+  .form-group {
+    padding-left: 1em;
+    padding-right: 1em;
+  }
 }
 
