@@ -87,8 +87,8 @@ To add or update an image for a milestone, create a migration file that updates 
 ```sql
 -- Migration number: 0XXX    YYYY-MM-DDTHH:MM:SS.000Z
 
--- Update image_id for goal: {Goal Title} (Distance: {distance_km})
-UPDATE goals SET image_id = 'milestone-mountain' WHERE distance = {distance_km} * 1.60934;
+-- Update image_id for goal: {Goal Title} (Distance: {distance_miles})
+UPDATE goals SET image_id = 'milestone-mountain' WHERE distance = {distance_miles} * 1.60934;
 ```
 
 **Example migration file** (`migrations/0099_update_image_milestone-mountain.sql`):
@@ -102,7 +102,7 @@ UPDATE goals SET image_id = 'milestone-mountain' WHERE distance = 150 * 1.60934;
 **Notes:**
 - The `image_id` should match the base filename of your optimized images (without extensions or `-thumb` suffix)
 - For example, if your images are `milestone-mountain.webp` and `milestone-mountain-thumb.webp`, use `image_id = 'milestone-mountain'`
-- Distance is stored in miles in the database, so multiply km by 1.60934
+- Distance is stored in kilometers in the database, so multiply miles by 1.60934 to convert
 - Migration number should be the next sequential number in the migrations folder
 - Use ISO 8601 timestamp format
 
