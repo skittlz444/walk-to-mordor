@@ -828,4 +828,201 @@ test.describe('Goals Functionality', () => {
     }
   });
 
+  // Story 1.8: Next Goal Emphasis and Progress Bar Tests
+  test.describe('Next Goal Visual Emphasis', () => {
+    test('Next upcoming goal has .next-goal class and visual emphasis', async ({ page }) => {
+      await page.waitForLoadState('networkidle');
+      
+      // Wait for goals to load
+      await expect(page.locator('#goals-list')).toBeVisible();
+      
+      // Check if there are upcoming goals
+      const upcomingGoals = page.locator('.upcoming-goal');
+      const upcomingCount = await upcomingGoals.count();
+      
+      if (upcomingCount === 0) {
+        test.skip(true, 'No upcoming goals available to test next goal emphasis');
+        return;
+      }
+      
+      // First upcoming goal should have .next-goal class (AC1)
+      const firstUpcomingGoal = upcomingGoals.first();
+      await expect(firstUpcomingGoal).toHaveClass(/next-goal/);
+      
+      // Verify visual emphasis: gold border
+      const borderColor = await firstUpcomingGoal.evaluate(el => {
+        return window.getComputedStyle(el).borderColor;
+      });
+      // Should have gold/yellow border (rgba with 215 in it for #FFD700)
+      expect(borderColor).toContain('215');
+      
+      // Subsequent goals should NOT have .next-goal class
+      if (upcomingCount > 1) {
+        const secondUpcomingGoal = upcomingGoals.nth(1);
+        await expect(secondUpcomingGoal).not.toHaveClass(/next-goal/);
+      }
+    });
+
+    test('Next goal displays progress bar with correct structure', async ({ page }) => {
+      await page.waitForLoadState('networkidle');
+      
+      // Wait for goals to load
+      await expect(page.locator('#goals-list')).toBeVisible();
+      
+      // Get first upcoming goal
+      const firstUpcomingGoal = page.locator('.upcoming-goal.next-goal').first();
+      const nextGoalExists = await firstUpcomingGoal.count() > 0;
+      
+      if (!nextGoalExists) {
+        test.skip(true, 'No next goal available to test progress bar');
+        return;
+      }
+      
+      // Progress bar should exist inside next goal (AC2)
+      const progressTrack = firstUpcomingGoal.locator('.goal-progress-track');
+      await expect(progressTrack).toBeVisible();
+      
+      // Progress fill should exist
+      const progressFill = progressTrack.locator('.goal-progress-fill');
+      await expect(progressFill).toBeVisible();
+      
+      // Verify gold color on fill
+      const fillColor = await progressFill.evaluate(el => {
+        return window.getComputedStyle(el).backgroundColor;
+      });
+      // Gold = #FFD700 = rgb(255, 215, 0)
+      expect(fillColor).toMatch(/rgb.*255.*215.*0/);
+    });
+
+    test('Progress bar width reflects segment progress percentage', async ({ page }) => {
+      await page.waitForLoadState('networkidle');
+      
+      // Wait for goals to load
+      await expect(page.locator('#goals-list')).toBeVisible();
+      
+      // Get goals data and current distance
+      const { goals, currentDistance } = await page.evaluate(async () => {
+        const token = localStorage.getItem('sessionToken');
+        const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': `Bearer ${token}` };
+        
+        // Get goals
+        const goalsResponse = await fetch('/api/goals', { headers });
+        const goals = await goalsResponse.json();
+        
+        // Get current distance
+        const progressResponse = await fetch('/api/progress', { headers });
+        const progress = await progressResponse.json();
+        
+        return {
+          goals: goals.sort((a, b) => a.distance - b.distance),
+          currentDistance: progress.total_distance || 0
+        };
+      });
+      
+      if (!goals || goals.length === 0) {
+        test.skip(true, 'No goals available to test progress calculation');
+        return;
+      }
+      
+      // Find next goal (first upcoming)
+      const nextGoal = goals.find(g => g.distance > currentDistance);
+      
+      if (!nextGoal) {
+        test.skip(true, 'No upcoming goals to test progress calculation');
+        return;
+      }
+      
+      // Calculate expected segment progress
+      const completed = goals.filter(g => g.distance <= currentDistance);
+      const previousDistance = completed.length > 0 ? completed[completed.length - 1].distance : 0;
+      const segmentTotal = nextGoal.distance - previousDistance;
+      const segmentProgress = currentDistance - previousDistance;
+      const expectedPercentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100));
+      
+      // Get actual progress bar width
+      const progressFill = page.locator('.upcoming-goal.next-goal .goal-progress-fill').first();
+      const actualWidth = await progressFill.evaluate(el => {
+        return parseFloat(window.getComputedStyle(el).width);
+      });
+      const trackWidth = await progressFill.locator('..').evaluate(el => {
+        return parseFloat(window.getComputedStyle(el).width);
+      });
+      const actualPercentage = (actualWidth / trackWidth) * 100;
+      
+      // Verify within tolerance (±2% for rounding)
+      expect(actualPercentage).toBeGreaterThanOrEqual(expectedPercentage - 2);
+      expect(actualPercentage).toBeLessThanOrEqual(expectedPercentage + 2);
+    });
+
+    test('Progress bar handles edge case: first goal with no previous milestone', async ({ page }) => {
+      await page.waitForLoadState('networkidle');
+      
+      // Get current progress and goals
+      const { totalDistance, goals } = await page.evaluate(async () => {
+        const token = localStorage.getItem('sessionToken');
+        const headers = window.getAuthHeaders ? window.getAuthHeaders() : { 'Authorization': `Bearer ${token}` };
+        
+        const progressResponse = await fetch('/api/progress', { headers });
+        const progress = await progressResponse.json();
+        const goalsResponse = await fetch('/api/goals', { headers });
+        const goals = await goalsResponse.json();
+        
+        return {
+          totalDistance: progress.total_distance || 0,
+          goals: goals.sort((a, b) => a.distance - b.distance)
+        };
+      });
+      
+      // Only test this if user hasn't completed any goals yet (first goal scenario)
+      const completedCount = goals.filter(g => g.distance <= totalDistance).length;
+      
+      if (completedCount > 0) {
+        test.skip(true, 'User has already completed goals. This test requires zero completed goals to test first goal edge case.');
+        return;
+      }
+      
+      // Progress bar should still render for first goal
+      const nextGoal = page.locator('.upcoming-goal.next-goal').first();
+      const progressBar = nextGoal.locator('.goal-progress-track');
+      await expect(progressBar).toBeVisible();
+      
+      // Progress should be calculated from 0km
+      const progressFill = nextGoal.locator('.goal-progress-fill');
+      await expect(progressFill).toBeVisible();
+      
+      // Width should reflect progress from 0 to first goal
+      const width = await progressFill.evaluate(el => el.style.width);
+      expect(width).toMatch(/\d+(\.\d+)?%/);
+    });
+
+    test('Next goal emphasis is responsive on mobile viewport', async ({ page }) => {
+      // Set mobile viewport (AC5)
+      await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE size
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+      
+      // Wait for goals to load
+      await expect(page.locator('#goals-list')).toBeVisible();
+      
+      const nextGoal = page.locator('.upcoming-goal.next-goal').first();
+      const nextGoalExists = await nextGoal.count() > 0;
+      
+      if (!nextGoalExists) {
+        test.skip(true, 'No next goal available to test mobile responsiveness');
+        return;
+      }
+      
+      // Verify next goal card is visible and fits in viewport
+      await expect(nextGoal).toBeVisible();
+      const boundingBox = await nextGoal.boundingBox();
+      
+      expect(boundingBox).not.toBeNull();
+      expect(boundingBox.width).toBeLessThanOrEqual(375); // Fits within mobile viewport
+      
+      // Progress bar should also be visible on mobile
+      const progressBar = nextGoal.locator('.goal-progress-track');
+      await expect(progressBar).toBeVisible();
+    });
+  });
+
 });
