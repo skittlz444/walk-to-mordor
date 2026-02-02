@@ -28,6 +28,7 @@ async function closePopupRobust(page, closeButton) {
  */
 test.describe('User Profile Modal', () => {
     test.setTimeout(60000); // 60 seconds
+    const profileSelector = '.profile-icon';
 
     test.beforeEach(async ({ page, authToken }) => {
         await setupTest({ page, authToken });
@@ -36,14 +37,14 @@ test.describe('User Profile Modal', () => {
 
     test('should display Profile button in header', async ({ page }) => {
         // Verify Profile button exists in header
-        const profileBtn = page.locator('#profile-btn');
+        const profileBtn = page.locator(profileSelector);
         await expect(profileBtn).toBeVisible();
-        await expect(profileBtn).toHaveText('Profile');
+        await expect(profileBtn).toHaveAttribute('aria-label', 'View Profile');
     });
 
     test('should open profile modal when clicking Profile button', async ({ page }) => {
         // Click Profile button
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
 
         // Verify modal is displayed
         await expect(page.locator('.modal-overlay')).toBeVisible();
@@ -61,7 +62,7 @@ test.describe('User Profile Modal', () => {
 
     test('should close modal when clicking Cancel button', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Click Cancel using robust closing
@@ -71,7 +72,7 @@ test.describe('User Profile Modal', () => {
 
     test('should close modal when clicking close (X) button', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Click close button using robust closing
@@ -81,7 +82,7 @@ test.describe('User Profile Modal', () => {
 
     test('should close modal when clicking overlay background', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Click on overlay (not on the dialog)
@@ -105,7 +106,7 @@ test.describe('User Profile Modal', () => {
         const expectedEmail = `${username}@example.com`;
 
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Verify current values
@@ -118,7 +119,7 @@ test.describe('User Profile Modal', () => {
 
     test('should update username successfully', async ({ page, authToken }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Update username (keeping same email)
@@ -135,7 +136,7 @@ test.describe('User Profile Modal', () => {
 
     test('should update email successfully', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Update email
@@ -154,7 +155,7 @@ test.describe('User Profile Modal', () => {
         await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 10000 });
 
         // Reopen modal to verify update
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         const updatedEmail = await page.inputValue('#profile-email');
@@ -163,7 +164,7 @@ test.describe('User Profile Modal', () => {
 
     test('should update both username and email successfully', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Update both fields
@@ -186,7 +187,7 @@ test.describe('User Profile Modal', () => {
 
     test('should show error for invalid email format', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Enter invalid email
@@ -204,7 +205,7 @@ test.describe('User Profile Modal', () => {
 
     test('should show error for invalid username format', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Enter invalid username (too short)
@@ -220,7 +221,7 @@ test.describe('User Profile Modal', () => {
 
     test('should show error when no fields are provided', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Clear both fields
@@ -237,7 +238,7 @@ test.describe('User Profile Modal', () => {
 
     test('should have logout button in profile modal', async ({ page }) => {
         // Open modal
-        await page.click('#profile-btn');
+        await page.click(profileSelector);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
         // Verify logout button exists
