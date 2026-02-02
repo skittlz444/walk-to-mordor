@@ -1,6 +1,6 @@
 # Story 1.5: Missing Milestone Images (Issue #105)
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,17 +21,17 @@ so that **I feel constantly rewarded and immersed in the journey regardless of w
 
 ## Tasks / Subtasks
 
-- [ ] **Audit & Source Assets**
-  - [ ] Identify all goals with `image_id IS NULL` (from Story 1.4).
-  - [ ] Identify all legacy goals where the image might be missing or low quality.
+- [x] **Audit & Source Assets**
+  - [x] Identify all goals with `image_id IS NULL` (from Story 1.4).
+  - [x] Identify all legacy goals where the image might be missing or low quality.
   - [ ] Source or generate license-appropriate images for these milestones.
   - [ ] **Critical**: Ensure filenames are safe, unique "slugs" (e.g., `woody-end`, `fog-on-downs`) rather than simple numbers, for better manageability.
 
-- [ ] **Image Optimization & Formatting**
-  - [ ] Convert all images (new and legacy) to **WebP**.
-  - [ ] Generate **High-Res** versions (Max 2560px width, Quality 90, <25MB).
-  - [ ] Generate **Thumbnail** versions (Max 400px width, Quality 60, <20KB).
-  - [ ] Place in `public/img/highres/` and `public/img/thumbnails/`.
+- [x] **Image Optimization & Formatting**
+  - [x] Convert all images (new and legacy) to **WebP**.
+  - [x] Generate **High-Res** versions (Max 2560px width, Quality 90, <25MB).
+  - [x] Generate **Thumbnail** versions (Max 400px width, Quality 60, <20KB).
+  - [x] Place in `public/img/highres/` and `public/img/thumbnails/`.
 
 - [ ] **Database Updates**
   - [ ] Create migration `0022_update_milestone_images.sql`.
