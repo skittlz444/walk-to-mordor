@@ -6,7 +6,7 @@ This guide describes how to add and optimize new milestone images for the Walk t
 
 The project uses an automated image optimization pipeline to generate WebP images in two formats:
 - **High-resolution images** (`public/img/highres/`): For detail views, lazy-loaded after thumbnails
-- **Thumbnails** (`public/img/thumbnails/`): Lightweight placeholders for instant loading with blur effect
+- **Thumbnails** (`public/img/thumbs/`): Lightweight placeholders for instant loading with blur effect (with `-thumb` suffix)
 
 ## Adding New Images
 
@@ -39,8 +39,8 @@ The script will:
 1. Scan `raw_assets/` recursively for all image files
 2. Process each image through two pipelines:
    - **High-res**: Target 2048px width, quality 90 (only downscales if >3840px/4K, preserves original otherwise)
-   - **Thumbnail**: 256px width, quality 60, iteratively compressed to <20KB
-3. Output WebP files to `public/img/highres/` and `public/img/thumbnails/`
+   - **Thumbnail**: 256px width, quality 60, iteratively compressed to <20KB (with `-thumb` suffix)
+3. Output WebP files to `public/img/highres/` and `public/img/thumbs/`
 4. Display a summary with file sizes and savings
 
 **Example output:**
@@ -50,16 +50,16 @@ The script will:
 
 Source: /path/to/raw_assets
 High-res output: /path/to/public/img/highres
-Thumbnail output: /path/to/public/img/thumbnails
+Thumbnail output: /path/to/public/img/thumbs
 
 Scanning for images...
 Found 3 image(s) to process.
 
-[Optimized] milestone-mountain.jpg -> milestone-mountain.webp
+[Optimized] milestone-mountain.jpg -> milestone-mountain.webp + milestone-mountain-thumb.webp
   Original: 3.24 MB | High-res: 856.45 KB (2048px) | Thumb: 18.72 KB (256px, q60)
-[Optimized] milestone-forest.png -> milestone-forest.webp
+[Optimized] milestone-forest.png -> milestone-forest.webp + milestone-forest-thumb.webp
   Original: 2.87 MB | High-res: 742.33 KB (2048px) | Thumb: 19.45 KB (256px, q55)
-[Optimized] milestone-river.jpg -> milestone-river.webp
+[Optimized] milestone-river.jpg -> milestone-river.webp + milestone-river-thumb.webp
   Original: 1.98 MB | High-res: 634.21 KB (1920px) | Thumb: 17.89 KB (256px, q60)
 
 ================================
@@ -84,7 +84,7 @@ After optimization, reference the WebP files in your code or database:
 ```html
 <!-- Thumbnail for lazy loading placeholder -->
 <img 
-  src="/img/thumbnails/milestone-mountain.webp" 
+  src="/img/thumbs/milestone-mountain-thumb.webp" 
   class="blur-placeholder"
   alt="Mountain milestone">
 
@@ -100,7 +100,7 @@ After optimization, reference the WebP files in your code or database:
 INSERT INTO milestones (name, image_highres, image_thumb) VALUES (
   'Mountain Pass',
   'milestone-mountain.webp',
-  'milestone-mountain.webp'
+  'milestone-mountain-thumb.webp'
 );
 ```
 
@@ -109,7 +109,7 @@ INSERT INTO milestones (name, image_highres, image_thumb) VALUES (
 const milestone = {
   name: 'Mountain Pass',
   imageHighres: '/img/highres/milestone-mountain.webp',
-  imageThumbnail: '/img/thumbnails/milestone-mountain.webp'
+  imageThumbnail: '/img/thumbs/milestone-mountain-thumb.webp'
 };
 ```
 

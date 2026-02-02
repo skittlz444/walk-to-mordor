@@ -5,7 +5,7 @@ const sharp = require('sharp');
 // Configuration
 const SOURCE_DIR = path.join(__dirname, '..', 'raw_assets');
 const HIGHRES_DIR = path.join(__dirname, '..', 'public', 'img', 'highres');
-const THUMB_DIR = path.join(__dirname, '..', 'public', 'img', 'thumbnails');
+const THUMB_DIR = path.join(__dirname, '..', 'public', 'img', 'thumbs');
 
 // High-res configuration
 const HIGHRES_MAX_WIDTH = 2048;
@@ -158,10 +158,11 @@ async function generateThumbnail(inputPath, outputPath) {
  */
 async function processImage(inputPath) {
   const filename = path.basename(inputPath, path.extname(inputPath));
-  const outputFilename = `${filename}.webp`;
+  const highresFilename = `${filename}.webp`;
+  const thumbFilename = `${filename}-thumb.webp`;
   
-  const highresPath = path.join(HIGHRES_DIR, outputFilename);
-  const thumbPath = path.join(THUMB_DIR, outputFilename);
+  const highresPath = path.join(HIGHRES_DIR, highresFilename);
+  const thumbPath = path.join(THUMB_DIR, thumbFilename);
   
   try {
     // Get original file size
@@ -175,7 +176,7 @@ async function processImage(inputPath) {
     const thumbResult = await generateThumbnail(inputPath, thumbPath);
     
     // Log results
-    console.log(`[Optimized] ${path.basename(inputPath)} -> ${outputFilename}`);
+    console.log(`[Optimized] ${path.basename(inputPath)} -> ${highresFilename} + ${thumbFilename}`);
     console.log(`  Original: ${formatSize(originalSize)} | High-res: ${formatSize(highresResult.size)} (${highresResult.width}px) | Thumb: ${formatSize(thumbResult.size)} (${THUMB_WIDTH}px, q${thumbResult.quality})`);
     
     return {
