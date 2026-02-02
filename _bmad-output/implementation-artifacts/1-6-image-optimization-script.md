@@ -1,6 +1,6 @@
 # Story 1.6: Image Optimization Script (Issue #157)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,25 +22,25 @@ so that **I can easily generate optimized WebP high-res and thumbnail assets wit
 
 ## Tasks / Subtasks
 
-- [ ] **Setup & Dependencies**
-  - [ ] Install `sharp` (or equivalent) as a dev dependency.
-  - [ ] Create `scripts/optimize-images.js`.
-  - [ ] Define source folder (e.g., `raw_assets/` or `scripts/source_images/`) and destination folder (`public/img/`).
+- [x] **Setup & Dependencies**
+  - [x] Install `sharp` (or equivalent) as a dev dependency.
+  - [x] Create `scripts/optimize-images.js`.
+  - [x] Define source folder (e.g., `raw_assets/` or `scripts/source_images/`) and destination folder (`public/img/`).
 
-- [ ] **Script Implementation**
-  - [ ] Implement file discovery (recursive or flat).
-  - [ ] **Smart Resizing**: Check original dimensions. If width > 2560px, resize to 2560px. If width <= 2560px, keep original width. **NEVER upscale**.
-  - [ ] Implement High-Res pipeline: WebP (quality: 90) to ensure visual fidelity matches or exceeds source.
-  - [ ] Implement Thumbnail pipeline: Resize (fit: inside, 400px), WebP (quality: 60) to serve as blurred placeholders. Ensure strict <20KB output.
-  - [ ] Ensure filename sanitization (create "slugs" if source names are complex, though manually renaming source files is preferred).
-  - [ ] Logging: Print `[Optimized] filename.jpg -> filename.webp (Original: X MB, HighRes: Y KB, Thumb: Z KB)`.
+- [x] **Script Implementation**
+  - [x] Implement file discovery (recursive or flat).
+  - [x] **Smart Resizing**: Check original dimensions. If width > 2560px, resize to 2560px. If width <= 2560px, keep original width. **NEVER upscale**.
+  - [x] Implement High-Res pipeline: WebP (quality: 90) to ensure visual fidelity matches or exceeds source.
+  - [x] Implement Thumbnail pipeline: Resize (fit: inside, 400px), WebP (quality: 60) to serve as blurred placeholders. Ensure strict <20KB output.
+  - [x] Ensure filename sanitization (create "slugs" if source names are complex, though manually renaming source files is preferred).
+  - [x] Logging: Print `[Optimized] filename.jpg -> filename.webp (Original: X MB, HighRes: Y KB, Thumb: Z KB)`.
 
-- [ ] **NPM Script Integration**
-  - [ ] Add `"optimize:images": "node scripts/optimize-images.js"` to `package.json`.
-  - [ ] Add `.gitignore` entry for `raw_assets/` (if we don't want to commit huge source files).
+- [x] **NPM Script Integration**
+  - [x] Add `"optimize:images": "node scripts/optimize-images.js"` to `package.json`.
+  - [x] Add `.gitignore` entry for `raw_assets/` (if we don't want to commit huge source files).
 
-- [ ] **Documentation**
-  - [ ] Create `docs/asset-workflow.md` describing how to add new images: "Put raw file in X, run Y, update DB/Code to use Z".
+- [x] **Documentation**
+  - [x] Create `docs/asset-workflow.md` describing how to add new images: "Put raw file in X, run Y, update DB/Code to use Z".
 
 ## Dev Notes
 

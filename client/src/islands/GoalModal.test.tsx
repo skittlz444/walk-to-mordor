@@ -175,7 +175,7 @@ describe('GoalModal', () => {
     
     // Trigger second error on thumbnail (.jpg fails, goes to placeholder)
     thumbImage.dispatchEvent(errorEvent);
-    expect(thumbImage.src).toContain('/img/thumbs/0-thumb.jpg');
+    expect(thumbImage.src).toContain('/img/thumbs/0-thumb.webp');
     
     // Trigger first error on high-res (.webp fails, tries .jpg)
     const highResImage = images[1];
@@ -184,7 +184,7 @@ describe('GoalModal', () => {
     
     // Trigger second error on high-res (.jpg fails, goes to placeholder)
     highResImage.dispatchEvent(errorEvent);
-    expect(highResImage.src).toContain('/img/highres/0.jpg');
+    expect(highResImage.src).toContain('/img/highres/0.webp');
   });
 
   it('calls onClose when Close button is clicked', () => {
