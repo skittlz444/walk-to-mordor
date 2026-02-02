@@ -59,6 +59,19 @@ function showDistanceModal(event, date = null) {
 
   document.body.appendChild(modalOverlay);
 
+  // Helper function to add to current distance
+  function addToDistance(amount) {
+    const input = document.getElementById('distance-input');
+    const current = parseFloat(input.value) || 0;
+    input.value = (current + amount).toFixed(2);
+    // Trigger input event for any validation listeners
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function closeModal() {
+    modalOverlay.remove();
+  }
+
   // Add event listeners
   document.getElementById('save-btn').addEventListener('click', handleSaveDistance);
   document.getElementById('cancel-btn').addEventListener('click', closeModal);
@@ -94,19 +107,6 @@ function showDistanceModal(event, date = null) {
   setTimeout(() => {
     document.getElementById('distance-input').focus();
   }, 100);
-
-  // Helper function to add to current distance
-  function addToDistance(amount) {
-    const input = document.getElementById('distance-input');
-    const current = parseFloat(input.value) || 0;
-    input.value = (current + amount).toFixed(2);
-    // Trigger input event for any validation listeners
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  function closeModal() {
-    modalOverlay.remove();
-  }
 }
 
 function handleSaveDistance() {
