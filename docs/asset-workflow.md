@@ -156,7 +156,7 @@ interface Goal {
 
 ### Thumbnails
 - **Format**: WebP
-- **Width**: 256px (maintains aspect ratio)
+- **Max width**: 256px (maintains aspect ratio, never upscales)
 - **Starting quality**: 60
 - **Target file size**: < 20KB
 - **Compression strategy**: Iteratively reduces quality by 5% steps until <20KB or minimum quality (20) reached
@@ -206,7 +206,8 @@ mkdir raw_assets
 
 ## Related Documentation
 
-- [Story 1.5: Milestone Image Detail View](../README.md) - Consumer of optimized images
+- [Story 1.5: Missing Milestone Images](../_bmad-output/implementation-artifacts/1-5-missing-milestone-images.md) - Related work on milestone images
+- [Story 1.6: Image Optimization Script](../_bmad-output/implementation-artifacts/1-6-image-optimization-script.md) - This story's definition
 - [Sharp Documentation](https://sharp.pixelplumbing.com/) - Image processing library
 - [WebP Format Guide](https://developers.google.com/speed/webp) - WebP format details
 
