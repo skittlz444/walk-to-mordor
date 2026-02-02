@@ -19,7 +19,7 @@ const THUMB_TARGET_KB = 20;
 const THUMB_MIN_QUALITY = 20;
 const THUMB_QUALITY_STEP = 5;
 
-// Supported image formats
+// Supported image formats (TIFF/TIF both supported)
 const SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.webp', '.tiff', '.tif', '.gif'];
 
 /**
@@ -75,8 +75,8 @@ function formatSize(bytes) {
 
 /**
  * Generate high-res WebP image
- * - Max 2048px width (unless original is smaller - no upscaling)
- * - Don't downscale unless > 4K (3840px)
+ * - Target 2048px width, but preserve original if under 4K
+ * - Only downscale if original > 4K (3840px) - never upscale
  * - Quality 90
  */
 async function generateHighRes(inputPath, outputPath) {
@@ -85,14 +85,9 @@ async function generateHighRes(inputPath, outputPath) {
   
   let resizeWidth = null;
   
-  // Smart resizing: only resize if > 2048px, never upscale
-  if (originalWidth > HIGHRES_MAX_WIDTH) {
-    // Only downscale if significantly larger than target
-    if (originalWidth > HIGHRES_MAX_4K) {
-      resizeWidth = HIGHRES_MAX_WIDTH;
-    } else if (originalWidth > HIGHRES_MAX_WIDTH) {
-      resizeWidth = HIGHRES_MAX_WIDTH;
-    }
+  // Smart resizing: only resize if > 4K (3840px), never upscale
+  if (originalWidth > HIGHRES_MAX_4K) {
+    resizeWidth = HIGHRES_MAX_WIDTH;
   }
   
   const pipeline = sharp(inputPath);
