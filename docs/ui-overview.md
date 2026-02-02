@@ -17,7 +17,7 @@ Located in `public/js/`.
 - **`validators.js`**: Shared validation logic (mirrors server-side validators).
 - **`calendar.js`**: Renders the interactive calendar component using Vanilla JS DOM manipulation. Handles date selection.
 - **`progress.js`**: Handles API calls related to fetching and saving progress.
-- **`goals.js`**: Fetches goals and calculates which ones have been achieved based on total distance.
+- **`goals.js`**: Fetches goals and calculates which ones have been achieved based on total distance. Hydrates the next goal as a Preact island (`NextGoalCard`) for visual emphasis and segment progress.
 - **`profile.js`**: Manages the profile modal and user settings updates.
 
 ## Styling

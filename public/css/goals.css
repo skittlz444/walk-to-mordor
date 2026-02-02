@@ -110,6 +110,20 @@
   background: rgba(50,50,50,0.95) !important;
 }
 
+/* Next Goal Emphasis (AC1) */
+.upcoming-goal.next-goal {
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  box-shadow: 0 2px 12px rgba(255, 215, 0, 0.3), 0 2px 8px #222;
+  background: rgba(45,45,45,0.95);
+  position: relative;
+}
+
+.upcoming-goal.next-goal:hover {
+  background: rgba(55,55,55,0.95) !important;
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 0 2px 16px rgba(255, 215, 0, 0.4), 0 2px 8px #222;
+}
+
 /* Goal header styles */
 .goal-header-main,
 .goal-header-special {

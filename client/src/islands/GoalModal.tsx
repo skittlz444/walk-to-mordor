@@ -1,14 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-
-interface Goal {
-  id: number;
-  distance: number;
-  title: string;
-  special?: string | null;
-  description?: string | null;
-  image_id?: string | null;
-}
+import type { Goal } from '../types/goal';
 
 interface GoalModalProps {
   goal: Goal;
