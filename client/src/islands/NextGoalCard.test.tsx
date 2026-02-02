@@ -88,9 +88,8 @@ describe('NextGoalCard', () => {
       />
     );
 
-    const listItem = container.querySelector('li');
-    expect(listItem?.classList.contains('next-goal')).toBe(true);
-    expect(listItem?.classList.contains('upcoming-goal')).toBe(true);
+    const card = container.querySelector('.upcoming-goal.next-goal');
+    expect(card).toBeTruthy();
   });
 
   it('calls onClick handler when clicked', () => {
@@ -104,8 +103,8 @@ describe('NextGoalCard', () => {
       />
     );
 
-    const listItem = container.querySelector('li');
-    listItem?.click();
+    const card = container.querySelector('.upcoming-goal.next-goal');
+    card?.click();
     
     expect(handleClick).toHaveBeenCalledTimes(1);
   });

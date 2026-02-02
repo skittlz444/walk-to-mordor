@@ -16,10 +16,11 @@ export function NextGoalCard({ goal, currentDistance, previousDistance, onClick 
   const segmentTotal = goal.distance - previousDistance;
   const segmentProgress = currentDistance - previousDistance;
   const percentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100));
+  const hasVisibleProgress = percentage > 0;
   const distanceToGo = goal.distance - currentDistance;
 
   return (
-    <li 
+    <div 
       className="upcoming-goal next-goal"
       data-goal-index={0}
       onClick={onClick}
@@ -81,16 +82,17 @@ export function NextGoalCard({ goal, currentDistance, previousDistance, onClick 
           overflow: 'hidden'
         }}
       >
-        <div 
+        <div
           className="goal-progress-fill"
           style={{
             width: `${percentage.toFixed(1)}%`,
+            minWidth: hasVisibleProgress ? undefined : '1px',
             height: '100%',
             background: '#FFD700',
             transition: 'width 0.3s ease'
           }}
         />
       </div>
-    </li>
+      </div>
   );
 }

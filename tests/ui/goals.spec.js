@@ -123,12 +123,8 @@ test.describe('Goals Functionality', () => {
       }
     }
     
-    if (!goalFound) {
-      test.fixme(true, 'No interactive goals found to test popup images. Ensure goals exist in the system for this test.');
-    } else {
-      // Test passed - we successfully interacted with a goal popup
-      expect(goalFound).toBe(true);
-    }
+    // Test passed only if we successfully interacted with a goal popup
+    expect(goalFound).toBe(true);
   });
 
   test('Goal popup shows congratulations when user passes a goal by adding distance', async ({ page }) => {
@@ -161,19 +157,14 @@ test.describe('Goals Functionality', () => {
       return await response.json();
     });
 
-    if (goals.length === 0) {
-      test.skip(true, `No goals available for congratulations testing. Need at least one goal to test goal completion popup.`);
-      return;
-    }
+    expect(goals.length).toBeGreaterThan(0);
 
-    // Find the first goal with a reasonable distance for testing
-    const testGoal = goals.find(goal => goal.distance > 0 && goal.distance <= 100);
-    
-    if (!testGoal) {
-      const availableGoals = goals.map(g => `${g.title}: ${g.distance}km`).join(', ');
-      test.skip(true, `No suitable goals found for testing. Need goals ≤100km, available: ${availableGoals}`);
-      return;
-    }
+    // Find the first goal with a positive distance for testing
+    const sortedGoals = goals
+      .filter(goal => goal.distance > 0)
+      .sort((a, b) => a.distance - b.distance);
+    const testGoal = sortedGoals[0] || goals[0];
+    expect(testGoal).toBeTruthy();
 
     // Add a distance entry that will pass this goal
     const testDistance = testGoal.distance + 1; // Slightly more than the goal distance
@@ -557,10 +548,9 @@ test.describe('Goals Functionality', () => {
         const closeButton = page.locator('text=Close').last();
         await closePopupRobust(page, closeButton);
       } else {
-        // No goals available to test popup functionality
         const upcomingCount = await page.locator('.upcoming-goal').count();
         const completedCount = await page.locator('.completed-goal').count();
-        test.skip(`No goals available for popup testing. Upcoming: ${upcomingCount}, Completed: ${completedCount}. Need at least one goal to test popup functionality.`);
+        expect(upcomingCount + completedCount).toBeGreaterThan(0);
       }
     }
   });
@@ -775,22 +765,11 @@ test.describe('Goals Functionality', () => {
       return await response.json();
     });
 
-    if (goals.length < 2) {
-      test.skip(true, `Skipping test: Not enough goals available (found ${goals.length}, need at least 2). Current goals: ${JSON.stringify(goals.map(g => ({title: g.title, distance: g.distance})))}`);
-      return;
-    }
-
-    // Find two consecutive goals with reasonable distances for testing
-    goals.sort((a, b) => a.distance - b.distance);
-    const suitableGoals = goals.filter(goal => goal.distance > 0 && goal.distance <= 100);
-    
-    if (suitableGoals.length < 2) {
-      test.skip(true, `Skipping test: Not enough suitable goals for testing (found ${suitableGoals.length}, need at least 2). Suitable goals (distance 1-100km): ${JSON.stringify(suitableGoals.map(g => ({title: g.title, distance: g.distance})))}. Total goals: ${goals.length}`);
-      return;
-    }
+    expect(goals.length).toBeGreaterThanOrEqual(2);
 
     // Use distance that would pass multiple goals
-    const highestGoal = suitableGoals[1]; // Second goal
+    goals.sort((a, b) => a.distance - b.distance);
+    const highestGoal = goals[1]; // Second goal
     const testDistance = highestGoal.distance + 1; // Should pass both first and second goal
 
     // Add the distance entry using the same approach as other edge case tests
@@ -840,10 +819,7 @@ test.describe('Goals Functionality', () => {
       const upcomingGoals = page.locator('.upcoming-goal');
       const upcomingCount = await upcomingGoals.count();
       
-      if (upcomingCount === 0) {
-        test.skip(true, 'No upcoming goals available to test next goal emphasis');
-        return;
-      }
+      expect(upcomingCount).toBeGreaterThan(0);
       
       // First upcoming goal should have .next-goal class (AC1)
       const firstUpcomingGoal = upcomingGoals.first();
@@ -873,10 +849,7 @@ test.describe('Goals Functionality', () => {
       const firstUpcomingGoal = page.locator('.upcoming-goal.next-goal').first();
       const nextGoalExists = await firstUpcomingGoal.count() > 0;
       
-      if (!nextGoalExists) {
-        test.skip(true, 'No next goal available to test progress bar');
-        return;
-      }
+      expect(nextGoalExists).toBe(true);
       
       // Progress bar should exist inside next goal (AC2)
       const progressTrack = firstUpcomingGoal.locator('.goal-progress-track');
@@ -919,18 +892,12 @@ test.describe('Goals Functionality', () => {
         };
       });
       
-      if (!goals || goals.length === 0) {
-        test.skip(true, 'No goals available to test progress calculation');
-        return;
-      }
+      expect(goals && goals.length > 0).toBe(true);
       
       // Find next goal (first upcoming)
       const nextGoal = goals.find(g => g.distance > currentDistance);
       
-      if (!nextGoal) {
-        test.skip(true, 'No upcoming goals to test progress calculation');
-        return;
-      }
+      expect(nextGoal).toBeTruthy();
       
       // Calculate expected segment progress
       const completed = goals.filter(g => g.distance <= currentDistance);
@@ -973,15 +940,11 @@ test.describe('Goals Functionality', () => {
         };
       });
       
-      // Only test this if user hasn't completed any goals yet (first goal scenario)
-      const completedCount = goals.filter(g => g.distance <= totalDistance).length;
-      
-      if (completedCount > 0) {
-        test.skip(true, 'User has already completed goals. This test requires zero completed goals to test first goal edge case.');
-        return;
-      }
-      
-      // Progress bar should still render for first goal
+      // Progress bar should still render for first goal segment (0km start)
+      const completed = goals.filter(g => g.distance <= totalDistance);
+      const previousDistance = completed.length > 0 ? completed[completed.length - 1].distance : 0;
+      expect(previousDistance).toBe(0);
+
       const nextGoal = page.locator('.upcoming-goal.next-goal').first();
       const progressBar = nextGoal.locator('.goal-progress-track');
       await expect(progressBar).toBeVisible();
@@ -1007,10 +970,7 @@ test.describe('Goals Functionality', () => {
       const nextGoal = page.locator('.upcoming-goal.next-goal').first();
       const nextGoalExists = await nextGoal.count() > 0;
       
-      if (!nextGoalExists) {
-        test.skip(true, 'No next goal available to test mobile responsiveness');
-        return;
-      }
+      expect(nextGoalExists).toBe(true);
       
       // Verify next goal card is visible and fits in viewport
       await expect(nextGoal).toBeVisible();
