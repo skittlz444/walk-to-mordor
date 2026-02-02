@@ -43,7 +43,7 @@ function showDistanceModal(event, date = null) {
             <div class="quick-entry-group">
               <button type="button" class="quick-btn" id="quick-add-1">+1 km</button>
               <button type="button" class="quick-btn" id="quick-add-5">+5 km</button>
-              <button type="button" class="quick-btn quick-btn-reset" id="quick-reset">Reset</button>
+              <button type="button" class="quick-btn" id="quick-reset">Reset</button>
             </div>
           </div>
         </div>
