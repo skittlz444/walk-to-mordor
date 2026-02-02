@@ -52,9 +52,9 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, on
       // Try .jpg format
       thumbFormat.value = 'jpg';
       img.src = `/img/thumbs/${goal.image_id || '0'}-thumb.jpg`;
-    } else if (!img.src.includes('/img/thumbs/0-thumb.jpg')) {
+    } else if (!img.src.includes('/img/thumbs/0-thumb.webp')) {
       // Fallback to placeholder
-      img.src = '/img/thumbs/0-thumb.jpg';
+      img.src = '/img/thumbs/0-thumb.webp';
     }
   };
 
@@ -64,9 +64,9 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, on
       // Try .jpg format
       highResFormat.value = 'jpg';
       img.src = `/img/highres/${goal.image_id || '0'}.jpg`;
-    } else if (!img.src.includes('/img/highres/0.jpg')) {
+    } else if (!img.src.includes('/img/highres/0.webp')) {
       // Fallback to placeholder
-      img.src = '/img/highres/0.jpg';
+      img.src = '/img/highres/0.webp';
     }
   };
 

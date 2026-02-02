@@ -567,7 +567,7 @@ test.describe('Goals Functionality', () => {
 
   test('Thumbnail image initially has blur filter applied', async ({ page }) => {
     // Block high-res images from loading to test initial blur state
-    await page.route('**/img/highres/*.jpg', route => route.abort());
+    await page.route('**/img/highres/*', route => route.abort());
 
     const popup = await openFirstAvailableGoalPopup(page);
     
@@ -585,8 +585,8 @@ test.describe('Goals Functionality', () => {
 
   test('Thumbnail image falls back to placeholder on error', async ({ page }) => {
     // Mock network to make thumb image fail
-    await page.route('**/img/thumbs/*.jpg', route => {
-      if (route.request().url().includes('0-thumb.jpg')) {
+    await page.route('**/img/thumbs/*', route => {
+      if (route.request().url().includes('0-thumb.webp')) {
         // Let placeholder load successfully
         route.continue();
       } else {
@@ -601,13 +601,13 @@ test.describe('Goals Functionality', () => {
     const thumbImage = popup.locator('#goal-thumb-image');
     
     // Check that fallback image is loaded
-    await expect(thumbImage).toHaveAttribute('src', '/img/thumbs/0-thumb.jpg');
+    await expect(thumbImage).toHaveAttribute('src', '/img/thumbs/0-thumb.webp');
   });
 
   test('High-res image falls back to placeholder on error', async ({ page }) => {
     // Mock network to make highres image fail
-    await page.route('**/img/highres/*.jpg', route => {
-      if (route.request().url().includes('0.jpg')) {
+    await page.route('**/img/highres/*', route => {
+      if (route.request().url().includes('0.webp')) {
         // Let placeholder load successfully
         route.continue();
       } else {
@@ -622,7 +622,7 @@ test.describe('Goals Functionality', () => {
     const highresImage = popup.locator('#goal-highres-image');
     
     // Check that fallback image is loaded
-    await expect(highresImage).toHaveAttribute('src', '/img/highres/0.jpg');
+    await expect(highresImage).toHaveAttribute('src', '/img/highres/0.webp');
   });
 
   test('Image lazy loading only occurs when popup is opened', async ({ page }) => {

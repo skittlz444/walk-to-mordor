@@ -1,6 +1,6 @@
 # Story 1.4: Intermediary Goals System (Issue #140)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,27 +24,27 @@ so that **I can improve the narrative pacing and density of the journey without 
 
 ## Tasks / Subtasks
 
-- [ ] **Database Schema Update**
-  - [ ] Create migration `0020_add_image_id_to_goals.sql`.
-  - [ ] Add `image_id` column (TEXT).
-  - [ ] Update existing rows: `UPDATE goals SET image_id = CAST(id AS TEXT)`.
-  - [ ] Verify `image_id` is populated.
-- [ ] **Content Injection**
-  - [ ] Create migration `0021_add_intermediary_goals.sql`.
-  - [ ] Identify and insert intermediary goals to close all >70km gaps.
-  - [ ] Ensure they have `NULL` for `image_id`.
-  - [ ] Ensure they have `NULL` for `special` unless impactful.
-- [ ] **Backend Updates**
-  - [ ] Update `src/goals-handlers.ts` to select `image_id`.
-  - [ ] Ensure `ORDER BY distance ASC` is the default sorting.
-- [ ] **Frontend Updates**
-  - [ ] Update `public/js/goals.js` `showGoalModal`.
-  - [ ] Change logic to check `if (goal.image_id)`.
-  - [ ] Update string template to use `${goal.image_id}` instead of `${goal.id}`.
-- [ ] **Verification**
-  - [ ] Verify existing goals still show images.
-  - [ ] Verify new intermediary goals appear in the list in correct distance order.
-  - [ ] Verify new goals do NOT show broken image icons (should show no image).
+- [x] **Database Schema Update**
+  - [x] Create migration `0020_add_image_id_to_goals.sql`.
+  - [x] Add `image_id` column (TEXT).
+  - [x] Update existing rows: `UPDATE goals SET image_id = CAST(id AS TEXT)`.
+  - [x] Verify `image_id` is populated.
+- [x] **Content Injection**
+  - [x] Create migration `0021_add_intermediary_goals.sql`.
+  - [x] Identify and insert intermediary goals to close all >70km gaps.
+  - [x] Ensure they have `NULL` for `image_id`.
+  - [x] Ensure they have `NULL` for `special` unless impactful.
+- [x] **Backend Updates**
+  - [x] Update `src/goals-handlers.ts` to select `image_id`.
+  - [x] Ensure `ORDER BY distance ASC` is the default sorting.
+- [x] **Frontend Updates**
+  - [x] Update `public/js/goals.js` `showGoalModal`.
+  - [x] Change logic to check `if (goal.image_id)`.
+  - [x] Update string template to use `${goal.image_id}` instead of `${goal.id}`.
+- [x] **Verification**
+  - [x] Verify existing goals still show images.
+  - [x] Verify new intermediary goals appear in the list in correct distance order.
+  - [x] Verify new goals do NOT show broken image icons (should show no image).
 
 ## Dev Notes
 
