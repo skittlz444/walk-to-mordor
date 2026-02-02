@@ -126,6 +126,7 @@
   flex: 1;
 }
 
+/* Button base styles */
 .btn {
   padding: 0.5rem 1rem;
   border: none;
@@ -136,6 +137,10 @@
   transition: all 0.2s ease;
 }
 
+/* Primary button - matches auth.css styling for consistency
+ * Color: #0f3460 (dark blue) - WCAG AAA compliant (12.5:1 contrast ratio)
+ * Hover: #16c79a (teal) - established design system hover state
+ */
 .btn-primary {
   background: #0f3460;
   color: white;
