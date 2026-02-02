@@ -17,7 +17,7 @@ html += '<ul style="list-style:none;padding:0;margin:0;">' +
     if (isNextGoal) {
       const previousDistance = completed.length > 0 ? completed[completed.length - 1].distance : 0;
       const segmentTotal = g.distance - previousDistance;
-      const segmentProgress = Number(currentDistance) - segmentStart;
+      const segmentProgress = Number(currentDistance) - previousDistance;
       const percentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100));
       
       progressBarHTML = '<div class="goal-progress-track" style="width:100%;height:8px;...">' +

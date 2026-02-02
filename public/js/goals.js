@@ -147,7 +147,7 @@ function renderGoals(currentDistance) {
       
       // Create mount point for next goal Preact island (first upcoming goal)
       if (upcoming.length > 0) {
-        html += '<div id="next-goal-mount" data-goal-index="0"></div>';
+        html += '<li id="next-goal-mount" data-goal-index="0"></li>';
       }
       
       // Render remaining upcoming goals (non-next) with vanilla JS
@@ -189,25 +189,55 @@ function renderGoals(currentDistance) {
 
       // Hydrate next goal Preact island and add click listeners for other goals
       queueMicrotask(() => {
-        // Hydrate next goal as Preact island
+        // Hydrate next goal as Preact island with fallback
         if (upcoming.length > 0) {
           const nextGoalMount = document.getElementById('next-goal-mount');
-          if (nextGoalMount && window.preact && window.preactIslands) {
-            const { render, h } = window.preact;
-            const { NextGoalCard } = window.preactIslands;
-            
+          if (nextGoalMount) {
             const nextGoal = upcoming[0];
             const previousDistance = completed.length > 0 ? completed[completed.length - 1].distance : 0;
             
-            render(
-              h(NextGoalCard, {
-                goal: nextGoal,
-                currentDistance: Number(currentDistance),
-                previousDistance: previousDistance,
-                onClick: () => showGoalModal(nextGoal, currentDistance)
-              }),
-              nextGoalMount
-            );
+            const hasPreact = !!(window.preact && window.preact.render && window.preact.h);
+            const hasNextGoalCard = !!(window.preactIslands && window.preactIslands.NextGoalCard);
+            
+            if (hasPreact && hasNextGoalCard) {
+              const { render, h } = window.preact;
+              const { NextGoalCard } = window.preactIslands;
+              
+              render(
+                h(NextGoalCard, {
+                  goal: nextGoal,
+                  currentDistance: Number(currentDistance),
+                  previousDistance: previousDistance,
+                  onClick: () => showGoalModal(nextGoal, currentDistance)
+                }),
+                nextGoalMount
+              );
+            } else {
+              // Fallback: render next goal without Preact
+              if (!hasPreact) {
+                console.error('Preact library not loaded. Ensure islands.js is loaded before goals.js');
+              } else if (!hasNextGoalCard) {
+                console.error('NextGoalCard island not found in registry. Check island registration in client/src/index.tsx');
+              }
+              
+              // Render vanilla JS fallback with progress bar
+              const segmentTotal = nextGoal.distance - previousDistance;
+              const segmentProgress = Number(currentDistance) - previousDistance;
+              const percentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100));
+              
+              nextGoalMount.innerHTML = 
+                '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal next-goal" data-goal-index="0">' +
+                (nextGoal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + nextGoal.special + '</span>' : '') +
+                '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + nextGoal.title + '</span>' +
+                '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + nextGoal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (nextGoal.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
+                '<div class="goal-progress-track" style="width:100%;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;margin-top:0.6em;overflow:hidden;">' +
+                  '<div class="goal-progress-fill" style="width:' + percentage.toFixed(1) + '%;height:100%;background:#FFD700;transition:width 0.3s ease;"></div>' +
+                '</div>' +
+                '</div>';
+              
+              // Make fallback clickable
+              makeGoalClickable(nextGoalMount.querySelector('.next-goal'), nextGoal, currentDistance);
+            }
           }
         }
         
