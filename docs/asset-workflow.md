@@ -38,7 +38,7 @@ npm run optimize:images
 The script will:
 1. Scan `raw_assets/` recursively for all image files
 2. Process each image through two pipelines:
-   - **High-res**: Max 2048px width, quality 90 (no upscaling, preserves original if ≤2048px)
+   - **High-res**: Target 2048px width, quality 90 (only downscales if >3840px/4K, preserves original otherwise)
    - **Thumbnail**: 256px width, quality 60, iteratively compressed to <20KB
 3. Output WebP files to `public/img/highres/` and `public/img/thumbnails/`
 4. Display a summary with file sizes and savings
@@ -117,12 +117,13 @@ const milestone = {
 
 ### High-Resolution Images
 - **Format**: WebP
-- **Maximum width**: 2048px (maintains aspect ratio)
+- **Target width**: 2048px (maintains aspect ratio)
 - **Quality**: 90 (high quality for detail views)
 - **Resizing logic**:
-  - If original width ≤ 2048px: Preserves original dimensions (no upscaling)
-  - If original width > 2048px: Resizes to 2048px max width
-  - Never upscales images smaller than target
+  - If original width ≤ 3840px (4K): Preserves original dimensions (no resizing or upscaling)
+  - If original width > 3840px (4K): Resizes to 2048px max width
+  - Examples: 1920px stays 1920px, 3000px stays 3000px, 5000px becomes 2048px
+  - Never upscales images smaller than their original size
 - **Use case**: Full-quality image loaded after thumbnail via lazy loading
 
 ### Thumbnails
