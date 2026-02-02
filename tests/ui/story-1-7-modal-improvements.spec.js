@@ -185,7 +185,6 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     for (const button of buttons) {
       const box = await button.boundingBox();
       // boundingBox() can return null if the element is not visible or not in the viewport
-      expect(box).not.toBeNull();
       if (!box) {
         throw new Error('Expected button to have a bounding box, but got null');
       }
