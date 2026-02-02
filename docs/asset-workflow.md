@@ -23,7 +23,7 @@ raw_assets/
 
 **Notes:**
 - The `raw_assets/` directory is gitignored and not committed to the repository
-- Supported formats: JPG, JPEG, PNG, WebP, TIFF, GIF
+- Supported formats: JPG, JPEG, PNG, WebP, TIFF/TIF, GIF
 - Use descriptive filenames (they'll be preserved in output with `.webp` extension)
 - Original images can be any size; the script handles resizing intelligently
 
