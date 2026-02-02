@@ -263,6 +263,9 @@
   font-size: 1.08em;
   min-height: 2.5em;
   width: 100%;
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
   font-weight: 400;
 }
 
