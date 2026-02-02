@@ -9,25 +9,73 @@
   /* Backgrounds */
   --bg-primary: #000000;
   --bg-secondary: #1a1a1a;
+  --bg-dark-alt: #2a2a2a;
+  --bg-button-dark: #444;
+  --bg-modal-overlay: rgba(0, 0, 0, 0.5);
+  --bg-modal-dark: rgba(0, 0, 0, 0.95);
   
   /* Accent Colors */
   --text-gold: #FFD700;
   --accent-blue: #007bff;
+  --accent-blue-alt: #2563eb;
+  --accent-blue-dark: #1e5aa8;
   --accent-teal: #16c79a;
   --accent-dark-teal: #006048;
   --accent-dark-blue: #0f3460;
+  --spring-meadow: #00FF7F;
   
   /* Text Colors */
   --text-primary: #ffffff;
   --text-secondary: #ccc;
+  --text-muted: #999;
+  --text-dim: #aaa;
+  --text-black: #000;
+  --text-gray-dark: #333;
+  --text-gray-medium: #666;
+  
+  /* Light theme colors (for auth page) */
+  --light-bg: #f5f5f5;
+  --light-bg-error: #fff5f5;
+  --light-bg-success: #f0f9f0;
+  --light-border: #ddd;
+  --light-border-hover: #777;
   
   /* Status Colors */
   --status-success: #28a745;
+  --status-success-light: #51cf66;
   --status-error: #dc3545;
+  --status-error-hover: #c82333;
+  --status-warning: #ff6b6b;
   
   /* UI Elements */
   --border-gray: #333;
+  --border-medium: #555;
+  --border-light: #666;
+  --border-lighter: #ababab;
   --shadow-dark: #222;
+  
+  /* Secondary Colors */
+  --secondary-gray: #6c757d;
+  --secondary-gray-hover: #545b62;
+  --secondary-dark: #404040;
+  
+  /* Overlay Effects */
+  --hover-overlay: rgba(255, 255, 255, 0.1);
+  --hover-overlay-light: rgba(255, 255, 255, 0.05);
+  --gold-glow-light: rgba(255, 215, 0, 0.3);
+  --gold-glow-medium: rgba(255, 215, 0, 0.5);
+  --gold-glow-strong: rgba(255, 215, 0, 0.7);
+  --gold-border-light: rgba(255, 215, 0, 0.6);
+  --gold-border-strong: rgba(255, 215, 0, 0.8);
+  --blue-overlay: rgba(0, 120, 215, 0.25);
+  --blue-border: rgba(0, 123, 255, 0.3);
+  --dark-overlay: rgba(60, 60, 60, 0.8);
+  --dark-bg: rgba(50, 50, 50, 0.95);
+  --darker-bg: rgba(45, 45, 45, 0.95);
+  --darkest-bg: rgba(55, 55, 55, 0.95);
+  --shadow-std: rgba(0, 0, 0, 0.3);
+  --status-warning-bg: rgba(255, 107, 107, 0.1);
+  --status-success-bg: rgba(81, 207, 102, 0.1);
 }
 
 /* General application layout */
@@ -88,7 +136,7 @@ h1 {
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px var(--shadow-std);
 }
 
 .profile-icon:hover {
@@ -96,7 +144,7 @@ h1 {
   border-color: var(--accent-teal);
   color: var(--text-primary);
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 12px var(--gold-glow-light);
 }
 
 .profile-icon:active {
