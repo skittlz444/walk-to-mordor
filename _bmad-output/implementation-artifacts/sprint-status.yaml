@@ -1,0 +1,107 @@
+# generated: 2026-01-16
+# project: walk-to-mordor
+# tracking_system: file-system
+# story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-01-16
+project: walk-to-mordor
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # ============================================
+  # EPIC 1: Phase 1 Polish & Completion (#150)
+  # ============================================
+  epic-1: in-progress
+  1-1-preact-infrastructure-setup: done
+  1-2-email-service-migration: done
+  1-3-email-confirmation-flow: done
+  1-4-intermediary-goals-system: done
+  1-5-missing-milestone-images: in-progress
+  1-6-image-optimization-script: done
+  1-7-ux-polish-modal-input-improvements: ready-for-dev
+  1-8-ux-polish-goals-display-improvements: done
+  1-9-ux-polish-profile-icon-css-variables: ready-for-dev
+  epic-1-retrospective: optional
+
+  # ============================================
+  # EPIC 2: Interactive Journey Map (#151)
+  # ============================================
+  epic-2: backlog
+  2-1-map-page-shell-navigation: backlog
+  2-2-map-canvas-base-image-layer: backlog
+  2-3-journey-path-rendering: backlog
+  2-4-current-position-marker: backlog
+  2-5-waypoint-markers: backlog
+  2-6-waypoint-detail-popup: backlog
+  2-7-map-state-management: backlog
+  2-8-map-visual-testing: backlog
+  epic-2-retrospective: optional
+
+  # ============================================
+  # EPIC 3: Fellowship Features (#152)
+  # ============================================
+  epic-3: backlog
+  3-1-fellowship-database-schema: backlog
+  3-2-create-fellowship-api: backlog
+  3-3-invite-join-fellowship-api: backlog
+  3-4-fellowship-progress-calculation-api: backlog
+  3-5-leave-fellowship-api: backlog
+  3-6-fellowship-ui-dashboard-integration: backlog
+  3-7-fellowship-ui-management-page: backlog
+  3-8-fellowship-progress-activity-feed: backlog
+  3-9-fellowship-notifications-party-milestones: backlog
+  epic-3-retrospective: optional
+
+  # ============================================
+  # EPIC 4: Admin Portal (#153)
+  # ============================================
+  epic-4: backlog
+  4-1-admin-authentication-authorization: backlog
+  4-2-admin-dashboard-shell: backlog
+  4-3-goal-management-list-view: backlog
+  4-4-goal-management-edit-goal: backlog
+  4-5-goal-management-image-upload-to-r2: backlog
+  4-6-goal-management-add-intermediary-goal: backlog
+  epic-4-retrospective: optional
+
+  # ============================================
+  # EPIC 5: Races (Competitive Events) (#154)
+  # ============================================
+  epic-5: backlog
+  5-1-race-database-schema: backlog
+  5-2-race-management-api-admin: backlog
+  5-3-race-join-leave-api: backlog
+  5-4-race-leaderboard-api: backlog
+  5-5-race-ui-discovery-join: backlog
+  5-6-race-ui-leaderboard-progress: backlog
+  epic-5-retrospective: optional
