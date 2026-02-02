@@ -3,7 +3,7 @@
 /* Field hints */
 .field-hint {
   display: block;
-  color: #999;
+  color: var(--text-muted);
   font-size: 0.85em;
   margin-top: 0.25rem;
   font-style: italic;
@@ -11,11 +11,11 @@
 
 /* Error and success messages */
 .error-message {
-  color: #ff6b6b;
+  color: var(--status-warning);
   padding: 0.5rem;
   margin-top: 0.5rem;
   border-radius: 4px;
-  background: rgba(255, 107, 107, 0.1);
+  background: var(--status-warning-bg);
   font-size: 0.9rem;
   display: none;
 }
@@ -25,11 +25,11 @@
 }
 
 .success-message {
-  color: #51cf66;
+  color: var(--status-success-light);
   padding: 0.5rem;
   margin-top: 0.5rem;
   border-radius: 4px;
-  background: rgba(81, 207, 102, 0.1);
+  background: var(--status-success-bg);
   font-size: 0.9rem;
   display: none;
 }
@@ -52,8 +52,8 @@
   font-size: 1.08em;
   min-height: 2.5em;
   width: 100%;
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   border: none;
   font-weight: 400;
 }
@@ -61,7 +61,7 @@
 /* Profile button in header */
 .profile-btn {
   padding: 0.5rem 1rem;
-  background: #16c79a;
+  background: var(--accent-teal);
   color: white;
   border: none;
   border-radius: 4px;
@@ -72,7 +72,7 @@
 }
 
 .profile-btn:hover {
-  background: #0f3460;
+  background: var(--accent-dark-blue);
 }
 
 .profile-btn:active {

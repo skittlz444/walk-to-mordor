@@ -60,8 +60,8 @@ test.describe('Email Confirmation UI', () => {
         
         // If we are on dashboard (first user case), logout
         if (page.url() === '/' || page.url().endsWith('/')) {
-             // Try to find profile or logout
-             const profileBtn = page.locator('#profile-btn');
+             // Try to find profile icon and logout
+             const profileBtn = page.locator('.profile-icon');
              if (await profileBtn.isVisible()) {
                  await profileBtn.click();
                  // Assuming logout is in profile modal
