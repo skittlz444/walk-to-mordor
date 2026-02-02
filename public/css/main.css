@@ -62,8 +62,7 @@
   /* Overlay Effects */
   --hover-overlay: rgba(255, 255, 255, 0.1);
   --hover-overlay-light: rgba(255, 255, 255, 0.05);
-  --focus-ring-blue: rgba(15, 52, 96, 0.1);
-  --blue-hover-overlay: rgba(15, 52, 96, 0.1);
+  --blue-overlay-light: rgba(15, 52, 96, 0.1);  /* Blue overlay/focus ring */
   --gold-glow-light: rgba(255, 215, 0, 0.3);
   --gold-glow-medium: rgba(255, 215, 0, 0.5);
   --gold-glow-strong: rgba(255, 215, 0, 0.7);

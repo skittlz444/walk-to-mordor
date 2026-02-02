@@ -71,7 +71,7 @@
 .form-group input:focus {
   outline: none;
   border-color: var(--accent-dark-blue);
-  box-shadow: 0 0 0 3px var(--focus-ring-blue);
+  box-shadow: 0 0 0 3px var(--blue-overlay-light);
 }
 
 .form-group small {
@@ -194,7 +194,7 @@
 }
 
 .resend-btn:hover {
-  background: var(--blue-hover-overlay);
+  background: var(--blue-overlay-light);
 }
 
 .resend-btn-full {

@@ -81,8 +81,7 @@ All theme variables are defined in the `:root` selector in `/public/css/main.css
 ```css
 --hover-overlay: rgba(255, 255, 255, 0.1)     /* White hover overlay */
 --hover-overlay-light: rgba(255, 255, 255, 0.05) /* Light hover overlay */
---focus-ring-blue: rgba(15, 52, 96, 0.1)      /* Blue focus ring (auth) */
---blue-hover-overlay: rgba(15, 52, 96, 0.1)   /* Blue hover overlay */
+--blue-overlay-light: rgba(15, 52, 96, 0.1)   /* Blue overlay/focus ring */
 --gold-glow-light: rgba(255, 215, 0, 0.3)     /* Light gold glow */
 --gold-glow-medium: rgba(255, 215, 0, 0.5)    /* Medium gold glow */
 --gold-glow-strong: rgba(255, 215, 0, 0.7)    /* Strong gold glow */
