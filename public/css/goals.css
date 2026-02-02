@@ -143,5 +143,5 @@
 
 #toggle-completed-visibility:hover,
 #toggle-completed:hover {
-  background: var(--border-medium) !important;
+  background: var(--bg-button-medium) !important;
 }

@@ -205,7 +205,7 @@
 }
 
 .quick-btn:hover {
-  background: var(--border-medium);
+  background: var(--bg-button-medium);
   border-color: var(--light-border-hover);
 }
 

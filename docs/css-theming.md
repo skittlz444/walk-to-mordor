@@ -68,6 +68,7 @@ All theme variables are defined in the `:root` selector in `/public/css/main.css
 --border-light: #666           /* Light border */
 --border-lighter: #ababab      /* Lighter border */
 --shadow-dark: #222            /* Dark shadow */
+--bg-button-medium: #555       /* Medium button background */
 ```
 
 ### Secondary Colors
