@@ -138,7 +138,7 @@
 }
 
 /* Primary button - matches auth.css styling for consistency
- * Color: var(--accent-dark-blue) - WCAG AAA compliant (12.5:1 contrast ratio)
+ * Color: var(--accent-dark-blue) - WCAG AA compliant (~9.38:1 contrast ratio with white text)
  * Hover: var(--accent-teal) - established design system hover state
  */
 .btn-primary {
