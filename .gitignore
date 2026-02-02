@@ -200,3 +200,6 @@ test-summary/
 tests/.tmp/
 public/js/client/
 .dev.vars
+
+# Raw source images for optimization (not committed to repo)
+raw_assets/

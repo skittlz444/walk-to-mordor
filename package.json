@@ -67,7 +67,8 @@
     "test:client:watch": "vitest --root client",
     "test:client:coverage": "vitest run --coverage --root client",
     "build:sw": "node public/js/update-cache-version.js",
-    "build:sw:reset": "node public/js/reset-cache-version.js"
+    "build:sw:reset": "node public/js/reset-cache-version.js",
+    "optimize:images": "node scripts/optimize-images.js"
   },
   "dependencies": {
     "@preact/signals": "^2.6.2",
