@@ -53,7 +53,7 @@
   --border-light: #666;
   --border-lighter: #ababab;
   --shadow-dark: #222;
-  --bg-button-medium: #555;  /* Medium button background (same as border-medium) */
+  --bg-button-medium: var(--border-medium);  /* Medium button background (derived from border-medium) */
   
   /* Secondary Colors */
   --secondary-gray: #6c757d;
