@@ -107,7 +107,7 @@
 .form-group input:focus {
   outline: none;
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 2px var(--blue-overlay);
+  box-shadow: 0 0 0 2px var(--blue-focus-ring);
 }
 
 /* Center and size the distance input */

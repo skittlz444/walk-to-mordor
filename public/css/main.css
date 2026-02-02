@@ -62,6 +62,8 @@
   /* Overlay Effects */
   --hover-overlay: rgba(255, 255, 255, 0.1);
   --hover-overlay-light: rgba(255, 255, 255, 0.05);
+  --focus-ring-blue: rgba(15, 52, 96, 0.1);
+  --blue-hover-overlay: rgba(15, 52, 96, 0.1);
   --gold-glow-light: rgba(255, 215, 0, 0.3);
   --gold-glow-medium: rgba(255, 215, 0, 0.5);
   --gold-glow-strong: rgba(255, 215, 0, 0.7);
@@ -69,11 +71,13 @@
   --gold-border-strong: rgba(255, 215, 0, 0.8);
   --blue-overlay: rgba(0, 120, 215, 0.25);
   --blue-border: rgba(0, 123, 255, 0.3);
+  --blue-focus-ring: rgba(0, 123, 255, 0.25);
   --dark-overlay: rgba(60, 60, 60, 0.8);
   --dark-bg: rgba(50, 50, 50, 0.95);
   --darker-bg: rgba(45, 45, 45, 0.95);
   --darkest-bg: rgba(55, 55, 55, 0.95);
   --shadow-std: rgba(0, 0, 0, 0.3);
+  --shadow-light: rgba(0, 0, 0, 0.1);
   --status-warning-bg: rgba(255, 107, 107, 0.1);
   --status-success-bg: rgba(81, 207, 102, 0.1);
 }

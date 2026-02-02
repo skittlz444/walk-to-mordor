@@ -81,6 +81,8 @@ All theme variables are defined in the `:root` selector in `/public/css/main.css
 ```css
 --hover-overlay: rgba(255, 255, 255, 0.1)     /* White hover overlay */
 --hover-overlay-light: rgba(255, 255, 255, 0.05) /* Light hover overlay */
+--focus-ring-blue: rgba(15, 52, 96, 0.1)      /* Blue focus ring (auth) */
+--blue-hover-overlay: rgba(15, 52, 96, 0.1)   /* Blue hover overlay */
 --gold-glow-light: rgba(255, 215, 0, 0.3)     /* Light gold glow */
 --gold-glow-medium: rgba(255, 215, 0, 0.5)    /* Medium gold glow */
 --gold-glow-strong: rgba(255, 215, 0, 0.7)    /* Strong gold glow */
@@ -88,11 +90,13 @@ All theme variables are defined in the `:root` selector in `/public/css/main.css
 --gold-border-strong: rgba(255, 215, 0, 0.8)  /* Strong gold border */
 --blue-overlay: rgba(0, 120, 215, 0.25)       /* Blue overlay */
 --blue-border: rgba(0, 123, 255, 0.3)         /* Blue border */
+--blue-focus-ring: rgba(0, 123, 255, 0.25)    /* Blue focus ring */
 --dark-overlay: rgba(60, 60, 60, 0.8)         /* Dark overlay */
 --dark-bg: rgba(50, 50, 50, 0.95)            /* Dark background */
 --darker-bg: rgba(45, 45, 45, 0.95)          /* Darker background */
 --darkest-bg: rgba(55, 55, 55, 0.95)         /* Darkest background */
 --shadow-std: rgba(0, 0, 0, 0.3)             /* Standard shadow */
+--shadow-light: rgba(0, 0, 0, 0.1)           /* Light shadow */
 --status-warning-bg: rgba(255, 107, 107, 0.1) /* Warning background */
 --status-success-bg: rgba(81, 207, 102, 0.1)  /* Success background */
 ```
