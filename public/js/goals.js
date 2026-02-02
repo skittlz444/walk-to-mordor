@@ -142,38 +142,23 @@ function renderGoals(currentDistance) {
         '</div>';
       }
       
-      html += '<ul style="list-style:none;padding:0;margin:0;">' +
-        upcoming.map(function(g, index) {
-          const isNextGoal = index === 0;
-          let progressBarHTML = '';
-          
-          // Calculate segment progress for the next goal (AC2)
-          if (isNextGoal) {
-            // Get previous milestone distance (or 0 if this is the first goal)
-            const previousDistance = completed.length > 0 ? completed[completed.length - 1].distance : 0;
-            const segmentStart = previousDistance;
-            const segmentEnd = g.distance;
-            const segmentTotal = segmentEnd - segmentStart;
-            const segmentProgress = Number(currentDistance) - segmentStart;
-            const percentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100));
-            
-            // Build progress bar HTML (AC2)
-            progressBarHTML = '<div class="goal-progress-track" style="width:100%;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;margin-top:0.6em;overflow:hidden;">' +
-              '<div class="goal-progress-fill" style="width:' + percentage.toFixed(1) + '%;height:100%;background:#FFD700;transition:width 0.3s ease;"></div>' +
-            '</div>';
-          }
-          
-          // Add .next-goal class for emphasis (AC1)
-          const goalClasses = 'upcoming-goal' + (isNextGoal ? ' next-goal' : '');
-          
-          return '<li style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="' + goalClasses + '" data-goal-index="' + index + '">' +
-            (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
-            '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + g.title + '</span>' +
-            '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + g.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (g.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
-            progressBarHTML +
-          '</li>';
-        }).join('') +
-        '</ul>';
+      // Render upcoming goals list - use Preact island for next goal
+      html += '<ul id="upcoming-goals-list" style="list-style:none;padding:0;margin:0;">';
+      
+      // Create mount point for next goal Preact island (first upcoming goal)
+      if (upcoming.length > 0) {
+        html += '<div id="next-goal-mount" data-goal-index="0"></div>';
+      }
+      
+      // Render remaining upcoming goals (non-next) with vanilla JS
+      html += upcoming.slice(1).map(function(g, index) {
+        return '<li style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal" data-goal-index="' + (index + 1) + '">' +
+          (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
+          '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + g.title + '</span>' +
+          '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + g.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (g.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
+        '</li>';
+      }).join('') +
+      '</ul>';
       
       document.getElementById('goals-list').innerHTML = html;
       
@@ -202,8 +187,30 @@ function renderGoals(currentDistance) {
         };
       }
 
-      // Add click listeners for goals
+      // Hydrate next goal Preact island and add click listeners for other goals
       queueMicrotask(() => {
+        // Hydrate next goal as Preact island
+        if (upcoming.length > 0) {
+          const nextGoalMount = document.getElementById('next-goal-mount');
+          if (nextGoalMount && window.preact && window.preactIslands) {
+            const { render, h } = window.preact;
+            const { NextGoalCard } = window.preactIslands;
+            
+            const nextGoal = upcoming[0];
+            const previousDistance = completed.length > 0 ? completed[completed.length - 1].distance : 0;
+            
+            render(
+              h(NextGoalCard, {
+                goal: nextGoal,
+                currentDistance: Number(currentDistance),
+                previousDistance: previousDistance,
+                onClick: () => showGoalModal(nextGoal, currentDistance)
+              }),
+              nextGoalMount
+            );
+          }
+        }
+        
         // Completed goals (last 3)
         document.querySelectorAll('.completed-goal').forEach((element, index) => {
           makeGoalClickable(element, lastCompleted[index], currentDistance);
@@ -214,9 +221,10 @@ function renderGoals(currentDistance) {
           makeGoalClickable(element, completed[index], currentDistance);
         });
 
-        // Upcoming goals
-        document.querySelectorAll('.upcoming-goal').forEach((element, index) => {
-          makeGoalClickable(element, upcoming[index], currentDistance);
+        // Upcoming goals (skip index 0 - that's the next goal Preact island)
+        document.querySelectorAll('.upcoming-goal:not(#next-goal-mount .upcoming-goal)').forEach((element, index) => {
+          // index here corresponds to upcoming.slice(1), so we need index + 1 for the actual upcoming array
+          makeGoalClickable(element, upcoming[index + 1], currentDistance);
         });
       });
     })
