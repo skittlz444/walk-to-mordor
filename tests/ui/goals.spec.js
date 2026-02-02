@@ -853,8 +853,8 @@ test.describe('Goals Functionality', () => {
       const borderColor = await firstUpcomingGoal.evaluate(el => {
         return window.getComputedStyle(el).borderColor;
       });
-      // Should have gold/yellow border (rgba with 215 in it for #FFD700)
-      expect(borderColor).toContain('215');
+      // Should have gold/yellow border - #FFD700 = rgb(255, 215, 0)
+      expect(borderColor).toMatch(/rgb\(255,\s*215,\s*0\)/);
       
       // Subsequent goals should NOT have .next-goal class
       if (upcomingCount > 1) {
@@ -891,7 +891,7 @@ test.describe('Goals Functionality', () => {
         return window.getComputedStyle(el).backgroundColor;
       });
       // Gold = #FFD700 = rgb(255, 215, 0)
-      expect(fillColor).toMatch(/rgb.*255.*215.*0/);
+      expect(fillColor).toMatch(/rgb\(255,\s*215,\s*0\)/);
     });
 
     test('Progress bar width reflects segment progress percentage', async ({ page }) => {

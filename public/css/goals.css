@@ -124,15 +124,6 @@
   box-shadow: 0 2px 16px rgba(255, 215, 0, 0.4), 0 2px 8px #222;
 }
 
-/* Progress Bar Styles (AC2) */
-.goal-progress-track {
-  /* Styles defined inline in JS for flexibility */
-}
-
-.goal-progress-fill {
-  /* Styles defined inline in JS for flexibility */
-}
-
 /* Goal header styles */
 .goal-header-main,
 .goal-header-special {
