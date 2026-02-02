@@ -177,7 +177,7 @@ async function processImage(inputPath) {
     
     // Log results
     console.log(`[Optimized] ${path.basename(inputPath)} -> ${highresFilename} + ${thumbFilename}`);
-    console.log(`  Original: ${formatSize(originalSize)} | High-res: ${formatSize(highresResult.size)} (${highresResult.width}px) | Thumb: ${formatSize(thumbResult.size)} (${THUMB_WIDTH}px, q${thumbResult.quality})`);
+    console.log(`  Original: ${formatSize(originalSize)} | High-res: ${formatSize(highresResult.size)} (${highresResult.width}px) | Thumb: ${formatSize(thumbResult.size)} (≤${THUMB_WIDTH}px, q${thumbResult.quality})`);
     
     return {
       filename: path.basename(inputPath),
