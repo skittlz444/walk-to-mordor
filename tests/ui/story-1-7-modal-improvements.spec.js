@@ -102,6 +102,39 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     await expect(distanceInput).toHaveValue('9.50');
   });
 
+  test('Reset button clears distance to 0.00', async ({ page }) => {
+    await page.waitForLoadState('networkidle');
+    
+    // Open modal
+    const testDateInfo = generateRandomTestDate();
+    const cell = await selectCalendarDate(page, testDateInfo);
+    await cell.click({ timeout: 10000 });
+    
+    // Wait for modal
+    const distanceInput = page.locator('#distance-input');
+    await distanceInput.waitFor({ state: 'visible', timeout: 5000 });
+    
+    // Add some distance
+    await page.locator('#quick-add-5').click();
+    await expect(distanceInput).toHaveValue('5.00');
+    
+    await page.locator('#quick-add-1').click();
+    await expect(distanceInput).toHaveValue('6.00');
+    
+    // Click reset button
+    const resetBtn = page.locator('#quick-reset');
+    await expect(resetBtn).toBeVisible();
+    await expect(resetBtn).toHaveText('Reset');
+    await resetBtn.click();
+    
+    // Verify input is reset to 0.00
+    await expect(distanceInput).toHaveValue('0.00');
+    
+    // Verify can add again after reset
+    await page.locator('#quick-add-1').click();
+    await expect(distanceInput).toHaveValue('1.00');
+  });
+
   test('Modal buttons have proper styling (auth-style buttons)', async ({ page }) => {
     await page.waitForLoadState('networkidle');
     
@@ -145,7 +178,8 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
       page.locator('#save-btn'),
       page.locator('#cancel-btn'),
       page.locator('#quick-add-1'),
-      page.locator('#quick-add-5')
+      page.locator('#quick-add-5'),
+      page.locator('#quick-reset')
     ];
     
     for (const button of buttons) {

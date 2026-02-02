@@ -213,6 +213,17 @@
   transform: translateY(1px);
 }
 
+/* Reset button - distinct styling to indicate reset action */
+.quick-btn-reset {
+  background: #dc3545;
+  border-color: #c82333;
+}
+
+.quick-btn-reset:hover {
+  background: #c82333;
+  border-color: #bd2130;
+}
+
 /* Distance input with km suffix */
 .input-with-suffix {
   display: flex;

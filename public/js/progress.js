@@ -43,6 +43,7 @@ function showDistanceModal(event, date = null) {
             <div class="quick-entry-group">
               <button type="button" class="quick-btn" id="quick-add-1">+1 km</button>
               <button type="button" class="quick-btn" id="quick-add-5">+5 km</button>
+              <button type="button" class="quick-btn quick-btn-reset" id="quick-reset">Reset</button>
             </div>
           </div>
         </div>
@@ -82,6 +83,12 @@ function showDistanceModal(event, date = null) {
   });
   document.getElementById('quick-add-5').addEventListener('click', function() {
     addToDistance(5);
+  });
+  document.getElementById('quick-reset').addEventListener('click', function() {
+    const input = document.getElementById('distance-input');
+    input.value = '0.00';
+    // Trigger input event for any validation listeners
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
   
   const closeModalBtn = document.getElementById('close-modal');
