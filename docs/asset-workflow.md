@@ -78,39 +78,67 @@ Total savings: 5.82 MB (72.0%)
 
 ### 3. Reference Images in Code
 
-After optimization, reference the WebP files in your code or database:
+After optimization, reference the WebP files in your code or database using the `image_id` field.
+
+**In Database Migrations:**
+
+To add or update an image for a milestone, create a migration file that updates the `image_id` field in the goals table:
+
+```sql
+-- Migration number: 0XXX    YYYY-MM-DDTHH:MM:SS.000Z
+
+-- Update image_id for goal: {Goal Title} (Distance: {distance_km})
+UPDATE goals SET image_id = 'milestone-mountain' WHERE distance = {distance_km} * 1.60934;
+```
+
+**Example migration file** (`migrations/0099_update_image_milestone-mountain.sql`):
+```sql
+-- Migration number: 0099    2026-02-02T12:00:00.000Z
+
+-- Update image_id for goal: Reach Mountain Pass (Distance: 150)
+UPDATE goals SET image_id = 'milestone-mountain' WHERE distance = 150 * 1.60934;
+```
+
+**Notes:**
+- The `image_id` should match the base filename of your optimized images (without extensions or `-thumb` suffix)
+- For example, if your images are `milestone-mountain.webp` and `milestone-mountain-thumb.webp`, use `image_id = 'milestone-mountain'`
+- Distance is stored in miles in the database, so multiply km by 1.60934
+- Migration number should be the next sequential number in the migrations folder
+- Use ISO 8601 timestamp format
 
 **In HTML/Templates:**
+
+The frontend automatically constructs image paths using the `image_id`:
+
 ```html
 <!-- Thumbnail for lazy loading placeholder -->
 <img 
-  src="/img/thumbs/milestone-mountain-thumb.webp" 
+  src="/img/thumbs/{image_id}-thumb.webp" 
   class="blur-placeholder"
-  alt="Mountain milestone">
+  alt="Goal image">
 
 <!-- High-res for full quality view -->
 <img 
-  data-src="/img/highres/milestone-mountain.webp"
+  data-src="/img/highres/{image_id}.webp"
   class="lazy-load"
-  alt="Mountain milestone">
+  alt="Goal image">
 ```
 
-**In Database (Milestone Records):**
-```sql
-INSERT INTO milestones (name, image_highres, image_thumb) VALUES (
-  'Mountain Pass',
-  'milestone-mountain.webp',
-  'milestone-mountain-thumb.webp'
-);
-```
+**In JavaScript/TypeScript:**
 
-**In JavaScript:**
-```javascript
-const milestone = {
-  name: 'Mountain Pass',
-  imageHighres: '/img/highres/milestone-mountain.webp',
-  imageThumbnail: '/img/thumbs/milestone-mountain-thumb.webp'
-};
+The `GoalModal` component automatically handles image loading using the goal's `image_id` field:
+
+```typescript
+interface Goal {
+  id: number;
+  distance: number;
+  title: string;
+  image_id?: string | null;
+}
+
+// Images are loaded as:
+// Thumbnail: `/img/thumbs/${goal.image_id}-thumb.webp`
+// High-res: `/img/highres/${goal.image_id}.webp`
 ```
 
 ## Image Specifications
