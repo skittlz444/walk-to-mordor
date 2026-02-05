@@ -20,32 +20,32 @@ so that **I can quickly record my kilometers without friction or confusion**.
 
 ## Tasks / Subtasks
 
-- [ ] **Analyze & Locate**
-  - [ ] Identify the HTML structure for the "Add Walk" modal (likely in `src/renderHtml.ts` injected string or created via JS in `public/js/calendar.js`/`progress.js`).
-  - [ ] Identify existing CSS styles for Auth buttons in `public/css/auth.css` or `public/css/main.css` to replicate.
+- [x] **Analyze & Locate**
+  - [x] Identify the HTML structure for the "Add Walk" modal (likely in `src/renderHtml.ts` injected string or created via JS in `public/js/calendar.js`/`progress.js`).
+  - [x] Identify existing CSS styles for Auth buttons in `public/css/auth.css` or `public/css/main.css` to replicate.
 
-- [ ] **Button Styling Implementation**
-  - [ ] Assign classes to Modal buttons to match Auth button styles (e.g., `.btn`, `.btn-primary`, `.btn-secondary`).
-  - [ ] Update `public/css/main.css` to ensure these classes apply correctly within the modal context.
-  - [ ] Ensure adequate padding (e.g., `12px 24px`) and rounded corners.
+- [x] **Button Styling Implementation**
+  - [x] Assign classes to Modal buttons to match Auth button styles (e.g., `.btn`, `.btn-primary`, `.btn-secondary`).
+  - [x] Update `public/css/main.css` to ensure these classes apply correctly within the modal context.
+  - [x] Ensure adequate padding (e.g., `12px 24px`) and rounded corners.
 
-- [ ] **Distance Input Enhancement**
-  - [ ] Wrap the distance `input` in a container to allow a "km" suffix span.
-  - [ ] Style the input to have a clear border and focus state.
-  - [ ] Ensure input type is `number` with `step="0.01"` for partial kilometers.
+- [x] **Distance Input Enhancement**
+  - [x] Wrap the distance `input` in a container to allow a "km" suffix span.
+  - [x] Style the input to have a clear border and focus state.
+  - [x] Ensure input type is `number` with `step="0.01"` for partial kilometers.
 
-- [ ] **Quick Entry Logic**
-  - [ ] Add HTML buttons for `+1km` and `+5km`.
-  - [ ] Write event listeners in `public/js/*.js` (likely `progress.js` or `calendar.js`) to handle clicks:
+- [x] **Quick Entry Logic**
+  - [x] Add HTML buttons for `+1km` and `+5km`.
+  - [x] Write event listeners in `public/js/*.js` (likely `progress.js` or `calendar.js`) to handle clicks:
     - Parse current value (default to 0).
     - Add 1 or 5.
     - Update input value.
     - Trigger any `input` or `change` events if required for validation.
 
-- [ ] **Accessibility & Responsiveness**
-  - [ ] Verify touch targets size (adjust padding/height).
-  - [ ] Ensure contrast ratios for new buttons meet WCAG AA.
-  - [ ] Test layout flex/grid behavior on narrow screens.
+- [x] **Accessibility & Responsiveness**
+  - [x] Verify touch targets size (adjust padding/height).
+  - [x] Ensure contrast ratios for new buttons meet WCAG AA.
+  - [x] Test layout flex/grid behavior on narrow screens.
 
 ## Dev Notes
 

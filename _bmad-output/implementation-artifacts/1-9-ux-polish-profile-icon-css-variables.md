@@ -28,21 +28,21 @@ so that **the application feels polished, immersive, and I can easily access my 
 
 ## Tasks / Subtasks
 
-- [ ] **CSS Architecture (`public/css/main.css`)**
-  - [ ] Analysis: Audit `main.css` to collect all used hex codes.
-  - [ ] Implementation: Define `:root` block with semantic variable names (e.g., `--color-accent-gold: #FFD700`).
-  - [ ] Refactor: Replace hardcoded colors with `var(--variable-name)`.
+- [x] **CSS Architecture (`public/css/main.css`)**
+  - [x] Analysis: Audit `main.css` to collect all used hex codes.
+  - [x] Implementation: Define `:root` block with semantic variable names (e.g., `--color-accent-gold: #FFD700`).
+  - [x] Refactor: Replace hardcoded colors with `var(--variable-name)`.
 
-- [ ] **Profile Button Implementation (`src/renderHtml.ts`)**
-  - [ ] Locate the header rendering logic (likely in `renderHtml` or a helper).
-  - [ ] Update the HTML generation for the profile link.
-  - [ ] Logic: Extract initials from `user.name` (if available) or use default.
-  - [ ] Markup: Change to `<a href="/profile" class="profile-icon" aria-label="Profile">...</a>`.
+- [x] **Profile Button Implementation (`src/renderHtml.ts`)**
+  - [x] Locate the header rendering logic (likely in `renderHtml` or a helper).
+  - [x] Update the HTML generation for the profile link.
+  - [x] Logic: Extract initials from `user.name` (if available) or use default.
+  - [x] Markup: Change to `<a href="/profile" class="profile-icon" aria-label="Profile">...</a>`.
 
-- [ ] **Profile Button Styling (`public/css/main.css` or `public/css/header.css`)**
-  - [ ] Create `.profile-icon` class.
-  - [ ] Styles: `border-radius: 50%`, `display: flex`, `justify-content: center`, `align-items: center`, `width/height: 40px`.
-  - [ ] Colors: Use the new CSS variables (e.g., Gold border, dark background).
+- [x] **Profile Button Styling (`public/css/main.css` or `public/css/header.css`)**
+  - [x] Create `.profile-icon` class.
+  - [x] Styles: `border-radius: 50%`, `display: flex`, `justify-content: center`, `align-items: center`, `width/height: 40px`.
+  - [x] Colors: Use the new CSS variables (e.g., Gold border, dark background).
 
 ## Dev Notes
 

@@ -39,13 +39,13 @@ so that **I feel constantly rewarded and immersed in the journey regardless of w
   - [ ] Example: `UPDATE goals SET image_id = 'woody-end' WHERE id = X;`
   - [ ] Ensure NO rows have `image_id` as NULL after migration.
 
-- [ ] **Frontend Integration**
-  - [ ] **Refactoring Decision**: Evaluate complexity. If changes are significant (e.g., complex state management), **Refactor to Preact**. If minor (simple DOM updates), **maintain Vanilla JS**.
-  - [ ] Update `public/js/goals.js` (or create new Island if refactoring).
-  - [ ] Switch image source construction from `.jpg` to `.webp`.
-  - [ ] Implement distinction between "List View" (use `public/img/thumbnails/{image_id}.webp`) and "Detail View" (use `public/img/highres/{image_id}.webp`).
-  - [ ] Implement lazy loading: Focus on **Perceived Performance**. Show thumbnail immediately (placeholder/blur-up) while high-res loads.
-  - [ ] Handle error states (fallback image if WebP fails to load).
+- [x] **Frontend Integration**
+  - [x] **Refactoring Decision**: Evaluate complexity. If changes are significant (e.g., complex state management), **Refactor to Preact**. If minor (simple DOM updates), **maintain Vanilla JS**.
+  - [x] Update `public/js/goals.js` (or create new Island if refactoring).
+  - [x] Switch image source construction from `.jpg` to `.webp`.
+  - [x] Implement distinction between "List View" (use `public/img/thumbnails/{image_id}.webp`) and "Detail View" (use `public/img/highres/{image_id}.webp`).
+  - [x] Implement lazy loading: Focus on **Perceived Performance**. Show thumbnail immediately (placeholder/blur-up) while high-res loads.
+  - [x] Handle error states (fallback image if WebP fails to load).
 
 - [ ] **Verification & Testing**
   - [ ] **Path Verification**: Confirm new asset paths (`/img/thumbnails/`, `/img/highres/`) resolve correctly.

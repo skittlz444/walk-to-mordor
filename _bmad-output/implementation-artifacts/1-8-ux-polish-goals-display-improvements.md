@@ -22,24 +22,24 @@ so that **I can see exactly how close I am to the next milestone without doing m
 
 ## Tasks / Subtasks
 
-- [ ] **Goals List Rendering Logic (`public/js/goals.js`)**
-  - [ ] Modify `renderGoals()` loop.
-  - [ ] Identify the **first** goal where `goal.distance > currentDistance`. This is the "Next Goal".
-  - [ ] Flag this goal for special rendering.
+- [x] **Goals List Rendering Logic (`public/js/goals.js`)**
+  - [x] Modify `renderGoals()` loop.
+  - [x] Identify the **first** goal where `goal.distance > currentDistance`. This is the "Next Goal".
+  - [x] Flag this goal for special rendering.
 
-- [ ] **Next Goal Styling (`public/css/goals.css`)**
-  - [ ] Create `.goal-card.next-goal` class.
-  - [ ] Add emphasis styling: e.g., slightly larger font, subtle gold border/box-shadow, or a "Next Target" badge.
+- [x] **Next Goal Styling (`public/css/goals.css`)**
+  - [x] Create `.goal-card.next-goal` class.
+  - [x] Add emphasis styling: e.g., slightly larger font, subtle gold border/box-shadow, or a "Next Target" badge.
 
-- [ ] **Progress Bar Implementation**
-  - [ ] Inside the `renderGoals()` logic for the Next Goal:
-    - [ ] Get `previousDistance` (distance of the goal immediately preceding this one, or 0 if it's the first goal).
-    - [ ] Calculate `segmentTotal = goal.distance - previousDistance`.
-    - [ ] Calculate `segmentProgress = currentDistance - previousDistance`.
-    - [ ] Calculate `percentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100))`.
-  - [ ] Inject HTML for the progress bar into the Goal Card's DOM.
-    - [ ] Structure: `<div class="goal-progress-track"><div class="goal-progress-fill" style="width: ${percentage}%"></div></div>`
-  - [ ] Style the bar (Gold fill, dark track).
+- [x] **Progress Bar Implementation**
+  - [x] Inside the `renderGoals()` logic for the Next Goal:
+    - [x] Get `previousDistance` (distance of the goal immediately preceding this one, or 0 if it's the first goal).
+    - [x] Calculate `segmentTotal = goal.distance - previousDistance`.
+    - [x] Calculate `segmentProgress = currentDistance - previousDistance`.
+    - [x] Calculate `percentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100))`.
+  - [x] Inject HTML for the progress bar into the Goal Card's DOM.
+    - [x] Structure: `<div class="goal-progress-track"><div class="goal-progress-fill" style="width: ${percentage}%"></div></div>`
+  - [x] Style the bar (Gold fill, dark track).
 
 ## Dev Notes
 
