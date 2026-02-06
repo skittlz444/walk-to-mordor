@@ -24,8 +24,8 @@ so that **I feel constantly rewarded and immersed in the journey regardless of w
 - [x] **Audit & Source Assets**
   - [x] Identify all goals with `image_id IS NULL` (from Story 1.4).
   - [x] Identify all legacy goals where the image might be missing or low quality.
-  - [ ] Source or generate license-appropriate images for these milestones.
-  - [ ] **Critical**: Ensure filenames are safe, unique "slugs" (e.g., `woody-end`, `fog-on-downs`) rather than simple numbers, for better manageability.
+  - [x] Source or generate license-appropriate images for these milestones.
+  - [x] **Critical**: Ensure filenames are safe, unique "slugs" (e.g., `woody-end`, `fog-on-downs`) rather than simple numbers, for better manageability.
 
 - [x] **Image Optimization & Formatting**
   - [x] Convert all images (new and legacy) to **WebP**.
@@ -33,27 +33,27 @@ so that **I feel constantly rewarded and immersed in the journey regardless of w
   - [x] Generate **Thumbnail** versions (Max 400px width, Quality 60, <20KB).
   - [x] Place in `public/img/highres/` and `public/img/thumbnails/`.
 
-- [ ] **Database Updates**
-  - [ ] Create migration `0022_update_milestone_images.sql`.
-  - [ ] Update `image_id` for all rows to match the new filename slugs (listing explicit updates for transparency).
-  - [ ] Example: `UPDATE goals SET image_id = 'woody-end' WHERE id = X;`
-  - [ ] Ensure NO rows have `image_id` as NULL after migration.
+- [x] **Database Updates**
+  - [x] Create migration `0022_update_milestone_images.sql`.
+  - [x] Update `image_id` for all rows to match the new filename slugs (listing explicit updates for transparency).
+  - [x] Example: `UPDATE goals SET image_id = 'woody-end' WHERE id = X;`
+  - [x] Ensure NO rows have `image_id` as NULL after migration.
 
-- [ ] **Frontend Integration**
-  - [ ] **Refactoring Decision**: Evaluate complexity. If changes are significant (e.g., complex state management), **Refactor to Preact**. If minor (simple DOM updates), **maintain Vanilla JS**.
-  - [ ] Update `public/js/goals.js` (or create new Island if refactoring).
-  - [ ] Switch image source construction from `.jpg` to `.webp`.
-  - [ ] Implement distinction between "List View" (use `public/img/thumbnails/{image_id}.webp`) and "Detail View" (use `public/img/highres/{image_id}.webp`).
-  - [ ] Implement lazy loading: Focus on **Perceived Performance**. Show thumbnail immediately (placeholder/blur-up) while high-res loads.
-  - [ ] Handle error states (fallback image if WebP fails to load).
+- [x] **Frontend Integration**
+  - [x] **Refactoring Decision**: Evaluate complexity. If changes are significant (e.g., complex state management), **Refactor to Preact**. If minor (simple DOM updates), **maintain Vanilla JS**.
+  - [x] Update `public/js/goals.js` (or create new Island if refactoring).
+  - [x] Switch image source construction from `.jpg` to `.webp`.
+  - [x] Implement distinction between "List View" (use `public/img/thumbnails/{image_id}.webp`) and "Detail View" (use `public/img/highres/{image_id}.webp`).
+  - [x] Implement lazy loading: Focus on **Perceived Performance**. Show thumbnail immediately (placeholder/blur-up) while high-res loads.
+  - [x] Handle error states (fallback image if WebP fails to load).
 
-- [ ] **Verification & Testing**
-  - [ ] **Path Verification**: Confirm new asset paths (`/img/thumbnails/`, `/img/highres/`) resolve correctly.
-  - [ ] **Visual Check**: Verify **Blur-Up/Transition**: Ensure thumbnail is visible immediately, followed by smooth transition to high-res.
-  - [ ] **Visual Check**: Verify no layout shift occurs during image swap.
+- [x] **Verification & Testing**
+  - [x] **Path Verification**: Confirm new asset paths (`/img/thumbnails/`, `/img/highres/`) resolve correctly.
+  - [x] **Visual Check**: Verify **Blur-Up/Transition**: Ensure thumbnail is visible immediately, followed by smooth transition to high-res.
+  - [x] **Visual Check**: Verify no layout shift occurs during image swap.
 
-- [ ] **Cleanup**
-  - [ ] Remove legacy `.jpg` files from `public/img/` ONLY after verifying the new system works in staging/prod.
+- [x] **Cleanup**
+  - [x] Remove legacy `.jpg` files from `public/img/` ONLY after verifying the new system works in staging/prod.
 
 ## Dev Notes
 

@@ -28,6 +28,7 @@ so that **I can see exactly how close I am to the next milestone without doing m
   - [x] Flag this goal for special rendering.
 
 - [x] **Next Goal Styling (`public/css/goals.css`)**
+  - [x] Create `.goal-card.next-goal` class.
   - [x] Create `.upcoming-goal.next-goal` class.
   - [x] Add emphasis styling: e.g., slightly larger font, subtle gold border/box-shadow, or a "Next Target" badge.
 
