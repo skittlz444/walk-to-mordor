@@ -35,41 +35,41 @@
 }
 
 .goal-modal-scrollable ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--hover-overlay);
   border-radius: 4px;
 }
 
 .goal-modal-scrollable ::-webkit-scrollbar-thumb {
-  background: rgba(255, 215, 0, 0.5);
+  background: var(--gold-glow-medium);
   border-radius: 4px;
 }
 
 .goal-modal-scrollable ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 215, 0, 0.7);
+  background: var(--gold-glow-strong);
 }
 
 .goal-congratulations {
-  color: #00FF7F;
+  color: var(--spring-meadow);
   font-size: 1em;
   font-weight: bold;
   margin-bottom: 1em;
   text-align: center;
-  text-shadow: 0 0 8px #00FF7F;
+  text-shadow: 0 0 8px var(--spring-meadow);
   animation: pulse 1.5s normal;
 }
 
 /* Congratulations animation */
 @keyframes pulse {
   0% {
-    text-shadow: 0 0 8px #00FF7F;
+    text-shadow: 0 0 8px var(--spring-meadow);
     transform: scale(1);
   }
   50% {
-    text-shadow: 0 0 20px #00FF7F, 0 0 30px #00FF7F;
+    text-shadow: 0 0 20px var(--spring-meadow), 0 0 30px var(--spring-meadow);
     transform: scale(1.02);
   }
   100% {
-    text-shadow: 0 0 8px #00FF7F;
+    text-shadow: 0 0 8px var(--spring-meadow);
     transform: scale(1);
   }
 }
@@ -77,7 +77,7 @@
 .modal-footer-btns-goal {
   display: flex;
   width: 100%;
-  background: #1a1a1a;
+  background: var(--bg-secondary);
 }
 
 .modal-footer-btns-goal button {
@@ -87,8 +87,8 @@
   font-size: 1.08em;
   min-height: 2.5em;
   width: 100%;
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   border: none;
   font-weight: 400;
   text-align: center;
@@ -103,11 +103,25 @@
 
 .completed-goal:hover,
 .all-completed-goal:hover {
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  background-color: var(--hover-overlay-light) !important;
 }
 
 .upcoming-goal:hover {
-  background: rgba(50,50,50,0.95) !important;
+  background: var(--dark-bg) !important;
+}
+
+/* Next Goal Emphasis (AC1) */
+.upcoming-goal.next-goal {
+  border: 2px solid var(--gold-border-light);
+  box-shadow: 0 2px 12px var(--gold-glow-light), 0 2px 8px var(--shadow-dark);
+  background: var(--darker-bg);
+  position: relative;
+}
+
+.upcoming-goal.next-goal:hover {
+  background: var(--darkest-bg) !important;
+  border-color: var(--gold-border-strong);
+  box-shadow: 0 2px 16px var(--gold-glow-medium), 0 2px 8px var(--shadow-dark);
 }
 
 /* Goal header styles */
@@ -118,7 +132,7 @@
 
 .goal-header-main:hover,
 .goal-header-special:hover {
-  color: #fff !important;
+  color: var(--text-primary) !important;
 }
 
 /* Goal toggle buttons */
@@ -129,5 +143,5 @@
 
 #toggle-completed-visibility:hover,
 #toggle-completed:hover {
-  background: #555 !important;
+  background: var(--bg-button-medium) !important;
 }

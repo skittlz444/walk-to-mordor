@@ -1,6 +1,7 @@
 import { render, h } from 'preact';
 import { AuthForms } from './islands/AuthForms';
 import { GoalModal } from './islands/GoalModal';
+import { NextGoalCard } from './islands/NextGoalCard';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
@@ -11,6 +12,7 @@ const autoHydratedIslands = {
 const allIslands = {
   AuthForms,
   GoalModal,
+  NextGoalCard,
 };
 
 // Type for auto-hydrated island names

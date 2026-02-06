@@ -35,9 +35,15 @@ function showDistanceModal(event, date = null) {
             <label>Date: ${selectedDate}</label>
           </div>
           <div class="form-group">
-            <label for="distance-input">Distance (km):</label>
-            <div class="input-group">
-              <input type="number" id="distance-input" step="any" min="0" value="${distanceValue}" placeholder="0.00">
+            <label for="distance-input">Distance:</label>
+            <div class="input-with-suffix">
+              <input type="number" id="distance-input" step="0.01" min="0" value="${distanceValue}" placeholder="0.00">
+              <span class="km-suffix">km</span>
+            </div>
+            <div class="quick-entry-group">
+              <button type="button" class="quick-btn" id="quick-add-1">+1 km</button>
+              <button type="button" class="quick-btn" id="quick-add-5">+5 km</button>
+              <button type="button" class="quick-btn" id="quick-reset">Reset</button>
             </div>
           </div>
         </div>
@@ -54,9 +60,36 @@ function showDistanceModal(event, date = null) {
 
   document.body.appendChild(modalOverlay);
 
+  // Helper function to add to current distance
+  function addToDistance(amount) {
+    const input = document.getElementById('distance-input');
+    const current = parseFloat(input.value) || 0;
+    input.value = (current + amount).toFixed(2);
+    // Trigger input event for any validation listeners
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function closeModal() {
+    modalOverlay.remove();
+  }
+
   // Add event listeners
   document.getElementById('save-btn').addEventListener('click', handleSaveDistance);
   document.getElementById('cancel-btn').addEventListener('click', closeModal);
+  
+  // Quick entry button handlers
+  document.getElementById('quick-add-1').addEventListener('click', function() {
+    addToDistance(1);
+  });
+  document.getElementById('quick-add-5').addEventListener('click', function() {
+    addToDistance(5);
+  });
+  document.getElementById('quick-reset').addEventListener('click', function() {
+    const input = document.getElementById('distance-input');
+    input.value = '0.00';
+    // Trigger input event for any validation listeners
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   
   const closeModalBtn = document.getElementById('close-modal');
   if (closeModalBtn) {
@@ -81,10 +114,6 @@ function showDistanceModal(event, date = null) {
   setTimeout(() => {
     document.getElementById('distance-input').focus();
   }, 100);
-
-  function closeModal() {
-    modalOverlay.remove();
-  }
 }
 
 function handleSaveDistance() {

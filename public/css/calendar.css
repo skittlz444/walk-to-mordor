@@ -2,11 +2,11 @@
 
 /* Custom Calendar Styles */
 .custom-calendar {
-  color: #fff;
+  color: var(--text-primary);
   border-radius: 8px;
   overflow: hidden;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: #1a1a1a;
+  background: var(--bg-secondary);
 }
 
 .calendar-header {
@@ -14,7 +14,7 @@
   flex-direction: row;
   align-items: center;
   padding: 0.2rem 1rem;
-  background: #1a1a1a;
+  background: var(--bg-secondary);
   border-bottom: none;
 }
 
@@ -32,7 +32,7 @@
   align-items: center;
   min-height: 50px;
   padding: 0.3em;
-  background: #1a1a1a;
+  background: var(--bg-secondary);
   overflow: hidden;
   gap: 0.5rem;
 }
@@ -53,14 +53,14 @@
   justify-content: center;
   font-size: 1em;
   background: transparent;
-  color: #ccc;
+  color: var(--text-secondary);
   border: none;
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
 .nav-btn:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .calendar-title {
@@ -68,7 +68,7 @@
   font-weight: 300;
   line-height: 1.461538em;
   padding: 0 .307693em;
-  color: #fff;
+  color: var(--text-primary);
   min-width: 150px;
   text-align: left;
 }
@@ -76,7 +76,7 @@
 .day-headers {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background: #1a1a1a;
+  background: var(--bg-secondary);
   border-bottom: 1px solid #444;
 }
 
@@ -84,7 +84,7 @@
   padding: 0.6em 0.5em;
   text-align: left;
   font-weight: 400;
-  color: #aaa;
+  color: var(--text-dim);
   font-size: .875em;
   text-transform: capitalize;
   border-top: none;
@@ -127,12 +127,12 @@
 }
 
 .calendar-cell:hover {
-  background: rgba(255,255,255,0.05);
+  background: var(--hover-overlay-light);
 }
 
 .calendar-cell.today {
-  background: rgba(0,120,215,.25);
-  border: 1px solid rgba(0,123,255,0.3);
+  background: var(--blue-overlay);
+  border: 1px solid var(--blue-border);
 }
 
 .calendar-cell.other-month {
@@ -144,16 +144,16 @@
   font-size: 0.85em;
   margin-bottom: 0.7em;
   margin-left:0.3em;
-  color: #ccc;
+  color: var(--text-secondary);
 }
 
 .calendar-cell.today .day-number {
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: bold;
 }
 
 .event-label {
-  background: #1e5aa8;
+  background: var(--accent-blue-dark);
   color: white;
   padding: 0.15em 0.4em;
   border-radius: 0;
@@ -166,11 +166,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 3px var(--shadow-std);
 }
 
 .calendar-cell:hover .event-label {
-  background: #2563eb;
+  background: var(--accent-blue-alt);
 }
 
 .today-indicator {
@@ -179,19 +179,19 @@
   right: 0.4em;
   width: 6px;
   height: 6px;
-  background: #007bff;
+  background: var(--accent-blue);
   border-radius: 50%;
 }
 
 .week-cell {
   min-height: 70px;
-  background: #1a1a1a;
+  background: var(--bg-secondary);
 }
 
 .month-cell {
   min-height: 50px;
   padding-bottom: 1.5em;
-  background: #1a1a1a;
+  background: var(--bg-secondary);
 }
 
 /* View toggle and button styles */
@@ -215,25 +215,25 @@
 .view-toggle-group label {
   padding: 0.4em 1.2em;
   cursor: pointer;
-  color: #ccc;
+  color: var(--text-secondary);
   border: none;
-  background: #404040;
+  background: var(--secondary-dark);
   transition: color 0.2s ease;
   margin: 0;
 }
 
 .view-toggle-group input[type="radio"]:checked + label {
-  color: #000;
-  background-color: #ababab;
+  color: var(--text-black);
+  background-color: var(--border-lighter);
 }
 
 .view-toggle-group label:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .today-btn {
   background: transparent;
-  color: #ccc;
+  color: var(--text-secondary);
   border: none;
   padding: 0.4em 0.7em;
   cursor: pointer;
@@ -243,8 +243,8 @@
 }
 
 .today-btn:hover {
-  color: #fff;
-  background: rgba(60,60,60,0.8);
+  color: var(--text-primary);
+  background: var(--dark-overlay);
 }
 
 /* Default nav-buttons layout for desktop */
@@ -259,8 +259,8 @@
   left: 0;
   width: 100vw;
   z-index: 100;
-  background: rgba(0,0,0,0.95);
-  box-shadow: 0 -2px 16px #222;
+  background: var(--bg-modal-dark);
+  box-shadow: 0 -2px 16px var(--shadow-dark);
 }
 
 /* Mobile responsive adjustments */

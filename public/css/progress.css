@@ -7,7 +7,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--bg-modal-overlay);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -15,9 +15,9 @@
 }
 
 .modal-dialog {
-  background: #1a1a1a;
+  background: var(--bg-secondary);
   border-radius: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px var(--shadow-std);
   max-width: 500px;
   width: 90%;
   max-height: 90vh;
@@ -44,7 +44,7 @@
 }
 
 .modal-title {
-  color: #fff;
+  color: var(--text-primary);
   margin: 0;
   font-size: 1.2em;
   font-weight: bold;
@@ -53,7 +53,7 @@
 .close-btn {
   background: none;
   border: none;
-  color: #ccc;
+  color: var(--text-secondary);
   font-size: 1.5em;
   cursor: pointer;
   padding: 0;
@@ -67,7 +67,7 @@
 }
 
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--hover-overlay);
   color: white;
 }
 
@@ -93,12 +93,12 @@
 
 .form-group label {
   display: block;
-  color: #ccc;
+  color: var(--text-secondary);
   margin-bottom: 0.2rem;
 }
 
 .form-group input {
-  border: 1px solid #555;
+  border: 1px solid var(--border-medium);
   border-radius: 4px;
   font-size: 1rem;
   width: 100%;
@@ -106,8 +106,8 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px var(--blue-focus-ring);
 }
 
 /* Center and size the distance input */
@@ -126,6 +126,7 @@
   flex: 1;
 }
 
+/* Button base styles */
 .btn {
   padding: 0.5rem 1rem;
   border: none;
@@ -136,31 +137,108 @@
   transition: all 0.2s ease;
 }
 
+/* Primary button - matches auth.css styling for consistency
+ * Color: var(--accent-dark-blue) - WCAG AA compliant (~9.38:1 contrast ratio with white text)
+ * Hover: var(--accent-teal) - established design system hover state
+ */
 .btn-primary {
-  background: #007bff;
+  background: var(--accent-dark-blue);
   color: white;
+  padding: 0.75rem 1.5rem;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .btn-primary:hover {
-  background: #0056b3;
+  background: var(--accent-teal);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
 }
 
 .btn-secondary {
-  background: #6c757d;
+  background: var(--secondary-gray);
   color: white;
+  padding: 0.75rem 1.5rem;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .btn-secondary:hover {
-  background: #545b62;
+  background: var(--secondary-gray-hover);
+}
+
+.btn-secondary:active {
+  transform: translateY(1px);
 }
 
 .btn-danger {
-  background: #dc3545;
+  background: var(--status-error);
   color: white;
+  padding: 0.75rem 1.5rem;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .btn-danger:hover {
-  background: #c82333;
+  background: var(--status-error-hover);
+}
+
+.btn-danger:active {
+  transform: translateY(1px);
+}
+
+/* Quick entry buttons */
+.quick-btn {
+  padding: 0.5rem 1rem;
+  background: var(--bg-button-dark);
+  color: white;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.quick-btn:hover {
+  background: var(--bg-button-medium);
+  border-color: var(--light-border-hover);
+}
+
+.quick-btn:active {
+  transform: translateY(1px);
+}
+
+/* Distance input with km suffix */
+.input-with-suffix {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input-with-suffix input {
+  flex: 1;
+  padding: 0.75rem;
+  background: var(--bg-dark-alt);
+  color: var(--text-primary);
+}
+
+.km-suffix {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0 0.5rem;
+}
+
+.quick-entry-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  justify-content: center;
 }
 
 
@@ -168,13 +246,13 @@
 /* Modal footer full width buttons */
 .modal-footer-full {
   padding: 0;
-  background: #1a1a1a;
+  background: var(--bg-secondary);
 }
 
 .modal-footer-btns {
   display: flex;
   width: 100%;
-  background: #1a1a1a;
+  background: var(--bg-secondary);
   gap: 0.7em;
 }
 
@@ -185,9 +263,29 @@
   font-size: 1.08em;
   min-height: 2.5em;
   width: 100%;
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   border: none;
   font-weight: 400;
+}
+
+/* Mobile responsiveness for touch targets and layout */
+@media (max-width: 320px) {
+  .quick-entry-group {
+    flex-direction: column;
+  }
+  
+  .quick-btn {
+    width: 100%;
+  }
+  
+  .modal-dialog {
+    width: 95%;
+  }
+  
+  .form-group {
+    padding-left: 1em;
+    padding-right: 1em;
+  }
 }
 

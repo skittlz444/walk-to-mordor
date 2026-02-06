@@ -9,6 +9,7 @@ Welcome to the technical documentation for Walk to Mordor.
 - [Data Models](data-models.md) - Database schema and relationships.
 - [API Reference](api-reference.md) - Endpoints and usage.
 - [UI Overview](ui-overview.md) - Frontend architecture and components.
+- [CSS Theming](css-theming.md) - Theme customization and CSS variable system.
 
 ## Archive
 Old documentation can be found in `docs/archive/`.
