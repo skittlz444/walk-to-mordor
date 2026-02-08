@@ -20,7 +20,9 @@ export function UpcomingGoalCard({ goal, currentDistance, onClick }: UpcomingGoa
       style={{
         margin: '0.7em 0',
         padding: '0.7em 1em',
+        background: 'rgba(40,40,40,0.95)',
         borderRadius: '12px',
+        boxShadow: '0 2px 8px #222',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
