@@ -14,53 +14,16 @@ export function UpcomingGoalCard({ goal, currentDistance, onClick }: UpcomingGoa
   const distanceToGo = goal.distance - currentDistance;
 
   return (
-    <div
-      className="upcoming-goal"
-      onClick={onClick}
-      style={{
-        margin: '0.7em 0',
-        padding: '0.7em 1em',
-        background: 'rgba(40,40,40,0.95)',
-        borderRadius: '12px',
-        boxShadow: '0 2px 8px #222',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        wordBreak: 'break-word',
-        cursor: 'pointer'
-      }}
-    >
+    <div className="upcoming-goal" onClick={onClick}>
       {goal.special && (
-        <span style={{
-          display: 'block',
-          color: '#FFD700',
-          fontSize: '1.3em',
-          fontWeight: 'bold',
-          marginBottom: '0.2em'
-        }}>
-          {goal.special}
-        </span>
+        <span className="goal-special">{goal.special}</span>
       )}
 
-      <span style={{
-        fontSize: '1.1em',
-        color: '#fff',
-        fontWeight: 'bold',
-        maxWidth: '90vw'
-      }}>
-        {goal.title}
-      </span>
+      <span className="goal-title">{goal.title}</span>
 
-      <span style={{
-        fontSize: '0.95em',
-        color: '#FFD700',
-        marginTop: '0.2em'
-      }}>
+      <span className="goal-distance">
         {goal.distance.toFixed(2)} km{' '}
-        <span style={{
-          color: '#aaa',
-          fontSize: '0.9em'
-        }}>
+        <span className="goal-distance-to-go">
           ({distanceToGo.toFixed(2)} km to go)
         </span>
       </span>
