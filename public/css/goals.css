@@ -98,20 +98,30 @@
 .completed-goal,
 .all-completed-goal,
 .upcoming-goal {
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  word-break: break-word;
+}
+
+/* Completed goals - compact inline style */
+.completed-goal,
+.all-completed-goal {
+  margin: 0.5em 0;
+  text-decoration: line-through;
+  color: #888;
+  font-size: 1em;
+}
+
+/* Upcoming goals - card style with flexbox */
+.upcoming-goal {
   margin: 0.7em 0;
   padding: 0.7em 1em;
+  background: rgba(40, 40, 40, 0.95);
   border-radius: 12px;
+  box-shadow: 0 2px 8px #222;
   display: flex;
   flex-direction: column;
   align-items: center;
-  word-break: break-word;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.upcoming-goal {
-  background: rgba(40, 40, 40, 0.95);
-  box-shadow: 0 2px 8px #222;
 }
 
 .completed-goal:hover,
