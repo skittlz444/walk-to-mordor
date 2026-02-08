@@ -142,21 +142,17 @@ function renderGoals(currentDistance) {
         '</div>';
       }
       
-      // Render upcoming goals list - use Preact island for next goal
+      // Render upcoming goals list - use Preact islands for all goals
       html += '<ul id="upcoming-goals-list" style="list-style:none;padding:0;margin:0;">';
-      
+
       // Create mount point for next goal Preact island (first upcoming goal)
       if (upcoming.length > 0) {
         html += '<li id="next-goal-mount" data-goal-index="0"></li>';
       }
-      
-      // Render remaining upcoming goals (non-next) with vanilla JS
+
+      // Create mount points for remaining upcoming goals (use Preact islands)
       html += upcoming.slice(1).map(function(g, index) {
-        return '<li style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal" data-goal-index="' + (index + 1) + '">' +
-          (g.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + g.special + '</span>' : '') +
-          '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + g.title + '</span>' +
-          '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + g.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (g.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
-        '</li>';
+        return '<li id="upcoming-goal-mount-' + (index + 1) + '" data-goal-index="' + (index + 1) + '"></li>';
       }).join('') +
       '</ul>';
       
@@ -187,7 +183,7 @@ function renderGoals(currentDistance) {
         };
       }
 
-      // Hydrate next goal Preact island and add click listeners for other goals
+      // Hydrate next goal Preact island and remaining upcoming goals
       queueMicrotask(() => {
         // Hydrate next goal as Preact island with fallback
         if (upcoming.length > 0) {
@@ -195,14 +191,14 @@ function renderGoals(currentDistance) {
           if (nextGoalMount) {
             const nextGoal = upcoming[0];
             const previousDistance = completed.length > 0 ? completed[completed.length - 1].distance : 0;
-            
+
             const hasPreact = !!(window.preact && window.preact.render && window.preact.h);
             const hasNextGoalCard = !!(window.preactIslands && window.preactIslands.NextGoalCard);
-            
+
             if (hasPreact && hasNextGoalCard) {
               const { render, h } = window.preact;
               const { NextGoalCard } = window.preactIslands;
-              
+
               render(
                 h(NextGoalCard, {
                   goal: nextGoal,
@@ -219,15 +215,15 @@ function renderGoals(currentDistance) {
               } else if (!hasNextGoalCard) {
                 console.error('NextGoalCard island not found in registry. Check island registration in client/src/index.tsx');
               }
-              
+
               // Render vanilla JS fallback with progress bar
               const segmentTotal = nextGoal.distance - previousDistance;
               const segmentProgress = Number(currentDistance) - previousDistance;
               const percentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100));
-              
+
               const fillMinWidth = percentage > 0 ? '0' : '1px';
 
-              nextGoalMount.innerHTML = 
+              nextGoalMount.innerHTML =
                 '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal next-goal" data-goal-index="0">' +
                 (nextGoal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + nextGoal.special + '</span>' : '') +
                 '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + nextGoal.title + '</span>' +
@@ -236,13 +232,58 @@ function renderGoals(currentDistance) {
                   '<div class="goal-progress-fill" style="width:' + percentage.toFixed(1) + '%;min-width:' + fillMinWidth + ';height:100%;background:#FFD700;transition:width 0.3s ease;"></div>' +
                 '</div>' +
                 '</div>';
-              
+
               // Make fallback clickable
               makeGoalClickable(nextGoalMount.querySelector('.next-goal'), nextGoal, currentDistance);
             }
           }
         }
-        
+
+        // Hydrate remaining upcoming goals as Preact islands with fallback
+        const hasPreact = !!(window.preact && window.preact.render && window.preact.h);
+        const hasUpcomingGoalCard = !!(window.preactIslands && window.preactIslands.UpcomingGoalCard);
+
+        if (hasPreact && hasUpcomingGoalCard) {
+          const { render, h } = window.preact;
+          const { UpcomingGoalCard } = window.preactIslands;
+
+          upcoming.slice(1).forEach((goal, index) => {
+            const mountPoint = document.getElementById('upcoming-goal-mount-' + (index + 1));
+            if (mountPoint) {
+              render(
+                h(UpcomingGoalCard, {
+                  goal: goal,
+                  currentDistance: Number(currentDistance),
+                  onClick: () => showGoalModal(goal, currentDistance)
+                }),
+                mountPoint
+              );
+            }
+          });
+        } else {
+          // Fallback: render upcoming goals without Preact
+          if (!hasPreact) {
+            console.error('Preact library not loaded. Ensure islands.js is loaded before goals.js');
+          } else if (!hasUpcomingGoalCard) {
+            console.error('UpcomingGoalCard island not found in registry. Check island registration in client/src/index.tsx');
+          }
+
+          upcoming.slice(1).forEach((goal, index) => {
+            const mountPoint = document.getElementById('upcoming-goal-mount-' + (index + 1));
+            if (mountPoint) {
+              mountPoint.innerHTML =
+                '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal" data-goal-index="' + (index + 1) + '">' +
+                (goal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + goal.special + '</span>' : '') +
+                '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + goal.title + '</span>' +
+                '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + goal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (goal.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
+                '</div>';
+
+              // Make fallback clickable
+              makeGoalClickable(mountPoint.querySelector('.upcoming-goal'), goal, currentDistance);
+            }
+          });
+        }
+
         // Completed goals (last 3)
         document.querySelectorAll('.completed-goal').forEach((element, index) => {
           makeGoalClickable(element, lastCompleted[index], currentDistance);
@@ -251,12 +292,6 @@ function renderGoals(currentDistance) {
         // All completed goals
         document.querySelectorAll('.all-completed-goal').forEach((element, index) => {
           makeGoalClickable(element, completed[index], currentDistance);
-        });
-
-        // Upcoming goals (non-next goals - those without .next-goal class)
-        document.querySelectorAll('.upcoming-goal:not(.next-goal)').forEach((element, index) => {
-          // index here corresponds to upcoming.slice(1), so we need index + 1 for the actual upcoming array
-          makeGoalClickable(element, upcoming[index + 1], currentDistance);
         });
       });
     })
