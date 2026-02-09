@@ -41,7 +41,7 @@ development_status:
   # ============================================
   # EPIC 1: Phase 1 Polish & Completion (#150)
   # ============================================
-  epic-1: in-progress
+  epic-1: done
   1-1-preact-infrastructure-setup: done
   1-2-email-service-migration: done
   1-3-email-confirmation-flow: done
@@ -51,7 +51,7 @@ development_status:
   1-7-ux-polish-modal-input-improvements: done
   1-8-ux-polish-goals-display-improvements: done
   1-9-ux-polish-profile-icon-css-variables: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # ============================================
   # EPIC 2: Interactive Journey Map (#151)

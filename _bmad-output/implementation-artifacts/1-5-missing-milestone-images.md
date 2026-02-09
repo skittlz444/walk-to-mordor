@@ -1,6 +1,6 @@
 # Story 1.5: Missing Milestone Images (Issue #105)
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
