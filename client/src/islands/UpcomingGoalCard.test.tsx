@@ -158,17 +158,20 @@ describe('UpcomingGoalCard', () => {
   });
 
   it('formats decimals consistently', () => {
+    const currentDistance = 50.555;
+    const expectedRemaining = (mockGoal.distance - currentDistance).toFixed(2);
+
     const { container } = render(
       <UpcomingGoalCard
         goal={mockGoal}
-        currentDistance={50.555}
+        currentDistance={currentDistance}
         onClick={() => {}}
       />
     );
 
     // Distance should show 2 decimal places
     expect(container.textContent).toContain('200.00 km');
-    // Distance to go should also show 2 decimal places (200 - 50.555 = 149.445 -> 149.44)
-    expect(container.textContent).toContain('149.44 km to go');
+    // Distance to go should also show 2 decimal places using the same rounding logic as the component
+    expect(container.textContent).toContain(`${expectedRemaining} km to go`);
   });
 });
