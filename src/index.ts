@@ -1,6 +1,7 @@
 import { renderHtml } from "./renderHtml";
 import { renderAuthPage } from "./renderAuthPage";
 import { renderPasswordResetRequestPage, renderPasswordResetPage } from "./renderPasswordResetPage";
+import { renderMapPage } from "./renderMapPage";
 import { 
   isValidDateFormat, 
   isValidDistance, 
@@ -166,6 +167,15 @@ export default {
     // Password reset with token page
     if (url.pathname === "/reset-password" || url.pathname === "/wtm/reset-password") {
       return new Response(renderPasswordResetPage(), {
+        headers: {
+          "content-type": "text/html",
+        },
+      });
+    }
+    
+    // Map page - requires authentication (checked in JavaScript)
+    if (url.pathname === "/map" || url.pathname === "/wtm/map") {
+      return new Response(renderMapPage(), {
         headers: {
           "content-type": "text/html",
         },

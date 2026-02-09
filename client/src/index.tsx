@@ -3,10 +3,12 @@ import { AuthForms } from './islands/AuthForms';
 import { GoalModal } from './islands/GoalModal';
 import { NextGoalCard } from './islands/NextGoalCard';
 import { UpcomingGoalCard } from './islands/UpcomingGoalCard';
+import { MapIsland } from './islands/MapIsland';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
   AuthForms,
+  MapIsland,
 };
 
 // All islands including those rendered programmatically
@@ -15,6 +17,7 @@ const allIslands = {
   GoalModal,
   NextGoalCard,
   UpcomingGoalCard,
+  MapIsland,
 };
 
 // Type for auto-hydrated island names

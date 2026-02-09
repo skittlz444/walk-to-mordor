@@ -24,7 +24,6 @@
     "publish": true
   },
   "devDependencies": {
-    "sharp": "^0.34.5",
     "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.58.2",
     "@preact/preset-vite": "^2.10.3",
@@ -39,6 +38,7 @@
     "jest-environment-miniflare": "^2.14.4",
     "jest-junit": "^16.0.0",
     "pnpm": "^10.29.1",
+    "sharp": "^0.34.5",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.6",
     "typescript": "5.9.3",
@@ -72,6 +72,9 @@
   },
   "dependencies": {
     "@preact/signals": "^2.7.0",
-    "preact": "^10.28.3"
+    "konva": "^10.2.0",
+    "preact": "^10.28.3",
+    "react-konva": "^19.2.2",
+    "use-image": "^1.1.4"
   }
 }

@@ -44,6 +44,9 @@ export function renderHtml() {
       <body>
       <header>
         <div class="header-controls">
+          <a href="/map" class="map-link" aria-label="View Map" title="Map">
+            <i class="fas fa-map"></i>
+          </a>
           <button type="button" class="profile-icon" aria-label="View Profile" title="Profile" onclick="showProfileModal();">
             <i class="fas fa-user"></i>
           </button>

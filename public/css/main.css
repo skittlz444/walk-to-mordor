@@ -126,9 +126,13 @@ h1 {
   top: 1rem;
   right: 1rem;
   z-index: 10;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 
-.profile-icon {
+.profile-icon,
+.map-link {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,7 +151,8 @@ h1 {
   font-family: inherit;
 }
 
-.profile-icon:hover {
+.profile-icon:hover,
+.map-link:hover {
   background: var(--accent-dark-blue);
   border-color: var(--accent-teal);
   color: var(--text-primary);
@@ -155,11 +160,13 @@ h1 {
   box-shadow: 0 4px 12px var(--gold-glow-light);
 }
 
-.profile-icon:active {
+.profile-icon:active,
+.map-link:active {
   transform: scale(0.98);
 }
 
-.profile-icon:focus {
+.profile-icon:focus,
+.map-link:focus {
   outline: 2px solid var(--accent-teal);
   outline-offset: 2px;
 }
@@ -172,15 +179,17 @@ h1 {
   
   h1 {
     font-size: 1.8em;
-    padding: 0 60px; /* Ensure space for profile icon */
+    padding: 0 70px; /* Ensure space for multiple header controls */
   }
   
   .header-controls {
     top: 0.75rem;
     right: 0.75rem;
+    gap: 0.5rem;
   }
   
-  .profile-icon {
+  .profile-icon,
+  .map-link {
     width: 40px;
     height: 40px;
     font-size: 1.1rem;
