@@ -64,7 +64,7 @@ so that **I can either preview upcoming milestones for anticipation OR be surpri
     - [ ] Create migration file `migrations/0117_add_goal_visibility_preference.sql`.
     - [ ] Add column: `ALTER TABLE users ADD COLUMN show_future_goals_unlocked INTEGER NOT NULL DEFAULT 1;`
     - [ ] Backfill existing users to `1` so they retain the unlocked default once the migration runs.
-    - [ ] Test migration locally with `npx wrangler d1 migrations apply walk-to-mordor --local`.
+    - [ ] Test migration locally with `npx wrangler d1 migrations apply DB --local`.
 
 - [ ] **2. Update Session API (AC: #2, #6)**
     - [ ] Modify `GET /api/session` handler in `src/auth-handlers.ts`.

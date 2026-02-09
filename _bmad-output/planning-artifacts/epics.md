@@ -545,7 +545,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Acceptance Criteria:**
 - [ ] Add "Log Walk" / "Calendar" floating action button (FAB) or header button to Map view.
 - [ ] Clicking button toggles the visibility of the Date/Calendar picker (shared component).
-- [ ] Calendar overlay is dismissable (X button or click outside) to maximize map view.
+- [ ] Calendar overlay is dismissible (X button or click outside) to maximize map view.
 - [ ] Entering a distance updates the global `userProgress` state.
 - [ ] **Reactive Updates**:
     - [ ] Path updates (completed vs future line).
@@ -586,11 +586,11 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Description:** Allow users to choose whether future goals/waypoints appear locked or unlocked based on their personal motivation style.
 
 **Acceptance Criteria:**
-- [ ] Add `show_future_goals_locked` BOOLEAN column to `users` table (default: FALSE)
+- [ ] Add `show_future_goals_unlocked` INTEGER column to `users` table (default: 1/TRUE)
 - [ ] Create database migration for the new column
-- [ ] Add toggle in Profile Settings modal: "Show future goals as locked"
-- [ ] Default behavior (toggle OFF): All goals display as unlocked (preserves current behavior)
-- [ ] When toggle ON: Future goals (distance > user totalDistance) display as locked/grayed
+- [ ] Add toggle in Profile Settings modal: "Preview all milestones"
+- [ ] Default behavior (toggle ON): All goals display as unlocked (preserves current behavior)
+- [ ] When toggle OFF: Future goals (distance > user totalDistance) display as locked/grayed
 - [ ] Preference applies to:
     - [ ] Map waypoint markers (Story 2.5)
     - [ ] Journey/Dashboard goals list view

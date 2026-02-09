@@ -59,6 +59,7 @@ async function processMapImages() {
     }
   } catch (err) {
     console.error('Error processing images:', err);
+    process.exitCode = 1;
   }
 }
 

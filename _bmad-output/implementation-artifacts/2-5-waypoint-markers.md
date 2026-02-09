@@ -228,10 +228,10 @@ goals (
 **Scope**: Separate story to implement user preference for locked/unlocked future goal visibility.
 
 **Summary**:
-- Add `show_future_goals_locked` BOOLEAN column to `users` table (default: FALSE to preserve current unlocked behavior).
-- Add toggle in Profile Settings modal: "Show future goals as locked" (off by default).
-- When enabled: Future waypoints (and Journey list goals) display as locked/grayed.
-- When disabled (default): All waypoints display as unlocked (current behavior).
+- Add `show_future_goals_unlocked` INTEGER column to `users` table (default: 1/TRUE to preserve current unlocked behavior).
+- Add toggle in Profile Settings modal: "Preview all milestones" (on by default).
+- When disabled: Future waypoints (and Journey list goals) display as locked/grayed.
+- When enabled (default): All waypoints display as unlocked (current behavior).
 - Applies to both Map waypoint markers AND Journey (goals list) view.
 
 **Why Separate Story**: This is a cross-cutting feature affecting multiple views (Map + Journey) and requires database migration + profile UI changes.
