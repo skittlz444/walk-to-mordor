@@ -26,7 +26,7 @@ so that **I can see my journey progress update in real-time on the map and stay 
    - [ ] Clicking the button opens the **existing** calendar and distance entry modal.
    - [ ] **Reuse existing components** from `public/js/progress.js` and `public/js/calendar.js`.
    - [ ] Modal overlay appears above the map canvas (higher z-index).
-   - [ ] **New**: Overlay is dismissable via X button, clicking outside, or ESC key.
+   - [ ] **New**: Overlay is dismissible via X button, clicking outside, or ESC key.
    - [ ] Calendar shows existing walk entries from the user's history (existing behavior).
 
 3. **Distance Entry (Existing Modal)**:
