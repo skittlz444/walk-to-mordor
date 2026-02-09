@@ -536,7 +536,29 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 2.8: Map Visual Testing (Issue #168)
+#### Story 2.8: Map Walk Logging (Issue #TBD)
+
+**Priority:** P2
+
+**Description:** Allow users to log daily walk distances directly from the Map view via a toggleable, shared calendar component.
+
+**Acceptance Criteria:**
+- [ ] Add "Log Walk" / "Calendar" floating action button (FAB) or header button to Map view.
+- [ ] Clicking button toggles the visibility of the Date/Calendar picker (shared component).
+- [ ] Calendar overlay is dismissible (X button or click outside) to maximize map view.
+- [ ] Entering a distance updates the global `userProgress` state.
+- [ ] **Reactive Updates**:
+    - [ ] Path updates (completed vs future line).
+    - [ ] User marker moves to new location.
+    - [ ] Map pans/zooms to center on new user location.
+- [ ] **Milestone Trigger**: If new distance unlocks a goal, trigger the standard "Goal Unlocked" modal.
+- [ ] **Component Reuse**: Refactor existing Calendar/Input implementation to be reusable across Dashboard and Map.
+
+**Dependencies:** Story 2.7, Story 1.1
+
+---
+
+#### Story 2.9: Map Visual Testing (Issue #168)
 
 **Priority:** P2
 
@@ -547,12 +569,40 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Create snapshot tests for map at zoomed in/out states
 - [ ] Test path rendering with mock progress data
 - [ ] Test waypoint marker visibility at different zoom levels
+- [ ] Test map calendar toggle interaction
 - [ ] Document snapshot update process
 - [ ] Tests run in CI pipeline
 
 **NFRs:** ARCH_TEST_01, NFR_TEST_01
 
-**Dependencies:** Story 2.5
+**Dependencies:** Story 2.8
+
+---
+
+#### Story 2.10: User Goal Visibility Preference (Issue #TBD)
+
+**Priority:** P2
+
+**Description:** Allow users to choose whether future goals/waypoints appear locked or unlocked based on their personal motivation style.
+
+**Acceptance Criteria:**
+- [ ] Add `show_future_goals_unlocked` INTEGER column to `users` table (default: 1/TRUE)
+- [ ] Create database migration for the new column
+- [ ] Add toggle in Profile Settings modal: "Preview all milestones"
+- [ ] Default behavior (toggle ON): All goals display as unlocked (preserves current behavior)
+- [ ] When toggle OFF: Future goals (distance > user totalDistance) display as locked/grayed
+- [ ] Preference applies to:
+    - [ ] Map waypoint markers (Story 2.5)
+    - [ ] Journey/Dashboard goals list view
+- [ ] Persist preference to database on toggle change
+- [ ] Load preference on session start
+
+**Technical Notes:**
+- Default FALSE preserves existing functionality for current users
+- Cross-cutting feature: affects both Map and Journey views
+- Profile modal already exists; add toggle to existing UI
+
+**Dependencies:** None (can be implemented independently)
 
 ---
 

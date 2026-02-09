@@ -193,6 +193,10 @@ coverage/
 /public/wtm/img/png
 test-results/.last-run.json
 
+# Local-only high-res map sources
+/public/img/map/8K_Middle_Earth_by_Kerem_Yurtseven.png
+/public/img/map/ctd58g7fsmyf1.jpeg
+
 # Temporary artifacts and build outputs
 artifacts/
 test-summary/
