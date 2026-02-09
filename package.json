@@ -71,7 +71,7 @@
     "optimize:images": "node scripts/optimize-images.js"
   },
   "dependencies": {
-    "@preact/signals": "^2.6.2",
+    "@preact/signals": "^2.7.0",
     "preact": "^10.28.3"
   }
 }
