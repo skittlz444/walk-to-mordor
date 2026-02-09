@@ -1,6 +1,7 @@
 # Story 2.10: User Goal Visibility Preference
 
 Status: ready-for-dev
+GitHub Issue: #226
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
