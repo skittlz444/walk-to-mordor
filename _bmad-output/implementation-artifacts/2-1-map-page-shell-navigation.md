@@ -1,6 +1,6 @@
 # Story 2.1: Map Page Shell & Navigation
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

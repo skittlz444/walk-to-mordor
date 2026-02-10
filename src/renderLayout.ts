@@ -64,7 +64,7 @@ ${config.inlineStyles}
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         
         <!-- Stylesheets -->
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
         <link href="/css/main.css" rel="stylesheet" />
         <link href="/css/drawer.css" rel="stylesheet" />
 ${extraStylesheets}
