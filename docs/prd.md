@@ -85,12 +85,14 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 
 **Resource Requirements:** Single Developer (Gandalf Persona) with AI assistance.
 
-### Phase 1: Polish & Friction Removal (Immediate)
+### Phase 1: Polish & Friction Removal ✅ Complete (Epic 1)
 *Focus: improving the solo user experience and removing administrative bottlenecks.*
-*   **Registration Flow:** Move from manual approval to email confirmation (#149) to allow autonomous user growth.
-*   **Narrative Pacing:** Add intermediary goals (#140) to break up large distance gaps (keeping goals <70km apart).
-*   **Visual Completion:** Add missing photos for existing milestones (#105).
-*   **Process:** Establish BMAD workflows (#142).
+*   ✅ **Registration Flow:** Migrated from manual approval to email confirmation (#149) to allow autonomous user growth.
+*   ✅ **Narrative Pacing:** Added intermediary goals (#140) to break up large distance gaps (keeping goals <70km apart).
+*   ✅ **Visual Completion:** Added missing photos for all 171 milestones (#105) in WebP format with lazy loading.
+*   ✅ **Process:** Established BMAD workflows (#142).
+*   ✅ **Frontend Architecture:** Migrated key UI components to Preact islands (AuthForms, GoalModal, NextGoalCard, UpcomingGoalCard).
+*   ✅ **UX Polish:** Modal styling, distance input clarity, quick entry buttons, profile icon updates.
 
 ### Phase 2: The Atlas (Visual Immersion)
 *Focus: Enhancing the individual user's connection to the world.*
