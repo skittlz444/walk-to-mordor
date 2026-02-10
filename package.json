@@ -72,6 +72,9 @@
   },
   "dependencies": {
     "@preact/signals": "^2.7.0",
-    "preact": "^10.28.3"
+    "konva": "^9.3.18",
+    "preact": "^10.28.3",
+    "react-konva": "^19.0.1",
+    "use-image": "^1.1.1"
   }
 }

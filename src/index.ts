@@ -31,6 +31,7 @@ import {
   handleResendConfirmation,
   validateSession
 } from "./auth-handlers";
+import { handleMapPage } from "./map-handlers";
 
 export default {
   async fetch(request, env): Promise<Response> {
@@ -170,6 +171,10 @@ export default {
           "content-type": "text/html",
         },
       });
+    }
+
+    if (url.pathname === "/map") {
+      return handleMapPage(request, env);
     }
     
     // Main app page - will check auth in JavaScript
