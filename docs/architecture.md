@@ -81,9 +81,9 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 **Existing Infrastructure:**
 - Serverless monolith pattern with SSR + client hydration
-- 5 database tables: `users`, `sessions`, `progress`, `goals`, `password_reset_tokens`
-- Vanilla JavaScript frontend (no framework)
-- Jest + Playwright test suite (>90% coverage mandate)
+- 6 database tables: `users`, `sessions`, `progress`, `goals`, `password_reset_tokens`, `email_confirmation_tokens`
+- Vanilla JavaScript frontend with Preact islands for interactive components
+- Jest (backend) + Vitest (client) + Playwright (E2E) test suite (>90% coverage mandate)
 
 ### Cross-Cutting Concerns
 
@@ -119,10 +119,10 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 |-------|------------|--------|
 | **Runtime** | Cloudflare Workers (Edge) | ✅ Production |
 | **Language** | TypeScript | ✅ Configured |
-| **Database** | D1 SQLite | ✅ 5 tables |
-| **Frontend** | Vanilla JS (ES Modules) | ✅ SSR + Hydration |
+| **Database** | D1 SQLite | ✅ 6 tables |
+| **Frontend** | Vanilla JS + Preact Islands | ✅ SSR + Hydration |
 | **Styling** | Vanilla CSS | ✅ Dark theme |
-| **Testing** | Jest + Playwright | ✅ 97%+ coverage |
+| **Testing** | Jest + Vitest + Playwright | ✅ 97%+ coverage |
 | **PWA** | Service Worker + Manifest | ✅ Configured |
 
 ### Architectural Evolution Strategy
@@ -353,12 +353,16 @@ These patterns are already established and must be maintained:
 #### File Organization
 | Type | Location | Naming |
 |------|----------|--------|
-| Backend handlers | `src/*-handlers.ts` | `progress-handlers.ts` |
-| Backend utils | `src/*-utils.ts` | `auth-utils.ts` |
+| Backend handlers | `src/*-handlers.ts` | `progress-handlers.ts`, `auth-handlers.ts` |
+| Backend utils | `src/*-utils.ts` | `auth-utils.ts`, `email-utils.ts` |
+| Backend templates | `src/email-templates.ts` | HTML email templates |
+| Backend rendering | `src/render*.ts` | `renderHtml.ts`, `renderAuthPage.ts` |
 | Validators | `src/validators.ts` | Shared validation |
 | Frontend JS | `public/js/*.js` | `goals.js`, `calendar.js` |
+| Preact Islands | `client/src/islands/*.tsx` | `AuthForms.tsx`, `GoalModal.tsx` |
 | CSS | `public/css/*.css` | `main.css`, `auth.css` |
 | Tests (unit) | `tests/*.test.ts` | `auth-utils.test.ts` |
+| Tests (client) | `client/src/**/*.test.tsx` | `GoalModal.test.tsx` |
 | Tests (UI) | `tests/ui/*.spec.js` | `goals.spec.js` |
 
 ---
@@ -373,27 +377,22 @@ These patterns are already established and must be maintained:
 | Hook files | use + PascalCase | `useMapZoom.ts` |
 | Utility files | camelCase | `mapCoordinates.ts` |
 
-#### Component Organization
+#### Component Organization (Actual)
 ```
 client/src/
-├── components/           # Preact components (new)
-│   ├── map/
-│   │   ├── MapContainer.tsx
-│   │   ├── JourneyPath.tsx
-│   │   ├── Waypoint.tsx
-│   │   ├── UserMarker.tsx
-│   │   └── mapStore.ts
-│   ├── goals/
-│   │   ├── GoalCard.tsx
-│   │   ├── GoalList.tsx
-│   │   └── GoalModal.tsx
-│   └── shared/
-│       └── Button.tsx
-├── stores/               # Global state
-│   └── progressStore.ts
-└── utils/                # Frontend utilities
-    └── api.ts
+├── islands/              # Preact islands (auto-hydrated + programmatic)
+│   ├── AuthForms.tsx     # Login/registration forms
+│   ├── GoalModal.tsx     # Goal detail modal with image + description
+│   ├── NextGoalCard.tsx  # Highlighted next milestone card
+│   └── UpcomingGoalCard.tsx # Upcoming milestone cards
+├── stores/               # Global state (Preact Signals)
+│   └── goalStore.ts
+├── base.css              # Shared island styles
+├── index.tsx             # Island registry + hydration entry point
+└── vite.config.ts        # Vite build config
 ```
+
+> **Note:** The `components/map/` structure from ADR-002 is planned for Phase 2 and does not yet exist.
 
 #### State Management Pattern (Preact Signals)
 
@@ -451,11 +450,15 @@ async function fetchData(endpoint: string) {
 2. **Existing features** → Migrate when touched for enhancement
 3. **Shared state** → Bridge utilities for mixed vanilla/Preact
 
-**Priority order:**
+**Completed migrations (Epic 1):**
+- ✅ Auth forms → `AuthForms.tsx` island
+- ✅ Goal modals → `GoalModal.tsx` island
+- ✅ Next goal card → `NextGoalCard.tsx` island
+- ✅ Upcoming goal cards → `UpcomingGoalCard.tsx` island
+
+**Remaining migration targets:**
 1. Map feature (Phase 2) - new, built in Preact from start
-2. Goal modals - migrate when adding map waypoint interaction
-3. Calendar - migrate during future enhancement
-4. Auth pages - low priority, already stable
+2. Calendar - migrate during future enhancement
 
 ---
 
@@ -468,40 +471,42 @@ walk-to-mordor/
 ├── .github/workflows/          # CI/CD pipelines
 ├── .wrangler/                  # Cloudflare local state
 ├── docs/                       # Project documentation
-├── migrations/                 # D1 database migrations
+├── migrations/                 # D1 database migrations (0001–0021+)
 ├── node_modules/               # Dependencies
 ├── public/                     # Static assets (served by Workers)
-│   ├── css/                    # Vanilla CSS (gradual migration)
-│   ├── images/                 # Static images (milestones)
+│   ├── css/                    # Vanilla CSS
+│   ├── img/                    # Milestone images
+│   │   ├── highres/            # Full-size WebP images
+│   │   └── thumbs/             # Thumbnail WebP images
 │   └── js/                     # Vanilla JS (legacy/bridge)
 ├── src/                        # Backend Workers Code
-│   ├── *-handlers.ts           # Route handlers
+│   ├── *-handlers.ts           # Route handlers (auth, progress, goals)
 │   ├── *-utils.ts              # Business logic utilities
+│   ├── email-templates.ts      # HTML email templates (reset, confirmation)
+│   ├── email-utils.ts          # Resend API integration
+│   ├── renderHtml.ts           # Main page SSR
+│   ├── renderAuthPage.ts       # Auth page SSR
+│   ├── renderPasswordResetPage.ts
 │   ├── index.ts                # Main worker entry point
-│   └── router.ts               # API Router definition
-├── client/                     # 🆕 Frontend Source (Preact)
+│   └── validators.ts           # Shared validation
+├── client/                     # Frontend Source (Preact)
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── map/            # 🆕 Phase 2 Map Feature
-│   │   │   │   ├── MapContainer.tsx
-│   │   │   │   ├── JourneyPath.tsx
-│   │   │   │   ├── Waypoint.tsx
-│   │   │   │   └── mapStore.ts
-│   │   │   ├── goals/          # Goal UI Components
-│   │   │   │   ├── GoalCard.tsx
-│   │   │   │   └── GoalList.tsx
-│   │   │   └── shared/         # Reusable UI
-│   │   │       └── Button.tsx
+│   │   ├── islands/            # Preact islands (hydrated components)
+│   │   │   ├── AuthForms.tsx
+│   │   │   ├── GoalModal.tsx
+│   │   │   ├── NextGoalCard.tsx
+│   │   │   └── UpcomingGoalCard.tsx
 │   │   ├── stores/             # Global State (Signals)
-│   │   │   └── progressStore.ts
-│   │   ├── hooks/              # Custom Hooks
-│   │   ├── utils/              # Frontend Logic
-│   │   │   └── api.ts          # Typed API Client
-│   │   └── index.tsx           # Preact Entry Point
+│   │   │   └── goalStore.ts
+│   │   ├── base.css            # Shared island styles
+│   │   ├── index.tsx           # Island registry + hydration
+│   │   └── vite.config.ts      # Vite build config
 │   └── tsconfig.json           # Frontend TS Config
 ├── tests/                      # Testing
 │   ├── ui/                     # Playwright E2E tests
 │   └── unit/                   # Jest unit tests
+├── scripts/                    # Utility scripts
+│   └── optimize-images.*       # Image optimization
 ├── wrangler.toml               # Cloudflare Config
 ├── package.json                # Dependencies & Scripts
 └── tsconfig.json               # Backend TS Config
@@ -574,7 +579,7 @@ walk-to-mordor/
 ### Requirements Coverage Validation ✅
 
 **Feature Coverage:**
-- **Phase 1 (Polish)**: Covered by existing patterns + new Goal UI components.
+- **Phase 1 (Polish)**: ✅ Complete (Epic 1). Email confirmation, intermediary goals, milestone images, Preact islands all delivered.
 - **Phase 2 (Map)**: Fully covered by `Konva` choice and `components/map/` structure.
 - **Phase 3 (Fellowship)**: Forward-compatible via `parties` table decision (ADR-004).
 - **Phase 4 (Expansion)**: Flexible content structure in D1 supports adding new journeys.
@@ -668,7 +673,7 @@ Set up the `client/` directory with a Vite build step for Preact, integrated int
 
 **Development Sequence:**
 1.  **Skeleton**: Initialize `client/` structure and build script.
-2.  **Phase 1 Polish**: Implement Goal UI components in Preact to validate the stack.
+2.  **Phase 1 Polish**: ✅ Complete. Goal UI, email confirmation, intermediary goals, milestone images all delivered.
 3.  **Phase 2 Map**: Build the Konva.js map engine.
 4.  **Phase 3 Fellowship**: Implement Party data models.
 

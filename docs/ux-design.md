@@ -214,19 +214,15 @@ Two visual states based on completion:
 ### 4. Distance Entry Modal
 
 **Observations:**
-- Simple modal with date + numeric input
-- Add/Cancel buttons lack button styling (just text)
-- No units indicator on the input field
+- Modal with date + numeric input + "km" suffix
+- Quick entry buttons (+1, +2, +3, +5, +10 km) for common distances
+- Styled Add/Cancel buttons with clear visual affordance
 
 **What Works:**
-- ✅ Minimal friction - just enter a number
+- ✅ Minimal friction - just enter a number or tap a quick button
 - ✅ Date context shown clearly
-
-**Improvement Opportunities:**
-- Add "km" label next to or inside input field
-- Buttons should have more visible styling for better affordance
-- Consider increment buttons (+1km, +5km) for quick entry
-- Placeholder showing last entry could speed up repeat logging
+- ✅ "km" suffix eliminates unit confusion
+- ✅ Quick entry buttons speed up repeat logging
 
 ### 5. Goal Detail Modal
 
@@ -250,28 +246,28 @@ Two visual states based on completion:
 
 ## Recommended Improvements
 
-### Priority 1: Quick Wins (Low Effort, High Impact)
+### Priority 1: Quick Wins
 
-| Issue | Current State | Recommendation | Impact |
-|-------|--------------|----------------|--------|
-| Modal button styling | Text-only buttons | Add background color + padding matching auth buttons | Higher affordance |
-| Distance input clarity | No units shown | Add "km" suffix or placeholder | Reduces confusion |
-| Profile button color | Inconsistent between CSS files | Standardize to teal `#16c79a` | Visual consistency |
-| Next goal emphasis | Same styling as other upcoming | Make first upcoming goal larger/highlighted | Clearer immediate target |
+| Issue | Status | Notes |
+|-------|--------|-------|
+| Modal button styling | ✅ Implemented (Epic 1) | Buttons now have background color + padding |
+| Distance input clarity | ✅ Implemented (Epic 1) | "km" suffix added |
+| Profile button | ✅ Implemented (Epic 1) | Updated to user icon |
+| Next goal emphasis | ✅ Implemented (Epic 1) | `NextGoalCard` Preact island with visual prominence |
 
 ### Priority 2: Medium Effort Improvements
 
-| Area | Recommendation | Rationale |
-|------|---------------|-----------|
-| **Goals List** | Add section headers (e.g., "The Shire", "Bree", "Rivendell") | Breaks up 171-item list, provides journey context |
-| **Dashboard** | Add simple progress bar under total distance | Visual representation of overall journey progress |
-| **Quick Entry** | Add +1km / +5km quick buttons in modal | Speed up repeat logging for common distances |
-| **Calendar Events** | Show distance logged on day cells (not just event) | At-a-glance history without clicking |
+| Area | Status | Notes |
+|------|--------|-------|
+| **Goals List** | Planned | Add section headers by location |
+| **Dashboard** | Planned | Add simple progress bar under total distance |
+| **Quick Entry** | ✅ Implemented (Epic 1) | +1, +2, +3, +5, +10 km quick buttons in modal |
+| **Calendar Events** | Planned | Show distance logged on day cells |
 
 ### Priority 3: Design System Cleanup
 
 1. **Consolidate Inline Styles:** `goals.js` uses extensive inline styles. Extract to CSS classes for maintainability.
-2. **CSS Variable System:** Define color palette as CSS custom properties for easier theming.
+2. **CSS Variable System:** ✅ Implemented (Epic 1). Color palette defined as CSS custom properties (see [css-theming.md](css-theming.md)).
 3. **Button Component Standardization:** Create consistent button classes used across all modals.
 4. **Responsive Refinement:** Calendar header wraps awkwardly at 600px breakpoint.
 
