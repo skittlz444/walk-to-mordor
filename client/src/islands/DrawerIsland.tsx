@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 export function DrawerIsland() {
   const [isOpen, setIsOpen] = useState(false);
   const drawerRef = useRef<HTMLElement | null>(null);
+  const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     document.body.classList.toggle('drawer-open', isOpen);
@@ -34,8 +35,17 @@ export function DrawerIsland() {
 
     if (isOpen) {
       drawerElement.removeAttribute('inert');
+      // Move focus to the first focusable element (close button) in the drawer
+      const closeButton = drawerElement.querySelector('.drawer-close') as HTMLButtonElement;
+      if (closeButton) {
+        closeButton.focus();
+      }
     } else {
       drawerElement.setAttribute('inert', '');
+      // Restore focus to the trigger button when closing
+      if (triggerButtonRef.current) {
+        triggerButtonRef.current.focus();
+      }
     }
   }, [isOpen]);
 
@@ -74,15 +84,17 @@ export function DrawerIsland() {
       <button
         type="button"
         className="menu-icon"
-        aria-label="Open Navigation"
+        aria-label={isOpen ? 'Close Navigation' : 'Open Navigation'}
         title="Menu"
         aria-expanded={isOpen ? 'true' : 'false'}
+        aria-controls="navigation-drawer"
         onClick={openDrawer}
+        ref={triggerButtonRef}
       >
         <i className="fas fa-bars" aria-hidden="true"></i>
       </button>
       <div className="drawer-backdrop" aria-hidden="true" onClick={closeDrawer}></div>
-      <aside className="side-drawer" aria-hidden={isOpen ? 'false' : 'true'} ref={drawerRef}>
+      <aside id="navigation-drawer" className="side-drawer" aria-hidden={isOpen ? 'false' : 'true'} ref={drawerRef}>
         <div className="drawer-header">
           <span className="drawer-title">Navigation</span>
           <button
