@@ -107,7 +107,9 @@ GPT-5.2-Codex
 
 ### File List
 -   package.json
+-   package-lock.json
 -   src/index.ts
+-   src/renderLayout.ts (new)
 -   src/map-handlers.ts (new)
 -   src/renderHtml.ts
 -   client/src/index.tsx
@@ -116,7 +118,32 @@ GPT-5.2-Codex
 -   public/css/main.css
 -   public/css/drawer.css (new)
 -   public/css/map.css (new)
+-   public/js/main.js
 -   tests/ui/email-confirmation.spec.js
 -   tests/ui/profile.spec.js
 -   tests/ui/map-shell.spec.js (new)
+-   tests/ui/goals.spec.js
+-   tests/ui/system.spec.js
+-   tests/ui/user-isolation.spec.js
+-   tests/ui/helpers/cleanup.js
+-   tests/ui/helpers/common.js
 -   _bmad-output/implementation-artifacts/sprint-status.yaml
+
+### Senior Developer Review (AI)
+
+**Reviewer:** Amelia (Dev Agent) — 2026-02-10
+**Outcome:** Changes Requested → Auto-fixed
+
+**Findings (9 total: 2 HIGH, 4 MEDIUM, 3 LOW):**
+
+| ID  | Severity | Description | Resolution |
+|-----|----------|-------------|------------|
+| H1  | HIGH | Auth protection broken — server serves map page without auth; no flash prevention | FIXED — Added CSS auth-wall pattern (opacity:0 until `.authenticated` class added by main.js after auth check) |
+| H2  | HIGH | react-konva v19 brings React into Preact project | DOWNGRADED — Vite aliases react→preact/compat; React never enters browser bundle |
+| M1  | MED | 6 files changed in git but not in story File List | FIXED — Updated File List |
+| M2  | MED | Full HTML shell duplicated in map-handlers.ts instead of shared layout | FIXED — Created shared `renderLayout.ts`; both pages now use it |
+| M3  | MED | Flash of unauth content on map page | FIXED — Part of H1 auth-wall fix |
+| M4  | MED | Backdrop a11y — always in DOM with onClick | FIXED — Added aria-hidden="true" to backdrop |
+| L1  | LOW | Placeholder text differs from task description | ACCEPTED — AC text is a suggestion |
+| L2  | LOW | Misleading ts-expect-error comment | FIXED — Removed now-unnecessary directive |
+| L3  | LOW | Hardcoded localhost:8787 in map-shell tests | FIXED — Using BASE_URL constant |

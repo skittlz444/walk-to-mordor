@@ -1,4 +1,7 @@
 const { test, expect } = require('./helpers/common');
+const { cleanupAllTestData } = require('./helpers/cleanup');
+
+const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
 test.describe('Map Shell (Authenticated)', () => {
   test.beforeEach(async ({ page, authToken }) => {
@@ -8,7 +11,7 @@ test.describe('Map Shell (Authenticated)', () => {
   });
 
   test('drawer navigation and profile access', async ({ page }) => {
-    await page.goto('http://localhost:8787/map');
+    await page.goto(`${BASE_URL}/map`);
 
     const menuButton = page.locator('.menu-icon');
     await expect(menuButton).toBeVisible();
@@ -36,7 +39,7 @@ test.describe('Map Shell (Authenticated)', () => {
   });
 
   test('drawer opens and closes via backdrop and escape', async ({ page }) => {
-    await page.goto('http://localhost:8787/map');
+    await page.goto(`${BASE_URL}/map`);
 
     const menuButton = page.locator('.menu-icon');
     const backdrop = page.locator('.drawer-backdrop');
@@ -59,7 +62,7 @@ test.describe('Map Shell (Authenticated)', () => {
   });
 
   test('drawer links are not focusable when closed', async ({ page }) => {
-    await page.goto('http://localhost:8787/map');
+    await page.goto(`${BASE_URL}/map`);
 
     const drawerLinks = page.locator('.side-drawer .drawer-link');
     const closeButton = page.locator('.side-drawer .drawer-close');
@@ -80,7 +83,7 @@ test.describe('Map Shell (Authenticated)', () => {
 
 test.describe('Map Shell (Unauthenticated)', () => {
   test('redirects to login when session is missing', async ({ page }) => {
-    const response = await page.goto('http://localhost:8787/map');
+    const response = await page.goto(`${BASE_URL}/map`);
 
     expect(response).not.toBeNull();
     expect(response.status()).toBeGreaterThanOrEqual(200);

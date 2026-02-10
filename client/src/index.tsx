@@ -51,26 +51,25 @@ window.preactIslands = allIslands;
 function hydrateIslands() {
   // Find all elements with data-island attribute
   const islandElements = document.querySelectorAll('[data-island]');
-  
+
   islandElements.forEach((element) => {
     const islandName = element.getAttribute('data-island') as IslandName;
-    
+
     if (!islandName) {
       console.warn('Island element found without island name:', element);
       return;
     }
 
     const IslandComponent = autoHydratedIslands[islandName];
-    
+
     if (!IslandComponent) {
       console.error(`Island component "${islandName}" not found in registry`);
       return;
     }
 
     // Render the island component into the target element
-    // @ts-expect-error - TypeScript incorrectly infers that these islands require props, but AuthForms accepts none
     render(h(IslandComponent, null), element);
-    
+
     console.log(`✅ Hydrated island: ${islandName}`);
   });
 }

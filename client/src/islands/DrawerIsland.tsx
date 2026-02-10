@@ -81,7 +81,7 @@ export function DrawerIsland() {
       >
         <i className="fas fa-bars" aria-hidden="true"></i>
       </button>
-      <div className="drawer-backdrop" onClick={closeDrawer}></div>
+      <div className="drawer-backdrop" aria-hidden="true" onClick={closeDrawer}></div>
       <aside className="side-drawer" aria-hidden={isOpen ? 'false' : 'true'} ref={drawerRef}>
         <div className="drawer-header">
           <span className="drawer-title">Navigation</span>
