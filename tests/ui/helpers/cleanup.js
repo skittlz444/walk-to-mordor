@@ -45,6 +45,7 @@ async function getWithRetry(apiContext, url, options = {}, retries = 3) {
  * Clear ALL distance data from the database before/after tests
  * This ensures a clean state for each test run without worrying about data interference
  * @param {string} baseUrl - The base URL of the application (default: http://127.0.0.1:8787)
+ * @param {string} token - Authorization token used for API requests (default: TEST_MOCK_TOKEN)
  */
 async function cleanupAllTestData(baseUrl = 'http://127.0.0.1:8787', token = 'TEST_MOCK_TOKEN') {
   /** @type {import('@playwright/test').APIRequestContext | undefined} */

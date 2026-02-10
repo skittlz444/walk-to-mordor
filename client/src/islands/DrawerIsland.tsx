@@ -5,6 +5,7 @@ export function DrawerIsland() {
   const drawerRef = useRef<HTMLElement | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
     document.body.classList.toggle('drawer-open', isOpen);
@@ -34,19 +35,34 @@ export function DrawerIsland() {
       }
     });
 
-    if (isOpen) {
+    const prevIsOpen = prevIsOpenRef.current;
+    
+    // Only manage focus on transitions, not on initial mount
+    if (!prevIsOpen && isOpen) {
+      // Transitioning from closed to open
       drawerElement.removeAttribute('inert');
       // Move focus to the first focusable element (close button) in the drawer
       if (closeButtonRef.current) {
         closeButtonRef.current.focus();
       }
-    } else {
+    } else if (prevIsOpen && !isOpen) {
+      // Transitioning from open to closed
       drawerElement.setAttribute('inert', '');
       // Restore focus to the trigger button when closing
       if (triggerButtonRef.current) {
         triggerButtonRef.current.focus();
       }
+    } else {
+      // Initial mount or no transition - just set inert attribute
+      if (isOpen) {
+        drawerElement.removeAttribute('inert');
+      } else {
+        drawerElement.setAttribute('inert', '');
+      }
     }
+
+    // Update the previous state for next render
+    prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
   useEffect(() => {
