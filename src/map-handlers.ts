@@ -1,14 +1,16 @@
-export function renderHtml() {
+import { validateSession } from './auth-handlers';
+
+function renderMapPage() {
   return `
     <!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Walk to Mordor</title>
+        <title>Walk to Mordor - Middle Earth</title>
         
         <!-- PWA Meta Tags -->
-        <meta name="description" content="Track your walking progress on the journey to Mordor" />
+        <meta name="description" content="Explore your journey across Middle-earth" />
         <meta name="theme-color" content="#0f3460" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -26,6 +28,7 @@ export function renderHtml() {
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
         <link href="/css/main.css" rel="stylesheet" />
         <link href="/css/drawer.css" rel="stylesheet" />
+        <link href="/css/map.css" rel="stylesheet" />
         
         <!-- Service Worker Registration -->
         <script>
@@ -42,35 +45,40 @@ export function renderHtml() {
           }
         </script>
       </head>
-      <body>
-      <header>
-        <div class="header-controls">
-          <div data-island="DrawerIsland"></div>
-        </div>
-        <h1>Total distance travelled</h1>
-        <div id="total-distance-value">Loading...</div>
-        <div id="last-goal"></div>
-      </header>
-      <main>
-        <section id="goals-section">
-          <div id="goals-list"></div>
-        </section>
-        <div id="eventcalendar-container">
-          <div id="eventcalendar"></div>
-        </div>
-      </main>
-      
-      <!-- Preact Islands - Load before vanilla JS that depends on it -->
-      <script type="module" src="/js/client/islands.js"></script>
-      
-      <!-- Scripts -->
-      <script src="/js/validators.js"></script>
-      <script src="/js/calendar.js"></script>
-      <script src="/js/progress.js"></script>
-      <script src="/js/goals.js"></script>
-      <script src="/js/profile.js"></script>
-      <script src="/js/main.js"></script>
+      <body class="map-page">
+        <header class="map-header">
+          <div class="header-controls">
+            <div data-island="DrawerIsland"></div>
+          </div>
+          <h1>Middle Earth</h1>
+        </header>
+        <main class="map-main">
+          <div class="map-shell" data-island="MapIsland"></div>
+        </main>
+        
+        <!-- Preact Islands -->
+        <script type="module" src="/js/client/islands.js"></script>
+        
+        <!-- Scripts -->
+        <script src="/js/profile.js"></script>
+        <script src="/js/main.js"></script>
       </body>
     </html>
-`;
+  `;
+}
+
+export async function handleMapPage(request: Request, env: any): Promise<Response> {
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader) {
+    const sessionValidation = await validateSession(request, env);
+    if (!sessionValidation.valid) {
+      return sessionValidation.error;
+    }
+  }
+
+  return new Response(renderMapPage(), {
+    headers: {
+      'content-type': 'text/html',
+    },
+  });
 }

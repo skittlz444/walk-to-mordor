@@ -46,7 +46,7 @@ async function getWithRetry(apiContext, url, options = {}, retries = 3) {
  * This ensures a clean state for each test run without worrying about data interference
  * @param {string} baseUrl - The base URL of the application (default: http://localhost:8787)
  */
-async function cleanupAllTestData(baseUrl = 'http://localhost:8787', token = 'TEST_MOCK_TOKEN') {
+async function cleanupAllTestData(baseUrl = 'http://127.0.0.1:8787', token = 'TEST_MOCK_TOKEN') {
   /** @type {import('@playwright/test').APIRequestContext | undefined} */
   let apiContext;
   try {

@@ -1,0 +1,92 @@
+const { test, expect } = require('./helpers/common');
+
+test.describe('Map Shell (Authenticated)', () => {
+  test.beforeEach(async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+  });
+
+  test('drawer navigation and profile access', async ({ page }) => {
+    await page.goto('http://localhost:8787/map');
+
+    const menuButton = page.locator('.menu-icon');
+    await expect(menuButton).toBeVisible();
+
+    await menuButton.click();
+    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+
+    await expect(page.locator('.drawer-link', { hasText: 'Journey' })).toBeVisible();
+    await expect(page.locator('.drawer-link', { hasText: 'Map' })).toBeVisible();
+    await expect(page.locator('.drawer-profile')).toBeVisible();
+
+    await page.click('.drawer-link:has-text("Journey")');
+    await page.waitForURL('**/');
+
+    await page.click('.menu-icon');
+    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.click('.drawer-link:has-text("Map")');
+    await page.waitForURL('**/map');
+
+    await page.click('.menu-icon');
+    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.click('.drawer-profile');
+
+    await expect(page.locator('.modal-overlay')).toBeVisible();
+  });
+
+  test('drawer opens and closes via backdrop and escape', async ({ page }) => {
+    await page.goto('http://localhost:8787/map');
+
+    const menuButton = page.locator('.menu-icon');
+    const backdrop = page.locator('.drawer-backdrop');
+    const drawer = page.locator('.side-drawer');
+
+    await menuButton.click();
+    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(drawer).toHaveAttribute('aria-hidden', 'false');
+
+    await backdrop.click();
+    await expect(page.locator('body')).not.toHaveClass(/drawer-open/);
+    await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
+    await expect(drawer).toHaveAttribute('aria-hidden', 'true');
+
+    await menuButton.click();
+    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.keyboard.press('Escape');
+    await expect(page.locator('body')).not.toHaveClass(/drawer-open/);
+  });
+
+  test('drawer links are not focusable when closed', async ({ page }) => {
+    await page.goto('http://localhost:8787/map');
+
+    const drawerLinks = page.locator('.side-drawer .drawer-link');
+    const closeButton = page.locator('.side-drawer .drawer-close');
+
+    await page.waitForFunction(() => {
+      const drawer = document.querySelector('.side-drawer');
+      return drawer && drawer.getAttribute('aria-hidden') === 'true';
+    });
+
+    const linkCount = await drawerLinks.count();
+    for (let i = 0; i < linkCount; i += 1) {
+      await expect(drawerLinks.nth(i)).toHaveAttribute('tabindex', '-1');
+    }
+
+    await expect(closeButton).toBeDisabled();
+  });
+});
+
+test.describe('Map Shell (Unauthenticated)', () => {
+  test('redirects to login when session is missing', async ({ page }) => {
+    const response = await page.goto('http://localhost:8787/map');
+
+    expect(response).not.toBeNull();
+    expect(response.status()).toBeGreaterThanOrEqual(200);
+    expect(response.status()).toBeLessThan(400);
+
+    await page.waitForURL('**/login');
+    await expect(page).toHaveURL(/\/login/);
+  });
+});

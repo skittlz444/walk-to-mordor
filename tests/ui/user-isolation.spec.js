@@ -8,23 +8,25 @@
 const { test, expect, createTestEvent, generateRealisticTestDistance } = require('./helpers/common');
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
+const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
+
 // Helper to create authenticated context with improved performance
 async function createAuthenticatedContext(browser, username) {
     const authToken = `TEST_MOCK_TOKEN_${username}`;
     // Clean up data before creating context/page to ensure clean state
-    await cleanupAllTestData('http://localhost:8787', authToken);
+    await cleanupAllTestData(BASE_URL, authToken);
     
     const context = await browser.newContext({
          storageState: {
             cookies: [],
             origins: [{
-                origin: 'http://localhost:8787',
+                origin: BASE_URL,
                 localStorage: [{ name: 'sessionToken', value: authToken }]
             }]
          }
     });
     const page = await context.newPage();
-    await page.goto('http://localhost:8787/');
+    await page.goto(`${BASE_URL}/`);
     
     // Close existing popups if any (similar to setupTest)
     try {
@@ -95,8 +97,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
         } finally {
             // Cleanup both users' data
-            await cleanupAllTestData('http://localhost:8787', authToken1);
-            await cleanupAllTestData('http://localhost:8787', authToken2);
+            await cleanupAllTestData(BASE_URL, authToken1);
+            await cleanupAllTestData(BASE_URL, authToken2);
             
             await page1.close();
             await page2.close();
@@ -181,8 +183,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
         } finally {
             // Cleanup both users' data
-            await cleanupAllTestData('http://localhost:8787', authToken1);
-            await cleanupAllTestData('http://localhost:8787', authToken2);
+            await cleanupAllTestData(BASE_URL, authToken1);
+            await cleanupAllTestData(BASE_URL, authToken2);
             
             await page1.close();
             await page2.close();
@@ -243,8 +245,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
         } finally {
             // Cleanup both users' data
-            await cleanupAllTestData('http://localhost:8787', authToken1);
-            await cleanupAllTestData('http://localhost:8787', authToken2);
+            await cleanupAllTestData(BASE_URL, authToken1);
+            await cleanupAllTestData(BASE_URL, authToken2);
             
             await page1.close();
             await page2.close();

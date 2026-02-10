@@ -1,18 +1,24 @@
 import { render, h } from 'preact';
 import { AuthForms } from './islands/AuthForms';
+import { DrawerIsland } from './islands/DrawerIsland';
 import { GoalModal } from './islands/GoalModal';
+import { MapIsland } from './islands/MapIsland';
 import { NextGoalCard } from './islands/NextGoalCard';
 import { UpcomingGoalCard } from './islands/UpcomingGoalCard';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
   AuthForms,
+  DrawerIsland,
+  MapIsland,
 };
 
 // All islands including those rendered programmatically
 const allIslands = {
   AuthForms,
+  DrawerIsland,
   GoalModal,
+  MapIsland,
   NextGoalCard,
   UpcomingGoalCard,
 };
