@@ -6,7 +6,7 @@ This guide explains how to set up the email service for Walk to Mordor using Res
 
 Walk to Mordor uses [Resend](https://resend.com) as its transactional email provider for sending:
 - Password reset emails
-- Email confirmation links (future feature)
+- Email confirmation links for new account registration
 - Other account-related notifications
 
 ## Prerequisites

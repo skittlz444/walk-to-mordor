@@ -42,11 +42,9 @@ This document describes how to manually test the email functionality after migra
 - Non-existent user email (should not reveal if user exists - same success message)
 - Expired reset token (should show appropriate error message)
 
-### 2. Email Confirmation Flow (Future Feature)
+### 2. Email Confirmation Flow
 
-**Note**: This functionality may not be fully implemented yet. These tests verify the template functions work correctly.
-
-**Objective**: Verify email confirmation emails can be sent.
+**Objective**: Verify the full registration → email confirmation → account activation flow.
 
 **Steps**:
 1. Create a test route or use existing registration flow
