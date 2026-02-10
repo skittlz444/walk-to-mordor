@@ -4,6 +4,7 @@ export function DrawerIsland() {
   const [isOpen, setIsOpen] = useState(false);
   const drawerRef = useRef<HTMLElement | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     document.body.classList.toggle('drawer-open', isOpen);
@@ -36,9 +37,8 @@ export function DrawerIsland() {
     if (isOpen) {
       drawerElement.removeAttribute('inert');
       // Move focus to the first focusable element (close button) in the drawer
-      const closeButton = drawerElement.querySelector('.drawer-close') as HTMLButtonElement;
-      if (closeButton) {
-        closeButton.focus();
+      if (closeButtonRef.current) {
+        closeButtonRef.current.focus();
       }
     } else {
       drawerElement.setAttribute('inert', '');
@@ -102,6 +102,7 @@ export function DrawerIsland() {
             className="drawer-close"
             aria-label="Close Navigation"
             onClick={closeDrawer}
+            ref={closeButtonRef}
           >
             <i className="fas fa-times" aria-hidden="true"></i>
           </button>
