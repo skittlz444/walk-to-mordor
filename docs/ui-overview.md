@@ -33,7 +33,7 @@ Entry point: `client/src/index.tsx` — registers and hydrates islands.
 Islands are built with Vite and output to `public/js/client/islands.js`.
 
 ## Styling
-- **`client/src/base.css`** (or `public/css/main.css`): Main stylesheet.
+- **`public/css/main.css`**: Main stylesheet.
 - Uses standard CSS variables for theming (see [CSS Theming](css-theming.md)).
 - Responsive design for mobile support (PWA capable).
 

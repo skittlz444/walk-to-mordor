@@ -379,17 +379,17 @@ These patterns are already established and must be maintained:
 
 #### Component Organization (Actual)
 ```
-client/src/
-├── islands/              # Preact islands (auto-hydrated + programmatic)
-│   ├── AuthForms.tsx     # Login/registration forms
-│   ├── GoalModal.tsx     # Goal detail modal with image + description
-│   ├── NextGoalCard.tsx  # Highlighted next milestone card
-│   └── UpcomingGoalCard.tsx # Upcoming milestone cards
-├── stores/               # Global state (Preact Signals)
-│   └── goalStore.ts
-├── base.css              # Shared island styles
-├── index.tsx             # Island registry + hydration entry point
-└── vite.config.ts        # Vite build config
+client/
+├── src/
+│   ├── islands/              # Preact islands (auto-hydrated + programmatic)
+│   │   ├── AuthForms.tsx     # Login/registration forms
+│   │   ├── GoalModal.tsx     # Goal detail modal with image + description
+│   │   ├── NextGoalCard.tsx  # Highlighted next milestone card
+│   │   └── UpcomingGoalCard.tsx # Upcoming milestone cards
+│   ├── stores/               # Global state (Preact Signals) - reserved for future use
+│   └── index.tsx             # Island registry + hydration entry point
+├── vite.config.ts            # Vite build config
+└── vitest.config.ts          # Vitest test config
 ```
 
 > **Note:** The `components/map/` structure from ADR-002 is planned for Phase 2 and does not yet exist.

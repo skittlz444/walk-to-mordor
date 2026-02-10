@@ -8,7 +8,7 @@ The API is served from the same domain as the application. All dates use ISO 860
 Register a new user. Sends a confirmation email to activate the account.
 - **Body**: `{ username, email, password }`
 - **Response**: Success message prompting user to check email. Account is inactive until confirmed.
-- **Rate Limit**: 3 confirmation emails per hour per user.
+- **Note**: Each successful registration sends one confirmation email. Rate limiting is only applied on the resend confirmation endpoint.
 
 ### `POST /api/login`
 Log in an existing user.
@@ -34,13 +34,13 @@ Request a password reset email.
 Complete password reset with token.
 - **Body**: `{ token, newPassword }`
 
-### `GET /confirm-email`
+### `GET /api/auth/confirm-email`
 Confirm a user's email address via token (sent in confirmation email link).
 - **Query**: `?token=<confirmation_token>`
 - **Response**: Activates the account (sets `email_verified = 1`) and redirects to login.
 - **Errors**: Returns error for expired or invalid tokens.
 
-### `POST /api/resend-confirmation`
+### `POST /api/auth/resend-confirmation`
 Resend the email confirmation link.
 - **Body**: `{ email }`
 - **Rate Limit**: 3 resend attempts per hour per user.
