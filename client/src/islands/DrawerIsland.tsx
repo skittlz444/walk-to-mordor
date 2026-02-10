@@ -36,7 +36,7 @@ export function DrawerIsland() {
     });
 
     const prevIsOpen = prevIsOpenRef.current;
-    
+
     // Only manage focus on transitions, not on initial mount
     if (!prevIsOpen && isOpen) {
       // Transitioning from closed to open
