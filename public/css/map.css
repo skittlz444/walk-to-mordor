@@ -20,30 +20,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 0;
 }
 
 .map-container {
   width: 100%;
   height: 100%;
-  min-height: 50vh;
-  border: 2px dashed var(--border-medium);
+  min-height: 60vh;
+  position: relative;
+  overflow: hidden;
   border-radius: 16px;
+  background: var(--bg-secondary);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  touch-action: none;
+}
+
+.map-stage {
+  width: 100%;
+  height: 100%;
+}
+
+.map-loading {
   color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  background: var(--bg-secondary);
+  width: 100%;
+  height: 100%;
+  font-size: 1.1rem;
 }
 
 @media (max-width: 768px) {
-  .map-shell {
-    padding: 1rem;
-  }
-
   .map-container {
-    min-height: 45vh;
-    font-size: 1rem;
+    min-height: 50vh;
   }
 }
