@@ -2,11 +2,33 @@ const { test, expect } = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
+// Create a small test image as a data URL (1x1 red pixel PNG)
+const SMALL_TEST_IMAGE_BASE64 =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFklEQVQYV2P8z8BQz0BFwMgwasChAwAMDAn/xe0DwQAAAABJRU5ErkJggg==';
+
+function interceptMapImage(page) {
+  return page.route('**/img/map/**', async (route) => {
+    // Respond with a small 10x10 PNG to avoid canvas memory issues in CI
+    const response = await fetch(SMALL_TEST_IMAGE_BASE64);
+    const buffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFklEQVQYV2P8z8BQz0BFwMgwasChAwAMDAn/xe0DwQAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: buffer,
+    });
+  });
+}
+
 test.describe('Map Canvas & Base Image Layer', () => {
   test.beforeEach(async ({ page, authToken }) => {
     await page.addInitScript((token) => {
       localStorage.setItem('sessionToken', token);
     }, authToken);
+    // Intercept map images to use small test images (avoids canvas memory issues in CI)
+    await interceptMapImage(page);
   });
 
   test('renders canvas element after map image loads', async ({ page }) => {
@@ -14,14 +36,23 @@ test.describe('Map Canvas & Base Image Layer', () => {
 
     // Wait for the Konva canvas to appear (image loaded successfully)
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
   });
 
   test('shows loading state before image loads', async ({ page }) => {
-    // Slow down image loading to see the loading state
+    // Override the fast intercept with a slow one
+    await page.unrouteAll();
     await page.route('**/img/map/**', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      await route.continue();
+      const buffer = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFklEQVQYV2P8z8BQz0BFwMgwasChAwAMDAn/xe0DwQAAAABJRU5ErkJggg==',
+        'base64',
+      );
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: buffer,
+      });
     });
 
     await page.goto(`${BASE_URL}/map`);
@@ -32,14 +63,14 @@ test.describe('Map Canvas & Base Image Layer', () => {
 
     // Wait for canvas to eventually appear
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
   });
 
   test('canvas fills the map container', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
 
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
     const wrapper = page.locator('.map-canvas-wrapper');
     const wrapperBox = await wrapper.boundingBox();
@@ -53,25 +84,9 @@ test.describe('Map Canvas & Base Image Layer', () => {
     await page.goto(`${BASE_URL}/map`);
 
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
-    // Get initial stage position via Konva
-    const initialPos = await page.evaluate(() => {
-      const container = document.querySelector('.konvajs-content');
-      if (!container) return null;
-      const canvas = container.querySelector('canvas');
-      if (!canvas) return null;
-      return {
-        offsetLeft: container.getBoundingClientRect().left,
-        offsetTop: container.getBoundingClientRect().top,
-      };
-    });
-    expect(initialPos).not.toBeNull();
-
-    // Take screenshot before drag
-    await page.screenshot({ path: '/tmp/map-before-drag.png' });
-
-    // Perform a drag
+    // Perform a drag on the canvas
     const wrapper = page.locator('.map-canvas-wrapper');
     const box = await wrapper.boundingBox();
     const startX = box.x + box.width / 2;
@@ -82,28 +97,15 @@ test.describe('Map Canvas & Base Image Layer', () => {
     await page.mouse.move(startX + 100, startY + 50, { steps: 10 });
     await page.mouse.up();
 
-    // Take screenshot after drag
-    await page.screenshot({ path: '/tmp/map-after-drag.png' });
+    // Verify the canvas still exists (drag didn't break anything)
+    await expect(canvas.first()).toBeVisible();
   });
 
   test('map can be zoomed via mouse wheel', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
 
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
-
-    // Take screenshot before zoom
-    await page.screenshot({ path: '/tmp/map-before-zoom.png' });
-
-    // Get initial scale from Konva stage
-    const initialScale = await page.evaluate(() => {
-      const stage = document.querySelector('.konvajs-content');
-      if (!stage) return null;
-      // Find the canvas and check its transform via Konva's internal state
-      const canvases = stage.querySelectorAll('canvas');
-      return canvases.length;
-    });
-    expect(initialScale).toBeGreaterThan(0);
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
     // Scroll to zoom in
     const wrapper = page.locator('.map-canvas-wrapper');
@@ -112,15 +114,15 @@ test.describe('Map Canvas & Base Image Layer', () => {
     await page.mouse.wheel(0, -300);
     await page.waitForTimeout(500);
 
-    // Take screenshot after zoom
-    await page.screenshot({ path: '/tmp/map-after-zoom.png' });
+    // Verify the canvas still exists after zoom
+    await expect(canvas.first()).toBeVisible();
   });
 
   test('map responds to window resize', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
 
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
     // Resize the viewport
     await page.setViewportSize({ width: 800, height: 400 });
@@ -134,6 +136,18 @@ test.describe('Map Canvas & Base Image Layer', () => {
     expect(box.width).toBeGreaterThan(50);
     expect(box.height).toBeGreaterThan(50);
   });
+
+  test('grab cursor style is applied', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    const cursor = await page.locator('.map-canvas-wrapper').evaluate(
+      (el) => window.getComputedStyle(el).cursor,
+    );
+    expect(cursor).toBe('grab');
+  });
 });
 
 test.describe('Map Canvas - Mobile Touch', () => {
@@ -141,6 +155,7 @@ test.describe('Map Canvas - Mobile Touch', () => {
     await page.addInitScript((token) => {
       localStorage.setItem('sessionToken', token);
     }, authToken);
+    await interceptMapImage(page);
   });
 
   test('canvas renders on mobile viewport', async ({ page }) => {
@@ -148,14 +163,14 @@ test.describe('Map Canvas - Mobile Touch', () => {
     await page.goto(`${BASE_URL}/map`);
 
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
   });
 
   test('touch-action none prevents browser gestures', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
 
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 30000 });
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
     // Verify touch-action: none is set on wrapper
     const touchAction = await page.locator('.map-canvas-wrapper').evaluate(

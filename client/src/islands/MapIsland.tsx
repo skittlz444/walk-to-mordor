@@ -1,12 +1,52 @@
-import { useEffect, useRef, useCallback } from 'preact/hooks';
+import { useEffect, useRef, useCallback, useState } from 'preact/hooks';
 import { useSignal } from '@preact/signals';
 import { Stage, Layer, Image } from 'react-konva';
-import useImage from 'use-image';
 import type Konva from 'konva';
 
-const MAP_SRC = '/img/map/ctd58g7fsmyf1.webp';
+const MAP_PRIMARY = '/img/map/ctd58g7fsmyf1.webp';
+const MAP_FALLBACK = '/img/map/8K_Middle_Earth_by_Kerem_Yurtseven.webp';
 const SCALE_BY = 1.1;
 const MAX_ZOOM = 3.0;
+const MAX_TEXTURE_SIZE = 8192;
+
+type ImageStatus = 'loading' | 'loaded' | 'failed';
+
+function useMapImage(): [HTMLImageElement | undefined, ImageStatus] {
+  const [image, setImage] = useState<HTMLImageElement | undefined>(undefined);
+  const [status, setStatus] = useState<ImageStatus>('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function tryLoad(src: string, isFallback: boolean) {
+      const img = new window.Image();
+      img.onload = () => {
+        if (cancelled) return;
+        if (!isFallback && (img.naturalWidth > MAX_TEXTURE_SIZE || img.naturalHeight > MAX_TEXTURE_SIZE)) {
+          tryLoad(MAP_FALLBACK, true);
+          return;
+        }
+        setImage(img);
+        setStatus('loaded');
+      };
+      img.onerror = () => {
+        if (cancelled) return;
+        if (!isFallback) {
+          tryLoad(MAP_FALLBACK, true);
+        } else {
+          setStatus('failed');
+        }
+      };
+      img.src = src;
+    }
+
+    tryLoad(MAP_PRIMARY, false);
+
+    return () => { cancelled = true; };
+  }, []);
+
+  return [image, status];
+}
 
 interface StageSize {
   width: number;
@@ -62,7 +102,7 @@ function getTouchCenter(touches: TouchList): { x: number; y: number } {
 }
 
 export function MapIsland() {
-  const [mapImage, imageStatus] = useImage(MAP_SRC);
+  const [mapImage, imageStatus] = useMapImage();
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const lastTouchDist = useRef<number>(0);
