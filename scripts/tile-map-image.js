@@ -99,7 +99,7 @@ async function tileMapImage() {
             channels: info.channels,
           },
         })
-          .webp({ quality: 85 })
+          .webp({ quality: 100 })
           .toFile(tilePath);
 
         totalTiles++;
