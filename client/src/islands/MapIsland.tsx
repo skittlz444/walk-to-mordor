@@ -7,6 +7,7 @@ import type { Vector2d } from 'konva/lib/types';
 type Dimensions = { width: number; height: number };
 type Position = { x: number; y: number };
 
+// Preferred base map asset (per product decision)
 const MAP_IMAGE_SRC = '/img/map/ctd58g7fsmyf1.webp';
 const MAP_FALLBACK_SRC = '/img/map/8K_Middle_Earth_by_Kerem_Yurtseven.webp';
 const MIN_ZOOM = 0.5;
