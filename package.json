@@ -68,13 +68,12 @@
     "test:client:coverage": "vitest run --coverage --root client",
     "build:sw": "node public/js/update-cache-version.js",
     "build:sw:reset": "node public/js/reset-cache-version.js",
-    "optimize:images": "node scripts/optimize-images.js"
+    "optimize:images": "node scripts/optimize-images.js",
+    "tile:map": "node scripts/tile-map-image.js"
   },
   "dependencies": {
     "@preact/signals": "^2.7.0",
     "konva": "^9.3.18",
-    "preact": "^10.28.3",
-    "react-konva": "^18.2.14",
-    "use-image": "^1.1.1"
+    "preact": "^10.28.3"
   }
 }

@@ -1,0 +1,50 @@
+{
+  "source": "ctd58g7fsmyf1.webp",
+  "fullWidth": 10000,
+  "fullHeight": 5455,
+  "tileSize": 512,
+  "levels": [
+    {
+      "z": 0,
+      "width": 10000,
+      "height": 5455,
+      "cols": 20,
+      "rows": 11
+    },
+    {
+      "z": 1,
+      "width": 5000,
+      "height": 2728,
+      "cols": 10,
+      "rows": 6
+    },
+    {
+      "z": 2,
+      "width": 2500,
+      "height": 1364,
+      "cols": 5,
+      "rows": 3
+    },
+    {
+      "z": 3,
+      "width": 1250,
+      "height": 682,
+      "cols": 3,
+      "rows": 2
+    },
+    {
+      "z": 4,
+      "width": 625,
+      "height": 341,
+      "cols": 2,
+      "rows": 1
+    },
+    {
+      "z": 5,
+      "width": 313,
+      "height": 171,
+      "cols": 1,
+      "rows": 1
+    }
+  ]
+}
