@@ -46,8 +46,9 @@ function clampPosition(
 ): { x: number; y: number } {
   const scaledW = mapW * s;
   const scaledH = mapH * s;
-  const minX = stage.width - scaledW;
-  const minY = stage.height - scaledH;
+  // Fix 4: use Math.floor to ensure bottom/right edge is fully reachable
+  const minX = Math.floor(stage.width - scaledW);
+  const minY = Math.floor(stage.height - scaledH);
   return {
     x: Math.min(0, Math.max(minX, pos.x)),
     y: Math.min(0, Math.max(minY, pos.y)),
@@ -74,11 +75,17 @@ function getTouchCenter(touches: TouchList): { x: number; y: number } {
 }
 
 function pickLevel(levels: TileLevel[], currentScale: number, fullWidth: number): TileLevel {
-  let best = levels[0];
-  for (const lvl of levels) {
+  // Pick the coarsest level whose resolution is still adequate for the current scale.
+  // levels are sorted z=0 (full-res) to z=N (smallest).
+  // We want the highest z (smallest image) where levelScale >= currentScale
+  // so that each tile pixel covers at most one screen pixel.
+  let best = levels[levels.length - 1]; // start with smallest
+  for (let i = levels.length - 1; i >= 0; i--) {
+    const lvl = levels[i];
     const levelScale = lvl.width / fullWidth;
-    if (levelScale >= currentScale * 0.7) {
+    if (levelScale >= currentScale) {
       best = lvl;
+      break;
     }
   }
   return best;
@@ -161,7 +168,10 @@ export function MapIsland() {
   const layerRef = useRef<Konva.Layer | null>(null);
   const lastTouchDist = useRef(0);
   const lastTouchCenter = useRef({ x: 0, y: 0 });
+  const isPinching = useRef(false);
   const renderedTiles = useRef<Map<string, Konva.Image>>(new Map());
+  const pendingTiles = useRef<Map<string, Konva.Rect>>(new Map());
+  const currentLevelZ = useRef(-1);
   const metaRef = useRef<TileMetadata | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
@@ -188,30 +198,68 @@ export function MapIsland() {
     );
 
     const visibleKeys = new Set(visible.map((t) => t.key));
+    const isFirstRender = currentLevelZ.current === -1;
+    const levelChanged = !isFirstRender && level.z !== currentLevelZ.current;
+    currentLevelZ.current = level.z;
 
-    // Remove tiles no longer visible
-    renderedTiles.current.forEach((node, key) => {
-      if (!visibleKeys.has(key)) {
+    // When the level changes, keep old tiles until new ones load.
+    // Only remove tiles that belong to the NEW level and are off-screen.
+    // Old-level tiles are kept as a backdrop.
+    const oldTilesToRemove: string[] = [];
+    renderedTiles.current.forEach((_node, key) => {
+      const tileZ = parseInt(key.split('_')[0], 10);
+      if (tileZ === level.z && !visibleKeys.has(key)) {
+        // Same level, no longer visible — remove
+        oldTilesToRemove.push(key);
+      }
+    });
+    for (const key of oldTilesToRemove) {
+      const node = renderedTiles.current.get(key);
+      if (node) {
         node.destroy();
         renderedTiles.current.delete(key);
       }
+    }
+
+    // Also clean up pending placeholders that are no longer needed
+    pendingTiles.current.forEach((placeholder, key) => {
+      if (!visibleKeys.has(key)) {
+        placeholder.destroy();
+        pendingTiles.current.delete(key);
+      }
     });
 
-    // Add new tiles
-    for (const tile of visible) {
-      if (renderedTiles.current.has(tile.key)) continue;
+    // Count how many tiles we need to load for the current level
+    let tilesNeeded = 0;
+    let tilesLoaded = 0;
 
+    // Add new tiles for the current level
+    for (const tile of visible) {
+      if (renderedTiles.current.has(tile.key) || pendingTiles.current.has(tile.key)) {
+        if (renderedTiles.current.has(tile.key)) tilesLoaded++;
+        tilesNeeded++;
+        continue;
+      }
+      tilesNeeded++;
+
+      // Use a transparent placeholder (no dark flash) — old tiles show through
       const placeholder = new Konva.Rect({
         x: tile.x,
         y: tile.y,
         width: tile.width,
         height: tile.height,
-        fill: '#2a2a3e',
+        fill: 'transparent',
       });
       layer.add(placeholder);
+      pendingTiles.current.set(tile.key, placeholder);
 
       loadTileImage(tile.src).then((img) => {
-        placeholder.destroy();
+        // Remove the placeholder
+        const ph = pendingTiles.current.get(tile.key);
+        if (ph) {
+          ph.destroy();
+          pendingTiles.current.delete(tile.key);
+        }
         if (!layerRef.current) return;
         const konvaImg = new Konva.Image({
           image: img,
@@ -222,13 +270,47 @@ export function MapIsland() {
         });
         layerRef.current.add(konvaImg);
         renderedTiles.current.set(tile.key, konvaImg);
+
+        // Check if all tiles for the current level are now loaded;
+        // if so, clean up old-level tiles that were kept as backdrop.
+        if (levelChanged && pendingTiles.current.size === 0) {
+          cleanupOldLevelTiles(level.z);
+        }
+
         layerRef.current.batchDraw();
       }).catch(() => {
-        placeholder.destroy();
+        const ph = pendingTiles.current.get(tile.key);
+        if (ph) {
+          ph.destroy();
+          pendingTiles.current.delete(tile.key);
+        }
       });
     }
 
+    // If all tiles for the new level are already cached, remove old-level tiles now
+    if (levelChanged && tilesLoaded === tilesNeeded && tilesNeeded > 0) {
+      cleanupOldLevelTiles(level.z);
+    }
+
     layer.batchDraw();
+  }, []);
+
+  /** Remove all rendered tiles that don't belong to the given zoom level */
+  const cleanupOldLevelTiles = useCallback((keepZ: number) => {
+    const toRemove: string[] = [];
+    renderedTiles.current.forEach((_node, key) => {
+      const tileZ = parseInt(key.split('_')[0], 10);
+      if (tileZ !== keepZ) {
+        toRemove.push(key);
+      }
+    });
+    for (const key of toRemove) {
+      const node = renderedTiles.current.get(key);
+      if (node) {
+        node.destroy();
+        renderedTiles.current.delete(key);
+      }
+    }
   }, []);
 
   const applyTransform = useCallback(() => {
@@ -266,6 +348,23 @@ export function MapIsland() {
       const meta = metaRef.current;
       if (!meta) return pos;
       return clampPosition(pos, currentScale.value, stageSize.value, meta.fullWidth, meta.fullHeight);
+    });
+
+    // Fix 3 part A: during drag, update position and tiles
+    stage.on('dragmove', () => {
+      const meta = metaRef.current;
+      if (!meta) {
+        position.value = stage.position();
+      } else {
+        position.value = clampPosition(
+          stage.position(),
+          currentScale.value,
+          stageSize.value,
+          meta.fullWidth,
+          meta.fullHeight,
+        );
+      }
+      updateTiles();
     });
 
     stage.on('dragend', () => {
@@ -356,10 +455,13 @@ export function MapIsland() {
     }
     window.addEventListener('resize', onResize);
 
-    // Touch pinch-to-zoom
+    // Fix 3: Touch pinch-to-zoom with Konva drag suppression
     function handleTouchStart(e: TouchEvent) {
       if (e.touches.length === 2) {
         e.preventDefault();
+        // Disable Konva's built-in drag during pinch to prevent drift
+        isPinching.current = true;
+        stage.draggable(false);
         lastTouchDist.current = getTouchDistance(e.touches);
         lastTouchCenter.current = getTouchCenter(e.touches);
       }
@@ -384,16 +486,24 @@ export function MapIsland() {
       const newScale = clampScale(oldScale * pinchRatio, minScaleVal.value);
 
       const rect = container.getBoundingClientRect();
-      const pointerX = center.x - rect.left;
-      const pointerY = center.y - rect.top;
+      // Fix 3: use the MIDPOINT between the two touches relative to container
+      const pinchCenterX = center.x - rect.left;
+      const pinchCenterY = center.y - rect.top;
 
+      // Also handle two-finger pan: track how the pinch center moved
+      const prevCenterX = lastTouchCenter.current.x - rect.left;
+      const prevCenterY = lastTouchCenter.current.y - rect.top;
+      const panDeltaX = pinchCenterX - prevCenterX;
+      const panDeltaY = pinchCenterY - prevCenterY;
+
+      // Zoom toward pinch center
       const mousePointTo = {
-        x: (pointerX - position.value.x) / oldScale,
-        y: (pointerY - position.value.y) / oldScale,
+        x: (pinchCenterX - position.value.x) / oldScale,
+        y: (pinchCenterY - position.value.y) / oldScale,
       };
       const newPos = {
-        x: pointerX - mousePointTo.x * newScale,
-        y: pointerY - mousePointTo.y * newScale,
+        x: pinchCenterX - mousePointTo.x * newScale + panDeltaX,
+        y: pinchCenterY - mousePointTo.y * newScale + panDeltaY,
       };
 
       currentScale.value = newScale;
@@ -404,8 +514,13 @@ export function MapIsland() {
       lastTouchCenter.current = center;
     }
 
-    function handleTouchEnd() {
-      lastTouchDist.current = 0;
+    function handleTouchEnd(e: TouchEvent) {
+      if (e.touches.length < 2 && isPinching.current) {
+        isPinching.current = false;
+        // Re-enable dragging after pinch ends
+        stage.draggable(true);
+        lastTouchDist.current = 0;
+      }
     }
 
     container.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -421,6 +536,7 @@ export function MapIsland() {
       stageRef.current = null;
       layerRef.current = null;
       renderedTiles.current.clear();
+      pendingTiles.current.clear();
     };
   }, []);
 
