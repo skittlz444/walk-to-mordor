@@ -57,6 +57,8 @@ export function MapIsland() {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
   const [minScale, setMinScale] = useState(MIN_ZOOM);
+  const scaleRef = useRef(scale);
+  const positionRef = useRef(position);
   const [isDragging, setIsDragging] = useState(false);
   const pinchDistanceRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
@@ -113,9 +115,11 @@ export function MapIsland() {
 
     const computedMinScale = getFitScale(dimensions, mapImage);
     const nextMinScale = Math.max(MIN_ZOOM, computedMinScale);
-    const nextScale = clampScale(initializedRef.current ? Math.max(scale, nextMinScale) : nextMinScale, nextMinScale);
+    const currentScale = scaleRef.current;
+    const currentPosition = positionRef.current;
+    const nextScale = clampScale(initializedRef.current ? Math.max(currentScale, nextMinScale) : nextMinScale, nextMinScale);
     const initialPosition: Position = initializedRef.current
-      ? clampPosition(position, nextScale, dimensions, mapImage)
+      ? clampPosition(currentPosition, nextScale, dimensions, mapImage)
       : clampPosition(
           {
             x: (dimensions.width - mapImage.width * nextScale) / 2,
@@ -132,7 +136,15 @@ export function MapIsland() {
     if (!initializedRef.current) {
       initializedRef.current = true;
     }
-  }, [mapImage, dimensions.width, dimensions.height, scale, position]);
+  }, [mapImage, dimensions.width, dimensions.height]);
+
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
+
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
 
   useEffect(() => {
     const globalWindow = window as typeof window & { __mapDebug?: MapDebug };
