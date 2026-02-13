@@ -79,7 +79,8 @@ function pickLevel(levels: TileLevel[], currentScale: number, fullWidth: number)
   // levels are sorted z=0 (full-res) to z=N (smallest).
   // We want the highest z (smallest image) where levelScale >= currentScale
   // so that each tile pixel covers at most one screen pixel.
-  let best = levels[levels.length - 1]; // start with smallest
+  // Default to z=0 (full-res) when zoomed past native resolution.
+  let best = levels[0];
   for (let i = levels.length - 1; i >= 0; i--) {
     const lvl = levels[i];
     const levelScale = lvl.width / fullWidth;
