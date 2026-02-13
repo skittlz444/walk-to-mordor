@@ -13,12 +13,7 @@ const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.1;
 const MAX_ZOOM = 3.0;
 
-/** Enable coordinate logging by setting window.__MAP_DEV_LOG = true in console */
-declare global {
-  interface Window {
-    __MAP_DEV_LOG?: boolean;
-  }
-}
+/** Dev mode: set window.__MAP_DEV_LOG = true in console to log coordinates on click */
 
 interface TileLevel {
   z: number;

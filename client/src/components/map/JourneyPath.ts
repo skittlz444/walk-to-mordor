@@ -8,6 +8,10 @@
  *
  * Both lines use `listening: false` for performance (no hit detection needed).
  * Stroke width scales inversely with zoom so the line looks consistent.
+ *
+ * Dev mode (window.__MAP_DEV_LOG = true):
+ *   - Shows the entire future path (not truncated)
+ *   - Renders future path as a solid line instead of dashed
  */
 
 import Konva from 'konva';
@@ -17,6 +21,12 @@ import {
   truncateFuturePath,
   dynamicStrokeWidth,
 } from '../../utils/map-utils';
+
+declare global {
+  interface Window {
+    __MAP_DEV_LOG?: boolean;
+  }
+}
 
 const BASE_STROKE = 6;
 const MIN_STROKE = 2;
@@ -70,18 +80,19 @@ export function createJourneyPath(
     userDistance,
   );
 
-  // Truncate future path to ~10% of total journey length
+  // In dev mode, show entire path as solid; otherwise truncate to ~10%
+  const devMode = !!window.__MAP_DEV_LOG;
   const maxFuturePixels = fullPathPixelLength * FUTURE_FRACTION;
-  const truncatedFuture = truncateFuturePath(futurePoints, maxFuturePixels);
+  const displayedFuture = devMode ? futurePoints : truncateFuturePath(futurePoints, maxFuturePixels);
 
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
 
   const futureLine = new Konva.Line({
-    points: truncatedFuture,
+    points: displayedFuture,
     stroke: FUTURE_COLOR,
     strokeWidth,
     opacity: FUTURE_OPACITY,
-    dash: FUTURE_DASH,
+    dash: devMode ? [] : FUTURE_DASH,
     lineCap: LINE_CAP,
     lineJoin: LINE_JOIN,
     listening: false,
@@ -123,16 +134,17 @@ export function updateJourneyPath(
     userDistance,
   );
 
-  // Truncate future path to ~10% of total journey length
+  // In dev mode, show entire path as solid; otherwise truncate to ~10%
+  const devMode = !!window.__MAP_DEV_LOG;
   const maxFuturePixels = fullPathPixelLength * FUTURE_FRACTION;
-  const truncatedFuture = truncateFuturePath(futurePoints, maxFuturePixels);
+  const displayedFuture = devMode ? futurePoints : truncateFuturePath(futurePoints, maxFuturePixels);
 
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
 
-  nodes.futureLine.points(truncatedFuture);
+  nodes.futureLine.points(displayedFuture);
   nodes.futureLine.strokeWidth(strokeWidth);
-  // Scale dash pattern inversely with zoom for visual consistency
-  nodes.futureLine.dash(FUTURE_DASH.map((d) => d / scale));
+  // Dev mode: solid line; normal mode: scaled dash pattern
+  nodes.futureLine.dash(devMode ? [] : FUTURE_DASH.map((d) => d / scale));
 
   nodes.completedLine.points(completedPoints);
   nodes.completedLine.strokeWidth(strokeWidth);
