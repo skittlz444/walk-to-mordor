@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [preact()],
   resolve: {
     alias: {
-      // Required for react-konva compatibility (future use)
+      // Required for React-compatible libraries (e.g. Konva ecosystem)
       'react': 'preact/compat',
       'react-dom': 'preact/compat',
     },

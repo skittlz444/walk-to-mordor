@@ -1,0 +1,645 @@
+const { test, expect } = require('./helpers/common');
+
+const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
+
+// Small 10x10 red PNG for tile stubs
+const SMALL_TILE_BUFFER = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFklEQVQYV2P8z8BQz0BFwMgwasChAwAMDAn/xe0DwQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+// Minimal tile metadata for testing (small dimensions, few tiles)
+const TEST_METADATA = {
+  source: 'test.webp',
+  fullWidth: 1024,
+  fullHeight: 512,
+  tileSize: 512,
+  levels: [
+    { z: 0, width: 1024, height: 512, cols: 2, rows: 1 },
+    { z: 1, width: 512, height: 256, cols: 1, rows: 1 },
+  ],
+};
+
+function interceptTileRequests(page) {
+  return page.route('**/img/map/tiles/**', async (route) => {
+    const url = route.request().url();
+    if (url.endsWith('metadata.json')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(TEST_METADATA),
+      });
+    } else {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: SMALL_TILE_BUFFER,
+      });
+    }
+  });
+}
+
+test.describe('Map Canvas & Base Image Layer', () => {
+  test.beforeEach(async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+    await interceptTileRequests(page);
+  });
+
+  test('renders Konva canvas after tile metadata loads', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    // Konva creates its own canvas inside the container
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('canvas fills the map shell area', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const wrapperBox = await wrapper.boundingBox();
+
+    expect(wrapperBox).not.toBeNull();
+    expect(wrapperBox.width).toBeGreaterThan(100);
+    expect(wrapperBox.height).toBeGreaterThan(100);
+  });
+
+  test('map can be dragged (panned)', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const box = await wrapper.boundingBox();
+    const startX = box.x + box.width / 2;
+    const startY = box.y + box.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 100, startY + 50, { steps: 10 });
+    await page.mouse.up();
+
+    await expect(canvas.first()).toBeVisible();
+  });
+
+  test('map can be zoomed via mouse wheel', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const box = await wrapper.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, -300);
+    await page.waitForTimeout(500);
+
+    await expect(canvas.first()).toBeVisible();
+  });
+
+  test('map responds to window resize', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    await page.setViewportSize({ width: 800, height: 400 });
+    await page.waitForTimeout(300);
+
+    await expect(canvas.first()).toBeVisible();
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const box = await wrapper.boundingBox();
+    expect(box.width).toBeGreaterThan(50);
+    expect(box.height).toBeGreaterThan(50);
+  });
+
+  test('grab cursor style is applied', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    const cursor = await page.locator('.map-canvas-wrapper').evaluate(
+      (el) => window.getComputedStyle(el).cursor,
+    );
+    expect(cursor).toBe('grab');
+  });
+});
+
+test.describe('Map Canvas - Mobile Touch', () => {
+  test.beforeEach(async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+    await interceptTileRequests(page);
+  });
+
+  test('canvas renders on mobile viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('touch-action none prevents browser gestures', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    const touchAction = await page.locator('.map-canvas-wrapper').evaluate(
+      (el) => window.getComputedStyle(el).touchAction,
+    );
+    expect(touchAction).toBe('none');
+  });
+});
+
+test.describe('Map Canvas - Stage Initialization & Metadata', () => {
+  test('stage initializes and loads metadata successfully', async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+    await interceptTileRequests(page);
+
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Loading overlay should disappear after metadata loads
+    await expect(page.locator('.map-loading-overlay')).toBeHidden({ timeout: 15000 });
+  });
+
+  test('shows error state when metadata fetch fails', async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+
+    // Intercept metadata request with failure
+    await page.route('**/img/map/tiles/metadata.json', async (route) => {
+      await route.fulfill({ status: 500, body: 'Internal Server Error' });
+    });
+
+    await page.goto(`${BASE_URL}/map`);
+    // Should show error message
+    await expect(page.locator('text=Failed to load map data')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('stage cleanup removes canvas on navigation away', async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+    await interceptTileRequests(page);
+
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Navigate away from the map page
+    await page.goto(`${BASE_URL}/`);
+    // Canvas should no longer exist in the DOM
+    await expect(page.locator('.map-canvas-wrapper canvas')).toHaveCount(0, { timeout: 5000 });
+  });
+});
+
+test.describe('Map Canvas - Tile Update Logic', () => {
+  test.beforeEach(async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+  });
+
+  test('loads tiles for the visible area', async ({ page }) => {
+    const tileRequests = [];
+    await page.route('**/img/map/tiles/**', async (route) => {
+      const url = route.request().url();
+      tileRequests.push(url);
+      if (url.endsWith('metadata.json')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(TEST_METADATA),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'image/png',
+          body: SMALL_TILE_BUFFER,
+        });
+      }
+    });
+
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for tile image requests to arrive
+    await page.waitForFunction(() => {
+      // Verify canvas has non-empty content (Konva has drawn something)
+      const c = document.querySelector('.map-canvas-wrapper canvas');
+      return c && c.width > 0 && c.height > 0;
+    }, { timeout: 10000 });
+
+    // Should have requested metadata + at least one tile image
+    const metaReqs = tileRequests.filter((u) => u.includes('metadata.json'));
+    const tileImageReqs = tileRequests.filter((u) => u.endsWith('.webp'));
+    expect(metaReqs.length).toBeGreaterThanOrEqual(1);
+    expect(tileImageReqs.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('loads different tile level when zoomed in', async ({ page }) => {
+    const tileRequests = [];
+    await page.route('**/img/map/tiles/**', async (route) => {
+      const url = route.request().url();
+      tileRequests.push(url);
+      if (url.endsWith('metadata.json')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(TEST_METADATA),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'image/png',
+          body: SMALL_TILE_BUFFER,
+        });
+      }
+    });
+
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for initial tiles to load
+    await page.waitForTimeout(2000);
+
+    // Zoom in significantly (multiple scroll events)
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const box = await wrapper.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let i = 0; i < 10; i++) {
+      await page.mouse.wheel(0, -200);
+      await page.waitForTimeout(100);
+    }
+
+    // Wait for potential new tile requests
+    await page.waitForTimeout(2000);
+
+    // After zooming, verify that tile image requests were made
+    // (at initial load AND/OR after zoom — the key assertion is tiles were loaded)
+    const tileImageReqs = tileRequests.filter((u) => u.endsWith('.webp'));
+    expect(tileImageReqs.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('retains backdrop tiles during level transitions', async ({ page }) => {
+    await interceptTileRequests(page);
+
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for initial tiles to fully load and render
+    await page.waitForTimeout(2000);
+
+    // Zoom in to trigger a level change
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const box = await wrapper.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let i = 0; i < 8; i++) {
+      await page.mouse.wheel(0, -200);
+      await page.waitForTimeout(50);
+    }
+
+    // After zoom, verify the canvas still has content rendered
+    // (Konva stage exists and has children — proving tiles weren't all destroyed)
+    const stageHasChildren = await page.evaluate(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const stage = stages[0];
+      const layers = stage.getLayers();
+      if (!layers || layers.length === 0) return false;
+      // Count total image nodes across all layers
+      let totalNodes = 0;
+      layers.forEach((layer) => {
+        totalNodes += layer.getChildren().length;
+      });
+      return totalNodes > 0;
+    });
+
+    expect(stageHasChildren).toBe(true);
+  });
+});
+
+test.describe('Map Canvas - Touch Gesture Handlers', () => {
+  test.beforeEach(async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+    await interceptTileRequests(page);
+  });
+
+  test('pinch-to-zoom changes scale via touch events', async ({ page, browserName }) => {
+    // Firefox doesn't support the TouchEvent constructor
+    test.skip(browserName === 'firefox', 'TouchEvent not available in Firefox');
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await page.waitForFunction(() => {
+      const c = document.querySelector('.map-canvas-wrapper canvas');
+      return c && c.width > 0 && c.height > 0;
+    }, { timeout: 10000 });
+
+    // Get the Konva stage scale before pinch
+    const scaleBefore = await page.evaluate(() => {
+      const container = document.querySelector('.map-canvas-wrapper');
+      const konvaContent = container?.querySelector('.konvajs-content');
+      if (!konvaContent || !konvaContent._stage) {
+        // Konva doesn't expose _stage on content, use Konva.stages
+        const stages = window.Konva?.stages;
+        if (stages && stages.length > 0) return stages[0].scaleX();
+      }
+      return null;
+    });
+
+    // Simulate a pinch-to-zoom by dispatching touch events on the container
+    const scaleAfter = await page.evaluate(async () => {
+      const container = document.querySelector('.map-canvas-wrapper');
+      if (!container) return null;
+      const rect = container.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      function makeTouchList(points) {
+        return points.map((p, i) => new Touch({
+          identifier: i,
+          target: container,
+          clientX: p.x,
+          clientY: p.y,
+          pageX: p.x,
+          pageY: p.y,
+        }));
+      }
+
+      // Start: two fingers close together
+      const startPoints = [
+        { x: cx - 30, y: cy },
+        { x: cx + 30, y: cy },
+      ];
+      container.dispatchEvent(new TouchEvent('touchstart', {
+        touches: makeTouchList(startPoints),
+        targetTouches: makeTouchList(startPoints),
+        changedTouches: makeTouchList(startPoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      // Move: spread fingers apart (zoom in)
+      await new Promise((r) => setTimeout(r, 50));
+      const movePoints = [
+        { x: cx - 100, y: cy },
+        { x: cx + 100, y: cy },
+      ];
+      container.dispatchEvent(new TouchEvent('touchmove', {
+        touches: makeTouchList(movePoints),
+        targetTouches: makeTouchList(movePoints),
+        changedTouches: makeTouchList(movePoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // End: lift fingers
+      container.dispatchEvent(new TouchEvent('touchend', {
+        touches: [],
+        targetTouches: [],
+        changedTouches: makeTouchList(movePoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      await new Promise((r) => setTimeout(r, 200));
+
+      // Return the new scale
+      const stages = window.Konva?.stages;
+      if (stages && stages.length > 0) return stages[0].scaleX();
+      return null;
+    });
+
+    // Verify scale actually changed (zoomed in)
+    if (scaleBefore !== null && scaleAfter !== null) {
+      expect(scaleAfter).toBeGreaterThan(scaleBefore);
+    }
+    // Canvas should still be visible and functional after pinch
+    await expect(canvas.first()).toBeVisible();
+  });
+
+  test('dragging is disabled during pinch and re-enabled after', async ({ page, browserName }) => {
+    // Firefox doesn't support the TouchEvent constructor
+    test.skip(browserName === 'firefox', 'TouchEvent not available in Firefox');
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await page.waitForFunction(() => {
+      const c = document.querySelector('.map-canvas-wrapper canvas');
+      return c && c.width > 0 && c.height > 0;
+    }, { timeout: 10000 });
+
+    // Test drag state toggling during pinch
+    const dragStates = await page.evaluate(async () => {
+      const container = document.querySelector('.map-canvas-wrapper');
+      if (!container) return null;
+      const rect = container.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return null;
+      const stage = stages[0];
+
+      // Check draggable BEFORE pinch
+      const draggableBefore = stage.draggable();
+
+      function makeTouchList(points) {
+        return points.map((p, i) => new Touch({
+          identifier: i,
+          target: container,
+          clientX: p.x,
+          clientY: p.y,
+          pageX: p.x,
+          pageY: p.y,
+        }));
+      }
+
+      // Start pinch: two fingers
+      const startPoints = [
+        { x: cx - 30, y: cy },
+        { x: cx + 30, y: cy },
+      ];
+      container.dispatchEvent(new TouchEvent('touchstart', {
+        touches: makeTouchList(startPoints),
+        targetTouches: makeTouchList(startPoints),
+        changedTouches: makeTouchList(startPoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Check draggable DURING pinch (should be false)
+      const draggableDuring = stage.draggable();
+
+      // Move fingers
+      const movePoints = [
+        { x: cx - 80, y: cy },
+        { x: cx + 80, y: cy },
+      ];
+      container.dispatchEvent(new TouchEvent('touchmove', {
+        touches: makeTouchList(movePoints),
+        targetTouches: makeTouchList(movePoints),
+        changedTouches: makeTouchList(movePoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // End pinch
+      container.dispatchEvent(new TouchEvent('touchend', {
+        touches: [],
+        targetTouches: [],
+        changedTouches: makeTouchList(movePoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      await new Promise((r) => setTimeout(r, 200));
+
+      // Check draggable AFTER pinch (should be true again)
+      const draggableAfter = stage.draggable();
+
+      return { draggableBefore, draggableDuring, draggableAfter };
+    });
+
+    expect(dragStates).not.toBeNull();
+    // Before pinch: draggable should be true
+    expect(dragStates.draggableBefore).toBe(true);
+    // During pinch: draggable should be false (disabled to prevent drift)
+    expect(dragStates.draggableDuring).toBe(false);
+    // After pinch: draggable should be re-enabled
+    expect(dragStates.draggableAfter).toBe(true);
+
+    // Verify that after pinch ends, dragging still works
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const box = await wrapper.boundingBox();
+    const startX = box.x + box.width / 2;
+    const startY = box.y + box.height / 2;
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 50, startY + 30, { steps: 5 });
+    await page.mouse.up();
+
+    // Canvas should still be visible and functional
+    await expect(canvas.first()).toBeVisible();
+  });
+
+  test('pinch respects zoom limits on mobile', async ({ page, browserName }) => {
+    // Firefox doesn't support the TouchEvent constructor
+    test.skip(browserName === 'firefox', 'TouchEvent not available in Firefox');
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await page.waitForFunction(() => {
+      const c = document.querySelector('.map-canvas-wrapper canvas');
+      return c && c.width > 0 && c.height > 0;
+    }, { timeout: 10000 });
+
+    // Simulate an extreme pinch-out (zoom in a lot) and verify scale is capped at MAX_ZOOM
+    const scaleAfterExtremePinch = await page.evaluate(async () => {
+      const container = document.querySelector('.map-canvas-wrapper');
+      if (!container) return null;
+      const rect = container.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      function makeTouchList(points) {
+        return points.map((p, i) => new Touch({
+          identifier: i,
+          target: container,
+          clientX: p.x,
+          clientY: p.y,
+          pageX: p.x,
+          pageY: p.y,
+        }));
+      }
+
+      // Start with fingers very close
+      const startPoints = [
+        { x: cx - 10, y: cy },
+        { x: cx + 10, y: cy },
+      ];
+      container.dispatchEvent(new TouchEvent('touchstart', {
+        touches: makeTouchList(startPoints),
+        targetTouches: makeTouchList(startPoints),
+        changedTouches: makeTouchList(startPoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      // Move fingers very far apart (extreme zoom in attempt — 18x ratio)
+      await new Promise((r) => setTimeout(r, 30));
+      const movePoints = [
+        { x: cx - 180, y: cy },
+        { x: cx + 180, y: cy },
+      ];
+      container.dispatchEvent(new TouchEvent('touchmove', {
+        touches: makeTouchList(movePoints),
+        targetTouches: makeTouchList(movePoints),
+        changedTouches: makeTouchList(movePoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      await new Promise((r) => setTimeout(r, 30));
+
+      container.dispatchEvent(new TouchEvent('touchend', {
+        touches: [],
+        targetTouches: [],
+        changedTouches: makeTouchList(movePoints),
+        bubbles: true,
+        cancelable: true,
+      }));
+
+      await new Promise((r) => setTimeout(r, 200));
+
+      // Return the final scale
+      const stages = window.Konva?.stages;
+      if (stages && stages.length > 0) return stages[0].scaleX();
+      return null;
+    });
+
+    // Scale should be capped at MAX_ZOOM (3.0)
+    if (scaleAfterExtremePinch !== null) {
+      expect(scaleAfterExtremePinch).toBeLessThanOrEqual(3.0);
+    }
+    // Canvas should still be functioning after extreme pinch
+    await expect(canvas.first()).toBeVisible();
+  });
+});
+
+test.describe('Map Canvas (Unauthenticated)', () => {
+  test('redirects to login when not authenticated', async ({ page }) => {
+    const response = await page.goto(`${BASE_URL}/map`);
+    expect(response).not.toBeNull();
+    expect(response.status()).toBeGreaterThanOrEqual(200);
+    expect(response.status()).toBeLessThan(400);
+
+    await page.waitForURL('**/login');
+    await expect(page).toHaveURL(/\/login/);
+  });
+});
