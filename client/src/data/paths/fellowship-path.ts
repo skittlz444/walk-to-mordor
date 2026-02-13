@@ -86,7 +86,6 @@ export const fellowshipPath: PathNode[] = [
   // CHALLENGE 2: Rivendell -> Lothlorien
 
   // -- South along Misty Mountains --
-  { x: 4440, y: 1340, distance: null },
   { x: 4807, y: 1515, distance: 466 },         // Ford of Bruinen
   { x: 4840, y: 1575, distance: null },
   { x: 4891, y: 1665, distance: null },
@@ -158,7 +157,7 @@ export const fellowshipPath: PathNode[] = [
   { x: 5922, y: 3351, distance: null },
   { x: 5990, y: 3393, distance: null },
   { x: 6007, y: 3376, distance: null },
-  { x: 6037, y: 3369, distance: null },
+  { x: 6033, y: 3380, distance: null },
   { x: 6048, y: 3402, distance: 1421 },        // Heart of Dead Marshes
   { x: 6055, y: 3457, distance: null },
   { x: 6094, y: 3440, distance: null },
@@ -167,264 +166,114 @@ export const fellowshipPath: PathNode[] = [
   { x: 6231, y: 3499, distance: 1463 },        // Black Gate
 
   // -- Ithilien -> Shelob -> Mount Doom --
-  { x: 5940, y: 3280, distance: null },
-  { x: 5920, y: 3320, distance: null },
-  { x: 5900, y: 3360, distance: null },
-  { x: 6167, y: 3537, distance: 1499 },        // Northern edge Ithilien
-  { x: 5870, y: 3440, distance: null },
-  { x: 5862, y: 3480, distance: null },
-  { x: 5858, y: 3520, distance: 1533 },        // Henneth Annun
-  { x: 5870, y: 3560, distance: null },
-  { x: 5890, y: 3598, distance: null },
-  { x: 5910, y: 3630, distance: 1577 },        // End of forest
-  { x: 5940, y: 3650, distance: null },
-  { x: 5980, y: 3665, distance: null },
-  { x: 6030, y: 3675, distance: null },
-  { x: 6080, y: 3680, distance: 1612 },        // Shelob's Lair
-  { x: 6130, y: 3690, distance: null },
-  { x: 6190, y: 3700, distance: null },
-  { x: 6250, y: 3710, distance: 1651 },        // Stagnant pool
-  { x: 6310, y: 3720, distance: null },
-  { x: 6370, y: 3728, distance: null },
-  { x: 6430, y: 3735, distance: 1698 },        // Near Isenmouthe
-  { x: 6470, y: 3740, distance: null },
-  { x: 6510, y: 3745, distance: null },
-  { x: 6540, y: 3748, distance: null },
-  { x: 6555, y: 3750, distance: 1755 },        // Dreadful Nightfall
-  { x: 6565, y: 3751, distance: null },
+  { x: 6176, y: 3542, distance: null },
+  { x: 6155, y: 3568, distance: null },
+  { x: 6155, y: 3640, distance: 1499 },        // Northern edge Ithilien
+  { x: 6144, y: 3767, distance: 1533 },        // Henneth Annun
+  { x: 6192, y: 3923, distance: 1577 },        // End of forest
+  { x: 6239, y: 3920, distance: null },
+  { x: 6245, y: 3879, distance: 1612 },        // Shelob's Lair
+  { x: 6311, y: 3754, distance: null },
+  { x: 6318, y: 3653, distance: null },
+  { x: 6290, y: 3612, distance: null },
+  { x: 6350, y: 3588, distance: null },
+  { x: 6418, y: 3578, distance: 1698 },        // Near Isenmouthe
+  { x: 6484, y: 3576, distance: null },
+  { x: 6547, y: 3637, distance: null },
+  { x: 6553, y: 3702, distance: 1755 },        // Dreadful Nightfall
   { x: 6572, y: 3751, distance: 1779 },        // Mount Doom - Challenge 4 End
 
   // CHALLENGE 5: Mount Doom -> Minas Tirith
 
-  { x: 6560, y: 3755, distance: null },
-  { x: 6530, y: 3760, distance: null },
-  { x: 6480, y: 3765, distance: null },
-  { x: 6420, y: 3768, distance: 1798 },        // Camp along the road
-  { x: 6350, y: 3770, distance: null },
-  { x: 6280, y: 3760, distance: null },
-  { x: 6200, y: 3745, distance: null },
-  { x: 6120, y: 3720, distance: null },
-  { x: 6050, y: 3698, distance: null },
-  { x: 5990, y: 3680, distance: 1835 },        // Camp near Henneth Annun
-  { x: 5950, y: 3670, distance: 1840 },        // Continue on Southward Road
-  { x: 5900, y: 3665, distance: null },
-  { x: 5850, y: 3668, distance: null },
-  { x: 5800, y: 3672, distance: 1863 },        // Can see Amon Din due west
-  { x: 5750, y: 3680, distance: null },
-  { x: 5700, y: 3690, distance: 1886 },        // Landings of Osgiliath
-  { x: 5670, y: 3695, distance: null },
-  { x: 5640, y: 3700, distance: null },
-  { x: 5610, y: 3710, distance: 1899 },        // Minas Tirith - Challenge 5 End
+  { x: 6231, y: 3499, distance: 1798 },        // Camp along the road
+  { x: 6177, y: 3546, distance: null },
+  { x: 6185, y: 3712, distance: null },
+  { x: 6188, y: 3765, distance: 1835 },        // Camp near Henneth Annun
+  { x: 6192, y: 3839, distance: null },
+  { x: 6192, y: 3929, distance: null },
+  { x: 6120, y: 3934, distance: 1886 },        // Landings of Osgiliath
+  { x: 6057, y: 3960, distance: 1899 },        // Minas Tirith - Challenge 5 End
 
   // CHALLENGE 6: Minas Tirith -> Isengard
 
-  { x: 5580, y: 3720, distance: null },
-  { x: 5540, y: 3710, distance: null },
-  { x: 5490, y: 3695, distance: null },
-  { x: 5440, y: 3680, distance: 1949 },        // Camp N of Druadan Forest
-  { x: 5380, y: 3665, distance: null },
-  { x: 5320, y: 3650, distance: 2000 },        // Pass beacon on Nardol
-  { x: 5260, y: 3638, distance: null },
-  { x: 5200, y: 3625, distance: 2051 },        // Beacon hill of Minrimmon
-  { x: 5160, y: 3618, distance: null },
-  { x: 5120, y: 3610, distance: 2080 },        // Beacon tower of Calenhad
-  { x: 5060, y: 3595, distance: null },
-  { x: 5000, y: 3578, distance: null },
-  { x: 4940, y: 3560, distance: 2166 },        // North of road, the Entwash
-  { x: 4890, y: 3545, distance: null },
-  { x: 4845, y: 3530, distance: 2206 },        // Leave the Folde
-  { x: 4820, y: 3518, distance: null },
-  { x: 4800, y: 3500, distance: null },
-  { x: 4790, y: 3485, distance: 2260 },        // Ford the Snowbourne
-  { x: 4775, y: 3465, distance: null },
-  { x: 4755, y: 3445, distance: 2316 },        // Cross a small stream
-  { x: 4730, y: 3428, distance: null },
-  { x: 4708, y: 3415, distance: 2346 },        // Cross another small stream
-  { x: 4680, y: 3400, distance: null },
-  { x: 4650, y: 3388, distance: null },
-  { x: 4620, y: 3378, distance: 2378 },        // Helm's Deep
-  { x: 4580, y: 3365, distance: null },
-  { x: 4540, y: 3345, distance: null },
-  { x: 4500, y: 3320, distance: null },
-  { x: 4460, y: 3295, distance: null },
-  { x: 4420, y: 3270, distance: null },
-  { x: 4395, y: 3250, distance: null },
-  { x: 4380, y: 3230, distance: null },
-  { x: 4370, y: 3200, distance: null },
-  { x: 4365, y: 3170, distance: null },
-  { x: 4362, y: 3140, distance: null },
-  { x: 4360, y: 3110, distance: 2434 },        // Isengard - Challenge 6 End
+  { x: 6025, y: 3916, distance: null },
+  { x: 5850, y: 3853, distance: 1949 },        // Camp N of Druadan Forest
+  { x: 5716, y: 3812, distance: null },
+  { x: 5534, y: 3794, distance: 2124 },        // Beacon tower of Firien Wood
+  { x: 5343, y: 3754, distance: null },
+  { x: 5243, y: 3701, distance: null },
+  { x: 5115, y: 3647, distance: null },
+  { x: 4995, y: 3520, distance: 2206 },        // Leave the Folde
+  { x: 4952, y: 3509, distance: null },
+  { x: 4928, y: 3483, distance: 2260 },        // Ford the Snowbourne
+  { x: 4824, y: 3386, distance: null },
+  { x: 4719, y: 3313, distance: null },
+  { x: 4681, y: 3357, distance: 2378 },        // Helm's Deep
+  { x: 4710, y: 3306, distance: null },
+  { x: 4554, y: 3210, distance: 2410 },        // Cross the Ford of Isen
+  { x: 4561, y: 3122, distance: null },
+  { x: 4549, y: 3032, distance: 2434 },        // Isengard - Challenge 6 End
 
   // CHALLENGE 7: Isengard -> Rivendell (return north)
 
-  { x: 4350, y: 3090, distance: null },
-  { x: 4340, y: 3060, distance: null },
-  { x: 4325, y: 3030, distance: 2479 },        // Camp in Gap of Rohan
-  { x: 4310, y: 3000, distance: null },
-  { x: 4295, y: 2970, distance: 2509 },        // Camp by a small stream
-  { x: 4278, y: 2940, distance: null },
-  { x: 4260, y: 2912, distance: 2539 },        // Camp at base of Methedras
-  { x: 4245, y: 2885, distance: null },
-  { x: 4228, y: 2858, distance: 2569 },        // Roadway to Tharbad
-  { x: 4212, y: 2832, distance: null },
-  { x: 4195, y: 2808, distance: 2599 },        // Stop at a small stream
-  { x: 4178, y: 2785, distance: null },
-  { x: 4158, y: 2762, distance: 2629 },        // Enter Northern Dunland
-  { x: 4135, y: 2738, distance: null },
-  { x: 4110, y: 2712, distance: 2674 },        // Draw farther from foothills
-  { x: 4085, y: 2688, distance: null },
-  { x: 4058, y: 2662, distance: 2719 },        // Marshes of Swanfleet
-  { x: 4032, y: 2638, distance: null },
-  { x: 4008, y: 2615, distance: 2759 },        // Mists above Swanfleet
-  { x: 3985, y: 2592, distance: null },
-  { x: 3965, y: 2570, distance: 2809 },        // Ruins of Ost-en-Edhil
-  { x: 3948, y: 2548, distance: null },
-  { x: 3935, y: 2528, distance: 2839 },        // Mountains of Moria rise
-  { x: 3920, y: 2508, distance: null },
+  { x: 4577, y: 3162, distance: 2479 },        // Camp in Gap of Rohan
+  { x: 4544, y: 3208, distance: null },
+  { x: 4371, y: 3191, distance: null },
+  { x: 4325, y: 3125, distance: 2539 },        // Camp at base of Methedras
+  { x: 4227, y: 2933, distance: 2569 },        // Roadway to Tharbad
+  { x: 4110, y: 2544, distance: 2629 },        // Enter Northern Dunland
+  { x: 4210, y: 2379, distance: 2719 },        // Marshes of Swanfleet
+  { x: 4260, y: 2340, distance: 2759 },        // Mists above Swanfleet
+  { x: 4306, y: 2304, distance: 2809 },        // Ruins of Ost-en-Edhil
+  { x: 4460, y: 2233, distance: 2839 },        // Mountains of Moria rise
   { x: 4779, y: 2067, distance: 2874 },        // Warg-attack hill
-  { x: 3898, y: 2472, distance: null },
-  { x: 3890, y: 2455, distance: 2909 },        // Open country, gentle slopes
-  { x: 3882, y: 2435, distance: null },
-  { x: 3878, y: 2415, distance: 2959 },        // Camp atop Hollin Ridge
-  { x: 3875, y: 2392, distance: null },
-  { x: 3872, y: 2368, distance: 3015 },        // Descend to stream valley
-  { x: 3870, y: 2342, distance: null },
-  { x: 3868, y: 2318, distance: 3049 },        // Climb NE, marsh ends
-  { x: 3865, y: 2292, distance: null },
-  { x: 3862, y: 2268, distance: 3071 },        // Loudwater in deep valley
-  { x: 3858, y: 2240, distance: null },
-  { x: 3855, y: 2212, distance: 3099 },        // Turn slightly west of north
-  { x: 3850, y: 2180, distance: null },
-  { x: 3848, y: 2148, distance: null },
-  { x: 3850, y: 2115, distance: null },
-  { x: 3855, y: 2080, distance: null },
-  { x: 3862, y: 2045, distance: null },
-  { x: 3870, y: 2010, distance: null },
-  { x: 3880, y: 1975, distance: null },
-  { x: 3895, y: 1940, distance: null },
-  { x: 3910, y: 1905, distance: null },
-  { x: 3930, y: 1870, distance: null },
-  { x: 3955, y: 1835, distance: null },
-  { x: 3980, y: 1800, distance: null },
-  { x: 4010, y: 1765, distance: null },
-  { x: 4040, y: 1730, distance: null },
-  { x: 4075, y: 1695, distance: null },
-  { x: 4110, y: 1660, distance: null },
-  { x: 4145, y: 1625, distance: null },
-  { x: 4180, y: 1590, distance: null },
-  { x: 4215, y: 1555, distance: null },
-  { x: 4250, y: 1520, distance: null },
-  { x: 4285, y: 1485, distance: null },
-  { x: 4320, y: 1450, distance: null },
-  { x: 4355, y: 1415, distance: null },
-  { x: 4390, y: 1380, distance: null },
-  { x: 4420, y: 1355, distance: null },
+  { x: 4773, y: 1896, distance: 2959 },        // Camp atop Hollin Ridge
+  { x: 4821, y: 1811, distance: null },
+  { x: 4828, y: 1648, distance: null },
   { x: 4879, y: 1470, distance: 3127 },        // Last Homely House - Challenge 7 End
 
   // CHALLENGE 8: Rivendell -> Bag End (return via Great Road)
 
-  { x: 4440, y: 1335, distance: null },
-  { x: 4430, y: 1340, distance: 3135 },        // Reach the Ford
-  { x: 4415, y: 1345, distance: null },
-  { x: 4807, y: 1515, distance: 3156 },        // Bruinen turns south
-  { x: 4370, y: 1350, distance: null },
-  { x: 4345, y: 1348, distance: 3185 },        // Pathway to Stone Trolls
-  { x: 4318, y: 1342, distance: null },
-  { x: 4290, y: 1335, distance: 3199 },        // Cross The Last Bridge
-  { x: 4260, y: 1330, distance: null },
-  { x: 4230, y: 1328, distance: 3219 },        // Open country
-  { x: 4200, y: 1330, distance: null },
-  { x: 4170, y: 1332, distance: 3234 },        // See tops of Weather Hills
-  { x: 4140, y: 1334, distance: null },
-  { x: 4108, y: 1335, distance: 3256 },        // Weather Hills rise
-  { x: 4078, y: 1335, distance: null },
-  { x: 4050, y: 1332, distance: 3279 },        // Weathertop visible
-  { x: 4022, y: 1328, distance: null },
-  { x: 3998, y: 1322, distance: 3294 },        // Land rises toward Hills
-  { x: 3970, y: 1315, distance: null },
-  { x: 3945, y: 1310, distance: 3324 },        // Weathertop immediately north
-  { x: 3918, y: 1318, distance: null },
-  { x: 3890, y: 1328, distance: 3359 },        // SE edge Midgewater Marshes
-  { x: 3860, y: 1340, distance: null },
-  { x: 3832, y: 1352, distance: 3391 },        // Camp. Marshes farther north
-  { x: 3805, y: 1365, distance: null },
-  { x: 3778, y: 1378, distance: 3423 },        // Forsaken Inn
-  { x: 3748, y: 1392, distance: null },
-  { x: 3718, y: 1405, distance: null },
-  { x: 3688, y: 1418, distance: null },
-  { x: 3662, y: 1435, distance: 3439 },        // Bree: The Prancing Pony
-  { x: 3642, y: 1450, distance: null },
-  { x: 3622, y: 1468, distance: 3455 },        // Old Forest to the south
-  { x: 3600, y: 1485, distance: null },
-  { x: 3575, y: 1498, distance: 3479 },        // Brandywine Bridge
-  { x: 3548, y: 1508, distance: null },
-  { x: 3520, y: 1515, distance: null },
-  { x: 3490, y: 1518, distance: 3501 },        // Frogmorton
-  { x: 3460, y: 1520, distance: null },
-  { x: 3430, y: 1522, distance: null },
-  { x: 3400, y: 1525, distance: null },
-  { x: 3370, y: 1527, distance: null },
-  { x: 3340, y: 1528, distance: null },
-  { x: 3310, y: 1529, distance: null },
-  { x: 3280, y: 1529, distance: null },
-  { x: 3250, y: 1529, distance: null },
-  { x: 3220, y: 1529, distance: null },
-  { x: 3190, y: 1529, distance: null },
+  { x: 4842, y: 1515, distance: null },
+  { x: 4807, y: 1520, distance: 3135 },        // Reach the Ford
+  { x: 4694, y: 1500, distance: null },
+  { x: 4567, y: 1479, distance: 3185 },        // Pathway to Stone Trolls
+  { x: 4475, y: 1462, distance: 3199 },        // Cross The Last Bridge
+  { x: 4316, y: 1458, distance: null },
+  { x: 4110, y: 1527, distance: 3294 },        // Land rises toward Hills
+  { x: 4031, y: 1546, distance: 3324 },        // Weathertop immediately north
+  { x: 3876, y: 1539, distance: 3359 },        // SE edge Midgewater Marshes
+  { x: 3830, y: 1538, distance: 3391 },        // Camp. Marshes farther north
+  { x: 3726, y: 1546, distance: null },
+  { x: 3683, y: 1563, distance: 3439 },        // Bree: The Prancing Pony
+  { x: 3629, y: 1504, distance: null },
+  { x: 3595, y: 1484, distance: 3455 },        // Old Forest to the south
+  { x: 3364, y: 1497, distance: 3479 },        // Brandywine Bridge
+  { x: 3298, y: 1518, distance: null },
+  { x: 3231, y: 1547, distance: null },
   { x: 3165, y: 1529, distance: 3524 },        // Bag End - Challenge 8 End
 
   // CHALLENGE 9: Bag End -> Grey Havens -> Bag End
 
   // -- Bag End -> West to Grey Havens --
-  { x: 3150, y: 1530, distance: null },
-  { x: 3130, y: 1530, distance: 3538 },        // Reach Stock Road
-  { x: 3108, y: 1530, distance: null },
-  { x: 3085, y: 1528, distance: 3561 },        // Road splits
-  { x: 3060, y: 1525, distance: null },
-  { x: 3035, y: 1520, distance: null },
-  { x: 3010, y: 1515, distance: 3588 },        // Green Hill Country
-  { x: 2985, y: 1510, distance: null },
-  { x: 2960, y: 1505, distance: null },
-  { x: 2935, y: 1500, distance: 3614 },        // Camp in the open lands
-  { x: 2912, y: 1495, distance: null },
-  { x: 2890, y: 1490, distance: 3626 },        // South of Tuckburrow
-  { x: 2868, y: 1485, distance: null },
-  { x: 2845, y: 1478, distance: 3639 },        // Beyond the Downs
-  { x: 2820, y: 1470, distance: null },
-  { x: 2795, y: 1462, distance: 3669 },        // Crest of the Far Downs
-  { x: 2770, y: 1455, distance: null },
-  { x: 2745, y: 1448, distance: 3684 },        // Tower Hills on horizon
-  { x: 2720, y: 1440, distance: null },
-  { x: 2695, y: 1432, distance: 3704 },        // Land rises toward Tower Hills
-  { x: 2668, y: 1425, distance: null },
-  { x: 2640, y: 1418, distance: 3724 },        // Great East Road
-  { x: 2612, y: 1410, distance: null },
-  { x: 2585, y: 1402, distance: 3744 },        // Road reaches the Towers
-  { x: 2558, y: 1395, distance: null },
-  { x: 2530, y: 1388, distance: 3764 },        // Land drops toward the Gulf
-  { x: 2502, y: 1382, distance: null },
-  { x: 2475, y: 1375, distance: null },
-  { x: 2450, y: 1368, distance: 3784 },        // Grey Havens - Final Farewell
+  { x: 3142, y: 1564, distance: null },
+  { x: 3091, y: 1567, distance: 3561 },        // Road splits
+  { x: 3060, y: 1616, distance: null },
+  { x: 2974, y: 1599, distance: 3639 },        // Beyond the Downs
+  { x: 2910, y: 1585, distance: 3669 },        // Crest of the Far Downs
+  { x: 2850, y: 1605, distance: 3704 },        // Land rises toward Tower Hills
+  { x: 2743, y: 1550, distance: 3744 },        // Road reaches the Towers
+  { x: 2675, y: 1581, distance: 3764 },        // Land drops toward the Gulf
+  { x: 2551, y: 1524, distance: 3784 },        // Grey Havens - Final Farewell
 
   // -- Return: Grey Havens -> Bag End --
-  { x: 2478, y: 1375, distance: null },
-  { x: 2510, y: 1382, distance: 3814 },        // Camp at Tower Hills
-  { x: 2542, y: 1390, distance: null },
-  { x: 2575, y: 1398, distance: 3839 },        // Foot of the Hills
-  { x: 2608, y: 1405, distance: null },
-  { x: 2640, y: 1412, distance: 3864 },        // See Far Downs ahead
-  { x: 2672, y: 1420, distance: null },
-  { x: 2705, y: 1430, distance: 3884 },        // Western face of Far Downs
-  { x: 2738, y: 1440, distance: null },
-  { x: 2770, y: 1448, distance: 3904 },        // Camp next to the road
-  { x: 2800, y: 1455, distance: null },
-  { x: 2830, y: 1462, distance: 3919 },        // See grazing lands
-  { x: 2862, y: 1470, distance: null },
-  { x: 2895, y: 1478, distance: 3934 },        // Michel Delving
-  { x: 2930, y: 1488, distance: null },
-  { x: 2968, y: 1498, distance: null },
-  { x: 3008, y: 1508, distance: 3969 },        // Waymeet
-  { x: 3048, y: 1518, distance: null },
-  { x: 3088, y: 1525, distance: null },
-  { x: 3128, y: 1528, distance: null },
+  { x: 2675, y: 1581, distance: null },
+  { x: 2743, y: 1550, distance: 3814 },        // Camp at Tower Hills
+  { x: 2850, y: 1605, distance: 3864 },        // See Far Downs ahead
+  { x: 2910, y: 1585, distance: null },
+  { x: 2974, y: 1599, distance: 3884 },        // Western face of Far Downs
+  { x: 3060, y: 1616, distance: 3919 },        // See grazing lands
+  { x: 3091, y: 1567, distance: 3934 },        // Michel Delving
+  { x: 3142, y: 1564, distance: null },
   { x: 3165, y: 1529, distance: 3991 },        // Sam arrives at Bag End - THE END
 ];
