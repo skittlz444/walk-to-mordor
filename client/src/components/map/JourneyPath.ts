@@ -23,7 +23,7 @@ const MIN_STROKE = 2;
 const MAX_STROKE = 10;
 
 /** Fraction of the total path length to show as future (10%) */
-const FUTURE_FRACTION = 0.10;
+const FUTURE_FRACTION = 0.20;
 
 // Visual styles
 const FUTURE_COLOR = '#6B4226';      // warm brown, more visible

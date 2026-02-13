@@ -8,7 +8,7 @@ import {
 } from '../components/map/JourneyPath';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
-const PROGRESS_API_URL = '/api/progress';
+const PROGRESS_API_URL = '/api/total-distance';
 const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.1;
 const MAX_ZOOM = 3.0;
