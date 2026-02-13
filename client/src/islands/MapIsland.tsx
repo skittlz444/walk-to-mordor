@@ -461,14 +461,15 @@ export function MapIsland() {
         return res.json() as Promise<TileMetadata>;
       });
 
-    const progressPromise = fetch(PROGRESS_API_URL, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('sessionToken') || ''}`,
-      },
-    })
-      .then((res) => (res.ok ? res.json() : { totalDistance: 0 }))
-      .then((data: { totalDistance: number }) => data.totalDistance * KM_TO_MILES)
-      .catch(() => 0);
+    const token = localStorage.getItem('sessionToken');
+    const progressPromise = token
+      ? fetch(PROGRESS_API_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => (res.ok ? res.json() : { totalDistance: 0 }))
+          .then((data: { totalDistance: number }) => data.totalDistance * KM_TO_MILES)
+          .catch(() => 0)
+      : Promise.resolve(0);
 
     Promise.all([metaPromise, progressPromise])
       .then(([data, distMiles]) => {

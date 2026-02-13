@@ -164,8 +164,14 @@ export const fellowshipPath: PathNode[] = [
   { x: 4475, y: 2555, distance: 754 },         // Turn west, Crebain return
   { x: 4455, y: 2575, distance: null },
   { x: 4435, y: 2590, distance: 778 },         // Warg attack hill
-  { x: 4415, y: 2600, distance: null },
-  { x: 4495, y: 2310, distance: null },
+  { x: 4420, y: 2580, distance: null },        // heading west toward Moria
+  { x: 4410, y: 2560, distance: null },        // approaching Moria walls
+  { x: 4420, y: 2530, distance: null },        // along cliff face
+  { x: 4440, y: 2500, distance: null },        // approaching West-gate
+  { x: 4460, y: 2470, distance: null },        // nearing the Doors
+  { x: 4470, y: 2430, distance: null },        // at the Walls of Moria
+  { x: 4475, y: 2380, distance: null },        // along the wall
+  { x: 4478, y: 2330, distance: null },        // approaching gates
   { x: 4480, y: 2280, distance: 798 },         // Gates of Moria
 
   // -- Through Moria -> Lothlorien --
