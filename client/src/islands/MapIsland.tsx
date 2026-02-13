@@ -124,6 +124,10 @@ function getVisibleTiles(
   const rowStart = Math.max(0, Math.floor(vpTop / levelTileInMapCoords));
   const rowEnd = Math.min(level.rows - 1, Math.floor(vpBottom / levelTileInMapCoords));
 
+  // Small overlap in map coordinates to eliminate sub-pixel seams
+  // caused by floating-point rounding during canvas scale transforms.
+  const overlap = 1 / levelScale;
+
   const tiles: VisibleTile[] = [];
   for (let row = rowStart; row <= rowEnd; row++) {
     for (let col = colStart; col <= colEnd; col++) {
@@ -131,8 +135,8 @@ function getVisibleTiles(
       const mapY = row * levelTileInMapCoords;
       const tileW = Math.min(tileSize, level.width - col * tileSize);
       const tileH = Math.min(tileSize, level.height - row * tileSize);
-      const mapTileW = tileW / levelScale;
-      const mapTileH = tileH / levelScale;
+      const mapTileW = tileW / levelScale + overlap;
+      const mapTileH = tileH / levelScale + overlap;
 
       tiles.push({
         key: `${level.z}_${col}_${row}`,
