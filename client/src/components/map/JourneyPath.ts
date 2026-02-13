@@ -3,10 +3,10 @@
  *
  * Uses Konva's imperative API (react-konva is incompatible with preact/compat).
  * Two main Line shapes are drawn:
- *   1. Future path  – dashed line showing next 8% of journey ahead
+ *   1. Future path  – dashed line showing next 7% of journey ahead
  *   2. Completed path – solid dark red line showing walked distance
  *
- * The future tail from 8% to 12% is rendered as additional short dashed
+ * The future tail from 7% to 11% is rendered as additional short dashed
  * segments with decreasing opacity to create a smooth fade-out.
  *
  * Both lines use `listening: false` for performance (no hit detection needed).
@@ -108,7 +108,7 @@ function slicePathByDistance(points: number[], startPx: number, endPx: number): 
   return result;
 }
 
-/** Build fade segments between the 8% and 12% future path distances. */
+/** Build fade segments between the 7% and 11% future path distances. */
 function buildFadeSegments(futurePoints: number[]): number[][] {
   const fadeStartPx = fullPathPixelLength * FUTURE_SOLID_FRACTION;
   const fadeEndPx = fullPathPixelLength * FUTURE_FADE_END_FRACTION;
@@ -154,20 +154,21 @@ export function createJourneyPath(
     userDistance,
   );
 
-  // In dev mode, show entire path as solid; otherwise use 8% + 8-12% fade tail
+  // In dev mode, show entire path as solid; otherwise use 7% + 7-11% fade tail
   const devMode = !!window.__MAP_DEV_LOG;
   const solidFuturePixels = fullPathPixelLength * FUTURE_SOLID_FRACTION;
   const displayedFuture = devMode ? futurePoints : truncateFuturePath(futurePoints, solidFuturePixels);
   const fadeSegments = devMode ? [] : buildFadeSegments(futurePoints);
 
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
+  const scaledDash = FUTURE_DASH.map((d) => d / scale);
 
   const futureLine = new Konva.Line({
     points: displayedFuture,
     stroke: FUTURE_COLOR,
     strokeWidth,
     opacity: FUTURE_OPACITY,
-    dash: devMode ? [] : FUTURE_DASH,
+    dash: devMode ? [] : scaledDash,
     lineCap: LINE_CAP,
     lineJoin: LINE_JOIN,
     listening: false,
@@ -181,7 +182,7 @@ export function createJourneyPath(
       stroke: FUTURE_COLOR,
       strokeWidth,
       opacity,
-      dash: FUTURE_DASH,
+      dash: scaledDash,
       lineCap: LINE_CAP,
       lineJoin: LINE_JOIN,
       listening: false,
@@ -227,7 +228,7 @@ export function updateJourneyPath(
     userDistance,
   );
 
-  // In dev mode, show entire path as solid; otherwise use 8% + 8-12% fade tail
+  // In dev mode, show entire path as solid; otherwise use 7% + 7-11% fade tail
   const devMode = !!window.__MAP_DEV_LOG;
   const solidFuturePixels = fullPathPixelLength * FUTURE_SOLID_FRACTION;
   const displayedFuture = devMode ? futurePoints : truncateFuturePath(futurePoints, solidFuturePixels);
@@ -240,7 +241,7 @@ export function updateJourneyPath(
   // Dev mode: solid line; normal mode: scaled dash pattern
   nodes.futureLine.dash(devMode ? [] : FUTURE_DASH.map((d) => d / scale));
   nodes.futureLine.opacity(devMode ? 1.0 : FUTURE_OPACITY);
-  nodes.futureLine.stroke(devMode? '#ff0000' : FUTURE_COLOR); // bright red in dev mode
+  nodes.futureLine.stroke(devMode ? '#ff0000' : FUTURE_COLOR); // bright red in dev mode
 
   for (let i = 0; i < nodes.futureFadeLines.length; i++) {
     const fadeLine = nodes.futureFadeLines[i];
