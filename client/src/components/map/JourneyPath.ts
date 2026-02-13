@@ -32,12 +32,12 @@ const BASE_STROKE = 6;
 const MIN_STROKE = 2;
 const MAX_STROKE = 10;
 
-/** Fraction of the total path length to show as future (10%) */
-const FUTURE_FRACTION = 0.20;
+/** Fraction of the total path length to show as future (8%) */
+const FUTURE_FRACTION = 0.08;
 
 // Visual styles
 const FUTURE_COLOR = '#6B4226';      // warm brown, more visible
-const FUTURE_OPACITY = 0.65;
+const FUTURE_OPACITY = 0.85;
 const FUTURE_DASH = [12, 8];         // dash pattern (in map-space pixels)
 const COMPLETED_COLOR = '#8B1A1A';   // dark red
 const COMPLETED_OPACITY = 1.0;
