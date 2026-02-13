@@ -16,7 +16,7 @@ import { fellowshipPath } from '../data/paths/fellowship-path';
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
 const KM_TO_MILES = 0.621371;
-const SCALE_BY = 1.1;
+const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
 const DEFAULT_CENTER_ZOOM = 1.8;

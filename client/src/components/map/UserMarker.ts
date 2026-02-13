@@ -4,7 +4,7 @@
  * Uses Konva's imperative API (react-konva is incompatible with preact/compat).
  * The marker is a gold ring shape (fallback for the One Ring icon) that:
  *   - Maintains constant visual size via inverse scaling
- *   - Shows a tooltip on hover/tap with "Current Location: X mi"
+ *   - Shows a tooltip on hover/tap with "Current Location: X km"
  *   - Animates smoothly to new positions along the path
  *
  * When the One Ring icon (public/img/one-ring.png) is available, it loads
@@ -24,6 +24,9 @@ const RING_STROKE_COLOR = '#FFFFFF'; // White outer ring
 const HALO_COLOR = '#DAA520';        // Gold halo
 const TOOLTIP_BG = '#1a1a2e';
 const TOOLTIP_TEXT_COLOR = '#e0e0e0';
+
+/** Conversion factor: miles to km */
+const MILES_TO_KM = 1.60934;
 
 /** Animation duration for position transitions in milliseconds */
 const ANIMATION_DURATION_MS = 400;
@@ -166,7 +169,7 @@ export function createUserMarker(
   );
 
   const tooltipText = new Konva.Text({
-    text: `Current Location: ${Math.round(distanceMiles)} mi`,
+    text: `Current Location: ${Math.round(distanceMiles * MILES_TO_KM)} km`,
     fontFamily: 'system-ui, sans-serif',
     fontSize: 12,
     padding: 6,
@@ -232,7 +235,7 @@ export function createUserMarker(
     },
 
     setDistance(distanceMiles: number) {
-      tooltipText.text(`Current Location: ${Math.round(distanceMiles)} mi`);
+      tooltipText.text(`Current Location: ${Math.round(distanceMiles * MILES_TO_KM)} km`);
     },
 
     animateAlongPoints(points: Point[], onComplete?: () => void) {
