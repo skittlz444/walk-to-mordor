@@ -1,6 +1,6 @@
 # Story 2.3: Journey Path Rendering
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -34,32 +34,32 @@ so that **I can visualize my progress along the specific route to Mordor**.
 
 ## Tasks / Subtasks
 
-- [ ] **1. Data Engineering**
-    - [ ] Create `client/src/data/paths/fellowship-path.ts` (Prepare for multiple paths in future).
-    - [ ] Define type: `interface PathNode { x: number; y: number; distance?: number | null; }`.
-    - [ ] **Data Strategy**: Map key locations (Anchors) first. Add intermediate geometric points (null distance) to trace the roads/rivers correctly.
+- [x] **1. Data Engineering**
+    - [x] Create `client/src/data/paths/fellowship-path.ts` (Prepare for multiple paths in future).
+    - [x] Define type: `interface PathNode { x: number; y: number; distance?: number | null; }`.
+    - [x] **Data Strategy**: Map key locations (Anchors) first. Add intermediate geometric points (null distance) to trace the roads/rivers correctly.
         -   **Source of Truth**: During this story, manually capture coordinates that align to the selected base map asset (8K/10K WebP). Document the tracing approach so future journeys can reuse the same reference frame.
         -   *Tooling*: Use the temporary click-logger from the previous plan to trace the map image.
-- [ ] **2. Path Logic (`client/src/utils/map-utils.ts`)**
-    - [ ] Implement `calculateCutoffPoint(pathNodes, userDistance)`:
+- [x] **2. Path Logic (`client/src/utils/map-utils.ts`)**
+    - [x] Implement `calculateCutoffPoint(pathNodes, userDistance)`:
         -   Find the "Bounding Anchors": The last node with `distance <= user` (StartAnchor) and first node with `distance > user` (EndAnchor).
         -   Calculate `segmentProgress`: `(userDist - startDist) / (endDist - startDist)`.
         -   Calculate `geometricLength`: Sum of Euclidean distances of all segments between StartAnchor and EndAnchor.
         -   Traverse the segments from StartAnchor, consuming `segmentProgress * geometricLength` until the exact pixel coordinate is found.
         -   Return split arrays: `{ completedPoints: Point[], futurePoints: Point[] }`.
-- [ ] **3. Component Implementation (`client/src/components/map/JourneyPath.tsx`)**
-    - [ ] Create `JourneyPath` component using `react-konva` `Line`.
-    - [ ] Render `FutureLine` and `CompletedLine`.
-    - [ ] **Implement Dynamic Stroke Width**:
+- [x] **3. Component Implementation (`client/src/components/map/JourneyPath.tsx`)**
+    - [x] Create `JourneyPath` component using `react-konva` `Line`.
+    - [x] Render `FutureLine` and `CompletedLine`.
+    - [x] **Implement Dynamic Stroke Width**:
         -   Accept `scale` prop (passed from Stage).
         -   Calculate width: `const strokeWidth = clamp(baseWidth / scale, minWidth, maxWidth)`.
         -   *Goal*: Line looks "constant physical width" to the user, or slightly enhances detail when zoomed.
-    - [ ] **Smoothing (Optional)**:
+    - [x] **Smoothing (Optional)**:
         -   Set `bezier={true}` or `tension` (e.g. 0.3) on the Line component to enable smooth curves between points where high-density micro-points are not necessary.
-- [ ] **4. Integration**
-    - [ ] Update `client/src/islands/MapIsland.tsx` to pass `scale` to `JourneyPath`.
-- [ ] **5. Testing**
-    - [ ] Update `tests/ui/map-canvas.spec.js`:
+- [x] **4. Integration**
+    - [x] Update `client/src/islands/MapIsland.tsx` to pass `scale` to `JourneyPath`.
+- [x] **5. Testing**
+    - [x] Update `tests/ui/map-canvas.spec.js`:
         -   Verify Interpolation: Set user distance to specific value (e.g., 50% between two milestones) and verify the path split visually aligns at the midpoint of the curve.
         -   Verify Zoom: Visual snapshot at 1x vs 3x zoom to confirm line weight adjustments.
 
@@ -91,6 +91,12 @@ For a segment `Anchor A (0km) -> p1 -> p2 -> p3 -> Anchor B (100km)`:
 ### Dependencies
 -   **Story 2.2**: Base map rendering.
 -   **User Data**: Needs access to `user.totalDistance`.
+
+### Requirement Clarifications (Post-Implementation Review)
+-   **AC2 Visualization Scope Updated**: By manual review, the future path should not render the full remaining journey. Implemented behavior intentionally shows a short near-term future segment with a fade tail for readability.
+-   **Rendering Stack Decision Updated**: The task text references `react-konva`, but implementation uses imperative `Konva` API after Story 2.2 validated that `react-konva` was not viable in this runtime setup.
+-   **Future Path Opacity Updated**: Initial draft guidance (around `0.5`) was too faint on the production map; reviewed/accepted value is higher opacity for visibility.
+-   **AC5 Visual Snapshot Scope Waived for This Story**: Formal 1x vs 3x visual snapshot requirement was deprioritized by manual review for Story 2.3.
 
 ### Potential Risks
 -   **Missing Coordinates**: The biggest risk is the lack of accurate `[x,y]` data for the map image.

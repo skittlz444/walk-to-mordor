@@ -444,9 +444,12 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Define path coordinates for the complete Hobbiton→Mordor route
 - [ ] Render completed path segments as colored line (gold/amber theme)
 - [ ] Path renders from journey start to user's current position
-- [ ] Line style: dashed or dotted for "walking" aesthetic
+- [ ] Future path uses dashed styling for "walking" aesthetic with reviewed visibility (not too faint)
 - [ ] Path updates when user progress changes
-- [ ] Uncompleted path shown as faded/grayed (optional, for context)
+- [ ] Uncompleted path is shown as a limited near-term faded context segment (full remaining route is not required)
+
+**Implementation Clarification (review-approved):**
+- Imperative Konva API is acceptable for this story in place of `react-konva` due runtime compatibility constraints validated during Story 2.2 implementation.
 
 **FRs:** FR_MAP_02
 

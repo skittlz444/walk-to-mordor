@@ -643,3 +643,206 @@ test.describe('Map Canvas (Unauthenticated)', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 });
+
+test.describe('Map Canvas - Journey Path Rendering', () => {
+  test.beforeEach(async ({ page, authToken }) => {
+    await page.addInitScript((token) => {
+      localStorage.setItem('sessionToken', token);
+    }, authToken);
+    await interceptTileRequests(page);
+  });
+
+  test('renders journey path lines on the map', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for path layer to have Line shapes
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
+    }, { timeout: 10000 });
+
+    // Verify the Konva stage has a path layer with Line shapes
+    const pathInfo = await page.evaluate(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return null;
+      const stage = stages[0];
+      const layers = stage.getLayers();
+      if (layers.length < 2) return null;
+
+      // Path layer is the second layer
+      const pathLayer = layers[1];
+      const children = pathLayer.getChildren();
+      const lineCount = children.filter(c => c.getClassName() === 'Line').length;
+
+      return { layerCount: layers.length, lineCount };
+    });
+
+    expect(pathInfo).not.toBeNull();
+    expect(pathInfo.layerCount).toBeGreaterThanOrEqual(2);
+    // Should have at least 2 lines: future + completed (plus optional fade segments)
+    expect(pathInfo.lineCount).toBeGreaterThanOrEqual(2);
+  });
+
+  test('future path line has dashed style with reduced opacity', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for path lines to be created
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
+    }, { timeout: 10000 });
+
+    const futureLineInfo = await page.evaluate(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return null;
+      const stage = stages[0];
+      const layers = stage.getLayers();
+      if (layers.length < 2) return null;
+
+      const pathLayer = layers[1];
+      const lines = pathLayer.getChildren().filter(c => c.getClassName() === 'Line');
+      // Future line is added first (index 0)
+      const futureLine = lines[0];
+      if (!futureLine) return null;
+
+      return {
+        opacity: futureLine.opacity(),
+        dash: futureLine.dash(),
+        stroke: futureLine.stroke(),
+        hasPoints: futureLine.points().length > 0,
+      };
+    });
+
+    expect(futureLineInfo).not.toBeNull();
+    expect(futureLineInfo.opacity).toBeLessThan(1.0);
+    expect(futureLineInfo.dash).not.toBeNull();
+    expect(futureLineInfo.dash.length).toBeGreaterThan(0);
+    expect(futureLineInfo.hasPoints).toBe(true);
+  });
+
+  test('path stroke width adjusts with zoom level', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for path lines to be created
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
+    }, { timeout: 10000 });
+
+    // Get initial stroke width
+    const strokeBefore = await page.evaluate(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return null;
+      const pathLayer = stages[0].getLayers()[1];
+      if (!pathLayer) return null;
+      const lines = pathLayer.getChildren().filter(c => c.getClassName() === 'Line');
+      return lines[0]?.strokeWidth() ?? null;
+    });
+
+    // Zoom in via mouse wheel
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const box = await wrapper.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let i = 0; i < 8; i++) {
+      await page.mouse.wheel(0, -200);
+      await page.waitForTimeout(100);
+    }
+
+    // Wait for zoom scale to have changed
+    await page.waitForFunction((prevStroke) => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const pathLayer = stages[0].getLayers()[1];
+      if (!pathLayer) return false;
+      const lines = pathLayer.getChildren().filter(c => c.getClassName() === 'Line');
+      const currentStroke = lines[0]?.strokeWidth();
+      return currentStroke !== undefined && currentStroke !== prevStroke;
+    }, strokeBefore, { timeout: 5000 });
+
+    // Get stroke width after zoom
+    const strokeAfter = await page.evaluate(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return null;
+      const pathLayer = stages[0].getLayers()[1];
+      if (!pathLayer) return null;
+      const lines = pathLayer.getChildren().filter(c => c.getClassName() === 'Line');
+      return lines[0]?.strokeWidth() ?? null;
+    });
+
+    // Stroke width should change (decrease) when zoomed in
+    expect(strokeBefore).not.toBeNull();
+    expect(strokeAfter).not.toBeNull();
+    if (strokeBefore !== null && strokeAfter !== null) {
+      expect(strokeAfter).not.toBe(strokeBefore);
+    }
+  });
+
+  test('path lines use listening false for performance', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for path lines to be created
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
+    }, { timeout: 10000 });
+
+    const listeningState = await page.evaluate(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return null;
+      const pathLayer = stages[0].getLayers()[1];
+      if (!pathLayer) return null;
+      const lines = pathLayer.getChildren().filter(c => c.getClassName() === 'Line');
+      return lines.map(l => l.listening());
+    });
+
+    expect(listeningState).not.toBeNull();
+    // All path lines (future/completed and optional fade segments) should be non-listening
+    expect(Array.isArray(listeningState)).toBe(true);
+    expect(listeningState.length).toBeGreaterThanOrEqual(2);
+    expect(listeningState.every((v) => v === false)).toBe(true);
+  });
+
+  test('path layer is non-listening for performance', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    const canvas = page.locator('.map-canvas-wrapper canvas');
+    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+
+    // Wait for path lines to be created
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
+    }, { timeout: 10000 });
+
+    const layerListening = await page.evaluate(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return null;
+      const pathLayer = stages[0].getLayers()[1];
+      return pathLayer?.listening() ?? null;
+    });
+
+    expect(layerListening).toBe(false);
+  });
+});

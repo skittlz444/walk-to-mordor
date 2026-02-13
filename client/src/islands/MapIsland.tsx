@@ -1,10 +1,19 @@
 import { useEffect, useRef, useCallback } from 'preact/hooks';
 import { useSignal } from '@preact/signals';
 import Konva from 'konva';
+import {
+  createJourneyPath,
+  updateJourneyPath,
+  type JourneyPathNodes,
+} from '../components/map/JourneyPath';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
+const PROGRESS_API_URL = '/api/total-distance';
+const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.1;
 const MAX_ZOOM = 3.0;
+
+/** Dev mode: set window.__MAP_DEV_LOG = true in console to log coordinates on click */
 
 interface TileLevel {
   z: number;
@@ -178,6 +187,8 @@ export function MapIsland() {
   const pendingTiles = useRef<Map<string, Konva.Rect>>(new Map());
   const currentLevelZ = useRef(-1);
   const metaRef = useRef<TileMetadata | null>(null);
+  const pathLayerRef = useRef<Konva.Layer | null>(null);
+  const pathNodesRef = useRef<JourneyPathNodes | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -185,6 +196,8 @@ export function MapIsland() {
   const minScaleVal = useSignal(0.5);
   const loading = useSignal(true);
   const error = useSignal(false);
+  // User's walked distance in miles, fetched from /api/progress on init.
+  const userDistance = useSignal(0);
 
   const updateTiles = useCallback(() => {
     const meta = metaRef.current;
@@ -325,6 +338,12 @@ export function MapIsland() {
     stage.scale({ x: currentScale.value, y: currentScale.value });
     stage.batchDraw();
     updateTiles();
+
+    // Update journey path stroke widths for current zoom
+    if (pathNodesRef.current) {
+      updateJourneyPath(pathNodesRef.current, userDistance.value, currentScale.value);
+      pathLayerRef.current?.batchDraw();
+    }
   }, [updateTiles]);
 
   // Initialize Konva stage and fetch metadata
@@ -345,8 +364,24 @@ export function MapIsland() {
     const layer = new Konva.Layer();
     stage.add(layer);
 
+    // Separate layer for the journey path (renders on top of tiles)
+    const pathLayer = new Konva.Layer({ listening: false });
+    stage.add(pathLayer);
+
     stageRef.current = stage;
     layerRef.current = layer;
+    pathLayerRef.current = pathLayer;
+
+    // Dev tool: log map coordinates on click when enabled
+    // Enable in browser console: window.__MAP_DEV_LOG = true
+    stage.on('click tap', () => {
+      if (!window.__MAP_DEV_LOG) return;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const mapX = Math.round((pointer.x - position.value.x) / currentScale.value);
+      const mapY = Math.round((pointer.y - position.value.y) / currentScale.value);
+      console.log(`[MapDev] Click at map coordinates: { x: ${mapX}, y: ${mapY} }`);
+    });
 
     // Drag bounds
     stage.dragBoundFunc((pos: { x: number; y: number }) => {
@@ -414,14 +449,28 @@ export function MapIsland() {
       applyTransform();
     });
 
-    // Fetch metadata
-    fetch(TILES_META_URL)
+    // Fetch metadata and user progress in parallel
+    const metaPromise = fetch(TILES_META_URL)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: TileMetadata) => {
+        return res.json() as Promise<TileMetadata>;
+      });
+
+    const token = localStorage.getItem('sessionToken');
+    const progressPromise = token
+      ? fetch(PROGRESS_API_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => (res.ok ? res.json() : { totalDistance: 0 }))
+          .then((data: { totalDistance: number }) => data.totalDistance * KM_TO_MILES)
+          .catch(() => 0)
+      : Promise.resolve(0);
+
+    Promise.all([metaPromise, progressPromise])
+      .then(([data, distMiles]) => {
         metaRef.current = data;
+        userDistance.value = distMiles;
+
         const min = computeMinScale(size, data.fullWidth, data.fullHeight);
         minScaleVal.value = min;
         currentScale.value = min;
@@ -434,6 +483,14 @@ export function MapIsland() {
         };
 
         loading.value = false;
+
+        // Create journey path on the path layer
+        pathNodesRef.current = createJourneyPath(
+          pathLayer,
+          userDistance.value,
+          min,
+        );
+
         applyTransform();
       })
       .catch(() => {
@@ -540,6 +597,8 @@ export function MapIsland() {
       stage.destroy();
       stageRef.current = null;
       layerRef.current = null;
+      pathLayerRef.current = null;
+      pathNodesRef.current = null;
       renderedTiles.current.clear();
       pendingTiles.current.clear();
     };

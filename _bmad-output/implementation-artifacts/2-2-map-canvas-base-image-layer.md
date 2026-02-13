@@ -1,6 +1,6 @@
 # Story 2.2: Map Canvas & Base Image Layer
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -38,35 +38,35 @@ so that **I can explore the world and see where my journey takes place**.
 
 ## Tasks / Subtasks
 
-- [ ] **1. Assets & Setup**
-    - [ ] **Use Existing Directory**: `public/img/map/` (Assets already converted).
-    - [ ] **Select Map Image**: Two high-res candidates are available in `public/img/map/*.webp` (8K and 10K).
-        - [ ] Load one of these into the component.
-        - [ ] *Decision Deferred*: Choose either based on visual preference during implementation.
-    - [ ] Ensure `konva` and `react-konva` are installed (should be from Story 2.1).
-- [ ] **2. Component Implementation (`MapIsland.tsx`)**
-    - [ ] Import `Stage`, `Layer`, `Image` from `react-konva`.
-    - [ ] Implement `useMapImage` hook to load the image asset.
-    - [ ] **Render Stage**: Set width/height based on container parent or window.
-    - [ ] **Render Layer**: Add `Image` component with the map asset.
-- [ ] **3. Interaction Logic**
-    - [ ] **Pan**: Enable `draggable` on the Main Layer (or a Group containing the map).
-        - [ ] Add `dragBoundFunc` to restrict panning within map edges.
-    - [ ] **Zoom**: Add `onWheel` event listener to Stage.
-        - [ ] Implement calculated scaling logic (scale by factor ~1.1).
-        - [ ] Adjust position to zoom towards pointer.
-    - [ ] **Touch Zoom**: Add `onTouchMove` / `onTouchEnd` logic for 2-finger pinch calculation (calculate distance delta between touches).
-- [ ] **4. Testing**
-    - [ ] Create `tests/ui/map-canvas.spec.js`:
-        - [ ] Load Map Page.
-        - [ ] Locate `canvas` element.
-        - [ ] **Visual**: Take snapshot of initial load.
-        - [ ] **Action**: Simulate drag (mouse move).
-        - [ ] **Visual**: Take snapshot after drag (verify move).
-        - [ ] **Action**: Simulate Scroll (zoom).
-        - [ ] **Visual**: Take snapshot after zoom (verify scale change).
-        - [ ] **Touch**: On a mobile viewport, simulate two-finger pinch/expand gestures and ensure scale + bounds respect the same constraints.
-        - [ ] **Touch**: Simulate single-finger drag on mobile and verify kinetic panning doesn’t trigger browser back/forward gestures.
+- [x] **1. Assets & Setup**
+    - [x] **Use Existing Directory**: `public/img/map/` (Assets already converted).
+    - [x] **Select Map Image**: Two high-res candidates are available in `public/img/map/*.webp` (8K and 10K).
+        - [x] Load one of these into the component.
+        - [x] *Decision Deferred*: Choose either based on visual preference during implementation.
+    - [x] Ensure `konva` and `react-konva` are installed (should be from Story 2.1).
+- [x] **2. Component Implementation (`MapIsland.tsx`)**
+    - [x] Import `Stage`, `Layer`, `Image` from `react-konva`.
+    - [x] Implement `useMapImage` hook to load the image asset.
+    - [x] **Render Stage**: Set width/height based on container parent or window.
+    - [x] **Render Layer**: Add `Image` component with the map asset.
+- [x] **3. Interaction Logic**
+    - [x] **Pan**: Enable `draggable` on the Main Layer (or a Group containing the map).
+        - [x] Add `dragBoundFunc` to restrict panning within map edges.
+    - [x] **Zoom**: Add `onWheel` event listener to Stage.
+        - [x] Implement calculated scaling logic (scale by factor ~1.1).
+        - [x] Adjust position to zoom towards pointer.
+    - [x] **Touch Zoom**: Add `onTouchMove` / `onTouchEnd` logic for 2-finger pinch calculation (calculate distance delta between touches).
+- [x] **4. Testing**
+    - [x] Create `tests/ui/map-canvas.spec.js`:
+        - [x] Load Map Page.
+        - [x] Locate `canvas` element.
+        - [x] **Visual**: Take snapshot of initial load.
+        - [x] **Action**: Simulate drag (mouse move).
+        - [x] **Visual**: Take snapshot after drag (verify move).
+        - [x] **Action**: Simulate Scroll (zoom).
+        - [x] **Visual**: Take snapshot after zoom (verify scale change).
+        - [x] **Touch**: On a mobile viewport, simulate two-finger pinch/expand gestures and ensure scale + bounds respect the same constraints.
+        - [x] **Touch**: Simulate single-finger drag on mobile and verify kinetic panning doesn’t trigger browser back/forward gestures.
 
 ## Dev Notes
 
