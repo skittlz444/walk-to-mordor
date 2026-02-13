@@ -47,7 +47,7 @@ so that **I can visualize my progress along the specific route to Mordor**.
         -   Calculate `geometricLength`: Sum of Euclidean distances of all segments between StartAnchor and EndAnchor.
         -   Traverse the segments from StartAnchor, consuming `segmentProgress * geometricLength` until the exact pixel coordinate is found.
         -   Return split arrays: `{ completedPoints: Point[], futurePoints: Point[] }`.
-- [ ] **3. Component Implementation (`client/src/components/map/JourneyPath.tsx`)**
+- [x] **3. Component Implementation (`client/src/components/map/JourneyPath.tsx`)**
     - [x] Create `JourneyPath` component using `react-konva` `Line`.
     - [x] Render `FutureLine` and `CompletedLine`.
     - [x] **Implement Dynamic Stroke Width**:
@@ -91,6 +91,12 @@ For a segment `Anchor A (0km) -> p1 -> p2 -> p3 -> Anchor B (100km)`:
 ### Dependencies
 -   **Story 2.2**: Base map rendering.
 -   **User Data**: Needs access to `user.totalDistance`.
+
+### Requirement Clarifications (Post-Implementation Review)
+-   **AC2 Visualization Scope Updated**: By manual review, the future path should not render the full remaining journey. Implemented behavior intentionally shows a short near-term future segment with a fade tail for readability.
+-   **Rendering Stack Decision Updated**: The task text references `react-konva`, but implementation uses imperative `Konva` API after Story 2.2 validated that `react-konva` was not viable in this runtime setup.
+-   **Future Path Opacity Updated**: Initial draft guidance (around `0.5`) was too faint on the production map; reviewed/accepted value is higher opacity for visibility.
+-   **AC5 Visual Snapshot Scope Waived for This Story**: Formal 1x vs 3x visual snapshot requirement was deprioritized by manual review for Story 2.3.
 
 ### Potential Risks
 -   **Missing Coordinates**: The biggest risk is the lack of accurate `[x,y]` data for the map image.

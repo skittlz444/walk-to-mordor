@@ -663,7 +663,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       if (!stages || stages.length === 0) return false;
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
-      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
     }, { timeout: 10000 });
 
     // Verify the Konva stage has a path layer with Line shapes
@@ -684,8 +684,8 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
 
     expect(pathInfo).not.toBeNull();
     expect(pathInfo.layerCount).toBeGreaterThanOrEqual(2);
-    // Should have 2 lines: future + completed
-    expect(pathInfo.lineCount).toBe(2);
+    // Should have at least 2 lines: future + completed (plus optional fade segments)
+    expect(pathInfo.lineCount).toBeGreaterThanOrEqual(2);
   });
 
   test('future path line has dashed style with reduced opacity', async ({ page }) => {
@@ -699,7 +699,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       if (!stages || stages.length === 0) return false;
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
-      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
     }, { timeout: 10000 });
 
     const futureLineInfo = await page.evaluate(() => {
@@ -741,7 +741,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       if (!stages || stages.length === 0) return false;
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
-      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
     }, { timeout: 10000 });
 
     // Get initial stroke width
@@ -803,7 +803,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       if (!stages || stages.length === 0) return false;
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
-      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
     }, { timeout: 10000 });
 
     const listeningState = await page.evaluate(() => {
@@ -816,8 +816,10 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
     });
 
     expect(listeningState).not.toBeNull();
-    // Both lines should have listening=false
-    expect(listeningState).toEqual([false, false]);
+    // All path lines (future/completed and optional fade segments) should be non-listening
+    expect(Array.isArray(listeningState)).toBe(true);
+    expect(listeningState.length).toBeGreaterThanOrEqual(2);
+    expect(listeningState.every((v) => v === false)).toBe(true);
   });
 
   test('path layer is non-listening for performance', async ({ page }) => {
@@ -831,7 +833,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       if (!stages || stages.length === 0) return false;
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
-      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
     }, { timeout: 10000 });
 
     const layerListening = await page.evaluate(() => {
