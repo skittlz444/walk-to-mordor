@@ -3,8 +3,8 @@
  *
  * Uses Konva's imperative API (react-konva is incompatible with preact/compat).
  * Two Line shapes are drawn:
- *   1. Future path  – faint dashed line (sepia/dark grey, 0.5 opacity)
- *   2. Completed path – solid line (gold-red, 1.0 opacity)
+ *   1. Future path  – dashed line showing next ~10% of journey ahead
+ *   2. Completed path – solid dark red line showing walked distance
  *
  * Both lines use `listening: false` for performance (no hit detection needed).
  * Stroke width scales inversely with zoom so the line looks consistent.
@@ -12,17 +12,24 @@
 
 import Konva from 'konva';
 import { fellowshipPath } from '../../data/paths/fellowship-path';
-import { calculateCutoffPoint, dynamicStrokeWidth } from '../../utils/map-utils';
+import {
+  calculateCutoffPoint,
+  truncateFuturePath,
+  dynamicStrokeWidth,
+} from '../../utils/map-utils';
 
 const BASE_STROKE = 6;
 const MIN_STROKE = 2;
 const MAX_STROKE = 10;
 
+/** Fraction of the total path length to show as future (10%) */
+const FUTURE_FRACTION = 0.10;
+
 // Visual styles
-const FUTURE_COLOR = '#5C4033';      // dark sepia brown
-const FUTURE_OPACITY = 0.5;
+const FUTURE_COLOR = '#6B4226';      // warm brown, more visible
+const FUTURE_OPACITY = 0.65;
 const FUTURE_DASH = [12, 8];         // dash pattern (in map-space pixels)
-const COMPLETED_COLOR = '#C8A43C';   // gold
+const COMPLETED_COLOR = '#8B1A1A';   // dark red
 const COMPLETED_OPACITY = 1.0;
 const LINE_CAP: CanvasLineCap = 'round';
 const LINE_JOIN: CanvasLineJoin = 'round';
@@ -31,6 +38,19 @@ export interface JourneyPathNodes {
   completedLine: Konva.Line;
   futureLine: Konva.Line;
 }
+
+/** Pre-compute the total geometric pixel length of the full path. */
+function getFullPathPixelLength(): number {
+  let total = 0;
+  for (let i = 1; i < fellowshipPath.length; i++) {
+    const dx = fellowshipPath[i].x - fellowshipPath[i - 1].x;
+    const dy = fellowshipPath[i].y - fellowshipPath[i - 1].y;
+    total += Math.sqrt(dx * dx + dy * dy);
+  }
+  return total;
+}
+
+const fullPathPixelLength = getFullPathPixelLength();
 
 /**
  * Create the two Konva Line nodes for the journey path.
@@ -50,10 +70,14 @@ export function createJourneyPath(
     userDistance,
   );
 
+  // Truncate future path to ~10% of total journey length
+  const maxFuturePixels = fullPathPixelLength * FUTURE_FRACTION;
+  const truncatedFuture = truncateFuturePath(futurePoints, maxFuturePixels);
+
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
 
   const futureLine = new Konva.Line({
-    points: futurePoints,
+    points: truncatedFuture,
     stroke: FUTURE_COLOR,
     strokeWidth,
     opacity: FUTURE_OPACITY,
@@ -99,9 +123,13 @@ export function updateJourneyPath(
     userDistance,
   );
 
+  // Truncate future path to ~10% of total journey length
+  const maxFuturePixels = fullPathPixelLength * FUTURE_FRACTION;
+  const truncatedFuture = truncateFuturePath(futurePoints, maxFuturePixels);
+
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
 
-  nodes.futureLine.points(futurePoints);
+  nodes.futureLine.points(truncatedFuture);
   nodes.futureLine.strokeWidth(strokeWidth);
   // Scale dash pattern inversely with zoom for visual consistency
   nodes.futureLine.dash(FUTURE_DASH.map((d) => d / scale));

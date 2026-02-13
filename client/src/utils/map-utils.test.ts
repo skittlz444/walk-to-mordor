@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { calculateCutoffPoint, clamp, dynamicStrokeWidth } from './map-utils';
+import {
+  calculateCutoffPoint,
+  clamp,
+  dynamicStrokeWidth,
+  truncateFuturePath,
+  computePathLength,
+} from './map-utils';
 import type { PathNode } from '../data/paths/fellowship-path';
 
 describe('clamp', () => {
@@ -156,5 +162,53 @@ describe('calculateCutoffPoint', () => {
     const result = calculateCutoffPoint(path, 999);
     expect(result.completedPoints).toEqual([0, 0, 10, 0]);
     expect(result.futurePoints).toEqual([]);
+  });
+});
+
+describe('truncateFuturePath', () => {
+  it('returns original if fewer than 4 values', () => {
+    expect(truncateFuturePath([10, 20], 100)).toEqual([10, 20]);
+  });
+
+  it('returns original if path is within limit', () => {
+    // Two points 10px apart, max is 100
+    const pts = [0, 0, 10, 0];
+    expect(truncateFuturePath(pts, 100)).toEqual([0, 0, 10, 0]);
+  });
+
+  it('truncates at max pixel length', () => {
+    // Three points: (0,0) -> (10,0) -> (20,0), total = 20px, max = 15px
+    const pts = [0, 0, 10, 0, 20, 0];
+    const result = truncateFuturePath(pts, 15);
+    // Should stop at x=15
+    expect(result.length).toBe(6); // 3 points
+    expect(result[0]).toBe(0);
+    expect(result[1]).toBe(0);
+    expect(result[2]).toBe(10);
+    expect(result[3]).toBe(0);
+    expect(result[4]).toBeCloseTo(15, 5);
+    expect(result[5]).toBeCloseTo(0, 5);
+  });
+
+  it('truncates exactly at segment boundary', () => {
+    const pts = [0, 0, 10, 0, 20, 0];
+    const result = truncateFuturePath(pts, 10);
+    expect(result.length).toBe(4); // 2 points
+    expect(result[2]).toBeCloseTo(10, 5);
+  });
+});
+
+describe('computePathLength', () => {
+  it('returns 0 for fewer than 4 values', () => {
+    expect(computePathLength([0, 0])).toBe(0);
+  });
+
+  it('computes horizontal distance', () => {
+    expect(computePathLength([0, 0, 10, 0])).toBe(10);
+  });
+
+  it('computes multi-segment length', () => {
+    // (0,0) -> (3,4) -> (3,4+5) = 5 + 5 = 10
+    expect(computePathLength([0, 0, 3, 4, 3, 9])).toBe(10);
   });
 });

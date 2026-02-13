@@ -8,6 +8,8 @@ import {
 } from '../components/map/JourneyPath';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
+const PROGRESS_API_URL = '/api/progress';
+const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.1;
 const MAX_ZOOM = 3.0;
 
@@ -199,7 +201,7 @@ export function MapIsland() {
   const minScaleVal = useSignal(0.5);
   const loading = useSignal(true);
   const error = useSignal(false);
-  // TODO: Wire to actual user data from API when available.
+  // User's walked distance in miles, fetched from /api/progress on init.
   const userDistance = useSignal(0);
 
   const updateTiles = useCallback(() => {
@@ -452,14 +454,27 @@ export function MapIsland() {
       applyTransform();
     });
 
-    // Fetch metadata
-    fetch(TILES_META_URL)
+    // Fetch metadata and user progress in parallel
+    const metaPromise = fetch(TILES_META_URL)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: TileMetadata) => {
+        return res.json() as Promise<TileMetadata>;
+      });
+
+    const progressPromise = fetch(PROGRESS_API_URL, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('sessionToken') || ''}`,
+      },
+    })
+      .then((res) => (res.ok ? res.json() : { totalDistance: 0 }))
+      .then((data: { totalDistance: number }) => data.totalDistance * KM_TO_MILES)
+      .catch(() => 0);
+
+    Promise.all([metaPromise, progressPromise])
+      .then(([data, distMiles]) => {
         metaRef.current = data;
+        userDistance.value = distMiles;
+
         const min = computeMinScale(size, data.fullWidth, data.fullHeight);
         minScaleVal.value = min;
         currentScale.value = min;

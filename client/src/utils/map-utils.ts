@@ -178,6 +178,61 @@ export function calculateCutoffPoint(
 }
 
 /**
+ * Truncate the future path so it only extends a limited distance
+ * beyond the user's current position. This prevents overlapping lines
+ * when the path doubles back on itself (e.g. return journeys).
+ *
+ * @param futurePoints  Flat [x,y,...] array of future path points.
+ * @param maxPixelLength  Maximum geometric length (in map pixels) to keep.
+ * @returns Truncated flat [x,y,...] array.
+ */
+export function truncateFuturePath(
+  futurePoints: number[],
+  maxPixelLength: number,
+): number[] {
+  if (futurePoints.length < 4) return futurePoints;
+
+  const result: number[] = [futurePoints[0], futurePoints[1]];
+  let accumulated = 0;
+
+  for (let i = 2; i < futurePoints.length; i += 2) {
+    const prevX = futurePoints[i - 2];
+    const prevY = futurePoints[i - 1];
+    const curX = futurePoints[i];
+    const curY = futurePoints[i + 1];
+    const segLen = Math.sqrt((curX - prevX) ** 2 + (curY - prevY) ** 2);
+
+    if (accumulated + segLen >= maxPixelLength) {
+      // Interpolate the final point
+      const remaining = maxPixelLength - accumulated;
+      const t = segLen > 0 ? remaining / segLen : 0;
+      result.push(
+        prevX + (curX - prevX) * t,
+        prevY + (curY - prevY) * t,
+      );
+      break;
+    }
+    accumulated += segLen;
+    result.push(curX, curY);
+  }
+
+  return result;
+}
+
+/**
+ * Compute the total geometric length of a flat [x,y,...] point array.
+ */
+export function computePathLength(points: number[]): number {
+  let total = 0;
+  for (let i = 2; i < points.length; i += 2) {
+    const dx = points[i] - points[i - 2];
+    const dy = points[i + 1] - points[i - 1];
+    total += Math.sqrt(dx * dx + dy * dy);
+  }
+  return total;
+}
+
+/**
  * Clamp a number between min and max.
  */
 export function clamp(value: number, min: number, max: number): number {
