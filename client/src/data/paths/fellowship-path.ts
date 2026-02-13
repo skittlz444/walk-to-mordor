@@ -51,215 +51,126 @@ export const fellowshipPath: PathNode[] = [
 
   // -- The Shire --
   { x: 3165, y: 1529, distance: 0 },          // Bag End (Hobbiton)
-  { x: 3185, y: 1540, distance: null },
-  { x: 3210, y: 1548, distance: null },
-  { x: 3230, y: 1555, distance: 3 },           // Cross The Water
-  { x: 3255, y: 1558, distance: null },
-  { x: 3275, y: 1555, distance: 5 },           // Cross Great Road, enter Tookland
-  { x: 3310, y: 1548, distance: null },
-  { x: 3340, y: 1540, distance: 15 },          // Reach Stock Road
-  { x: 3375, y: 1530, distance: null },
-  { x: 3410, y: 1520, distance: 32 },          // Encounter Black Rider
-  { x: 3440, y: 1515, distance: null },
-  { x: 3465, y: 1510, distance: 41 },          // Meet Elves
-  { x: 3490, y: 1518, distance: null },
-  { x: 3510, y: 1530, distance: 61 },          // Farmer Maggot's Field
-  { x: 3530, y: 1525, distance: null },
-  { x: 3548, y: 1515, distance: 70 },          // Buckleberry Ferry
-  { x: 3560, y: 1510, distance: 73 },          // Crickhollow
+  { x: 3235, y: 1599, distance: 3 },           // Cross The Water
+  { x: 3283, y: 1618, distance: null },
+  { x: 3364, y: 1610, distance: 73 },          // Crickhollow
 
   // -- Old Forest -> Bree --
-  { x: 3575, y: 1520, distance: null },
-  { x: 3590, y: 1540, distance: 87 },          // Knoll in Old Forest
-  { x: 3600, y: 1555, distance: null },
-  { x: 3608, y: 1568, distance: 95 },          // Old Man Willow
-  { x: 3612, y: 1580, distance: 98 },          // Tom Bombadil's House
-  { x: 3620, y: 1565, distance: null },
-  { x: 3630, y: 1540, distance: 115 },         // Barrow Downs
-  { x: 3640, y: 1510, distance: null },
-  { x: 3650, y: 1480, distance: null },
-  { x: 3660, y: 1450, distance: 135 },         // Bree - The Prancing Pony
+  { x: 3426, y: 1600, distance: 87 },          // Knoll in Old Forest
+  { x: 3496, y: 1600, distance: 95 },          // Old Man Willow
+  { x: 3535, y: 1635, distance: 98 },          // Tom Bombadil's House
+  { x: 3583, y: 1598, distance: 115 },         // Barrow Downs
+  { x: 3677, y: 1618, distance: 125 },         // Cross the Withywindle
+  { x: 3683, y: 1563, distance: 135 },         // Bree - The Prancing Pony
 
   // -- Bree -> Weathertop --
-  { x: 3680, y: 1440, distance: null },
-  { x: 3700, y: 1430, distance: 147 },         // Camp in Chetwood
-  { x: 3730, y: 1418, distance: null },
-  { x: 3755, y: 1408, distance: 165 },         // Leave Chetwood
-  { x: 3780, y: 1398, distance: null },
-  { x: 3800, y: 1390, distance: 179 },         // Camp in Western Marshes
-  { x: 3830, y: 1380, distance: null },
-  { x: 3855, y: 1370, distance: 198 },         // East edge Midgewater
-  { x: 3878, y: 1360, distance: null },
-  { x: 3900, y: 1350, distance: 211 },         // Camp by stream
-  { x: 3925, y: 1335, distance: null },
-  { x: 3948, y: 1318, distance: 229 },         // Camp foot of Weather Hills
-  { x: 3970, y: 1300, distance: null },
-  { x: 3990, y: 1280, distance: 241 },         // Weathertop (Amon Sul)
+  { x: 3705, y: 1515, distance: null },
+  { x: 3732, y: 1502, distance: 147 },         // Camp in Chetwood
+  { x: 3761, y: 1501, distance: 165 },         // Leave Chetwood
+  { x: 3799, y: 1485, distance: 179 },         // Camp in Western Marshes
+  { x: 3874, y: 1489, distance: 198 },         // East edge Midgewater
+  { x: 3982, y: 1522, distance: 229 },         // Camp foot of Weather Hills
+  { x: 4056, y: 1477, distance: 241 },         // Weathertop (Amon Sul)
 
   // -- Weathertop -> Rivendell --
-  { x: 4008, y: 1290, distance: null },
-  { x: 4030, y: 1305, distance: 260 },         // Camp south of Great Road
-  { x: 4055, y: 1315, distance: null },
-  { x: 4078, y: 1320, distance: 271 },         // Camp
-  { x: 4105, y: 1325, distance: null },
-  { x: 4135, y: 1330, distance: 298 },         // Wide curving valley
-  { x: 4170, y: 1335, distance: null },
-  { x: 4205, y: 1332, distance: 328 },         // Continuing in valley
-  { x: 4238, y: 1328, distance: null },
-  { x: 4268, y: 1322, distance: 358 },         // Cross the Last Bridge
-  { x: 4298, y: 1330, distance: null },
-  { x: 4320, y: 1340, distance: 392 },         // Stone Trolls
-  { x: 4338, y: 1345, distance: null },
-  { x: 4355, y: 1348, distance: 405 },         // Meet Glorfindel
-  { x: 4378, y: 1350, distance: null },
-  { x: 4400, y: 1348, distance: null },
-  { x: 4418, y: 1342, distance: 450 },         // Ford of Bruinen
-  { x: 4432, y: 1335, distance: null },
-  { x: 4445, y: 1325, distance: 458 },         // Rivendell - Challenge 1 End
+  { x: 4119, y: 1556, distance: null },
+  { x: 4284, y: 1517, distance: null },
+  { x: 4470, y: 1462, distance: 358 },         // Cross the Last Bridge
+  { x: 4557, y: 1467, distance: null },
+  { x: 4642, y: 1445, distance: null },
+  { x: 4738, y: 1469, distance: null },
+  { x: 4807, y: 1515, distance: 450 },         // Ford of Bruinen
+  { x: 4850, y: 1510, distance: null },
+  { x: 4879, y: 1470, distance: 458 },         // Rivendell - Challenge 1 End
 
   // CHALLENGE 2: Rivendell -> Lothlorien
 
   // -- South along Misty Mountains --
   { x: 4440, y: 1340, distance: null },
-  { x: 4435, y: 1365, distance: 466 },         // Ford of Bruinen
-  { x: 4428, y: 1400, distance: null },
-  { x: 4420, y: 1440, distance: 480 },         // Steep canyon
-  { x: 4415, y: 1475, distance: null },
-  { x: 4410, y: 1510, distance: 484 },         // Cross small stream
-  { x: 4405, y: 1555, distance: null },
-  { x: 4400, y: 1600, distance: 504 },         // Top of small hill
-  { x: 4395, y: 1640, distance: null },
-  { x: 4390, y: 1680, distance: 516 },         // Small stream, follow west
-  { x: 4385, y: 1720, distance: null },
-  { x: 4380, y: 1760, distance: 528 },         // Top of rise
-  { x: 4378, y: 1800, distance: null },
-  { x: 4375, y: 1835, distance: 544 },         // Another mountain spur
-  { x: 4373, y: 1855, distance: 548 },         // Cliff top
-  { x: 4370, y: 1890, distance: null },
-  { x: 4368, y: 1925, distance: 560 },         // Cross small stream
-  { x: 4365, y: 1965, distance: null },
-  { x: 4362, y: 2005, distance: 588 },         // Cross another stream
-  { x: 4360, y: 2040, distance: null },
-  { x: 4358, y: 2075, distance: 608 },         // Hilltop, turning SE
-  { x: 4360, y: 2110, distance: null },
-  { x: 4362, y: 2140, distance: 627 },         // Cross small stream
-  { x: 4365, y: 2170, distance: 638 },         // Rolling Lands
-  { x: 4370, y: 2210, distance: null },
-  { x: 4375, y: 2248, distance: 668 },         // Land drops steeply
-  { x: 4378, y: 2275, distance: 675 },         // Cross small stream
-  { x: 4382, y: 2305, distance: null },
-  { x: 4388, y: 2335, distance: 686 },         // N side Hollin Ridge
-  { x: 4395, y: 2360, distance: 690 },         // Top Hollin Ridge - Crebain
-  { x: 4400, y: 2390, distance: null },
-  { x: 4408, y: 2425, distance: 708 },         // Cross small stream
-  { x: 4420, y: 2465, distance: null },
-  { x: 4435, y: 2505, distance: 733 },         // Road climbs higher
+  { x: 4807, y: 1515, distance: 466 },         // Ford of Bruinen
+  { x: 4840, y: 1575, distance: null },
+  { x: 4891, y: 1665, distance: null },
+  { x: 4834, y: 1814, distance: null },
+  { x: 4756, y: 1893, distance: 608 },         // Hilltop, turning SE
+  { x: 4799, y: 1966, distance: 686 },         // N side Hollin Ridge
 
   // -- Caradhras attempt and Moria --
-  { x: 4450, y: 2535, distance: null },
-  { x: 4468, y: 2558, distance: 742 },         // Foot of Redhorn
-  { x: 4488, y: 2530, distance: null },
-  { x: 4505, y: 2500, distance: 750 },         // Redhorn Pass - Caradhras
-  { x: 4490, y: 2528, distance: null },
-  { x: 4475, y: 2555, distance: 754 },         // Turn west, Crebain return
-  { x: 4455, y: 2575, distance: null },
-  { x: 4435, y: 2590, distance: 778 },         // Warg attack hill
-  { x: 4420, y: 2580, distance: null },        // heading west toward Moria
-  { x: 4410, y: 2560, distance: null },        // approaching Moria walls
-  { x: 4420, y: 2530, distance: null },        // along cliff face
-  { x: 4440, y: 2500, distance: null },        // approaching West-gate
-  { x: 4460, y: 2470, distance: null },        // nearing the Doors
-  { x: 4470, y: 2430, distance: null },        // at the Walls of Moria
-  { x: 4475, y: 2380, distance: null },        // along the wall
-  { x: 4478, y: 2330, distance: null },        // approaching gates
-  { x: 4480, y: 2280, distance: 798 },         // Gates of Moria
+  { x: 4841, y: 2011, distance: 742 },         // Foot of Redhorn
+  { x: 4922, y: 2002, distance: 750 },         // Redhorn Pass - Caradhras
+  { x: 4808, y: 2041, distance: 754 },         // Turn west, Crebain return
+  { x: 4779, y: 2067, distance: 778 },         // Warg attack hill
+  { x: 4701, y: 2161, distance: null },        // along cliff face
+  { x: 4779, y: 2159, distance: 798 },         // Gates of Moria
 
   // -- Through Moria -> Lothlorien --
-  { x: 4500, y: 2300, distance: null },
-  { x: 4520, y: 2320, distance: null },
-  { x: 4545, y: 2340, distance: 818 },         // Junction of 3 passages
-  { x: 4570, y: 2355, distance: null },
-  { x: 4595, y: 2370, distance: 838 },         // Balin's tomb
-  { x: 4618, y: 2380, distance: null },
-  { x: 4640, y: 2388, distance: 842 },         // Escape Moria - Silverlode
-  { x: 4665, y: 2395, distance: null },
-  { x: 4695, y: 2410, distance: 855 },         // Enter Lothlorien
-  { x: 4720, y: 2425, distance: null },
-  { x: 4745, y: 2440, distance: 861 },         // Cross Silverlode on ropes
-  { x: 4775, y: 2465, distance: null },
-  { x: 4808, y: 2490, distance: null },
-  { x: 4835, y: 2518, distance: 906 },         // Hill of Cerin Amroth
-  { x: 4850, y: 2540, distance: null },
-  { x: 4862, y: 2558, distance: 920 },         // Meet Galadriel - Challenge 2 End
+  { x: 4799, y: 2183, distance: null },
+  { x: 4819, y: 2154, distance: null },
+  { x: 4792, y: 2134, distance: null },
+  { x: 4828, y: 2116, distance: null },
+  { x: 4873, y: 2178, distance: 842 },         // Escape Moria - Silverlode
+  { x: 4894, y: 2266, distance: null },
+  { x: 5034, y: 2300, distance: 855 },         // Enter Lothlorien
+  { x: 5082, y: 2338, distance: 861 },         // Cross Silverlode on ropes
+  { x: 5164, y: 2316, distance: 920 },         // Meet Galadriel - Challenge 2 End
 
   // CHALLENGE 3: Lothlorien -> Amon Hen (down the Anduin)
 
-  { x: 4870, y: 2575, distance: null },
-  { x: 4878, y: 2595, distance: 930 },         // Gifts from Galadriel, boats
-  { x: 4890, y: 2620, distance: null },
-  { x: 4905, y: 2655, distance: null },
-  { x: 4920, y: 2690, distance: 951 },         // Camp west bank
-  { x: 4940, y: 2730, distance: null },
-  { x: 4958, y: 2770, distance: null },
-  { x: 4975, y: 2808, distance: 987 },         // Camp west bank
-  { x: 4990, y: 2840, distance: null },
-  { x: 5005, y: 2870, distance: 1008 },        // Trees thin, overcast
-  { x: 5018, y: 2898, distance: null },
-  { x: 5030, y: 2925, distance: 1023 },        // Flats N of Celebrant
-  { x: 5042, y: 2950, distance: null },
-  { x: 5055, y: 2975, distance: 1040 },        // River broadens
-  { x: 5068, y: 3000, distance: null },
-  { x: 5082, y: 3025, distance: 1063 },        // North Undeep
-  { x: 5090, y: 3040, distance: null },
-  { x: 5098, y: 3052, distance: 1070 },        // Limlight enters
-  { x: 5105, y: 3062, distance: 1075 },        // Sam spots Gollum
-  { x: 5115, y: 3080, distance: null },
-  { x: 5128, y: 3098, distance: 1083 },        // Camp on small eyot
-  { x: 5145, y: 3125, distance: null },
-  { x: 5162, y: 3155, distance: 1122 },        // Eastern South Undeep
-  { x: 5172, y: 3175, distance: null },
-  { x: 5180, y: 3195, distance: 1142 },        // Western South Undeep
-  { x: 5188, y: 3215, distance: null },
-  { x: 5195, y: 3232, distance: 1155 },        // Camp Day Feb 21
-  { x: 5202, y: 3250, distance: null },
-  { x: 5210, y: 3268, distance: 1180 },        // Lowlands
-  { x: 5218, y: 3288, distance: null },
-  { x: 5225, y: 3308, distance: 1205 },        // Camp Day Feb 22
-  { x: 5230, y: 3322, distance: null },
-  { x: 5235, y: 3338, distance: 1220 },        // Hills, crumbling cliffs
-  { x: 5240, y: 3352, distance: null },
-  { x: 5245, y: 3368, distance: 1234 },        // Higher Emyn Muil
-  { x: 5248, y: 3382, distance: null },
-  { x: 5250, y: 3398, distance: 1255 },        // Camp west shore Feb 23
-  { x: 5252, y: 3412, distance: null },
-  { x: 5255, y: 3425, distance: 1267 },        // Sarn Gebir - Orc Attack
-  { x: 5258, y: 3435, distance: 1269 },        // Carry boats to rapids
-  { x: 5262, y: 3450, distance: null },
-  { x: 5268, y: 3468, distance: 1288 },        // The Argonath
-  { x: 5272, y: 3478, distance: 1290 },        // Nen Hithoel
-  { x: 5278, y: 3498, distance: null },
-  { x: 5285, y: 3520, distance: 1309 },        // Amon Hen - Challenge 3 End
+  { x: 5178, y: 2363, distance: null },
+  { x: 5224, y: 2370, distance: 930 },         // Gifts from Galadriel, boats
+  { x: 5262, y: 2392, distance: null },
+  { x: 5270, y: 2423, distance: null },
+  { x: 5282, y: 2443, distance: null },
+  { x: 5287, y: 2478, distance: null },
+  { x: 5332, y: 2515, distance: null },
+  { x: 5379, y: 2541, distance: 1023 },        // Flats N of Celebrant
+  { x: 5424, y: 2576, distance: null },
+  { x: 5453, y: 2599, distance: null },
+  { x: 5484, y: 2612, distance: null },
+  { x: 5535, y: 2630, distance: null },
+  { x: 5551, y: 2649, distance: 1063 },        // North Undeep
+  { x: 5528, y: 2703, distance: null },
+  { x: 5509, y: 2756, distance: 1070 },        // Limlight enters
+  { x: 5531, y: 2791, distance: null },
+  { x: 5567, y: 2803, distance: null },
+  { x: 5602, y: 2795, distance: null },
+  { x: 5644, y: 2770, distance: 1122 },        // Eastern South Undeep
+  { x: 5676, y: 2830, distance: null },
+  { x: 5598, y: 2902, distance: 1142 },        // Western South Undeep
+  { x: 5618, y: 2941, distance: null },
+  { x: 5662, y: 2965, distance: null },
+  { x: 5688, y: 3023, distance: null },
+  { x: 5687, y: 3064, distance: null },
+  { x: 5655, y: 3111, distance: null },
+  { x: 5642, y: 3192, distance: null },
+  { x: 5657, y: 3261, distance: 1234 },        // Higher Emyn Muil
+  { x: 5691, y: 3340, distance: 1288 },        // The Argonath
+  { x: 5703, y: 3390, distance: 1290 },        // Nen Hithoel
+  { x: 5695, y: 3425, distance: 1309 },        // Amon Hen - Challenge 3 End
 
   // CHALLENGE 4: Amon Hen -> Mount Doom (Frodo & Sam)
 
   // -- Emyn Muil -> Dead Marshes -> Mordor --
-  { x: 5310, y: 3510, distance: null },
-  { x: 5350, y: 3495, distance: null },
-  { x: 5400, y: 3475, distance: 1341 },        // Wetwang curves south
-  { x: 5460, y: 3455, distance: null },
-  { x: 5520, y: 3430, distance: 1383 },        // Capture Gollum
-  { x: 5580, y: 3400, distance: null },
-  { x: 5650, y: 3370, distance: null },
-  { x: 5720, y: 3340, distance: 1421 },        // Heart of Dead Marshes
-  { x: 5800, y: 3310, distance: null },
-  { x: 5870, y: 3280, distance: null },
-  { x: 5950, y: 3250, distance: 1463 },        // Black Gate
+  { x: 5731, y: 3392, distance: null },
+  { x: 5771, y: 3344, distance: null },
+  { x: 5838, y: 3335, distance: 1341 },        // Wetwang curves south
+  { x: 5841, y: 3289, distance: 1383 },        // Capture Gollum
+  { x: 5904, y: 3306, distance: null },
+  { x: 5922, y: 3351, distance: null },
+  { x: 5990, y: 3393, distance: null },
+  { x: 6007, y: 3376, distance: null },
+  { x: 6037, y: 3369, distance: null },
+  { x: 6048, y: 3402, distance: 1421 },        // Heart of Dead Marshes
+  { x: 6055, y: 3457, distance: null },
+  { x: 6094, y: 3440, distance: null },
+  { x: 6152, y: 3443, distance: null },
+  { x: 6191, y: 3469, distance: null },
+  { x: 6231, y: 3499, distance: 1463 },        // Black Gate
 
   // -- Ithilien -> Shelob -> Mount Doom --
   { x: 5940, y: 3280, distance: null },
   { x: 5920, y: 3320, distance: null },
   { x: 5900, y: 3360, distance: null },
-  { x: 5885, y: 3400, distance: 1499 },        // Northern edge Ithilien
+  { x: 6167, y: 3537, distance: 1499 },        // Northern edge Ithilien
   { x: 5870, y: 3440, distance: null },
   { x: 5862, y: 3480, distance: null },
   { x: 5858, y: 3520, distance: 1533 },        // Henneth Annun
@@ -370,7 +281,7 @@ export const fellowshipPath: PathNode[] = [
   { x: 3948, y: 2548, distance: null },
   { x: 3935, y: 2528, distance: 2839 },        // Mountains of Moria rise
   { x: 3920, y: 2508, distance: null },
-  { x: 3908, y: 2490, distance: 2874 },        // Warg-attack hill
+  { x: 4779, y: 2067, distance: 2874 },        // Warg-attack hill
   { x: 3898, y: 2472, distance: null },
   { x: 3890, y: 2455, distance: 2909 },        // Open country, gentle slopes
   { x: 3882, y: 2435, distance: null },
@@ -408,14 +319,14 @@ export const fellowshipPath: PathNode[] = [
   { x: 4355, y: 1415, distance: null },
   { x: 4390, y: 1380, distance: null },
   { x: 4420, y: 1355, distance: null },
-  { x: 4445, y: 1325, distance: 3127 },        // Last Homely House - Challenge 7 End
+  { x: 4879, y: 1470, distance: 3127 },        // Last Homely House - Challenge 7 End
 
   // CHALLENGE 8: Rivendell -> Bag End (return via Great Road)
 
   { x: 4440, y: 1335, distance: null },
   { x: 4430, y: 1340, distance: 3135 },        // Reach the Ford
   { x: 4415, y: 1345, distance: null },
-  { x: 4395, y: 1348, distance: 3156 },        // Bruinen turns south
+  { x: 4807, y: 1515, distance: 3156 },        // Bruinen turns south
   { x: 4370, y: 1350, distance: null },
   { x: 4345, y: 1348, distance: 3185 },        // Pathway to Stone Trolls
   { x: 4318, y: 1342, distance: null },

@@ -96,7 +96,7 @@ export function createJourneyPath(
     lineCap: LINE_CAP,
     lineJoin: LINE_JOIN,
     listening: false,
-    tension: 0.3,
+    tension: 0.25,
   });
 
   const completedLine = new Konva.Line({
@@ -107,7 +107,7 @@ export function createJourneyPath(
     lineCap: LINE_CAP,
     lineJoin: LINE_JOIN,
     listening: false,
-    tension: 0.3,
+    tension: 0.25,
   });
 
   // Future line goes first (underneath), completed line on top
@@ -145,6 +145,8 @@ export function updateJourneyPath(
   nodes.futureLine.strokeWidth(strokeWidth);
   // Dev mode: solid line; normal mode: scaled dash pattern
   nodes.futureLine.dash(devMode ? [] : FUTURE_DASH.map((d) => d / scale));
+  nodes.futureLine.opacity(devMode ? 1.0 : FUTURE_OPACITY);
+  nodes.futureLine.stroke(devMode? '#ff0000' : FUTURE_COLOR); // bright red in dev mode
 
   nodes.completedLine.points(completedPoints);
   nodes.completedLine.strokeWidth(strokeWidth);
