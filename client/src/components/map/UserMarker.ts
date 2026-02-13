@@ -55,7 +55,10 @@ function loadMarkerIcon(): Promise<HTMLImageElement | null> {
     const img = new window.Image();
     img.onload = () => resolve(img);
     img.onerror = () => {
-      console.warn(`[UserMarker] Icon not found at ${ICON_PATH}, using fallback shape.`);
+      console.warn(
+        `[UserMarker] Could not load icon at ${ICON_PATH}. Using fallback shape. ` +
+        'Add the One Ring icon to public/img/one-ring.png to use the custom icon.',
+      );
       resolve(null);
     };
     img.src = ICON_PATH;
