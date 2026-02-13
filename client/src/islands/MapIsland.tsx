@@ -200,7 +200,6 @@ export function MapIsland() {
   const loading = useSignal(true);
   const error = useSignal(false);
   // TODO: Wire to actual user data from API when available.
-  // For now, default to 0 (no progress). Set window.__MAP_USER_DISTANCE in console to test.
   const userDistance = useSignal(0);
 
   const updateTiles = useCallback(() => {

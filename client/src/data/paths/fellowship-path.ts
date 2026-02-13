@@ -253,7 +253,7 @@ export const fellowshipPath: PathNode[] = [
   { x: 7220, y: 4620, distance: null },        // approaching Mount Doom
   { x: 7270, y: 4590, distance: null },        // Dreadful Nightfall area
   { x: 7320, y: 4570, distance: 1755 },        // Dreadful Nightfall
-  { x: 7370, y: 4560, distance: null },        // final approach
-  { x: 7420, y: 4550, distance: null },        // Mount Doom approach
+  { x: 7370, y: 4560, distance: null },        // near Mount Doom
+  { x: 7420, y: 4550, distance: null },        // final approach to Orodruin
   { x: 7460, y: 4540, distance: 1779 },        // Mount Doom – Orodruin
 ];

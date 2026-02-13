@@ -657,8 +657,14 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
-    // Wait for tiles and path to load
-    await page.waitForTimeout(2000);
+    // Wait for path layer to have Line shapes
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+    }, { timeout: 10000 });
 
     // Verify the Konva stage has a path layer with Line shapes
     const pathInfo = await page.evaluate(() => {
@@ -686,7 +692,15 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
-    await page.waitForTimeout(2000);
+
+    // Wait for path lines to be created
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+    }, { timeout: 10000 });
 
     const futureLineInfo = await page.evaluate(() => {
       const stages = window.Konva?.stages;
@@ -720,7 +734,15 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
-    await page.waitForTimeout(2000);
+
+    // Wait for path lines to be created
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+    }, { timeout: 10000 });
 
     // Get initial stroke width
     const strokeBefore = await page.evaluate(() => {
@@ -740,7 +762,17 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       await page.mouse.wheel(0, -200);
       await page.waitForTimeout(100);
     }
-    await page.waitForTimeout(500);
+
+    // Wait for zoom scale to have changed
+    await page.waitForFunction((prevStroke) => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const pathLayer = stages[0].getLayers()[1];
+      if (!pathLayer) return false;
+      const lines = pathLayer.getChildren().filter(c => c.getClassName() === 'Line');
+      const currentStroke = lines[0]?.strokeWidth();
+      return currentStroke !== undefined && currentStroke !== prevStroke;
+    }, strokeBefore, { timeout: 5000 });
 
     // Get stroke width after zoom
     const strokeAfter = await page.evaluate(() => {
@@ -764,7 +796,15 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
-    await page.waitForTimeout(2000);
+
+    // Wait for path lines to be created
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+    }, { timeout: 10000 });
 
     const listeningState = await page.evaluate(() => {
       const stages = window.Konva?.stages;
@@ -784,7 +824,15 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
-    await page.waitForTimeout(2000);
+
+    // Wait for path lines to be created
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const layers = stages[0].getLayers();
+      if (layers.length < 2) return false;
+      return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length === 2;
+    }, { timeout: 10000 });
 
     const layerListening = await page.evaluate(() => {
       const stages = window.Konva?.stages;
