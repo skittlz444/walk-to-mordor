@@ -13,10 +13,28 @@
 
 import Konva from 'konva';
 import type { Point } from '../../utils/map-utils';
+import { dynamicStrokeWidth } from '../../utils/map-utils';
 
 /** Visual size of the marker in screen pixels (maintained across zoom levels). */
 const MARKER_SIZE = 32;
 const MARKER_HALF = MARKER_SIZE / 2;
+
+/**
+ * Calculate the marker scale factor, using the same capping logic as line
+ * stroke width so that the marker doesn't become oversized when zoomed out.
+ * At scale 1.0 the marker is MARKER_SIZE px. It grows as zoom decreases
+ * but is capped at the same ratio used by dynamicStrokeWidth.
+ */
+function markerScale(stageScale: number): number {
+  // Use dynamicStrokeWidth's clamping with the same limits as JourneyPath
+  // (base=6, min=2, max=10). The ratio gives us a consistent visual scale.
+  const baseStroke = 6;
+  const minStroke = 2;
+  const maxStroke = 10;
+  const effectiveStroke = dynamicStrokeWidth(baseStroke, stageScale, minStroke, maxStroke);
+  // effectiveStroke / baseStroke gives us the ratio to apply to the marker
+  return effectiveStroke / baseStroke;
+}
 
 /** Marker colors */
 const RING_COLOR = '#DAA520';        // Goldenrod
@@ -83,14 +101,14 @@ export function createUserMarker(
   stageScale: number,
   distanceMiles: number,
 ): UserMarkerNodes {
-  const inverseScale = 1 / stageScale;
+  const scale = markerScale(stageScale);
 
   // Main group positioned at the user's location
   const group = new Konva.Group({
     x: position.x,
     y: position.y,
-    scaleX: inverseScale,
-    scaleY: inverseScale,
+    scaleX: scale,
+    scaleY: scale,
   });
 
   // Outer halo / glow effect
@@ -229,9 +247,9 @@ export function createUserMarker(
     },
 
     setScale(stageScale: number) {
-      const inv = 1 / stageScale;
-      group.scaleX(inv);
-      group.scaleY(inv);
+      const s = markerScale(stageScale);
+      group.scaleX(s);
+      group.scaleY(s);
     },
 
     setDistance(distanceMiles: number) {
