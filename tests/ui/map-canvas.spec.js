@@ -238,16 +238,11 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       return c && c.width > 0 && c.height > 0;
     }, { timeout: 10000 });
 
-    // Should have requested metadata and initialized a rendered Konva stage.
+    // Should have requested metadata and at least one tile image.
     const metaReqs = tileRequests.filter((u) => u.includes('metadata.json'));
-    const renderedLayerCount = await page.evaluate(() => {
-      const stages = window.Konva?.stages;
-      if (!stages || stages.length === 0) return 0;
-      const stage = stages[stages.length - 1];
-      return stage.getLayers().length;
-    });
+    const tileImageReqs = tileRequests.filter((u) => u.endsWith('.webp'));
     expect(metaReqs.length).toBeGreaterThanOrEqual(1);
-    expect(renderedLayerCount).toBeGreaterThanOrEqual(1);
+    expect(tileImageReqs.length).toBeGreaterThanOrEqual(1);
   });
 
   test('loads different tile level when zoomed in', async ({ page }) => {
