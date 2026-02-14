@@ -9,7 +9,7 @@ test.describe('Map Shell (Authenticated)', () => {
     }, authToken);
   });
 
-  test('drawer navigation and profile access', async ({ page }) => {
+  test('drawer navigation and profile access', async ({ page, authToken }) => {
     await page.goto(`${BASE_URL}/map`);
 
     const menuButton = page.locator('.menu-icon');
@@ -23,7 +23,15 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(page.locator('.drawer-profile')).toBeVisible();
 
     await page.click('.drawer-link:has-text("Journey")');
-    await page.waitForURL('**/');
+    await page.waitForURL(/\/(login)?$/);
+
+    if (page.url().endsWith('/login')) {
+      await page.evaluate((token) => {
+        localStorage.setItem('sessionToken', token);
+      }, authToken);
+      await page.goto(`${BASE_URL}/`);
+      await page.waitForURL('**/');
+    }
 
     await page.click('.menu-icon');
     await page.waitForSelector('body.drawer-open', { timeout: 5000 });

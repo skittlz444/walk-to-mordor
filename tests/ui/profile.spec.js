@@ -182,17 +182,21 @@ test.describe('User Profile Modal', () => {
         const newEmail = 'newemail_' + Math.random().toString(36).substring(7) + '@example.com';
         await page.fill('#profile-email', newEmail);
 
-        // Save changes
+        const saveResponsePromise = page.waitForResponse((response) =>
+            response.url().includes('/api/profile') && response.request().method() === 'PUT'
+        );
+
         await page.click('#save-profile-btn');
+
+        const saveResponse = await saveResponsePromise;
+        expect(saveResponse.status()).toBe(200);
 
         await waitForProfileSave(page);
 
         // Reopen modal to verify update
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
-
-        const updatedEmail = await page.inputValue('#profile-email');
-        expect(updatedEmail).toBe(newEmail);
+        await expect(page.locator('#profile-email')).toHaveValue(newEmail, { timeout: 10000 });
     });
 
     test('should update both username and email successfully', async ({ page }) => {

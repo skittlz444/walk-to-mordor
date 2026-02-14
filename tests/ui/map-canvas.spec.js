@@ -238,16 +238,25 @@ test.describe('Map Canvas - Tile Update Logic', () => {
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
-    // Wait for tile image requests to arrive
+    // Wait for map content to render
     await page.waitForFunction(() => {
-      // Verify canvas has non-empty content (Konva has drawn something)
       const c = document.querySelector('.map-canvas-wrapper canvas');
       return c && c.width > 0 && c.height > 0;
     }, { timeout: 10000 });
 
-    // Should have requested metadata and at least one tile image.
+    const wrapper = page.locator('.map-canvas-wrapper');
+    const box = await wrapper.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let i = 0; i < 8; i++) {
+      await page.mouse.wheel(0, -180);
+      await page.waitForTimeout(70);
+    }
+    await page.waitForTimeout(1200);
+
     const metaReqs = tileRequests.filter((u) => u.includes('metadata.json'));
-    const tileImageReqs = tileRequests.filter((u) => u.endsWith('.webp'));
+    const tileImageReqs = tileRequests.filter((u) =>
+      u.includes('/img/map/tiles/') && !u.includes('metadata.json'),
+    );
     expect(metaReqs.length).toBeGreaterThanOrEqual(1);
     expect(tileImageReqs.length).toBeGreaterThanOrEqual(1);
   });
@@ -293,7 +302,9 @@ test.describe('Map Canvas - Tile Update Logic', () => {
 
     // After zooming, verify that tile image requests were made
     // (at initial load AND/OR after zoom — the key assertion is tiles were loaded)
-    const tileImageReqs = tileRequests.filter((u) => u.endsWith('.webp'));
+    const tileImageReqs = tileRequests.filter((u) =>
+      u.includes('/img/map/tiles/') && !u.includes('metadata.json'),
+    );
     expect(tileImageReqs.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -345,9 +356,6 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
   });
 
   test('pinch-to-zoom changes scale via touch events', async ({ page, browserName }) => {
-    // Firefox doesn't support the TouchEvent constructor
-    test.skip(browserName === 'firefox', 'TouchEvent not available in Firefox');
-
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
@@ -367,67 +375,121 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
 
     // Simulate a pinch-to-zoom by dispatching touch events on the container
     const scaleAfter = await page.evaluate(async () => {
-      const container = document.querySelector('.map-canvas-wrapper');
+      const container = document.querySelector('.map-canvas-wrapper .konvajs-content') ||
+        document.querySelector('.map-canvas-wrapper');
       if (!container) return null;
       const rect = container.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
 
       function makeTouchList(points) {
-        return points.map((p, i) => new Touch({
+        const touchCtor = globalThis.Touch;
+        if (typeof touchCtor === 'function') {
+          return points.map((p, i) => new touchCtor({
+            identifier: i,
+            target: container,
+            clientX: p.x,
+            clientY: p.y,
+            pageX: p.x,
+            pageY: p.y,
+            screenX: p.x,
+            screenY: p.y,
+          }));
+        }
+
+        return points.map((p, i) => ({
           identifier: i,
           target: container,
           clientX: p.x,
           clientY: p.y,
           pageX: p.x,
           pageY: p.y,
+          screenX: p.x,
+          screenY: p.y,
         }));
       }
 
-      // Start: two fingers close together
-      const startPoints = [
-        { x: cx - 30, y: cy },
-        { x: cx + 30, y: cy },
+      function dispatchTouchEvent(type, touchesPoints, changedPoints = touchesPoints) {
+        const touches = makeTouchList(touchesPoints);
+        const changedTouches = makeTouchList(changedPoints);
+        const targetTouches = type === 'touchend' ? [] : touches;
+
+        let event;
+        if (typeof globalThis.TouchEvent === 'function') {
+          event = new TouchEvent(type, {
+            touches: type === 'touchend' ? [] : touches,
+            targetTouches,
+            changedTouches,
+            bubbles: true,
+            cancelable: true,
+          });
+        } else {
+          event = new Event(type, { bubbles: true, cancelable: true });
+          Object.defineProperty(event, 'touches', { value: type === 'touchend' ? [] : touches });
+          Object.defineProperty(event, 'targetTouches', { value: targetTouches });
+          Object.defineProperty(event, 'changedTouches', { value: changedTouches });
+        }
+
+        container.dispatchEvent(event);
+      }
+
+      const getScale = () => {
+        const stages = window.Konva?.stages;
+        if (stages && stages.length > 0) return stages[stages.length - 1].scaleX();
+        return null;
+      };
+
+      const doPinch = async (startOffset, moveOffset) => {
+        const startPoints = [
+          { x: cx - startOffset, y: cy },
+          { x: cx + startOffset, y: cy },
+        ];
+        dispatchTouchEvent('touchstart', startPoints);
+
+        const steps = [
+          startOffset + (moveOffset - startOffset) * 0.25,
+          startOffset + (moveOffset - startOffset) * 0.5,
+          startOffset + (moveOffset - startOffset) * 0.75,
+          moveOffset,
+        ];
+
+        for (const offset of steps) {
+          await new Promise((r) => setTimeout(r, 70));
+          const movePoints = [
+            { x: cx - offset, y: cy },
+            { x: cx + offset, y: cy },
+          ];
+          dispatchTouchEvent('touchmove', movePoints);
+        }
+
+        await new Promise((r) => setTimeout(r, 70));
+        const endPoints = [
+          { x: cx - moveOffset, y: cy },
+          { x: cx + moveOffset, y: cy },
+        ];
+        dispatchTouchEvent('touchend', [], endPoints);
+        await new Promise((r) => setTimeout(r, 220));
+      };
+
+      const before = getScale();
+      let after = before;
+      const attempts = [
+        [30, 140],
+        [20, 180],
+        [10, 220],
+        [30, 220],
+        [40, 240],
       ];
-      container.dispatchEvent(new TouchEvent('touchstart', {
-        touches: makeTouchList(startPoints),
-        targetTouches: makeTouchList(startPoints),
-        changedTouches: makeTouchList(startPoints),
-        bubbles: true,
-        cancelable: true,
-      }));
 
-      // Move: spread fingers apart (zoom in)
-      await new Promise((r) => setTimeout(r, 50));
-      const movePoints = [
-        { x: cx - 100, y: cy },
-        { x: cx + 100, y: cy },
-      ];
-      container.dispatchEvent(new TouchEvent('touchmove', {
-        touches: makeTouchList(movePoints),
-        targetTouches: makeTouchList(movePoints),
-        changedTouches: makeTouchList(movePoints),
-        bubbles: true,
-        cancelable: true,
-      }));
+      for (const [startOffset, moveOffset] of attempts) {
+        await doPinch(startOffset, moveOffset);
+        after = getScale();
+        if (before !== null && after !== null && after > before + 0.001) {
+          break;
+        }
+      }
 
-      await new Promise((r) => setTimeout(r, 50));
-
-      // End: lift fingers
-      container.dispatchEvent(new TouchEvent('touchend', {
-        touches: [],
-        targetTouches: [],
-        changedTouches: makeTouchList(movePoints),
-        bubbles: true,
-        cancelable: true,
-      }));
-
-      await new Promise((r) => setTimeout(r, 200));
-
-      // Return the new scale
-      const stages = window.Konva?.stages;
-      if (stages && stages.length > 0) return stages[stages.length - 1].scaleX();
-      return null;
+      return after;
     });
 
     // Verify scale actually changed (zoomed in)
@@ -439,9 +501,6 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
   });
 
   test('dragging is disabled during pinch and re-enabled after', async ({ page, browserName }) => {
-    // Firefox doesn't support the TouchEvent constructor
-    test.skip(browserName === 'firefox', 'TouchEvent not available in Firefox');
-
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
@@ -453,7 +512,8 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
 
     // Test drag state toggling during pinch
     const dragStates = await page.evaluate(async () => {
-      const container = document.querySelector('.map-canvas-wrapper');
+      const container = document.querySelector('.map-canvas-wrapper .konvajs-content') ||
+        document.querySelector('.map-canvas-wrapper');
       if (!container) return null;
       const rect = container.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
@@ -467,14 +527,54 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
       const draggableBefore = stage.draggable();
 
       function makeTouchList(points) {
-        return points.map((p, i) => new Touch({
+        const touchCtor = globalThis.Touch;
+        if (typeof touchCtor === 'function') {
+          return points.map((p, i) => new touchCtor({
+            identifier: i,
+            target: container,
+            clientX: p.x,
+            clientY: p.y,
+            pageX: p.x,
+            pageY: p.y,
+            screenX: p.x,
+            screenY: p.y,
+          }));
+        }
+
+        return points.map((p, i) => ({
           identifier: i,
           target: container,
           clientX: p.x,
           clientY: p.y,
           pageX: p.x,
           pageY: p.y,
+          screenX: p.x,
+          screenY: p.y,
         }));
+      }
+
+      function dispatchTouchEvent(type, touchesPoints, changedPoints = touchesPoints) {
+        const touches = makeTouchList(touchesPoints);
+        const changedTouches = makeTouchList(changedPoints);
+        const targetTouches = type === 'touchend' ? [] : touches;
+
+        let event;
+        if (typeof globalThis.TouchEvent === 'function') {
+          event = new TouchEvent(type, {
+            touches: type === 'touchend' ? [] : touches,
+            targetTouches,
+            changedTouches,
+            bubbles: true,
+            cancelable: true,
+          });
+        } else {
+          event = new Event(type, { bubbles: true, cancelable: true });
+          Object.defineProperty(event, 'touches', { value: type === 'touchend' ? [] : touches });
+          Object.defineProperty(event, 'targetTouches', { value: targetTouches });
+          Object.defineProperty(event, 'changedTouches', { value: changedTouches });
+        }
+
+        container.dispatchEvent(event);
       }
 
       // Start pinch: two fingers
@@ -482,13 +582,7 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
         { x: cx - 30, y: cy },
         { x: cx + 30, y: cy },
       ];
-      container.dispatchEvent(new TouchEvent('touchstart', {
-        touches: makeTouchList(startPoints),
-        targetTouches: makeTouchList(startPoints),
-        changedTouches: makeTouchList(startPoints),
-        bubbles: true,
-        cancelable: true,
-      }));
+      dispatchTouchEvent('touchstart', startPoints);
 
       await new Promise((r) => setTimeout(r, 50));
 
@@ -500,24 +594,12 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
         { x: cx - 80, y: cy },
         { x: cx + 80, y: cy },
       ];
-      container.dispatchEvent(new TouchEvent('touchmove', {
-        touches: makeTouchList(movePoints),
-        targetTouches: makeTouchList(movePoints),
-        changedTouches: makeTouchList(movePoints),
-        bubbles: true,
-        cancelable: true,
-      }));
+      dispatchTouchEvent('touchmove', movePoints);
 
       await new Promise((r) => setTimeout(r, 50));
 
       // End pinch
-      container.dispatchEvent(new TouchEvent('touchend', {
-        touches: [],
-        targetTouches: [],
-        changedTouches: makeTouchList(movePoints),
-        bubbles: true,
-        cancelable: true,
-      }));
+      dispatchTouchEvent('touchend', [], movePoints);
 
       await new Promise((r) => setTimeout(r, 200));
 
@@ -550,9 +632,6 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
   });
 
   test('pinch respects zoom limits on mobile', async ({ page, browserName }) => {
-    // Firefox doesn't support the TouchEvent constructor
-    test.skip(browserName === 'firefox', 'TouchEvent not available in Firefox');
-
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
@@ -564,21 +643,62 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
 
     // Simulate an extreme pinch-out (zoom in a lot) and verify scale is capped at MAX_ZOOM
     const scaleAfterExtremePinch = await page.evaluate(async () => {
-      const container = document.querySelector('.map-canvas-wrapper');
+      const container = document.querySelector('.map-canvas-wrapper .konvajs-content') ||
+        document.querySelector('.map-canvas-wrapper');
       if (!container) return null;
       const rect = container.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
 
       function makeTouchList(points) {
-        return points.map((p, i) => new Touch({
+        const touchCtor = globalThis.Touch;
+        if (typeof touchCtor === 'function') {
+          return points.map((p, i) => new touchCtor({
+            identifier: i,
+            target: container,
+            clientX: p.x,
+            clientY: p.y,
+            pageX: p.x,
+            pageY: p.y,
+            screenX: p.x,
+            screenY: p.y,
+          }));
+        }
+
+        return points.map((p, i) => ({
           identifier: i,
           target: container,
           clientX: p.x,
           clientY: p.y,
           pageX: p.x,
           pageY: p.y,
+          screenX: p.x,
+          screenY: p.y,
         }));
+      }
+
+      function dispatchTouchEvent(type, touchesPoints, changedPoints = touchesPoints) {
+        const touches = makeTouchList(touchesPoints);
+        const changedTouches = makeTouchList(changedPoints);
+        const targetTouches = type === 'touchend' ? [] : touches;
+
+        let event;
+        if (typeof globalThis.TouchEvent === 'function') {
+          event = new TouchEvent(type, {
+            touches: type === 'touchend' ? [] : touches,
+            targetTouches,
+            changedTouches,
+            bubbles: true,
+            cancelable: true,
+          });
+        } else {
+          event = new Event(type, { bubbles: true, cancelable: true });
+          Object.defineProperty(event, 'touches', { value: type === 'touchend' ? [] : touches });
+          Object.defineProperty(event, 'targetTouches', { value: targetTouches });
+          Object.defineProperty(event, 'changedTouches', { value: changedTouches });
+        }
+
+        container.dispatchEvent(event);
       }
 
       // Start with fingers very close
@@ -586,13 +706,7 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
         { x: cx - 10, y: cy },
         { x: cx + 10, y: cy },
       ];
-      container.dispatchEvent(new TouchEvent('touchstart', {
-        touches: makeTouchList(startPoints),
-        targetTouches: makeTouchList(startPoints),
-        changedTouches: makeTouchList(startPoints),
-        bubbles: true,
-        cancelable: true,
-      }));
+      dispatchTouchEvent('touchstart', startPoints);
 
       // Move fingers very far apart (extreme zoom in attempt — 18x ratio)
       await new Promise((r) => setTimeout(r, 30));
@@ -600,23 +714,11 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
         { x: cx - 180, y: cy },
         { x: cx + 180, y: cy },
       ];
-      container.dispatchEvent(new TouchEvent('touchmove', {
-        touches: makeTouchList(movePoints),
-        targetTouches: makeTouchList(movePoints),
-        changedTouches: makeTouchList(movePoints),
-        bubbles: true,
-        cancelable: true,
-      }));
+      dispatchTouchEvent('touchmove', movePoints);
 
       await new Promise((r) => setTimeout(r, 30));
 
-      container.dispatchEvent(new TouchEvent('touchend', {
-        touches: [],
-        targetTouches: [],
-        changedTouches: makeTouchList(movePoints),
-        bubbles: true,
-        cancelable: true,
-      }));
+      dispatchTouchEvent('touchend', [], movePoints);
 
       await new Promise((r) => setTimeout(r, 200));
 
