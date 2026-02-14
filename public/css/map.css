@@ -114,13 +114,7 @@
     min-height: 45vh;
     font-size: 1rem;
   }
-
-  /* .map-controls {
-    bottom: 1rem;
-    right: 1rem;
-    gap: 0.35rem;
-  } */
-
+  
   .map-controls button {
     width: 36px;
     height: 36px;

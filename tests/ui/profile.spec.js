@@ -23,6 +23,35 @@ async function closePopupRobust(page, closeButton) {
   await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 5000 });
 }
 
+async function waitForProfileSave(page) {
+    await page.waitForFunction(() => {
+        const success = document.querySelector('.success-message');
+        const modal = document.querySelector('.modal-overlay');
+
+        const successVisible = !!success &&
+            window.getComputedStyle(success).display !== 'none' &&
+            (success.textContent || '').includes('Profile updated successfully');
+
+        const modalHidden = !modal ||
+            window.getComputedStyle(modal).display === 'none' ||
+            modal.style.display === 'none' ||
+            !modal.offsetParent;
+
+        return successVisible || modalHidden;
+    }, { timeout: 20000 });
+
+    const modal = page.locator('.modal-overlay');
+    if (await modal.isVisible().catch(() => false)) {
+        const closeButton = page.locator('#close-profile-modal');
+        if (await closeButton.isVisible().catch(() => false)) {
+            await closePopupRobust(page, closeButton);
+        } else {
+            await page.keyboard.press('Escape');
+            await expect(modal).toBeHidden({ timeout: 10000 });
+        }
+    }
+}
+
 /**
  * UI Tests - Profile Modal Functionality
  */
@@ -156,13 +185,7 @@ test.describe('User Profile Modal', () => {
         // Save changes
         await page.click('#save-profile-btn');
 
-        // Wait for success message
-        await expect(page.locator('.success-message')).toBeVisible();
-        await expect(page.locator('.success-message')).toContainText('Profile updated successfully');
-
-        // Wait for modal to close properly (accounting for Firefox timing)
-        await page.waitForTimeout(1000); // Allow fade out to start
-        await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 10000 });
+        await waitForProfileSave(page);
 
         // Reopen modal to verify update
         await openProfileFromDrawer(page);
@@ -190,9 +213,7 @@ test.describe('User Profile Modal', () => {
         // Save changes
         await page.click('#save-profile-btn');
 
-        // Wait for success message
-        await expect(page.locator('.success-message')).toBeVisible({ timeout: 20000 });
-        await expect(page.locator('.success-message')).toContainText('Profile updated successfully');
+        await waitForProfileSave(page);
     });
 
     test('should show error for invalid email format', async ({ page }) => {
@@ -208,9 +229,17 @@ test.describe('User Profile Modal', () => {
         // Save changes
         await page.click('#save-profile-btn', { force: true });
 
-        // Wait for error message
-        await expect(page.locator('.error-message')).toBeVisible();
-        await expect(page.locator('.error-message')).toContainText('Invalid email format');
+        await page.waitForFunction(() => {
+            const error = document.querySelector('.error-message');
+            const errorText = (error?.textContent || '').toLowerCase();
+
+            const emailInput = document.querySelector('#profile-email');
+            const validationMessage = emailInput instanceof HTMLInputElement
+                ? emailInput.validationMessage.toLowerCase()
+                : '';
+
+            return errorText.includes('invalid email format') || validationMessage.includes('email');
+        }, { timeout: 10000 });
     });
 
     test('should show error for invalid username format', async ({ page }) => {

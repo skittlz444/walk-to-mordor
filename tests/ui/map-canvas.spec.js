@@ -194,7 +194,14 @@ test.describe('Map Canvas - Stage Initialization & Metadata', () => {
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
     // Navigate away from the map page
-    await page.goto(`${BASE_URL}/`);
+    try {
+      await page.goto(`${BASE_URL}/`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('NS_BINDING_ABORTED')) {
+        throw error;
+      }
+    }
     // Canvas should no longer exist in the DOM
     await expect(page.locator('.map-canvas-wrapper canvas')).toHaveCount(0, { timeout: 5000 });
   });

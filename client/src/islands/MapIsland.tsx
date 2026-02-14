@@ -11,6 +11,10 @@ import {
   type UserMarkerNodes,
 } from '../components/map/UserMarker';
 import { getUserPosition, type Point } from '../utils/map-utils';
+import {
+  readLastOpenedDistanceMiles,
+  writeLastOpenedDistanceMiles,
+} from '../utils/map-storage.ts';
 import { fellowshipPath } from '../data/paths/fellowship-path';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
@@ -390,7 +394,7 @@ export function MapIsland() {
       // Animate stage position and scale
       const startScale = currentScale.value;
       const startPos = { ...position.value };
-      const duration = 0.5; // seconds
+      const duration = 0.6; // seconds
       const anim = new Konva.Animation((frame) => {
         if (!frame) return;
         const t = Math.min(frame.time / (duration * 1000), 1);
@@ -481,6 +485,9 @@ export function MapIsland() {
 
     // Center on new position
     centerOnPosition(newPos, currentScale.value, true);
+
+    // Persist latest opened distance for next map visit animation baseline
+    writeLastOpenedDistanceMiles(localStorage, newDistanceMiles);
   }, [centerOnPosition]);
 
   // Initialize Konva stage and fetch metadata
@@ -611,13 +618,20 @@ export function MapIsland() {
     Promise.all([metaPromise, progressPromise])
       .then(([data, distMiles]) => {
         metaRef.current = data;
-        userDistance.value = distMiles;
+
+        const previousOpenedDistance = readLastOpenedDistanceMiles(localStorage);
+        const hasPreviousOpenedDistance = previousOpenedDistance !== null;
+        const initialDistance = hasPreviousOpenedDistance
+          ? previousOpenedDistance
+          : distMiles;
+
+        userDistance.value = initialDistance;
 
         const min = computeMinScale(size, data.fullWidth, data.fullHeight);
         minScaleVal.value = min;
 
         // Determine user position for initial centering
-        const userPos = getUserPosition(fellowshipPath, distMiles);
+        const userPos = getUserPosition(fellowshipPath, initialDistance);
 
         // Start zoomed in on user position
         const initialZoom = clampScale(DEFAULT_CENTER_ZOOM, min);
@@ -644,10 +658,17 @@ export function MapIsland() {
           markerLayer,
           userPos,
           initialZoom,
-          distMiles,
+          initialDistance,
         );
 
         applyTransform();
+
+        // Smoothly transition on initial load from previous opened distance to latest distance
+        if (hasPreviousOpenedDistance && previousOpenedDistance !== distMiles) {
+          updateUserDistance(distMiles);
+        } else {
+          writeLastOpenedDistanceMiles(localStorage, distMiles);
+        }
 
         // Expose updateUserDistance on window for external callers
         (window as Window & { updateMapDistance?: (d: number) => void }).updateMapDistance = (newDistKm: number) => {

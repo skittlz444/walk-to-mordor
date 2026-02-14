@@ -49,7 +49,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
     await expect(drawer).toHaveAttribute('aria-hidden', 'false');
 
-    await backdrop.click();
+    await backdrop.click({ position: { x: 5, y: 5 } });
     await expect(page.locator('body')).not.toHaveClass(/drawer-open/);
     await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
     await expect(drawer).toHaveAttribute('aria-hidden', 'true');
@@ -108,7 +108,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(closeButton).toBeFocused();
 
     // Close via backdrop
-    await page.click('.drawer-backdrop');
+    await page.locator('.drawer-backdrop').click({ position: { x: 5, y: 5 } });
     await expect(page.locator('body')).not.toHaveClass(/drawer-open/);
 
     // Focus should return to the menu trigger button
