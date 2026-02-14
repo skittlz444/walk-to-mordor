@@ -19,7 +19,7 @@ const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
-const DEFAULT_CENTER_ZOOM = 1.8;
+const DEFAULT_CENTER_ZOOM = 1.5;
 
 /** Dev mode: set window.__MAP_DEV_LOG = true in console to log coordinates on click */
 
@@ -390,7 +390,7 @@ export function MapIsland() {
       // Animate stage position and scale
       const startScale = currentScale.value;
       const startPos = { ...position.value };
-      const duration = 0.4; // seconds
+      const duration = 0.5; // seconds
       const anim = new Konva.Animation((frame) => {
         if (!frame) return;
         const t = Math.min(frame.time / (duration * 1000), 1);
@@ -802,7 +802,6 @@ export function MapIsland() {
           >
             <i className="fas fa-minus" aria-hidden="true"></i>
           </button>
-          <div className="map-controls-divider"></div>
           <button
             type="button"
             aria-label="Re-center on current location"

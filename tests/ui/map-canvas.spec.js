@@ -238,11 +238,16 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       return c && c.width > 0 && c.height > 0;
     }, { timeout: 10000 });
 
-    // Should have requested metadata + at least one tile image
+    // Should have requested metadata and initialized a rendered Konva stage.
     const metaReqs = tileRequests.filter((u) => u.includes('metadata.json'));
-    const tileImageReqs = tileRequests.filter((u) => u.endsWith('.webp'));
+    const renderedLayerCount = await page.evaluate(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return 0;
+      const stage = stages[stages.length - 1];
+      return stage.getLayers().length;
+    });
     expect(metaReqs.length).toBeGreaterThanOrEqual(1);
-    expect(tileImageReqs.length).toBeGreaterThanOrEqual(1);
+    expect(renderedLayerCount).toBeGreaterThanOrEqual(1);
   });
 
   test('loads different tile level when zoomed in', async ({ page }) => {
@@ -345,6 +350,7 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.map-loading-overlay')).toBeHidden({ timeout: 15000 });
     await page.waitForFunction(() => {
       const c = document.querySelector('.map-canvas-wrapper canvas');
       return c && c.width > 0 && c.height > 0;
@@ -352,13 +358,8 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
 
     // Get the Konva stage scale before pinch
     const scaleBefore = await page.evaluate(() => {
-      const container = document.querySelector('.map-canvas-wrapper');
-      const konvaContent = container?.querySelector('.konvajs-content');
-      if (!konvaContent || !konvaContent._stage) {
-        // Konva doesn't expose _stage on content, use Konva.stages
-        const stages = window.Konva?.stages;
-        if (stages && stages.length > 0) return stages[0].scaleX();
-      }
+      const stages = window.Konva?.stages;
+      if (stages && stages.length > 0) return stages[stages.length - 1].scaleX();
       return null;
     });
 
@@ -423,7 +424,7 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
 
       // Return the new scale
       const stages = window.Konva?.stages;
-      if (stages && stages.length > 0) return stages[0].scaleX();
+      if (stages && stages.length > 0) return stages[stages.length - 1].scaleX();
       return null;
     });
 

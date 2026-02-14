@@ -30,7 +30,7 @@ function markerScale(stageScale: number): number {
   // (base=6, min=2, max=10). The ratio gives us a consistent visual scale.
   const baseStroke = 6;
   const minStroke = 2;
-  const maxStroke = 10;
+  const maxStroke = 20;
   const effectiveStroke = dynamicStrokeWidth(baseStroke, stageScale, minStroke, maxStroke);
   // effectiveStroke / baseStroke gives us the ratio to apply to the marker
   return effectiveStroke / baseStroke;
@@ -39,7 +39,7 @@ function markerScale(stageScale: number): number {
 /** Marker colors */
 const RING_COLOR = '#DAA520';        // Goldenrod
 const RING_STROKE_COLOR = '#FFFFFF'; // White outer ring
-const HALO_COLOR = '#DAA520';        // Gold halo
+const HALO_COLOR = '#daa520';        // Gold halo
 const TOOLTIP_BG = '#1a1a2e';
 const TOOLTIP_TEXT_COLOR = '#e0e0e0';
 

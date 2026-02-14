@@ -65,12 +65,12 @@
 /* Map UI Controls (zoom, recenter) */
 .map-controls {
   position: absolute;
-  bottom: 1.5rem;
+  top: 1.5rem;
   right: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  z-index: 15;
+  /* z-index: 15; */
   pointer-events: auto;
 }
 
@@ -115,11 +115,11 @@
     font-size: 1rem;
   }
 
-  .map-controls {
+  /* .map-controls {
     bottom: 1rem;
     right: 1rem;
     gap: 0.35rem;
-  }
+  } */
 
   .map-controls button {
     width: 36px;
