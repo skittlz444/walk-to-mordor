@@ -69,7 +69,11 @@ export function DrawerIsland() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsOpen(false);
+        if (showAttribution) {
+          setShowAttribution(false);
+        } else {
+          setIsOpen(false);
+        }
       }
     }
 
@@ -77,7 +81,7 @@ export function DrawerIsland() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [showAttribution]);
 
   function openDrawer() {
     setIsOpen(true);
