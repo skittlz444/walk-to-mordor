@@ -62,6 +62,49 @@
   pointer-events: none;
 }
 
+/* Map UI Controls (zoom, recenter) */
+.map-controls {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  /* z-index: 15; */
+  pointer-events: auto;
+}
+
+.map-controls button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(26, 26, 46, 0.85);
+  color: #e0e0e0;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.1s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.map-controls button:hover {
+  background: rgba(26, 26, 46, 0.95);
+}
+
+.map-controls button:active {
+  transform: scale(0.92);
+}
+
+.map-controls-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0.15rem 0;
+}
+
 @media (max-width: 768px) {
   .map-shell {
     padding: 0;
@@ -69,6 +112,12 @@
 
   .map-container {
     min-height: 45vh;
+    font-size: 1rem;
+  }
+  
+  .map-controls button {
+    width: 36px;
+    height: 36px;
     font-size: 1rem;
   }
 }

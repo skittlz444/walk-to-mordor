@@ -14,7 +14,7 @@ existing_patterns_found: 5
 - **Runtime**: Cloudflare Workers (Single Worker Monolith)
 - **Database**: D1 (SQLite)
 - **Frontend**: Preact (Islands Architecture), Vanilla JS (Legacy)
-- **Map**: Konva.js / react-konva
+- **Map**: Konva.js (imperative API)
 - **Testing**: Playwright (`npm run test:ui`), Jest
 - **Deployment**: Wrangler
 
@@ -28,7 +28,7 @@ existing_patterns_found: 5
 ### 2. Coding Standards
 - **TypeScript**: Strict mode. No `any`.
 - **Preact Islands**: New components in `client/src/`. Legacy in `public/js/`.
-- **Konva**: Use `react-konva` components.
+- **Konva**: Use imperative `Konva` API (no `react-konva`).
 - **File Manipulation**: Use IDE tools (create_file, etc.), NOT terminal commands.
 
 ### 3. Testing Guidelines

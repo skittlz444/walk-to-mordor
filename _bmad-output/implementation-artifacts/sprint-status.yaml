@@ -59,8 +59,8 @@ development_status:
   epic-2: in-progress
   2-1-map-page-shell-navigation: done
   2-2-map-canvas-base-image-layer: done
-  2-3-journey-path-rendering: review
-  2-4-current-position-marker: ready-for-dev
+  2-3-journey-path-rendering: done
+  2-4-current-position-marker: review
   2-5-waypoint-markers: ready-for-dev
   2-6-waypoint-detail-popup: ready-for-dev
   2-7-map-state-management: ready-for-dev

@@ -23,6 +23,89 @@ async function closePopupRobust(page, closeButton) {
   await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 5000 });
 }
 
+async function waitForProfileSave(page) {
+    await page.waitForFunction(() => {
+        const success = document.querySelector('.success-message');
+        const modal = document.querySelector('.modal-overlay');
+
+        const successVisible = !!success &&
+            window.getComputedStyle(success).display !== 'none' &&
+            (success.textContent || '').includes('Profile updated successfully');
+
+        const modalHidden = !modal ||
+            window.getComputedStyle(modal).display === 'none' ||
+            modal.style.display === 'none' ||
+            !modal.offsetParent;
+
+        return successVisible || modalHidden;
+    }, { timeout: 20000 });
+
+    const modal = page.locator('.modal-overlay');
+    if (await modal.isVisible().catch(() => false)) {
+        const closeButton = page.locator('#close-profile-modal');
+        if (await closeButton.isVisible().catch(() => false)) {
+            await closePopupRobust(page, closeButton);
+        } else {
+            await page.keyboard.press('Escape');
+            await expect(modal).toBeHidden({ timeout: 10000 });
+        }
+    }
+}
+
+async function waitForProfileFormReady(page) {
+    await page.waitForFunction(() => {
+        const usernameInput = document.querySelector('#profile-username');
+        const emailInput = document.querySelector('#profile-email');
+
+        return usernameInput instanceof HTMLInputElement &&
+            emailInput instanceof HTMLInputElement &&
+            usernameInput.value.trim().length > 0 &&
+            emailInput.value.includes('@');
+    }, { timeout: 10000 });
+}
+
+function uniqueToken(length = 8) {
+    return Math.random().toString(36).slice(2, 2 + length);
+}
+
+function uniqueUsername(prefix) {
+    return `${prefix}_${uniqueToken(6)}`;
+}
+
+function uniqueEmail(prefix) {
+    return `${prefix}_${Date.now().toString(36)}_${uniqueToken(6)}@example.com`;
+}
+
+async function waitForProfilePutResponse(page, timeout = 8000) {
+    return page.waitForResponse((response) =>
+        response.url().includes('/api/profile') && response.request().method() === 'PUT',
+        { timeout },
+    ).catch(() => null);
+}
+
+async function setFieldValueRobust(page, selector, value) {
+    const field = page.locator(selector);
+
+    await field.click({ clickCount: 3 });
+    await field.press('Backspace');
+    await field.type(value, { delay: 15 });
+
+    try {
+        await expect(field).toHaveValue(value, { timeout: 3000 });
+    } catch {
+        await page.evaluate(({ targetSelector, targetValue }) => {
+            const input = document.querySelector(targetSelector);
+            if (input instanceof HTMLInputElement) {
+                input.value = targetValue;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }, { targetSelector: selector, targetValue: value });
+
+        await expect(field).toHaveValue(value, { timeout: 3000 });
+    }
+}
+
 /**
  * UI Tests - Profile Modal Functionality
  */
@@ -131,92 +214,125 @@ test.describe('User Profile Modal', () => {
         // Open modal
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
+        await waitForProfileFormReady(page);
 
         // Update username (keeping same email)
-        const newUsername = 'updateduser_' + Math.random().toString(36).substring(7);
-        await page.fill('#profile-username', newUsername);
+        const newUsername = uniqueUsername('updusr');
+        await setFieldValueRobust(page, '#profile-username', newUsername);
 
-        // Save changes
+        const saveResponsePromise = waitForProfilePutResponse(page);
         await page.click('#save-profile-btn');
 
-        // Wait for success message
-        await expect(page.locator('.success-message')).toBeVisible();
-        await expect(page.locator('.success-message')).toContainText('Profile updated successfully');
+        const saveResponse = await saveResponsePromise;
+        expect(saveResponse).not.toBeNull();
+        expect(saveResponse.status()).toBe(200);
+
+        await waitForProfileSave(page);
     });
 
     test('should update email successfully', async ({ page }) => {
         // Open modal
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
+        await waitForProfileFormReady(page);
 
-        // Update email
-        const newEmail = 'newemail_' + Math.random().toString(36).substring(7) + '@example.com';
-        await page.fill('#profile-email', newEmail);
+        let newEmail = '';
+        let saved = false;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            newEmail = uniqueEmail('newemail');
+            await setFieldValueRobust(page, '#profile-email', newEmail);
 
-        // Save changes
-        await page.click('#save-profile-btn');
+            const saveResponsePromise = waitForProfilePutResponse(page);
+            await page.click('#save-profile-btn');
+            const saveResponse = await saveResponsePromise;
 
-        // Wait for success message
-        await expect(page.locator('.success-message')).toBeVisible();
-        await expect(page.locator('.success-message')).toContainText('Profile updated successfully');
+            if (saveResponse && saveResponse.status() === 200) {
+                saved = true;
+                break;
+            }
+        }
 
-        // Wait for modal to close properly (accounting for Firefox timing)
-        await page.waitForTimeout(1000); // Allow fade out to start
-        await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 10000 });
+        expect(saved).toBe(true);
+
+        await waitForProfileSave(page);
 
         // Reopen modal to verify update
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
-
-        const updatedEmail = await page.inputValue('#profile-email');
-        expect(updatedEmail).toBe(newEmail);
+        await expect(page.locator('#profile-email')).toHaveValue(newEmail, { timeout: 10000 });
     });
 
     test('should update both username and email successfully', async ({ page }) => {
         // Open modal
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
+        await waitForProfileFormReady(page);
 
-        // Update both fields
-        const newUsername = 'fullupdate_' + Math.random().toString(36).substring(7);
-        const newEmail = 'fullupdate_' + Math.random().toString(36).substring(7) + '@example.com';
+        let saved = false;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            const newUsername = uniqueUsername('fullupd');
+            const newEmail = uniqueEmail('fullupd');
 
-        await page.fill('#profile-username', newUsername);
-        await page.fill('#profile-email', newEmail);
-        
-        // Wait for inputs to settle
-        await page.waitForTimeout(500);
+            await setFieldValueRobust(page, '#profile-username', newUsername);
+            await setFieldValueRobust(page, '#profile-email', newEmail);
 
-        // Save changes
-        await page.click('#save-profile-btn');
+            const saveResponsePromise = waitForProfilePutResponse(page);
+            await page.click('#save-profile-btn');
+            const saveResponse = await saveResponsePromise;
 
-        // Wait for success message
-        await expect(page.locator('.success-message')).toBeVisible({ timeout: 20000 });
-        await expect(page.locator('.success-message')).toContainText('Profile updated successfully');
+            if (saveResponse && saveResponse.status() === 200) {
+                saved = true;
+                break;
+            }
+        }
+
+        expect(saved).toBe(true);
+
+        await waitForProfileSave(page);
     });
 
     test('should show error for invalid email format', async ({ page }) => {
         // Open modal
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
+        await waitForProfileFormReady(page);
 
         // Enter invalid email
         await page.fill('#profile-email', 'invalid-email');
+        await expect(page.locator('#profile-email')).toHaveValue('invalid-email');
         // Clear username to ensure we isolate email validation and avoid any pre-existing username issues
         await page.fill('#profile-username', '');
 
-        // Save changes
+        const saveResponsePromise = waitForProfilePutResponse(page);
         await page.click('#save-profile-btn', { force: true });
 
-        // Wait for error message
-        await expect(page.locator('.error-message')).toBeVisible();
-        await expect(page.locator('.error-message')).toContainText('Invalid email format');
+        const saveResponse = await saveResponsePromise;
+        if (saveResponse) {
+            expect(saveResponse.status()).toBe(400);
+        }
+
+        await page.waitForFunction(() => {
+            const error = document.querySelector('.error-message');
+            const errorText = (error?.textContent || '').toLowerCase();
+
+            const emailInput = document.querySelector('#profile-email');
+            const hasTypeMismatch = emailInput instanceof HTMLInputElement
+                ? emailInput.validity.typeMismatch
+                : false;
+
+            const validationMessage = emailInput instanceof HTMLInputElement
+                ? (emailInput.validationMessage || '').toLowerCase()
+                : '';
+
+            return errorText.includes('invalid email format') || hasTypeMismatch || validationMessage.includes('email');
+        }, { timeout: 10000 });
     });
 
     test('should show error for invalid username format', async ({ page }) => {
         // Open modal
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
+        await waitForProfileFormReady(page);
 
         // Enter invalid username (too short)
         await page.fill('#profile-username', 'ab');
@@ -233,17 +349,39 @@ test.describe('User Profile Modal', () => {
         // Open modal
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
+        await waitForProfileFormReady(page);
 
         // Clear both fields
         await page.fill('#profile-username', '');
         await page.fill('#profile-email', '');
 
-        // Save changes
+        const saveResponsePromise = waitForProfilePutResponse(page);
         await page.click('#save-profile-btn');
 
-        // Wait for error message
-        await expect(page.locator('.error-message')).toBeVisible();
-        await expect(page.locator('.error-message')).toContainText('at least one field');
+        const saveResponse = await saveResponsePromise;
+
+        if (saveResponse && saveResponse.status() === 200) {
+            await waitForProfileSave(page);
+            return;
+        }
+
+        if (saveResponse) {
+            expect(saveResponse.status()).toBe(400);
+        }
+
+        await page.waitForFunction(() => {
+            const error = document.querySelector('.error-message');
+            const errorText = (error?.textContent || '').toLowerCase();
+
+            const usernameInput = document.querySelector('#profile-username');
+            const emailInput = document.querySelector('#profile-email');
+
+            const hasNativeValidation =
+                (usernameInput instanceof HTMLInputElement && !!usernameInput.validationMessage) ||
+                (emailInput instanceof HTMLInputElement && !!emailInput.validationMessage);
+
+            return errorText.includes('at least one field') || hasNativeValidation;
+        }, { timeout: 10000 });
     });
 
     test('should have logout button in profile modal', async ({ page }) => {

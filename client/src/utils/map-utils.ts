@@ -15,6 +15,23 @@ export interface Point {
 export interface PathSplit {
   completedPoints: number[];
   futurePoints: number[];
+  /** The exact {x, y} position of the user on the map. */
+  userPosition: Point;
+}
+
+/**
+ * Get the user's current position on the map from their distance.
+ * Convenience wrapper around calculateCutoffPoint.
+ *
+ * @param pathNodes  Ordered path nodes with optional distance anchors.
+ * @param userDistance  User's total distance in miles.
+ * @returns The {x, y} point on the map, or {x:0, y:0} if path is empty.
+ */
+export function getUserPosition(
+  pathNodes: PathNode[],
+  userDistance: number,
+): Point {
+  return calculateCutoffPoint(pathNodes, userDistance).userPosition;
 }
 
 /** Euclidean distance between two points. */
@@ -66,7 +83,7 @@ export function calculateCutoffPoint(
   userDistance: number,
 ): PathSplit {
   if (pathNodes.length === 0) {
-    return { completedPoints: [], futurePoints: [] };
+    return { completedPoints: [], futurePoints: [], userPosition: { x: 0, y: 0 } };
   }
 
   // Collect anchors (nodes with a defined numeric distance)
@@ -80,24 +97,28 @@ export function calculateCutoffPoint(
 
   if (anchors.length === 0) {
     // No anchors — everything is future
-    return { completedPoints: [], futurePoints: flattenPoints(pathNodes) };
+    return { completedPoints: [], futurePoints: flattenPoints(pathNodes), userPosition: pathNodes[0] };
   }
 
   // If user distance is at or past the final anchor, everything is completed
   const lastAnchor = anchors[anchors.length - 1];
   if (userDistance >= lastAnchor.distance) {
+    const lastNode = pathNodes[lastAnchor.index];
     return {
       completedPoints: flattenPoints(pathNodes),
       futurePoints: [],
+      userPosition: { x: lastNode.x, y: lastNode.y },
     };
   }
 
   // If user distance is before the first anchor, everything is future
   const firstAnchor = anchors[0];
   if (userDistance <= firstAnchor.distance) {
+    const firstNode = pathNodes[firstAnchor.index];
     return {
       completedPoints: [],
       futurePoints: flattenPoints(pathNodes),
+      userPosition: { x: firstNode.x, y: firstNode.y },
     };
   }
 
@@ -174,6 +195,7 @@ export function calculateCutoffPoint(
   return {
     completedPoints: flattenPoints(completedParts),
     futurePoints: flattenPoints(futureParts),
+    userPosition: cutPoint,
   };
 }
 

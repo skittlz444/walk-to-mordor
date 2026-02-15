@@ -6,12 +6,24 @@ import {
   updateJourneyPath,
   type JourneyPathNodes,
 } from '../components/map/JourneyPath';
+import {
+  createUserMarker,
+  type UserMarkerNodes,
+} from '../components/map/UserMarker';
+import { getUserPosition, type Point } from '../utils/map-utils';
+import {
+  readLastOpenedDistanceMiles,
+  writeLastOpenedDistanceMiles,
+} from '../utils/map-storage.ts';
+import { fellowshipPath } from '../data/paths/fellowship-path';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
 const KM_TO_MILES = 0.621371;
-const SCALE_BY = 1.1;
+const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
+/** Default zoom level when centering on user position */
+const DEFAULT_CENTER_ZOOM = 1.5;
 
 /** Dev mode: set window.__MAP_DEV_LOG = true in console to log coordinates on click */
 
@@ -189,6 +201,8 @@ export function MapIsland() {
   const metaRef = useRef<TileMetadata | null>(null);
   const pathLayerRef = useRef<Konva.Layer | null>(null);
   const pathNodesRef = useRef<JourneyPathNodes | null>(null);
+  const markerLayerRef = useRef<Konva.Layer | null>(null);
+  const markerRef = useRef<UserMarkerNodes | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -344,7 +358,137 @@ export function MapIsland() {
       updateJourneyPath(pathNodesRef.current, userDistance.value, currentScale.value);
       pathLayerRef.current?.batchDraw();
     }
+
+    // Update marker inverse scale for zoom independence
+    if (markerRef.current) {
+      markerRef.current.setScale(currentScale.value);
+      markerLayerRef.current?.batchDraw();
+    }
   }, [updateTiles]);
+
+  /**
+   * Center the map on a given map coordinate at a given zoom level.
+   * Respects map boundaries (edge clamping).
+   * If animate is true, smoothly transitions to the new position.
+   */
+  const centerOnPosition = useCallback((
+    mapPoint: Point,
+    zoom: number,
+    animate = false,
+  ) => {
+    const meta = metaRef.current;
+    const stage = stageRef.current;
+    if (!meta || !stage) return;
+
+    const targetScale = clampScale(zoom, minScaleVal.value);
+    const size = stageSize.value;
+
+    // Calculate stage position so mapPoint is at center of viewport
+    const rawPos = {
+      x: size.width / 2 - mapPoint.x * targetScale,
+      y: size.height / 2 - mapPoint.y * targetScale,
+    };
+    const targetPos = clampPosition(rawPos, targetScale, size, meta.fullWidth, meta.fullHeight);
+
+    if (animate) {
+      // Animate stage position and scale
+      const startScale = currentScale.value;
+      const startPos = { ...position.value };
+      const duration = 0.6; // seconds
+      const anim = new Konva.Animation((frame) => {
+        if (!frame) return;
+        const t = Math.min(frame.time / (duration * 1000), 1);
+        // Ease in-out
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+        const s = startScale + (targetScale - startScale) * ease;
+        const p = {
+          x: startPos.x + (targetPos.x - startPos.x) * ease,
+          y: startPos.y + (targetPos.y - startPos.y) * ease,
+        };
+
+        currentScale.value = s;
+        position.value = p;
+        applyTransform();
+
+        if (t >= 1) {
+          anim.stop();
+        }
+      }, stage.getLayers()[0]);
+      anim.start();
+    } else {
+      currentScale.value = targetScale;
+      position.value = targetPos;
+      applyTransform();
+    }
+  }, [applyTransform]);
+
+  /** Handle zoom in/out from UI buttons */
+  const handleZoom = useCallback((direction: 1 | -1) => {
+    const meta = metaRef.current;
+    if (!meta) return;
+    const size = stageSize.value;
+
+    const oldScale = currentScale.value;
+    const newScale = clampScale(
+      direction > 0 ? oldScale * SCALE_BY : oldScale / SCALE_BY,
+      minScaleVal.value,
+    );
+
+    // Zoom toward center of viewport
+    const centerX = size.width / 2;
+    const centerY = size.height / 2;
+    const mousePointTo = {
+      x: (centerX - position.value.x) / oldScale,
+      y: (centerY - position.value.y) / oldScale,
+    };
+    const newPos = {
+      x: centerX - mousePointTo.x * newScale,
+      y: centerY - mousePointTo.y * newScale,
+    };
+
+    currentScale.value = newScale;
+    position.value = clampPosition(newPos, newScale, stageSize.value, meta.fullWidth, meta.fullHeight);
+    applyTransform();
+  }, [applyTransform]);
+
+  /** Re-center on the user's current position */
+  const handleRecenter = useCallback(() => {
+    const pos = getUserPosition(fellowshipPath, userDistance.value);
+    centerOnPosition(pos, DEFAULT_CENTER_ZOOM, true);
+  }, [centerOnPosition]);
+
+  /**
+   * Update the user's distance and animate the marker + path.
+   * Called when distance changes (e.g. from distance logging on the map page).
+   * Exposed on window for external callers.
+   */
+  const updateUserDistance = useCallback((newDistanceMiles: number) => {
+    const oldDistance = userDistance.value;
+    if (newDistanceMiles === oldDistance) return;
+
+    userDistance.value = newDistanceMiles;
+    const newPos = getUserPosition(fellowshipPath, newDistanceMiles);
+
+    // Update path
+    if (pathNodesRef.current) {
+      updateJourneyPath(pathNodesRef.current, newDistanceMiles, currentScale.value);
+      pathLayerRef.current?.batchDraw();
+    }
+
+    // Update marker
+    if (markerRef.current) {
+      markerRef.current.setDistance(newDistanceMiles);
+      markerRef.current.setPosition(newPos, true);
+      markerLayerRef.current?.batchDraw();
+    }
+
+    // Center on new position
+    centerOnPosition(newPos, currentScale.value, true);
+
+    // Persist latest opened distance for next map visit animation baseline
+    writeLastOpenedDistanceMiles(localStorage, newDistanceMiles);
+  }, [centerOnPosition]);
 
   // Initialize Konva stage and fetch metadata
   useEffect(() => {
@@ -368,9 +512,14 @@ export function MapIsland() {
     const pathLayer = new Konva.Layer({ listening: false });
     stage.add(pathLayer);
 
+    // Marker layer (renders on top of path, below UI controls)
+    const markerLayer = new Konva.Layer();
+    stage.add(markerLayer);
+
     stageRef.current = stage;
     layerRef.current = layer;
     pathLayerRef.current = pathLayer;
+    markerLayerRef.current = markerLayer;
 
     // Dev tool: log map coordinates on click when enabled
     // Enable in browser console: window.__MAP_DEV_LOG = true
@@ -469,18 +618,31 @@ export function MapIsland() {
     Promise.all([metaPromise, progressPromise])
       .then(([data, distMiles]) => {
         metaRef.current = data;
-        userDistance.value = distMiles;
+
+        const previousOpenedDistance = readLastOpenedDistanceMiles(localStorage);
+        const hasPreviousOpenedDistance = previousOpenedDistance !== null;
+        const initialDistance = hasPreviousOpenedDistance
+          ? previousOpenedDistance
+          : distMiles;
+
+        userDistance.value = initialDistance;
 
         const min = computeMinScale(size, data.fullWidth, data.fullHeight);
         minScaleVal.value = min;
-        currentScale.value = min;
 
-        const scaledW = data.fullWidth * min;
-        const scaledH = data.fullHeight * min;
-        position.value = {
-          x: (size.width - scaledW) / 2,
-          y: (size.height - scaledH) / 2,
+        // Determine user position for initial centering
+        const userPos = getUserPosition(fellowshipPath, initialDistance);
+
+        // Start zoomed in on user position
+        const initialZoom = clampScale(DEFAULT_CENTER_ZOOM, min);
+        currentScale.value = initialZoom;
+
+        // Center viewport on user position, clamped to map bounds
+        const rawPos = {
+          x: size.width / 2 - userPos.x * initialZoom,
+          y: size.height / 2 - userPos.y * initialZoom,
         };
+        position.value = clampPosition(rawPos, initialZoom, size, data.fullWidth, data.fullHeight);
 
         loading.value = false;
 
@@ -488,10 +650,30 @@ export function MapIsland() {
         pathNodesRef.current = createJourneyPath(
           pathLayer,
           userDistance.value,
-          min,
+          initialZoom,
+        );
+
+        // Create user marker on marker layer
+        markerRef.current = createUserMarker(
+          markerLayer,
+          userPos,
+          initialZoom,
+          initialDistance,
         );
 
         applyTransform();
+
+        // Smoothly transition on initial load from previous opened distance to latest distance
+        if (hasPreviousOpenedDistance && previousOpenedDistance !== distMiles) {
+          updateUserDistance(distMiles);
+        } else {
+          writeLastOpenedDistanceMiles(localStorage, distMiles);
+        }
+
+        // Expose updateUserDistance on window for external callers
+        (window as Window & { updateMapDistance?: (d: number) => void }).updateMapDistance = (newDistKm: number) => {
+          updateUserDistance(newDistKm * KM_TO_MILES);
+        };
       })
       .catch(() => {
         error.value = true;
@@ -594,13 +776,19 @@ export function MapIsland() {
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
+      if (markerRef.current) {
+        markerRef.current.destroy();
+        markerRef.current = null;
+      }
       stage.destroy();
       stageRef.current = null;
       layerRef.current = null;
       pathLayerRef.current = null;
+      markerLayerRef.current = null;
       pathNodesRef.current = null;
       renderedTiles.current.clear();
       pendingTiles.current.clear();
+      delete (window as Window & { updateMapDistance?: unknown }).updateMapDistance;
     };
   }, []);
 
@@ -616,6 +804,34 @@ export function MapIsland() {
     >
       {loading.value && (
         <div className="map-loading-overlay">Loading Middle-earth...</div>
+      )}
+      {!loading.value && (
+        <div className="map-controls">
+          <button
+            type="button"
+            aria-label="Zoom in"
+            title="Zoom in"
+            onClick={() => handleZoom(1)}
+          >
+            <i className="fas fa-plus" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            aria-label="Zoom out"
+            title="Zoom out"
+            onClick={() => handleZoom(-1)}
+          >
+            <i className="fas fa-minus" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            aria-label="Re-center on current location"
+            title="Re-center"
+            onClick={handleRecenter}
+          >
+            <i className="fas fa-crosshairs" aria-hidden="true"></i>
+          </button>
+        </div>
       )}
     </div>
   );

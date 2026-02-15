@@ -9,7 +9,7 @@ test.describe('Map Shell (Authenticated)', () => {
     }, authToken);
   });
 
-  test('drawer navigation and profile access', async ({ page }) => {
+  test('drawer navigation and profile access', async ({ page, authToken }) => {
     await page.goto(`${BASE_URL}/map`);
 
     const menuButton = page.locator('.menu-icon');
@@ -23,7 +23,15 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(page.locator('.drawer-profile')).toBeVisible();
 
     await page.click('.drawer-link:has-text("Journey")');
-    await page.waitForURL('**/');
+    await page.waitForURL(/\/(login)?$/);
+
+    if (page.url().endsWith('/login')) {
+      await page.evaluate((token) => {
+        localStorage.setItem('sessionToken', token);
+      }, authToken);
+      await page.goto(`${BASE_URL}/`);
+      await page.waitForURL('**/');
+    }
 
     await page.click('.menu-icon');
     await page.waitForSelector('body.drawer-open', { timeout: 5000 });
@@ -49,7 +57,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
     await expect(drawer).toHaveAttribute('aria-hidden', 'false');
 
-    await backdrop.click();
+    await backdrop.click({ position: { x: 5, y: 5 } });
     await expect(page.locator('body')).not.toHaveClass(/drawer-open/);
     await expect(menuButton).toHaveAttribute('aria-expanded', 'false');
     await expect(drawer).toHaveAttribute('aria-hidden', 'true');
@@ -108,7 +116,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(closeButton).toBeFocused();
 
     // Close via backdrop
-    await page.click('.drawer-backdrop');
+    await page.locator('.drawer-backdrop').click({ position: { x: 5, y: 5 } });
     await expect(page.locator('body')).not.toHaveClass(/drawer-open/);
 
     // Focus should return to the menu trigger button

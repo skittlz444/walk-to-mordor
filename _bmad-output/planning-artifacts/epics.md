@@ -77,7 +77,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 | **ADR_004** | Fellowship Data | Plan for new tables (parties, party_members) for Phase 3 |
 | **ARCH_MIG_01** | Migration Strategy | Incremental adoption - new features in Preact, existing migrated when enhanced |
 | **ARCH_STRUCT_01** | Client Structure | New client/src/ directory for Preact components |
-| **ARCH_BUILD_01** | Build Config | Need preact/compat aliased for react-konva |
+| **ARCH_BUILD_01** | Build Config | Configure client build for Preact islands and Konva integration |
 | **ARCH_TEST_01** | Visual Testing | Rely on Playwright visual regression (snapshot) tests for canvas |
 
 #### From UX Design
@@ -211,7 +211,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Acceptance Criteria:**
 - [ ] Create `client/` directory structure: `client/src/`, `client/src/components/`, `client/src/islands/`
-- [ ] Configure esbuild (or vite) for Preact compilation with `preact/compat` alias for react-konva compatibility
+- [ ] Configure esbuild (or vite) for Preact compilation and Konva map support
 - [ ] Configure TypeScript for client code (separate tsconfig.client.json if needed)
 - [ ] Create npm scripts: `build:client`, `dev:client` (watch mode)
 - [ ] Create a sample proof-of-concept island component (Note: HelloWorld POC has been removed after validation)
@@ -219,7 +219,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Verify build outputs to `public/js/islands/` or equivalent assets location
 
 **Technical Notes:**
-- Must alias `react` → `preact/compat` and `react-dom` → `preact/compat` for Konva compatibility
+- Keep Konva map integration compatible with the current runtime and package versions
 - Follow ADR-001 (Preact) and ARCH_BUILD_01
 
 **Dependencies:** None (foundational)
@@ -428,7 +428,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **FRs:** FR_MAP_01
 
-**Tech:** Konva.js, react-konva with preact/compat
+**Tech:** Konva.js (imperative API)
 
 **Dependencies:** Story 2.1, Story 1.1
 
@@ -449,7 +449,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Uncompleted path is shown as a limited near-term faded context segment (full remaining route is not required)
 
 **Implementation Clarification (review-approved):**
-- Imperative Konva API is acceptable for this story in place of `react-konva` due runtime compatibility constraints validated during Story 2.2 implementation.
+- Imperative Konva API is the approved rendering approach for this story due runtime compatibility constraints validated during Story 2.2 implementation.
 
 **FRs:** FR_MAP_02
 

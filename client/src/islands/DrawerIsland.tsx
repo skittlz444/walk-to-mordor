@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 
 export function DrawerIsland() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showAttribution, setShowAttribution] = useState(false);
   const drawerRef = useRef<HTMLElement | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -68,7 +69,11 @@ export function DrawerIsland() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsOpen(false);
+        if (showAttribution) {
+          setShowAttribution(false);
+        } else {
+          setIsOpen(false);
+        }
       }
     }
 
@@ -76,7 +81,7 @@ export function DrawerIsland() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [showAttribution]);
 
   function openDrawer() {
     setIsOpen(true);
@@ -128,7 +133,29 @@ export function DrawerIsland() {
           <a className="drawer-link" href="/map" onClick={closeDrawer}>Map</a>
           <button className="drawer-link drawer-profile" type="button" onClick={handleProfileClick}>Profile</button>
         </nav>
+        <div className="drawer-footer">
+          <button
+            type="button"
+            className="drawer-attribution-link"
+            onClick={() => setShowAttribution(true)}
+          >
+            Icon Attribution
+          </button>
+        </div>
       </aside>
+      {showAttribution && (
+        <div className="attribution-overlay" onClick={() => setShowAttribution(false)}>
+          <div className="attribution-dialog" role="dialog" aria-label="Icon Attribution" onClick={(e) => e.stopPropagation()}>
+            <h3>Icon Attribution</h3>
+            <p>
+              <a href="https://icons8.com/icon/20169/one-ring" target="_blank" rel="noopener noreferrer">One Ring</a> icon
+              by <a href="https://icons8.com" target="_blank" rel="noopener noreferrer">Icons8</a>
+            </p>
+            <p className="attribution-usage">Used as the current position marker on the Middle-earth map.</p>
+            <button type="button" className="attribution-close" onClick={() => setShowAttribution(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

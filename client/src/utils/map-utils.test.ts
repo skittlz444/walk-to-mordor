@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculateCutoffPoint,
+  getUserPosition,
   clamp,
   dynamicStrokeWidth,
   truncateFuturePath,
@@ -162,6 +163,82 @@ describe('calculateCutoffPoint', () => {
     const result = calculateCutoffPoint(path, 999);
     expect(result.completedPoints).toEqual([0, 0, 10, 0]);
     expect(result.futurePoints).toEqual([]);
+    expect(result.userPosition).toEqual({ x: 10, y: 0 });
+  });
+
+  it('returns userPosition at origin for empty path', () => {
+    const result = calculateCutoffPoint([], 100);
+    expect(result.userPosition).toEqual({ x: 0, y: 0 });
+  });
+
+  it('returns userPosition at first anchor when user has zero distance', () => {
+    const path: PathNode[] = [
+      { x: 5, y: 10, distance: 0 },
+      { x: 20, y: 30, distance: 100 },
+    ];
+    const result = calculateCutoffPoint(path, 0);
+    expect(result.userPosition).toEqual({ x: 5, y: 10 });
+  });
+
+  it('returns userPosition at interpolated point between anchors', () => {
+    const path: PathNode[] = [
+      { x: 0, y: 0, distance: 0 },
+      { x: 20, y: 0, distance: 20 },
+    ];
+    const result = calculateCutoffPoint(path, 10);
+    expect(result.userPosition.x).toBeCloseTo(10, 5);
+    expect(result.userPosition.y).toBeCloseTo(0, 5);
+  });
+});
+
+describe('getUserPosition', () => {
+  it('returns {0, 0} for empty path', () => {
+    const pos = getUserPosition([], 100);
+    expect(pos).toEqual({ x: 0, y: 0 });
+  });
+
+  it('returns first anchor position at zero distance', () => {
+    const path: PathNode[] = [
+      { x: 100, y: 200, distance: 0 },
+      { x: 300, y: 400, distance: 50 },
+    ];
+    const pos = getUserPosition(path, 0);
+    expect(pos).toEqual({ x: 100, y: 200 });
+  });
+
+  it('returns last anchor position at max distance', () => {
+    const path: PathNode[] = [
+      { x: 0, y: 0, distance: 0 },
+      { x: 100, y: 100, distance: 100 },
+    ];
+    const pos = getUserPosition(path, 100);
+    expect(pos).toEqual({ x: 100, y: 100 });
+  });
+
+  it('returns interpolated position for partial distance', () => {
+    const path: PathNode[] = [
+      { x: 0, y: 0, distance: 0 },
+      { x: 10, y: 0, distance: null },
+      { x: 20, y: 0, distance: null },
+      { x: 30, y: 0, distance: 30 },
+    ];
+    const pos = getUserPosition(path, 15);
+    expect(pos.x).toBeCloseTo(15, 5);
+    expect(pos.y).toBeCloseTo(0, 5);
+  });
+
+  it('aligns with end of completed path from calculateCutoffPoint', () => {
+    const path: PathNode[] = [
+      { x: 0, y: 0, distance: 0 },
+      { x: 50, y: 50, distance: 50 },
+      { x: 100, y: 100, distance: 100 },
+    ];
+    const pos = getUserPosition(path, 25);
+    const split = calculateCutoffPoint(path, 25);
+    const lastCompletedX = split.completedPoints[split.completedPoints.length - 2];
+    const lastCompletedY = split.completedPoints[split.completedPoints.length - 1];
+    expect(pos.x).toBeCloseTo(lastCompletedX, 5);
+    expect(pos.y).toBeCloseTo(lastCompletedY, 5);
   });
 });
 
