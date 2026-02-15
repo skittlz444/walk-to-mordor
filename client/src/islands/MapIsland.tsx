@@ -10,20 +10,36 @@ import {
   createUserMarker,
   type UserMarkerNodes,
 } from '../components/map/UserMarker';
+import {
+  createWaypointMarkers,
+  type WaypointMarkerNodes,
+} from '../components/map/WaypointMarkers';
 import { getUserPosition, type Point } from '../utils/map-utils';
 import {
   readLastOpenedDistanceMiles,
   writeLastOpenedDistanceMiles,
 } from '../utils/map-storage.ts';
 import { fellowshipPath } from '../data/paths/fellowship-path';
+import type { Goal } from '../types/goal';
+import {
+  getWaypointCoordinates,
+  filterWaypointsByRange,
+  filterWaypointsByViewport,
+  filterWaypointsByTier,
+  getVisibilityTier,
+  type Waypoint,
+} from '../data/waypoints';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
+const GOALS_API_URL = '/api/goals';
 const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
 const DEFAULT_CENTER_ZOOM = 1.5;
+/** Total journey distance in miles (Bag End to Bag End, all 9 challenges). */
+const TOTAL_PATH_DISTANCE_MILES = 3991;
 
 /** Dev mode: set window.__MAP_DEV_LOG = true in console to log coordinates on click */
 
@@ -203,6 +219,9 @@ export function MapIsland() {
   const pathNodesRef = useRef<JourneyPathNodes | null>(null);
   const markerLayerRef = useRef<Konva.Layer | null>(null);
   const markerRef = useRef<UserMarkerNodes | null>(null);
+  const waypointMarkersRef = useRef<WaypointMarkerNodes | null>(null);
+  const allWaypointsRef = useRef<Waypoint[]>([]);
+  const selectedWaypointRef = useRef<Waypoint | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -345,6 +364,41 @@ export function MapIsland() {
     }
   }, []);
 
+  /** Recompute which waypoints are visible and rebuild markers. */
+  const updateWaypointVisibility = useCallback(() => {
+    if (!waypointMarkersRef.current || allWaypointsRef.current.length === 0) return;
+
+    const devMode = !!window.__MAP_DEV_LOG;
+    const scale = currentScale.value;
+    const pos = position.value;
+    const size = stageSize.value;
+
+    // Viewport bounds in map coordinates
+    const viewport = {
+      left: -pos.x / scale,
+      top: -pos.y / scale,
+      right: (-pos.x + size.width) / scale,
+      bottom: (-pos.y + size.height) / scale,
+    };
+
+    // 1. Filter by range (7% ahead, or all in dev mode)
+    let visible = filterWaypointsByRange(
+      allWaypointsRef.current,
+      userDistance.value,
+      TOTAL_PATH_DISTANCE_MILES,
+      devMode,
+    );
+
+    // 2. Filter by zoom-based visibility tier
+    const tier = getVisibilityTier(scale);
+    visible = filterWaypointsByTier(visible, tier);
+
+    // 3. Filter by viewport
+    visible = filterWaypointsByViewport(visible, viewport);
+
+    waypointMarkersRef.current.update(visible, userDistance.value, scale);
+  }, []);
+
   const applyTransform = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -363,6 +417,11 @@ export function MapIsland() {
     if (markerRef.current) {
       markerRef.current.setScale(currentScale.value);
       markerLayerRef.current?.batchDraw();
+    }
+
+    // Update waypoint markers (visibility tier + viewport culling)
+    if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
+      updateWaypointVisibility();
     }
   }, [updateTiles]);
 
@@ -481,6 +540,11 @@ export function MapIsland() {
       markerRef.current.setDistance(newDistanceMiles);
       markerRef.current.setPosition(newPos, true);
       markerLayerRef.current?.batchDraw();
+    }
+
+    // Update waypoint markers for new distance
+    if (waypointMarkersRef.current) {
+      updateWaypointVisibility();
     }
 
     // Center on new position
@@ -615,8 +679,16 @@ export function MapIsland() {
           .catch(() => 0)
       : Promise.resolve(0);
 
-    Promise.all([metaPromise, progressPromise])
-      .then(([data, distMiles]) => {
+    const goalsPromise = token
+      ? fetch(GOALS_API_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => (res.ok ? (res.json() as Promise<Goal[]>) : []))
+          .catch(() => [] as Goal[])
+      : Promise.resolve([] as Goal[]);
+
+    Promise.all([metaPromise, progressPromise, goalsPromise])
+      .then(([data, distMiles, goals]) => {
         metaRef.current = data;
 
         const previousOpenedDistance = readLastOpenedDistanceMiles(localStorage);
@@ -660,6 +732,24 @@ export function MapIsland() {
           initialZoom,
           initialDistance,
         );
+
+        // Create waypoint markers from goals data
+        if (goals.length > 0) {
+          const waypoints = getWaypointCoordinates(fellowshipPath, goals);
+          allWaypointsRef.current = waypoints;
+
+          // Initial waypoint markers (empty — will be populated by updateWaypointVisibility)
+          waypointMarkersRef.current = createWaypointMarkers(
+            markerLayer,
+            [],
+            initialDistance,
+            initialZoom,
+            (wp) => {
+              selectedWaypointRef.current = wp;
+              console.log('[Map] Waypoint selected:', wp.title);
+            },
+          );
+        }
 
         applyTransform();
 
@@ -780,6 +870,11 @@ export function MapIsland() {
         markerRef.current.destroy();
         markerRef.current = null;
       }
+      if (waypointMarkersRef.current) {
+        waypointMarkersRef.current.destroy();
+        waypointMarkersRef.current = null;
+      }
+      allWaypointsRef.current = [];
       stage.destroy();
       stageRef.current = null;
       layerRef.current = null;
