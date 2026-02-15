@@ -6,7 +6,7 @@
  *
  * Visual states:
  *   - Unlocked: gold fill, white stroke, interactive.
- *   - Next:     gold fill with visible glow ring to highlight destination.
+ *   - Next:     locked coloring with visible glow ring to highlight destination.
  *   - Locked:   gray fill, reduced opacity, non-interactive.
  *   - Special:  diamond shape instead of circle to distinguish narrative milestones.
  *
@@ -60,6 +60,7 @@ export interface WaypointMarkerNodes {
     waypoints: Waypoint[],
     userDistance: number,
     stageScale: number,
+    nextWaypointId: number | null,
   ) => void;
   /** Destroy all markers and clean up. */
   destroy: () => void;
@@ -194,6 +195,7 @@ export function createWaypointMarkers(
     wps: Waypoint[],
     uDist: number,
     scale: number,
+    nextId: number | null,
   ): void {
     // Clear existing markers
     for (const mg of markerGroups) {
@@ -203,15 +205,6 @@ export function createWaypointMarkers(
 
     const s = markerScale(scale);
 
-    // Find the "next" waypoint (first where distance > userDistance)
-    let nextWaypointId: number | null = null;
-    for (const wp of wps) {
-      if (wp.distance > uDist) {
-        nextWaypointId = wp.id;
-        break;
-      }
-    }
-
     // Cluster overlapping waypoints
     const clusters = clusterWaypoints(wps, scale);
 
@@ -220,7 +213,7 @@ export function createWaypointMarkers(
         // Single waypoint - render normally
         const wp = cluster.items[0];
         const isUnlocked = wp.distance <= uDist;
-        const isNext = wp.id === nextWaypointId;
+        const isNext = wp.id === nextId;
         const isSpecial = wp.special !== null && wp.special !== undefined && wp.special !== '';
 
         const mg = new Konva.Group({
@@ -238,13 +231,21 @@ export function createWaypointMarkers(
         let shadowBlur: number;
         let shadowColor: string;
 
-        if (isUnlocked || isNext) {
+        if (isUnlocked) {
           fill = isSpecial ? SPECIAL_FILL : UNLOCKED_FILL;
           stroke = isSpecial ? SPECIAL_STROKE : UNLOCKED_STROKE;
           strokeWidth = isSpecial ? 3 : 2;
           opacity = 1.0;
-          shadowBlur = isNext ? NEXT_GLOW_BLUR : 0;
-          shadowColor = isNext ? NEXT_GLOW_COLOR : '';
+          shadowBlur = 0;
+          shadowColor = '';
+        } else if (isNext) {
+          // Next waypoint: locked coloring but with glow effect
+          fill = LOCKED_FILL;
+          stroke = '#999999';
+          strokeWidth = 1;
+          opacity = LOCKED_OPACITY;
+          shadowBlur = NEXT_GLOW_BLUR;
+          shadowColor = NEXT_GLOW_COLOR;
         } else {
           // Locked
           fill = LOCKED_FILL;
@@ -262,8 +263,8 @@ export function createWaypointMarkers(
           mg.add(createCircleShape(fill, stroke, strokeWidth, opacity, shadowBlur, shadowColor));
         }
 
-        // Interactivity for unlocked/next waypoints
-        if (isUnlocked || isNext) {
+        // Interactivity for unlocked waypoints only
+        if (isUnlocked) {
           mg.listening(true);
           mg.on('mouseenter', () => {
             const stage = layer.getStage();
@@ -300,7 +301,7 @@ export function createWaypointMarkers(
         });
 
         // Determine if any item in the cluster is unlocked
-        const hasUnlocked = cluster.items.some((w) => w.distance <= uDist || w.id === nextWaypointId);
+        const hasUnlocked = cluster.items.some((w) => w.distance <= uDist || w.id === nextId);
         const clusterOpacity = hasUnlocked ? 1.0 : LOCKED_OPACITY;
         const clusterFillColor = hasUnlocked ? CLUSTER_FILL : LOCKED_FILL;
 
@@ -364,8 +365,8 @@ export function createWaypointMarkers(
     layer.batchDraw();
   }
 
-  // Initial build
-  buildMarkers(waypoints, userDistance, stageScale);
+  // Initial build (no next waypoint ID provided on init with empty array)
+  buildMarkers(waypoints, userDistance, stageScale, null);
 
   return {
     group,
@@ -378,8 +379,8 @@ export function createWaypointMarkers(
       }
     },
 
-    update(wps: Waypoint[], uDist: number, scale: number) {
-      buildMarkers(wps, uDist, scale);
+    update(wps: Waypoint[], uDist: number, scale: number, nextId: number | null) {
+      buildMarkers(wps, uDist, scale, nextId);
     },
 
     destroy() {

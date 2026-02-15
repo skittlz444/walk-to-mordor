@@ -373,6 +373,16 @@ export function MapIsland() {
     const pos = position.value;
     const size = stageSize.value;
 
+    // Determine the true "next" waypoint from the FULL list (not filtered)
+    // so it stays consistent regardless of zoom/viewport filtering
+    let nextWaypointId: number | null = null;
+    for (const wp of allWaypointsRef.current) {
+      if (wp.distance > userDistance.value) {
+        nextWaypointId = wp.id;
+        break;
+      }
+    }
+
     // Viewport bounds in map coordinates
     const viewport = {
       left: -pos.x / scale,
@@ -396,7 +406,7 @@ export function MapIsland() {
     // 3. Filter by viewport
     visible = filterWaypointsByViewport(visible, viewport);
 
-    waypointMarkersRef.current.update(visible, userDistance.value, scale);
+    waypointMarkersRef.current.update(visible, userDistance.value, scale, nextWaypointId);
   }, []);
 
   const applyTransform = useCallback(() => {
