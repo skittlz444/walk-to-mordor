@@ -13,27 +13,19 @@
 
 import Konva from 'konva';
 import type { Point } from '../../utils/map-utils';
-import { dynamicStrokeWidth } from '../../utils/map-utils';
+import { markerScale } from '../../utils/map-utils';
 
 /** Visual size of the marker in screen pixels (maintained across zoom levels). */
 const MARKER_SIZE = 32;
 const MARKER_HALF = MARKER_SIZE / 2;
 
 /**
- * Calculate the marker scale factor, using the same capping logic as line
- * stroke width so that the marker doesn't become oversized when zoomed out.
- * At scale 1.0 the marker is MARKER_SIZE px. It grows as zoom decreases
- * but is capped at the same ratio used by dynamicStrokeWidth.
+ * Calculate the marker scale factor for the user marker.
+ * Delegates to the shared `markerScale` utility with UserMarker-specific
+ * settings (base=6, min=2, max=20).
  */
-function markerScale(stageScale: number): number {
-  // Use dynamicStrokeWidth's clamping with the same limits as JourneyPath
-  // (base=6, min=2, max=10). The ratio gives us a consistent visual scale.
-  const baseStroke = 6;
-  const minStroke = 2;
-  const maxStroke = 20;
-  const effectiveStroke = dynamicStrokeWidth(baseStroke, stageScale, minStroke, maxStroke);
-  // effectiveStroke / baseStroke gives us the ratio to apply to the marker
-  return effectiveStroke / baseStroke;
+function userMarkerScale(stageScale: number): number {
+  return markerScale(stageScale, 6, 2, 20);
 }
 
 /** Marker colors */
@@ -101,7 +93,7 @@ export function createUserMarker(
   stageScale: number,
   distanceMiles: number,
 ): UserMarkerNodes {
-  const scale = markerScale(stageScale);
+  const scale = userMarkerScale(stageScale);
 
   // Main group positioned at the user's location
   const group = new Konva.Group({
@@ -247,7 +239,7 @@ export function createUserMarker(
     },
 
     setScale(stageScale: number) {
-      const s = markerScale(stageScale);
+      const s = userMarkerScale(stageScale);
       group.scaleX(s);
       group.scaleY(s);
     },
