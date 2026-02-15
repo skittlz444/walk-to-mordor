@@ -1,12 +1,18 @@
 /**
- * WaypointMarkers – renders goal milestone markers on the Konva map.
+ * WaypointMarkers - renders goal milestone markers on the Konva map.
  *
  * Uses Konva's imperative API (react-konva is incompatible with preact/compat).
  * Markers are rendered as circles with inverse scaling for zoom independence.
  *
  * Visual states:
- *   - All visible waypoints use gold/unlocked styling (no locked gray styling).
+ *   - Unlocked: gold fill, white stroke, interactive.
+ *   - Next:     gold fill with visible glow ring to highlight destination.
+ *   - Locked:   gray fill, reduced opacity, non-interactive.
  *   - Special:  diamond shape instead of circle to distinguish narrative milestones.
+ *
+ * Clustering:
+ *   - When multiple waypoints overlap at screen level, they are grouped into
+ *     a single cluster marker showing the count as a numbered badge.
  */
 
 import Konva from 'konva';
@@ -20,8 +26,18 @@ const MARKER_HALF = MARKER_SIZE / 2;
 // Colors
 const UNLOCKED_FILL = '#FFD700';        // Gold
 const UNLOCKED_STROKE = '#FFFFFF';      // White
+const NEXT_GLOW_COLOR = '#FFAA00';      // Amber glow (more visible than gold-on-gold)
+const NEXT_GLOW_BLUR = 20;             // Increased blur for visibility
+const LOCKED_FILL = '#666666';          // Gray
+const LOCKED_OPACITY = 0.4;
 const SPECIAL_FILL = '#DAA520';         // Goldenrod (slightly different for special)
 const SPECIAL_STROKE = '#8B6914';       // Darker gold stroke for special
+const CLUSTER_FILL = '#FFD700';         // Gold cluster circle
+const CLUSTER_STROKE = '#FFFFFF';       // White stroke on cluster
+const CLUSTER_TEXT_COLOR = '#000000';   // Black text for badge count
+
+/** Distance (in map pixels) below which waypoints are clustered together. */
+const CLUSTER_RADIUS = 30;
 
 /**
  * Calculate the marker scale factor using the same capping logic as UserMarker
@@ -72,7 +88,8 @@ function createDiamondShape(
     opacity,
     shadowBlur,
     shadowColor,
-    shadowOpacity: shadowBlur > 0 ? 0.6 : 0,
+    shadowOpacity: shadowBlur > 0 ? 0.8 : 0,
+    shadowEnabled: shadowBlur > 0,
   });
 }
 
@@ -97,8 +114,58 @@ function createCircleShape(
     opacity,
     shadowBlur,
     shadowColor,
-    shadowOpacity: shadowBlur > 0 ? 0.6 : 0,
+    shadowOpacity: shadowBlur > 0 ? 0.8 : 0,
+    shadowEnabled: shadowBlur > 0,
   });
+}
+
+/** A cluster of overlapping waypoints or a single waypoint. */
+interface WaypointCluster {
+  /** Representative x position (average). */
+  x: number;
+  /** Representative y position (average). */
+  y: number;
+  /** Waypoints in this cluster. */
+  items: Waypoint[];
+}
+
+/**
+ * Group waypoints that are too close together (in map-pixel space)
+ * into clusters, accounting for current scale.
+ */
+function clusterWaypoints(waypoints: Waypoint[], scale: number): WaypointCluster[] {
+  const clusterDist = CLUSTER_RADIUS / scale; // map-space distance threshold
+  const used = new Set<number>();
+  const clusters: WaypointCluster[] = [];
+
+  for (let i = 0; i < waypoints.length; i++) {
+    if (used.has(i)) continue;
+    const wp = waypoints[i];
+    const items: Waypoint[] = [wp];
+    used.add(i);
+
+    for (let j = i + 1; j < waypoints.length; j++) {
+      if (used.has(j)) continue;
+      const other = waypoints[j];
+      const dx = wp.x - other.x;
+      const dy = wp.y - other.y;
+      if (Math.sqrt(dx * dx + dy * dy) < clusterDist) {
+        items.push(other);
+        used.add(j);
+      }
+    }
+
+    // Cluster position = average of members
+    let cx = 0;
+    let cy = 0;
+    for (const item of items) {
+      cx += item.x;
+      cy += item.y;
+    }
+    clusters.push({ x: cx / items.length, y: cy / items.length, items });
+  }
+
+  return clusters;
 }
 
 /**
@@ -136,51 +203,162 @@ export function createWaypointMarkers(
 
     const s = markerScale(scale);
 
+    // Find the "next" waypoint (first where distance > userDistance)
+    let nextWaypointId: number | null = null;
     for (const wp of wps) {
-      const isSpecial = wp.special !== null && wp.special !== undefined && wp.special !== '';
-
-      const mg = new Konva.Group({
-        x: wp.x,
-        y: wp.y,
-        scaleX: s,
-        scaleY: s,
-      });
-
-      // All visible waypoints use unlocked styling (gold)
-      const fill = isSpecial ? SPECIAL_FILL : UNLOCKED_FILL;
-      const stroke = isSpecial ? SPECIAL_STROKE : UNLOCKED_STROKE;
-      const strokeWidth = isSpecial ? 3 : 2;
-
-      // Use diamond for special waypoints, circle for regular
-      if (isSpecial) {
-        mg.add(createDiamondShape(fill, stroke, strokeWidth, 1.0, 0, ''));
-      } else {
-        mg.add(createCircleShape(fill, stroke, strokeWidth, 1.0, 0, ''));
+      if (wp.distance > uDist) {
+        nextWaypointId = wp.id;
+        break;
       }
+    }
 
-      // All visible waypoints are interactive
-      mg.listening(true);
-      mg.on('mouseenter', () => {
-        const stage = layer.getStage();
-        if (stage) {
-          const container = stage.container();
-          container.style.cursor = 'pointer';
-        }
-      });
-      mg.on('mouseleave', () => {
-        const stage = layer.getStage();
-        if (stage) {
-          const container = stage.container();
-          container.style.cursor = 'grab';
-        }
-      });
-      mg.on('click tap', () => {
-        console.log('[WaypointMarker] Selected:', wp.title, wp);
-        if (onSelect) onSelect(wp);
-      });
+    // Cluster overlapping waypoints
+    const clusters = clusterWaypoints(wps, scale);
 
-      group.add(mg);
-      markerGroups.push(mg);
+    for (const cluster of clusters) {
+      if (cluster.items.length === 1) {
+        // Single waypoint - render normally
+        const wp = cluster.items[0];
+        const isUnlocked = wp.distance <= uDist;
+        const isNext = wp.id === nextWaypointId;
+        const isSpecial = wp.special !== null && wp.special !== undefined && wp.special !== '';
+
+        const mg = new Konva.Group({
+          x: wp.x,
+          y: wp.y,
+          scaleX: s,
+          scaleY: s,
+        });
+
+        // Determine visual properties
+        let fill: string;
+        let stroke: string;
+        let strokeWidth: number;
+        let opacity: number;
+        let shadowBlur: number;
+        let shadowColor: string;
+
+        if (isUnlocked || isNext) {
+          fill = isSpecial ? SPECIAL_FILL : UNLOCKED_FILL;
+          stroke = isSpecial ? SPECIAL_STROKE : UNLOCKED_STROKE;
+          strokeWidth = isSpecial ? 3 : 2;
+          opacity = 1.0;
+          shadowBlur = isNext ? NEXT_GLOW_BLUR : 0;
+          shadowColor = isNext ? NEXT_GLOW_COLOR : '';
+        } else {
+          // Locked
+          fill = LOCKED_FILL;
+          stroke = '#999999';
+          strokeWidth = 1;
+          opacity = LOCKED_OPACITY;
+          shadowBlur = 0;
+          shadowColor = '';
+        }
+
+        // Use diamond for special waypoints, circle for regular
+        if (isSpecial) {
+          mg.add(createDiamondShape(fill, stroke, strokeWidth, opacity, shadowBlur, shadowColor));
+        } else {
+          mg.add(createCircleShape(fill, stroke, strokeWidth, opacity, shadowBlur, shadowColor));
+        }
+
+        // Interactivity for unlocked/next waypoints
+        if (isUnlocked || isNext) {
+          mg.listening(true);
+          mg.on('mouseenter', () => {
+            const stage = layer.getStage();
+            if (stage) {
+              const container = stage.container();
+              container.style.cursor = 'pointer';
+            }
+          });
+          mg.on('mouseleave', () => {
+            const stage = layer.getStage();
+            if (stage) {
+              const container = stage.container();
+              container.style.cursor = 'grab';
+            }
+          });
+          mg.on('click tap', () => {
+            console.log('[WaypointMarker] Selected:', wp.title, wp);
+            if (onSelect) onSelect(wp);
+          });
+        } else {
+          // Locked: no event handling for performance
+          mg.listening(false);
+        }
+
+        group.add(mg);
+        markerGroups.push(mg);
+      } else {
+        // Multiple waypoints clustered - render cluster badge
+        const mg = new Konva.Group({
+          x: cluster.x,
+          y: cluster.y,
+          scaleX: s,
+          scaleY: s,
+        });
+
+        // Determine if any item in the cluster is unlocked
+        const hasUnlocked = cluster.items.some((w) => w.distance <= uDist || w.id === nextWaypointId);
+        const clusterOpacity = hasUnlocked ? 1.0 : LOCKED_OPACITY;
+        const clusterFillColor = hasUnlocked ? CLUSTER_FILL : LOCKED_FILL;
+
+        // Cluster circle (slightly larger than single markers)
+        const clusterRadius = MARKER_HALF - 2;
+        mg.add(new Konva.Circle({
+          x: 0,
+          y: 0,
+          radius: clusterRadius,
+          fill: clusterFillColor,
+          stroke: CLUSTER_STROKE,
+          strokeWidth: 2,
+          opacity: clusterOpacity,
+        }));
+
+        // Count badge text
+        mg.add(new Konva.Text({
+          text: String(cluster.items.length),
+          x: -clusterRadius,
+          y: -clusterRadius * 0.45,
+          width: clusterRadius * 2,
+          align: 'center',
+          fontSize: 12,
+          fontStyle: 'bold',
+          fill: CLUSTER_TEXT_COLOR,
+          listening: false,
+        }));
+
+        // Cluster is interactive if it has unlocked items
+        if (hasUnlocked) {
+          mg.listening(true);
+          mg.on('mouseenter', () => {
+            const stage = layer.getStage();
+            if (stage) {
+              const container = stage.container();
+              container.style.cursor = 'pointer';
+            }
+          });
+          mg.on('mouseleave', () => {
+            const stage = layer.getStage();
+            if (stage) {
+              const container = stage.container();
+              container.style.cursor = 'grab';
+            }
+          });
+          mg.on('click tap', () => {
+            // Select the first unlocked item in the cluster
+            const target = cluster.items.find((w) => w.distance <= uDist) ?? cluster.items[0];
+            console.log('[WaypointMarker] Cluster selected:', cluster.items.length, 'items, picked:', target.title);
+            if (onSelect) onSelect(target);
+          });
+        } else {
+          mg.listening(false);
+        }
+
+        group.add(mg);
+        markerGroups.push(mg);
+      }
     }
 
     layer.batchDraw();
