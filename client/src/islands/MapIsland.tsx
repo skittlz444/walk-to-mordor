@@ -14,7 +14,14 @@ import {
   createWaypointMarkers,
   type WaypointMarkerNodes,
 } from '../components/map/WaypointMarkers';
+import { WaypointPopupContainer } from '../components/map/WaypointPopupContainer';
+import { GoalModal } from './GoalModal';
 import { getUserPosition, type Point } from '../utils/map-utils';
+import {
+  getScreenPosition,
+  getOptimalPopupPosition,
+  calculatePanOffset,
+} from '../utils/map-popup-utils';
 import {
   readLastOpenedDistanceMiles,
   writeLastOpenedDistanceMiles,
@@ -40,6 +47,12 @@ const MAX_ZOOM = 3.0;
 const DEFAULT_CENTER_ZOOM = 1.7;
 /** Total journey distance in miles (Bag End to Bag End, all 9 challenges). */
 const TOTAL_PATH_DISTANCE_MILES = 3991;
+/** Popup dimensions used for positioning calculations. */
+const POPUP_SIZE = { width: 280, height: 200 };
+/** Mobile breakpoint matching WaypointPopupContainer. */
+const MOBILE_BREAKPOINT = 768;
+/** Miles to km for distance display in Goal types. */
+const MILES_TO_KM_DISPLAY = 1.60934;
 
 /** Dev mode: set window.__MAP_DEV_LOG = true in console to log coordinates on click */
 
@@ -221,7 +234,8 @@ export function MapIsland() {
   const markerRef = useRef<UserMarkerNodes | null>(null);
   const waypointMarkersRef = useRef<WaypointMarkerNodes | null>(null);
   const allWaypointsRef = useRef<Waypoint[]>([]);
-  const selectedWaypointRef = useRef<Waypoint | null>(null);
+  const allGoalsRef = useRef<Goal[]>([]);
+  const isUserPanning = useRef(false);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -231,6 +245,25 @@ export function MapIsland() {
   const error = useSignal(false);
   // User's walked distance in miles, fetched from /api/progress on init.
   const userDistance = useSignal(0);
+
+  // Popup state signals
+  const selectedWaypoint = useSignal<Waypoint | null>(null);
+  const popupPosition = useSignal<{ x: number; y: number } | null>(null);
+  const isMobile = useSignal(false);
+  const expandGoal = useSignal<Goal | null>(null);
+
+  /** Close the waypoint popup. */
+  const closePopup = useCallback(() => {
+    selectedWaypoint.value = null;
+    popupPosition.value = null;
+  }, []);
+
+  /** Open the full goal detail modal for a waypoint. */
+  const handleExpandWaypoint = useCallback((waypointId: number) => {
+    const goal = allGoalsRef.current.find((g) => g.id === waypointId) ?? null;
+    expandGoal.value = goal;
+    closePopup();
+  }, [closePopup]);
 
   const updateTiles = useCallback(() => {
     const meta = metaRef.current;
@@ -629,6 +662,12 @@ export function MapIsland() {
       return clampPosition(pos, currentScale.value, stageSize.value, meta.fullWidth, meta.fullHeight);
     });
 
+    // Close popup on user-initiated drag (pan)
+    stage.on('dragstart', () => {
+      isUserPanning.current = true;
+      closePopup();
+    });
+
     // Fix 3 part A: during drag, update position and tiles
     stage.on('dragmove', () => {
       const meta = metaRef.current;
@@ -667,11 +706,13 @@ export function MapIsland() {
       if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
         updateWaypointVisibility();
       }
+      isUserPanning.current = false;
     });
 
-    // Wheel zoom
+    // Wheel zoom — close popup on user zoom
     stage.on('wheel', (e: Konva.KonvaEventObject<WheelEvent>) => {
       e.evt.preventDefault();
+      closePopup();
       const meta = metaRef.current;
       if (!meta) return;
       const pointer = stage.getPointerPosition();
@@ -773,6 +814,7 @@ export function MapIsland() {
         if (goals.length > 0) {
           const waypoints = getWaypointCoordinates(fellowshipPath, goals);
           allWaypointsRef.current = waypoints;
+          allGoalsRef.current = goals;
 
           // Initial waypoint markers (empty - will be populated by updateWaypointVisibility)
           waypointMarkersRef.current = createWaypointMarkers(
@@ -781,8 +823,84 @@ export function MapIsland() {
             initialDistance,
             initialZoom,
             (wp) => {
-              selectedWaypointRef.current = wp;
-              console.log('[Map] Waypoint selected:', wp.title);
+              // Calculate screen position of waypoint
+              const screenPos = getScreenPosition(
+                wp,
+                position.value,
+                currentScale.value,
+              );
+              const viewportSize = {
+                width: stageSize.value.width,
+                height: stageSize.value.height,
+              };
+              const mobile = viewportSize.width <= MOBILE_BREAKPOINT;
+              isMobile.value = mobile;
+
+              // Calculate pan offset if needed
+              const panDelta = calculatePanOffset(
+                screenPos,
+                POPUP_SIZE,
+                viewportSize,
+                mobile,
+              );
+
+              if (panDelta) {
+                // Animate the stage pan
+                const meta = metaRef.current;
+                if (meta) {
+                  const newPos = clampPosition(
+                    {
+                      x: position.value.x + panDelta.dx,
+                      y: position.value.y + panDelta.dy,
+                    },
+                    currentScale.value,
+                    stageSize.value,
+                    meta.fullWidth,
+                    meta.fullHeight,
+                  );
+
+                  // Animate pan with Konva
+                  const startPos = { ...position.value };
+                  const duration = 0.3;
+                  const anim = new Konva.Animation((frame) => {
+                    if (!frame) return;
+                    const t = Math.min(frame.time / (duration * 1000), 1);
+                    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                    position.value = {
+                      x: startPos.x + (newPos.x - startPos.x) * ease,
+                      y: startPos.y + (newPos.y - startPos.y) * ease,
+                    };
+                    applyTransform();
+
+                    if (t >= 1) {
+                      anim.stop();
+                      // Update popup position after pan completes
+                      const finalScreenPos = getScreenPosition(
+                        wp,
+                        position.value,
+                        currentScale.value,
+                      );
+                      const popupPos = getOptimalPopupPosition(
+                        finalScreenPos,
+                        POPUP_SIZE,
+                        viewportSize,
+                      );
+                      selectedWaypoint.value = wp;
+                      popupPosition.value = { x: popupPos.x, y: popupPos.y };
+                    }
+                  }, stage.getLayers()[0]);
+                  anim.start();
+                }
+              } else {
+                // No pan needed — show popup immediately
+                const popupPos = getOptimalPopupPosition(
+                  screenPos,
+                  POPUP_SIZE,
+                  viewportSize,
+                );
+                selectedWaypoint.value = wp;
+                popupPosition.value = { x: popupPos.x, y: popupPos.y };
+              }
             },
           );
         }
@@ -911,6 +1029,7 @@ export function MapIsland() {
         waypointMarkersRef.current = null;
       }
       allWaypointsRef.current = [];
+      allGoalsRef.current = [];
       stage.destroy();
       stageRef.current = null;
       layerRef.current = null;
@@ -963,6 +1082,25 @@ export function MapIsland() {
             <i className="fas fa-crosshairs" aria-hidden="true"></i>
           </button>
         </div>
+      )}
+      {/* Waypoint detail popup (HTML overlay, outside Konva canvas) */}
+      <WaypointPopupContainer
+        selectedWaypoint={selectedWaypoint}
+        popupPosition={popupPosition}
+        onClose={closePopup}
+        onExpand={handleExpandWaypoint}
+        isMobile={isMobile}
+      />
+      {/* Full goal detail modal (opened from popup expand button) */}
+      {expandGoal.value && (
+        <GoalModal
+          goal={{
+            ...expandGoal.value,
+            distance: expandGoal.value.distance,
+          }}
+          currentDistance={userDistance.value * MILES_TO_KM_DISPLAY}
+          onClose={() => { expandGoal.value = null; }}
+        />
       )}
     </div>
   );
