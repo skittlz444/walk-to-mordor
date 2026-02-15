@@ -248,6 +248,7 @@ export function MapIsland() {
 
   // Popup state signals
   const selectedWaypoint = useSignal<Waypoint | null>(null);
+  const selectedCluster = useSignal<Waypoint[]>([]);
   const popupPosition = useSignal<{ x: number; y: number } | null>(null);
   const isMobile = useSignal(false);
   const expandGoal = useSignal<Goal | null>(null);
@@ -255,6 +256,7 @@ export function MapIsland() {
   /** Close the waypoint popup. */
   const closePopup = useCallback(() => {
     selectedWaypoint.value = null;
+    selectedCluster.value = [];
     popupPosition.value = null;
   }, []);
 
@@ -822,7 +824,7 @@ export function MapIsland() {
             [],
             initialDistance,
             initialZoom,
-            (wp) => {
+            (wp, cluster) => {
               // Calculate screen position of waypoint
               const screenPos = getScreenPosition(
                 wp,
@@ -887,6 +889,7 @@ export function MapIsland() {
                         viewportSize,
                       );
                       selectedWaypoint.value = wp;
+                      selectedCluster.value = cluster ?? [];
                       popupPosition.value = { x: popupPos.x, y: popupPos.y };
                     }
                   }, stage.getLayers()[0]);
@@ -900,6 +903,7 @@ export function MapIsland() {
                   viewportSize,
                 );
                 selectedWaypoint.value = wp;
+                selectedCluster.value = cluster ?? [];
                 popupPosition.value = { x: popupPos.x, y: popupPos.y };
               }
             },
@@ -1087,6 +1091,7 @@ export function MapIsland() {
       {/* Waypoint detail popup (HTML overlay, outside Konva canvas) */}
       <WaypointPopupContainer
         selectedWaypoint={selectedWaypoint}
+        selectedCluster={selectedCluster}
         popupPosition={popupPosition}
         onClose={closePopup}
         onExpand={handleExpandWaypoint}
