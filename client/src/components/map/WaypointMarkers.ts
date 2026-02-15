@@ -26,10 +26,12 @@ const MARKER_HALF = MARKER_SIZE / 2;
 // Colors
 const UNLOCKED_FILL = '#FFD700';        // Gold
 const UNLOCKED_STROKE = '#FFFFFF';      // White
-const NEXT_GLOW_COLOR = '#FFAA00';      // Amber glow (more visible than gold-on-gold)
+const NEXT_GLOW_COLOR = '#ff8800';      // Amber glow (more visible than gold-on-gold)
 const NEXT_GLOW_BLUR = 20;             // Increased blur for visibility
+const NEXT_GLOW_OPACITY = 0.8;           // Opacity for next waypoint glow
+const NEXT_GLOW_STROKE = '#bb8f00';
 const LOCKED_FILL = '#666666';          // Gray
-const LOCKED_OPACITY = 0.4;
+const LOCKED_OPACITY = 0.6;
 const SPECIAL_FILL = '#DAA520';         // Goldenrod (slightly different for special)
 const SPECIAL_STROKE = '#8B6914';       // Darker gold stroke for special
 const CLUSTER_FILL = '#FFD700';         // Gold cluster circle
@@ -241,9 +243,9 @@ export function createWaypointMarkers(
         } else if (isNext) {
           // Next waypoint: locked coloring but with glow effect
           fill = LOCKED_FILL;
-          stroke = '#999999';
-          strokeWidth = 1;
-          opacity = LOCKED_OPACITY;
+          stroke = NEXT_GLOW_STROKE;
+          strokeWidth = 2;
+          opacity = NEXT_GLOW_OPACITY;
           shadowBlur = NEXT_GLOW_BLUR;
           shadowColor = NEXT_GLOW_COLOR;
         } else {
