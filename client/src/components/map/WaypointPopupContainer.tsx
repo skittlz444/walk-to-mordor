@@ -6,12 +6,14 @@
  * (ESC key, click-outside).
  */
 
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 import { type Signal, type ReadonlySignal } from '@preact/signals';
 import type { Waypoint } from '../../data/waypoints';
 import { WaypointPopup } from './WaypointPopup';
 import { WaypointSheet } from './WaypointSheet';
-import './WaypointPopup.css';
+// Import CSS as inline string — Vite's ?inline query returns raw text
+// so we can inject it ourselves (the HTML is server-rendered, not Vite-managed).
+import popupStyles from './WaypointPopup.css?inline';
 
 /** Breakpoint for mobile bottom sheet (matches existing map.css). */
 const MOBILE_BREAKPOINT = 768;
@@ -33,6 +35,17 @@ export function WaypointPopupContainer({
 }: WaypointPopupContainerProps) {
   const waypoint = selectedWaypoint.value;
   const pos = popupPosition.value;
+  const styleInjected = useRef(false);
+
+  // Inject popup CSS once (server-rendered HTML doesn't load Vite CSS assets)
+  useEffect(() => {
+    if (styleInjected.current) return;
+    styleInjected.current = true;
+    const style = document.createElement('style');
+    style.setAttribute('data-waypoint-popup', '');
+    style.textContent = popupStyles;
+    document.head.appendChild(style);
+  }, []);
 
   // ESC key handler
   useEffect(() => {
