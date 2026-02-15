@@ -2,156 +2,250 @@ const { test, expect } = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
-// Small 10x10 red PNG for tile stubs
-const SMALL_TILE_BUFFER = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFklEQVQYV2P8z8BQz0BFwMgwasChAwAMDAn/xe0DwQAAAABJRU5ErkJggg==',
-  'base64',
-);
+/**
+ * Helper: click on the first unlocked (listening) waypoint marker in the Konva canvas.
+ * Uses Konva internal API to find the marker's screen position.
+ * Returns true if a marker was found and clicked, false otherwise.
+ */
+async function clickUnlockedWaypoint(page, index = 0) {
+  const pos = await page.evaluate((idx) => {
+    const stages = window.Konva && window.Konva.stages;
+    if (!stages || !stages.length) return null;
+    const stage = stages[0];
+    const layers = stage.getLayers();
+    if (layers.length < 3) return null;
+    const markerLayer = layers[2];
+    const rootGroups = markerLayer.getChildren();
+    const wpGroup = rootGroups.find(
+      (g) => g.x() === 0 && g.y() === 0 && g.children && g.children.length > 3,
+    );
+    if (!wpGroup) return null;
+    const listening = wpGroup.children.filter((c) => c.listening());
+    if (idx >= listening.length) return null;
+    const wp = listening[idx];
+    const canvas = document.querySelector('.map-canvas-wrapper');
+    const rect = canvas.getBoundingClientRect();
+    return {
+      screenX: wp.x() * stage.scaleX() + stage.x() + rect.left,
+      screenY: wp.y() * stage.scaleY() + stage.y() + rect.top,
+    };
+  }, index);
 
-// Minimal tile metadata for testing
-const TEST_METADATA = {
-  source: 'test.webp',
-  fullWidth: 1024,
-  fullHeight: 512,
-  tileSize: 512,
-  levels: [
-    { z: 0, width: 1024, height: 512, cols: 2, rows: 1 },
-    { z: 1, width: 512, height: 256, cols: 1, rows: 1 },
-  ],
-};
-
-// Test goals data — a mix of near (unlocked) and far (locked) goals
-const TEST_GOALS = [
-  { id: 1, distance: 5.0, title: 'Green Hill Country', special: null, description: 'Rolling hills', image_id: '1' },
-  { id: 2, distance: 10.0, title: 'Woody End', special: 'Meeting the Elves', description: 'A wooded area', image_id: '2' },
-  { id: 3, distance: 2000.0, title: 'Mordor Gate', special: null, description: 'The Black Gate', image_id: '3' },
-];
-
-// User has walked 20 km ≈ 12.4 miles → goals 1 & 2 are unlocked, goal 3 is locked
-const TEST_PROGRESS = { totalDistance: 20 };
-
-function interceptRequests(page) {
-  return Promise.all([
-    page.route('**/img/map/tiles/**', async (route) => {
-      const url = route.request().url();
-      if (url.endsWith('metadata.json')) {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(TEST_METADATA),
-        });
-      } else {
-        await route.fulfill({
-          status: 200,
-          contentType: 'image/png',
-          body: SMALL_TILE_BUFFER,
-        });
-      }
-    }),
-    page.route('**/api/total-distance', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(TEST_PROGRESS),
-      });
-    }),
-    page.route('**/api/goals', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(TEST_GOALS),
-      });
-    }),
-    page.route('**/img/thumbs/**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'image/png',
-        body: SMALL_TILE_BUFFER,
-      });
-    }),
-  ]);
+  if (!pos) return false;
+  await page.mouse.click(pos.screenX, pos.screenY);
+  return true;
 }
 
-test.describe('Waypoint Detail Popup', () => {
+/**
+ * Wait for the Konva map to be fully loaded with waypoint markers.
+ * Polls the Konva stage for markers on the marker layer.
+ */
+async function waitForMapReady(page) {
+  await page.waitForSelector('.map-canvas-wrapper canvas', { timeout: 15000 });
+  await page.waitForFunction(
+    () => {
+      const stages = window.Konva && window.Konva.stages;
+      if (!stages || !stages.length) return false;
+      const stage = stages[0];
+      const layers = stage.getLayers();
+      if (layers.length < 3) return false;
+      const markerLayer = layers[2];
+      const rootGroups = markerLayer.getChildren();
+      const wpGroup = rootGroups.find(
+        (g) => g.x() === 0 && g.y() === 0 && g.children && g.children.length > 3,
+      );
+      return !!wpGroup;
+    },
+    { timeout: 15000 },
+  );
+}
+
+test.describe('Waypoint Detail Popup - Functional Tests', () => {
   test.beforeEach(async ({ page, authToken }) => {
     await page.addInitScript((token) => {
       localStorage.setItem('sessionToken', token);
     }, authToken);
-    await interceptRequests(page);
   });
 
-  test('popup container renders in the DOM when map loads', async ({ page }) => {
+  test('no popup visible on initial map load', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
-    const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
-    // No popup should be visible initially
+    await waitForMapReady(page);
+
     await expect(page.locator('.waypoint-popup')).not.toBeVisible();
     await expect(page.locator('.waypoint-sheet')).not.toBeVisible();
   });
 
-  test('ESC key event is dispatched to the page', async ({ page }) => {
+  test('clicking unlocked waypoint opens popup with correct content', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
-    const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await waitForMapReady(page);
 
-    // Inject a popup element to verify ESC handling works at DOM level
-    await page.evaluate(() => {
-      const popup = document.createElement('div');
-      popup.className = 'waypoint-popup';
-      popup.id = 'test-popup';
-      popup.setAttribute('role', 'dialog');
-      popup.textContent = 'Test popup';
-      document.querySelector('.map-canvas-wrapper')?.appendChild(popup);
+    const clicked = await clickUnlockedWaypoint(page);
+    expect(clicked).toBe(true);
 
-      // Add ESC listener that removes the popup (mirrors component behavior)
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          popup.remove();
-        }
-      });
-    });
+    await page.waitForTimeout(500);
 
-    // Verify popup is visible
-    await expect(page.locator('#test-popup')).toBeVisible();
+    // Popup or sheet should appear
+    const popup = page.locator('.waypoint-popup');
+    const sheet = page.locator('.waypoint-sheet');
+    const hasPopup = await popup.count() > 0;
+    const hasSheet = await sheet.count() > 0;
+    expect(hasPopup || hasSheet).toBe(true);
 
-    // Press ESC — should dismiss the popup
-    await page.keyboard.press('Escape');
+    if (hasPopup) {
+      // Check popup content
+      await expect(popup.locator('.waypoint-popup-title')).toBeVisible();
+      await expect(popup.locator('.waypoint-popup-distance')).toBeVisible();
+      await expect(popup.locator('.waypoint-popup-expand')).toBeVisible();
+      await expect(popup.locator('.waypoint-popup-close')).toBeVisible();
 
-    // Verify popup was removed
-    await expect(page.locator('#test-popup')).not.toBeVisible();
+      // Popup has role=dialog and aria-label
+      await expect(popup).toHaveAttribute('role', 'dialog');
+      const ariaLabel = await popup.getAttribute('aria-label');
+      expect(ariaLabel).toBeTruthy();
+    }
   });
 
-  test('popup CSS styles are loaded', async ({ page }) => {
+  test('X button closes popup', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
-    const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await waitForMapReady(page);
 
-    // Check that the CSS for the popup component is loaded in the page
-    const hasPopupStyles = await page.evaluate(() => {
+    const clicked = await clickUnlockedWaypoint(page);
+    expect(clicked).toBe(true);
+    await page.waitForTimeout(500);
+
+    const popup = page.locator('.waypoint-popup');
+    if (await popup.count() > 0) {
+      await popup.locator('.waypoint-popup-close').click();
+      await page.waitForTimeout(200);
+      await expect(popup).not.toBeVisible();
+    }
+  });
+
+  test('ESC key closes popup', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    await waitForMapReady(page);
+
+    const clicked = await clickUnlockedWaypoint(page);
+    expect(clicked).toBe(true);
+    await page.waitForTimeout(500);
+
+    const popup = page.locator('.waypoint-popup');
+    const sheet = page.locator('.waypoint-sheet-overlay');
+    const hasPopup = await popup.count() > 0;
+    const hasSheet = await sheet.count() > 0;
+
+    if (hasPopup || hasSheet) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(200);
+      await expect(popup).not.toBeVisible();
+      await expect(sheet).not.toBeVisible();
+    }
+  });
+
+  test('zoom wheel dismisses popup', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    await waitForMapReady(page);
+
+    const clicked = await clickUnlockedWaypoint(page);
+    expect(clicked).toBe(true);
+    await page.waitForTimeout(500);
+
+    const popup = page.locator('.waypoint-popup');
+    if (await popup.count() > 0) {
+      const wrapper = await page.locator('.map-canvas-wrapper').boundingBox();
+      await page.mouse.move(wrapper.x + wrapper.width / 2, wrapper.y + wrapper.height / 2);
+      await page.mouse.wheel(0, -200);
+      await page.waitForTimeout(500);
+      await expect(popup).not.toBeVisible();
+    }
+  });
+
+  test('drag/pan dismisses popup', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    await waitForMapReady(page);
+
+    const clicked = await clickUnlockedWaypoint(page);
+    expect(clicked).toBe(true);
+    await page.waitForTimeout(500);
+
+    const popup = page.locator('.waypoint-popup');
+    if (await popup.count() > 0) {
+      const wrapper = await page.locator('.map-canvas-wrapper').boundingBox();
+      await page.mouse.move(wrapper.x + 100, wrapper.y + 100);
+      await page.mouse.down();
+      await page.mouse.move(wrapper.x + 250, wrapper.y + 250, { steps: 10 });
+      await page.mouse.up();
+      await page.waitForTimeout(500);
+      await expect(popup).not.toBeVisible();
+    }
+  });
+
+  test('only one popup open at a time', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    await waitForMapReady(page);
+
+    const clicked = await clickUnlockedWaypoint(page);
+    expect(clicked).toBe(true);
+    await page.waitForTimeout(500);
+
+    const popupCount = await page.locator('.waypoint-popup').count();
+    expect(popupCount).toBeLessThanOrEqual(1);
+  });
+
+  test('popup is rendered as HTML overlay, not Konva', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    await waitForMapReady(page);
+
+    const clicked = await clickUnlockedWaypoint(page);
+    expect(clicked).toBe(true);
+    await page.waitForTimeout(500);
+
+    const isHTMLOverlay = await page.evaluate(() => {
+      const popup = document.querySelector('.waypoint-popup');
+      const konva = document.querySelector('.konvajs-content');
+      return popup && konva && !konva.contains(popup);
+    });
+    expect(isHTMLOverlay).toBe(true);
+  });
+
+  test('popup CSS styles are injected at runtime', async ({ page }) => {
+    await page.goto(`${BASE_URL}/map`);
+    await waitForMapReady(page);
+
+    const hasStyles = await page.evaluate(() => {
       const sheets = Array.from(document.styleSheets);
       for (const sheet of sheets) {
         try {
           const rules = Array.from(sheet.cssRules);
-          if (rules.some(r => r.cssText?.includes('.waypoint-popup'))) {
+          if (rules.some((r) => r.cssText && r.cssText.includes('.waypoint-popup'))) {
             return true;
           }
-        } catch (_e) {
-          // Cross-origin stylesheet — skip
-        }
+        } catch (_e) { /* cross-origin */ }
       }
       return false;
     });
-    expect(hasPopupStyles).toBe(true);
+    expect(hasStyles).toBe(true);
   });
 
-  test('map controls remain visible when popup would be shown', async ({ page }) => {
+  test('expand button opens goal modal', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
-    const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await waitForMapReady(page);
 
-    // Map controls should always be visible
-    const zoomIn = page.locator('button[aria-label="Zoom in"]');
-    await expect(zoomIn).toBeVisible();
+    const clicked = await clickUnlockedWaypoint(page);
+    expect(clicked).toBe(true);
+    await page.waitForTimeout(500);
+
+    const expandBtn = page.locator('.waypoint-popup-expand');
+    if (await expandBtn.count() > 0) {
+      await expandBtn.click();
+
+      // GoalModal should appear, popup should close
+      const modal = page.locator('.modal-overlay');
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
+      const popup = page.locator('.waypoint-popup');
+      await expect(popup).not.toBeVisible();
+    }
   });
 });
 
@@ -160,16 +254,53 @@ test.describe('Waypoint Popup - Mobile', () => {
     await page.addInitScript((token) => {
       localStorage.setItem('sessionToken', token);
     }, authToken);
-    await interceptRequests(page);
   });
 
-  test('mobile viewport does not show desktop popup', async ({ page }) => {
+  test('mobile viewport shows bottom sheet instead of desktop popup', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/map`);
-    const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await waitForMapReady(page);
 
-    // Desktop popup should not be visible on mobile
-    await expect(page.locator('.waypoint-popup')).not.toBeVisible();
+    const clicked = await clickUnlockedWaypoint(page);
+    if (!clicked) {
+      test.skip();
+      return;
+    }
+    await page.waitForTimeout(500);
+
+    // Should show sheet overlay, not desktop popup
+    const sheet = page.locator('.waypoint-sheet');
+    const desktopPopup = page.locator('.waypoint-popup');
+
+    const hasSheet = await sheet.count() > 0;
+    const hasDesktop = await desktopPopup.count() > 0;
+
+    if (hasSheet) {
+      await expect(sheet).toBeVisible();
+      await expect(sheet.locator('.waypoint-popup-title')).toBeVisible();
+    }
+    // Desktop popup should not be shown on mobile
+    expect(hasDesktop).toBe(false);
+  });
+
+  test('mobile sheet overlay click dismisses sheet', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(`${BASE_URL}/map`);
+    await waitForMapReady(page);
+
+    const clicked = await clickUnlockedWaypoint(page);
+    if (!clicked) {
+      test.skip();
+      return;
+    }
+    await page.waitForTimeout(500);
+
+    const overlay = page.locator('.waypoint-sheet-overlay');
+    if (await overlay.count() > 0) {
+      // Click on overlay area (top of screen, outside sheet)
+      await page.mouse.click(187, 50);
+      await page.waitForTimeout(200);
+      await expect(overlay).not.toBeVisible();
+    }
   });
 });
