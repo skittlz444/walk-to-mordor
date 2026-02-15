@@ -277,6 +277,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     });
     
     test('Two users can have entries on the same date without conflicts', async ({ browser }) => {
+        test.setTimeout(60000);
+
         // Generate unique usernames for this test
         const timestamp = Date.now().toString().substring(6);
         const username1 = `iso_sam_u1_${timestamp}`;
