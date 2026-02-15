@@ -738,7 +738,7 @@ export function MapIsland() {
           const waypoints = getWaypointCoordinates(fellowshipPath, goals);
           allWaypointsRef.current = waypoints;
 
-          // Initial waypoint markers (empty — will be populated by updateWaypointVisibility)
+          // Initial waypoint markers (empty - will be populated by updateWaypointVisibility)
           waypointMarkersRef.current = createWaypointMarkers(
             markerLayer,
             [],

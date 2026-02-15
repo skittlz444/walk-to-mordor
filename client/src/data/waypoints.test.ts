@@ -79,7 +79,7 @@ describe('getVisibilityTier', () => {
     expect(getVisibilityTier(0.99)).toBe('major');
   });
 
-  it('returns expanded for zoom 1.0 – 1.99', () => {
+  it('returns expanded for zoom 1.0 - 1.99', () => {
     expect(getVisibilityTier(1.0)).toBe('expanded');
     expect(getVisibilityTier(1.5)).toBe('expanded');
     expect(getVisibilityTier(1.99)).toBe('expanded');
