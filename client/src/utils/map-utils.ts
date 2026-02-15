@@ -277,3 +277,23 @@ export function dynamicStrokeWidth(
 ): number {
   return clamp(baseWidth / scale, minWidth, maxWidth);
 }
+
+/**
+ * Calculate a marker scale factor using the same capping logic as
+ * `dynamicStrokeWidth`. Each marker type can supply its own base/min/max
+ * values so scaling is consistent yet individually tuneable.
+ *
+ * @param stageScale  Current zoom scale of the stage.
+ * @param baseStroke  Reference stroke width used as the 1× baseline (default 6).
+ * @param minStroke   Minimum stroke value (default 2).
+ * @param maxStroke   Maximum stroke value (default 20).
+ * @returns Scale factor to apply to marker groups for zoom independence.
+ */
+export function markerScale(
+  stageScale: number,
+  baseStroke: number = 6,
+  minStroke: number = 2,
+  maxStroke: number = 20,
+): number {
+  return dynamicStrokeWidth(baseStroke, stageScale, minStroke, maxStroke) / baseStroke;
+}

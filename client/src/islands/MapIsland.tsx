@@ -364,10 +364,8 @@ export function MapIsland() {
     }
   }, []);
 
-  /** Recompute which waypoints are visible and rebuild markers. */
-  const updateWaypointVisibility = useCallback(() => {
-    if (!waypointMarkersRef.current || allWaypointsRef.current.length === 0) return;
-
+  /** Compute filtered waypoints and the next-waypoint ID for the current state. */
+  const computeVisibleWaypoints = useCallback(() => {
     const devMode = !!window.__MAP_DEV_LOG;
     const scale = currentScale.value;
     const pos = position.value;
@@ -406,8 +404,26 @@ export function MapIsland() {
     // 3. Filter by viewport
     visible = filterWaypointsByViewport(visible, viewport);
 
-    waypointMarkersRef.current.update(visible, userDistance.value, scale, nextWaypointId);
+    return { visible, nextWaypointId, scale };
   }, []);
+
+  /** Full rebuild of waypoint markers (used for zoom / distance changes). */
+  const updateWaypointVisibility = useCallback(() => {
+    if (!waypointMarkersRef.current || allWaypointsRef.current.length === 0) return;
+    const { visible, nextWaypointId, scale } = computeVisibleWaypoints();
+    waypointMarkersRef.current.update(visible, userDistance.value, scale, nextWaypointId);
+  }, [computeVisibleWaypoints]);
+
+  /**
+   * Incremental viewport patch (used during pan / drag).
+   * Only rebuilds markers when the set of visible waypoints actually changes,
+   * avoiding unnecessary Konva node destruction on every drag frame.
+   */
+  const patchWaypointViewport = useCallback(() => {
+    if (!waypointMarkersRef.current || allWaypointsRef.current.length === 0) return;
+    const { visible, nextWaypointId, scale } = computeVisibleWaypoints();
+    waypointMarkersRef.current.patchViewport(visible, userDistance.value, scale, nextWaypointId);
+  }, [computeVisibleWaypoints]);
 
   const applyTransform = useCallback(() => {
     const stage = stageRef.current;
@@ -629,9 +645,9 @@ export function MapIsland() {
       }
       updateTiles();
 
-      // Update waypoint markers during pan so newly visible ones appear
+      // Incrementally patch waypoint markers during pan (avoids full rebuild per frame)
       if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
-        updateWaypointVisibility();
+        patchWaypointViewport();
       }
     });
 
@@ -647,7 +663,7 @@ export function MapIsland() {
       );
       updateTiles();
 
-      // Final waypoint update after drag completes
+      // Final full waypoint update after drag completes
       if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
         updateWaypointVisibility();
       }

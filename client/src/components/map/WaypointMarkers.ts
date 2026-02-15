@@ -17,7 +17,7 @@
 
 import Konva from 'konva';
 import type { Waypoint } from '../../data/waypoints';
-import { dynamicStrokeWidth } from '../../utils/map-utils';
+import { markerScale } from '../../utils/map-utils';
 
 /** Marker visual size in screen pixels (matches UserMarker MARKER_SIZE). */
 const MARKER_SIZE = 32;
@@ -42,23 +42,29 @@ const CLUSTER_TEXT_COLOR = '#000000';   // Black text for badge count
 const CLUSTER_RADIUS = 30;
 
 /**
- * Calculate the marker scale factor using the same capping logic as UserMarker
- * so waypoint markers match the user icon size.
+ * Calculate the marker scale factor for waypoint markers.
+ * Delegates to the shared `markerScale` utility with waypoint-specific
+ * settings (base=6, min=2, max=20).
  */
-function markerScale(stageScale: number): number {
-  const baseStroke = 6;
-  const minStroke = 2;
-  const maxStroke = 20;
-  const effectiveStroke = dynamicStrokeWidth(baseStroke, stageScale, minStroke, maxStroke);
-  return effectiveStroke / baseStroke;
+function waypointMarkerScale(stageScale: number): number {
+  return markerScale(stageScale, 6, 2, 20);
 }
 
 export interface WaypointMarkerNodes {
   group: Konva.Group;
-  /** Update inverse scale for all markers for zoom independence. */
-  setScale: (stageScale: number) => void;
   /** Rebuild markers with updated filter/visibility. */
   update: (
+    waypoints: Waypoint[],
+    userDistance: number,
+    stageScale: number,
+    nextWaypointId: number | null,
+  ) => void;
+  /**
+   * Incrementally update visible markers during pan.
+   * Only adds/removes markers that enter or leave the viewport,
+   * avoiding a full rebuild on every drag frame.
+   */
+  patchViewport: (
     waypoints: Waypoint[],
     userDistance: number,
     stageScale: number,
@@ -205,7 +211,7 @@ export function createWaypointMarkers(
     }
     markerGroups.length = 0;
 
-    const s = markerScale(scale);
+    const s = waypointMarkerScale(scale);
 
     // Cluster overlapping waypoints
     const clusters = clusterWaypoints(wps, scale);
@@ -370,19 +376,48 @@ export function createWaypointMarkers(
   // Initial build (no next waypoint ID provided on init with empty array)
   buildMarkers(waypoints, userDistance, stageScale, null);
 
+  /** Set of waypoint IDs (or cluster keys) currently rendered, for incremental patching. */
+  let renderedKeys = new Set<string>();
+
+  /** Build a stable key for a set of waypoints (single or cluster). */
+  function makeKey(wps: Waypoint[]): string {
+    return wps.map((w) => w.id).sort((a, b) => a - b).join(',');
+  }
+
+  /** Snapshot current rendered keys after a full build. */
+  function snapshotKeys(clusters: WaypointCluster[]): Set<string> {
+    const keys = new Set<string>();
+    for (const c of clusters) {
+      keys.add(makeKey(c.items));
+    }
+    return keys;
+  }
+
   return {
     group,
 
-    setScale(stageScale: number) {
-      const s = markerScale(stageScale);
-      for (const mg of markerGroups) {
-        mg.scaleX(s);
-        mg.scaleY(s);
-      }
-    },
-
     update(wps: Waypoint[], uDist: number, scale: number, nextId: number | null) {
       buildMarkers(wps, uDist, scale, nextId);
+      // Snapshot rendered state for future patchViewport calls
+      renderedKeys = snapshotKeys(clusterWaypoints(wps, scale));
+    },
+
+    patchViewport(wps: Waypoint[], uDist: number, scale: number, nextId: number | null) {
+      // Build the candidate set of clusters for the new viewport
+      const clusters = clusterWaypoints(wps, scale);
+      const newKeys = snapshotKeys(clusters);
+
+      // Compare: if the set of rendered keys is the same, do nothing
+      if (
+        newKeys.size === renderedKeys.size &&
+        [...newKeys].every((k) => renderedKeys.has(k))
+      ) {
+        return; // viewport hasn't changed the visible set — skip rebuild
+      }
+
+      // The visible set changed — do a full rebuild (simple & correct)
+      buildMarkers(wps, uDist, scale, nextId);
+      renderedKeys = newKeys;
     },
 
     destroy() {
@@ -391,6 +426,7 @@ export function createWaypointMarkers(
       }
       markerGroups.length = 0;
       group.destroy();
+      renderedKeys.clear();
     },
   };
 }
