@@ -23,8 +23,7 @@ export function WaypointPopup({ waypoint, position, onClose, onExpand }: Waypoin
   const imgError = useSignal(false);
 
   const distanceKm = (waypoint.distance * MILES_TO_KM).toFixed(1);
-  const imageId = (waypoint as Waypoint & { image_id?: string | null }).image_id;
-  const thumbSrc = imageId ? `/img/thumbs/${imageId}-thumb.webp` : null;
+  const thumbSrc = waypoint.image_id ? `/img/thumbs/${waypoint.image_id}-thumb.webp` : null;
 
   const handleImgError = () => {
     imgError.value = true;

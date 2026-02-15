@@ -865,6 +865,7 @@ export function MapIsland() {
                   const anim = new Konva.Animation((frame) => {
                     if (!frame) return;
                     const t = Math.min(frame.time / (duration * 1000), 1);
+                    // easeInOutQuad: smooth acceleration then deceleration
                     const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
                     position.value = {
                       x: startPos.x + (newPos.x - startPos.x) * ease,
@@ -1094,10 +1095,7 @@ export function MapIsland() {
       {/* Full goal detail modal (opened from popup expand button) */}
       {expandGoal.value && (
         <GoalModal
-          goal={{
-            ...expandGoal.value,
-            distance: expandGoal.value.distance,
-          }}
+          goal={expandGoal.value}
           currentDistance={userDistance.value * MILES_TO_KM_DISPLAY}
           onClose={() => { expandGoal.value = null; }}
         />
