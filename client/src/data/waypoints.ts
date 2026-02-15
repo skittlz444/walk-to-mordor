@@ -50,15 +50,15 @@ export function getWaypointCoordinates(
 /**
  * Determine waypoint visibility tier based on zoom level.
  *
- * - Low zoom (< 1.0): only major waypoints (special IS NOT NULL).
- * - Medium zoom (1.0 - 2.0): major + every 3rd non-major.
- * - High zoom (≥ 2.0): all waypoints.
+ * - Low zoom (< 0.8): only major waypoints (special IS NOT NULL).
+ * - Medium zoom (0.8 - 1.7): major + every 3rd non-major.
+ * - High zoom (≥ 1.7): all waypoints.
  */
 export type VisibilityTier = 'major' | 'expanded' | 'all';
 
 export function getVisibilityTier(zoomLevel: number): VisibilityTier {
-  if (zoomLevel < 1.0) return 'major';
-  if (zoomLevel < 2.0) return 'expanded';
+  if (zoomLevel < 0.8) return 'major';
+  if (zoomLevel < 1.7) return 'expanded';
   return 'all';
 }
 

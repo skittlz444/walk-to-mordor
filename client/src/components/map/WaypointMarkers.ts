@@ -5,9 +5,7 @@
  * Markers are rendered as circles with inverse scaling for zoom independence.
  *
  * Visual states:
- *   - Unlocked: gold fill, white stroke, interactive.
- *   - Next:     gold fill with glow effect (only one marker).
- *   - Locked:   gray fill, reduced opacity, non-interactive.
+ *   - All visible waypoints use gold/unlocked styling (no locked gray styling).
  *   - Special:  diamond shape instead of circle to distinguish narrative milestones.
  */
 
@@ -22,10 +20,6 @@ const MARKER_HALF = MARKER_SIZE / 2;
 // Colors
 const UNLOCKED_FILL = '#FFD700';        // Gold
 const UNLOCKED_STROKE = '#FFFFFF';      // White
-const NEXT_GLOW_COLOR = '#FFD700';      // Gold glow
-const NEXT_GLOW_BLUR = 12;
-const LOCKED_FILL = '#666666';          // Gray
-const LOCKED_OPACITY = 0.4;
 const SPECIAL_FILL = '#DAA520';         // Goldenrod (slightly different for special)
 const SPECIAL_STROKE = '#8B6914';       // Darker gold stroke for special
 
@@ -142,18 +136,7 @@ export function createWaypointMarkers(
 
     const s = markerScale(scale);
 
-    // Find the "next" waypoint (first where distance > userDistance)
-    let nextWaypointId: number | null = null;
     for (const wp of wps) {
-      if (wp.distance > uDist) {
-        nextWaypointId = wp.id;
-        break;
-      }
-    }
-
-    for (const wp of wps) {
-      const isUnlocked = wp.distance <= uDist;
-      const isNext = wp.id === nextWaypointId;
       const isSpecial = wp.special !== null && wp.special !== undefined && wp.special !== '';
 
       const mg = new Konva.Group({
@@ -163,63 +146,38 @@ export function createWaypointMarkers(
         scaleY: s,
       });
 
-      // Determine visual properties
-      let fill: string;
-      let stroke: string;
-      let strokeWidth: number;
-      let opacity: number;
-      let shadowBlur: number;
-      let shadowColor: string;
-
-      if (isUnlocked || isNext) {
-        fill = isSpecial ? SPECIAL_FILL : UNLOCKED_FILL;
-        stroke = isSpecial ? SPECIAL_STROKE : UNLOCKED_STROKE;
-        strokeWidth = isSpecial ? 3 : 2;
-        opacity = 1.0;
-        shadowBlur = isNext ? NEXT_GLOW_BLUR : 0;
-        shadowColor = isNext ? NEXT_GLOW_COLOR : '';
-      } else {
-        // Locked
-        fill = LOCKED_FILL;
-        stroke = '#999999';
-        strokeWidth = 1;
-        opacity = LOCKED_OPACITY;
-        shadowBlur = 0;
-        shadowColor = '';
-      }
+      // All visible waypoints use unlocked styling (gold)
+      const fill = isSpecial ? SPECIAL_FILL : UNLOCKED_FILL;
+      const stroke = isSpecial ? SPECIAL_STROKE : UNLOCKED_STROKE;
+      const strokeWidth = isSpecial ? 3 : 2;
 
       // Use diamond for special waypoints, circle for regular
       if (isSpecial) {
-        mg.add(createDiamondShape(fill, stroke, strokeWidth, opacity, shadowBlur, shadowColor));
+        mg.add(createDiamondShape(fill, stroke, strokeWidth, 1.0, 0, ''));
       } else {
-        mg.add(createCircleShape(fill, stroke, strokeWidth, opacity, shadowBlur, shadowColor));
+        mg.add(createCircleShape(fill, stroke, strokeWidth, 1.0, 0, ''));
       }
 
-      // Interactivity for unlocked/next waypoints
-      if (isUnlocked || isNext) {
-        mg.listening(true);
-        mg.on('mouseenter', () => {
-          const stage = layer.getStage();
-          if (stage) {
-            const container = stage.container();
-            container.style.cursor = 'pointer';
-          }
-        });
-        mg.on('mouseleave', () => {
-          const stage = layer.getStage();
-          if (stage) {
-            const container = stage.container();
-            container.style.cursor = 'grab';
-          }
-        });
-        mg.on('click tap', () => {
-          console.log('[WaypointMarker] Selected:', wp.title, wp);
-          if (onSelect) onSelect(wp);
-        });
-      } else {
-        // Locked: no event handling for performance
-        mg.listening(false);
-      }
+      // All visible waypoints are interactive
+      mg.listening(true);
+      mg.on('mouseenter', () => {
+        const stage = layer.getStage();
+        if (stage) {
+          const container = stage.container();
+          container.style.cursor = 'pointer';
+        }
+      });
+      mg.on('mouseleave', () => {
+        const stage = layer.getStage();
+        if (stage) {
+          const container = stage.container();
+          container.style.cursor = 'grab';
+        }
+      });
+      mg.on('click tap', () => {
+        console.log('[WaypointMarker] Selected:', wp.title, wp);
+        if (onSelect) onSelect(wp);
+      });
 
       group.add(mg);
       markerGroups.push(mg);

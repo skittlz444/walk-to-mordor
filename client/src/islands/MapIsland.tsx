@@ -37,7 +37,7 @@ const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
-const DEFAULT_CENTER_ZOOM = 1.5;
+const DEFAULT_CENTER_ZOOM = 1.7;
 /** Total journey distance in miles (Bag End to Bag End, all 9 challenges). */
 const TOTAL_PATH_DISTANCE_MILES = 3991;
 
@@ -618,6 +618,11 @@ export function MapIsland() {
         );
       }
       updateTiles();
+
+      // Update waypoint markers during pan so newly visible ones appear
+      if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
+        updateWaypointVisibility();
+      }
     });
 
     stage.on('dragend', () => {
@@ -631,6 +636,11 @@ export function MapIsland() {
         meta.fullHeight,
       );
       updateTiles();
+
+      // Final waypoint update after drag completes
+      if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
+        updateWaypointVisibility();
+      }
     });
 
     // Wheel zoom

@@ -74,18 +74,20 @@ describe('getWaypointCoordinates', () => {
 });
 
 describe('getVisibilityTier', () => {
-  it('returns major for zoom < 1.0', () => {
+  it('returns major for zoom < 0.8', () => {
     expect(getVisibilityTier(0.5)).toBe('major');
-    expect(getVisibilityTier(0.99)).toBe('major');
+    expect(getVisibilityTier(0.79)).toBe('major');
   });
 
-  it('returns expanded for zoom 1.0 - 1.99', () => {
+  it('returns expanded for zoom 0.8 - 1.69', () => {
+    expect(getVisibilityTier(0.8)).toBe('expanded');
     expect(getVisibilityTier(1.0)).toBe('expanded');
     expect(getVisibilityTier(1.5)).toBe('expanded');
-    expect(getVisibilityTier(1.99)).toBe('expanded');
+    expect(getVisibilityTier(1.69)).toBe('expanded');
   });
 
-  it('returns all for zoom ≥ 2.0', () => {
+  it('returns all for zoom >= 1.7', () => {
+    expect(getVisibilityTier(1.7)).toBe('all');
     expect(getVisibilityTier(2.0)).toBe('all');
     expect(getVisibilityTier(3.0)).toBe('all');
   });
