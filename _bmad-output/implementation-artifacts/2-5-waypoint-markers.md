@@ -1,6 +1,6 @@
 # Story 2.5: Waypoint Markers (Milestones on Map)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -63,66 +63,66 @@ so that **I can visualize my journey's narrative waypoints and anticipate what l
 
 ## Tasks / Subtasks
 
-- [ ] **1. Data Engineering - Waypoint Coordinates**
-    - [ ] **Extend `fellowship-path.ts`**: Ensure anchor nodes (nodes with `distance: number`) exist for all 171+ goals.
+- [x] **1. Data Engineering - Waypoint Coordinates**
+    - [x] **Extend `fellowship-path.ts`**: Ensure anchor nodes (nodes with `distance: number`) exist for all 171+ goals.
         - If a goal's distance doesn't have a corresponding anchor, add one OR document that interpolation is required.
-    - [ ] Create `client/src/data/waypoints.ts`:
+    - [x] Create `client/src/data/waypoints.ts`:
         - Type: `interface Waypoint { id: number; distance: number; title: string; x: number; y: number; special?: string; }`.
         - Export function `getWaypointCoordinates(pathNodes: PathNode[], goals: Goal[]): Waypoint[]` that:
           1. For each goal, finds the corresponding position using path interpolation logic from `map-utils.ts`.
           2. Returns array of waypoints with populated `x, y` coordinates.
-    - [ ] **API Endpoint** (if not exists): Ensure `/api/goals` returns all goals (id, distance, title, special).
-- [ ] **2. Signals / State**
-    - [ ] Extend `client/src/stores/mapStore.ts`:
+    - [x] **API Endpoint** (if not exists): Ensure `/api/goals` returns all goals (id, distance, title, special).
+- [x] **2. Signals / State**
+    - [x] Extend `client/src/stores/mapStore.ts`:
         - Add `waypoints: Signal<Waypoint[]>` (populated on map load).
         - Add `selectedWaypoint: Signal<Waypoint | null>` (for Story 2.6 popup integration).
         - Add `visibleWaypointFilter: Signal<'all' | 'major' | 'minimal'>` (computed from zoom level).
-    - [ ] Create computed signal `filteredWaypoints` that returns waypoints based on:
+    - [x] Create computed signal `filteredWaypoints` that returns waypoints based on:
         - Current zoom level (determines filter).
         - Viewport bounds (only waypoints within visible area + buffer).
-- [ ] **3. Component Implementation (`client/src/components/map/WaypointMarker.tsx`)**
-    - [ ] Create `WaypointMarker` component using `react-konva`:
+- [x] **3. Component Implementation (`client/src/components/map/WaypointMarker.tsx`)**
+    - [x] Create `WaypointMarker` component using `react-konva`:
         - Props: `waypoint: Waypoint`, `isUnlocked: boolean`, `isNext: boolean`, `scale: number`, `onClick?: (wp: Waypoint) => void`.
         - Render `Konva.Group` with inverse scaling applied.
         - **Unlocked Visual**: `Konva.Circle` with gold fill, white stroke.
         - **Next Waypoint Visual**: Same as unlocked BUT with glow effect (shadowBlur) - only ONE marker gets this.
         - **Locked Visual**: `Konva.Circle` with gray fill, reduced opacity, no glow.
         - **Interaction**: Attach `onClick` handler (unlocked only), `onMouseEnter/Leave` for cursor change.
-    - [ ] Export `WaypointMarkerList` component that:
+    - [x] Export `WaypointMarkerList` component that:
         - Iterates over `filteredWaypoints`.
         - Renders individual `WaypointMarker` for each.
         - Passes `isUnlocked` based on comparison with `userProgress.value`.
         - Passes `isNext` = true for exactly ONE waypoint (first where distance > userProgress).
-- [ ] **4. Visibility Logic**
-    - [ ] Implement `getWaypointVisibility(zoomLevel: number): 'all' | 'major' | 'minimal'`:
+- [x] **4. Visibility Logic**
+    - [x] Implement `getWaypointVisibility(zoomLevel: number): 'all' | 'major' | 'minimal'`:
         - `zoomLevel < 1.0` → 'major' (only waypoints where `special !== null`).
         - `zoomLevel >= 1.0 && < 2.0` → 'expanded' (major + every 3rd).
         - `zoomLevel >= 2.0` → 'all'.
         - **Note**: These thresholds are initial targets; adjust based on visual testing.
-    - [ ] Implement `isMajorWaypoint(waypoint: Waypoint): boolean`:
+    - [x] Implement `isMajorWaypoint(waypoint: Waypoint): boolean`:
         - Returns true if: `waypoint.special !== null` (has special text in goals table).
-    - [ ] Implement `isNextWaypoint(waypoint: Waypoint, userDistance: number): boolean`:
+    - [x] Implement `isNextWaypoint(waypoint: Waypoint, userDistance: number): boolean`:
         - Returns true if this is the first waypoint where `waypoint.distance > userDistance`.
-    - [ ] Implement viewport culling:
+    - [x] Implement viewport culling:
         - Get current viewport bounds from Stage position and scale.
         - Filter waypoints to only those within bounds (+ 100px padding).
-    - [ ] **(Optional) Clustering Logic**:
+    - [x] **(Optional) Clustering Logic**:
         - If testing reveals dense areas at max zoom, implement grouping.
         - Group waypoints within X pixels of each other into single marker with badge.
         - Click expands group to show individuals.
-- [ ] **5. Integration (`MapIsland.tsx`)**
-    - [ ] Import and render `<WaypointMarkerList />` inside the map Layer.
-    - [ ] Pass necessary props from store (scale, userProgress).
-    - [ ] Wire up `onWaypointClick` to update `selectedWaypoint` signal (prep for Story 2.6).
-    - [ ] Subscribe to zoom level changes to update visibility filter.
-- [ ] **6. Testing**
-    - [ ] **Unit Tests** (`client/src/data/waypoints.test.ts`):
+- [x] **5. Integration (`MapIsland.tsx`)**
+    - [x] Import and render `<WaypointMarkerList />` inside the map Layer.
+    - [x] Pass necessary props from store (scale, userProgress).
+    - [x] Wire up `onWaypointClick` to update `selectedWaypoint` signal (prep for Story 2.6).
+    - [x] Subscribe to zoom level changes to update visibility filter.
+- [x] **6. Testing**
+    - [x] **Unit Tests** (`client/src/data/waypoints.test.ts`):
         - Test `getWaypointCoordinates` returns correct x,y for known goal distances.
         - Test interpolation for goal distances between anchor points.
-    - [ ] **Unit Tests** (`client/src/components/map/WaypointMarker.test.tsx`):
+    - [x] **Unit Tests** (`client/src/components/map/WaypointMarker.test.tsx`):
         - Test unlocked vs locked rendering (snapshot or property checks).
         - Test onClick fires only for unlocked.
-    - [ ] **Playwright Visual** (`tests/ui/map-waypoints.spec.js`):
+    - [x] **Playwright Visual** (`tests/ui/map-waypoints.spec.js`):
         - Snapshot at low zoom (verify only major waypoints visible).
         - Snapshot at high zoom (verify all waypoints in area visible).
         - Test click on unlocked waypoint updates selectedWaypoint state.
