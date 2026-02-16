@@ -15,9 +15,16 @@ export interface WaypointPopupProps {
   position: { x: number; y: number };
   onClose: () => void;
   onExpand: (waypointId: number) => void;
+  popupRef?: (el: HTMLDivElement | null) => void;
 }
 
-export function WaypointPopup({ waypoint, position, onClose, onExpand }: WaypointPopupProps) {
+export function WaypointPopup({
+  waypoint,
+  position,
+  onClose,
+  onExpand,
+  popupRef,
+}: WaypointPopupProps) {
   const imgError = useSignal(false);
 
   const distanceKm = (waypoint.distance * MILES_TO_KM).toFixed(1);
@@ -29,6 +36,7 @@ export function WaypointPopup({ waypoint, position, onClose, onExpand }: Waypoin
 
   return (
     <div
+      ref={popupRef}
       class="waypoint-popup"
       style={`left:${position.x}px;top:${position.y}px;`}
       role="dialog"

@@ -43,7 +43,7 @@ export interface ViewportSize {
 }
 
 /** Offset (px) between waypoint marker and popup edge. */
-const POPUP_OFFSET = 12;
+const POPUP_OFFSET = 30;
 
 /**
  * Convert waypoint map coordinates to screen (DOM) coordinates.

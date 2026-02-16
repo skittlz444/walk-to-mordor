@@ -47,8 +47,8 @@ const MAX_ZOOM = 3.0;
 const DEFAULT_CENTER_ZOOM = 1.7;
 /** Total journey distance in miles (Bag End to Bag End, all 9 challenges). */
 const TOTAL_PATH_DISTANCE_MILES = 3991;
-/** Popup dimensions used for positioning calculations. */
-const POPUP_SIZE = { width: 280, height: 200 };
+/** Fallback popup dimensions before the real rendered size is measured. */
+const INITIAL_POPUP_SIZE = { width: 280, height: 200 };
 /** Mobile breakpoint matching WaypointPopupContainer. */
 const MOBILE_BREAKPOINT = 768;
 
@@ -249,6 +249,7 @@ export function MapIsland() {
   const selectedWaypoint = useSignal<Waypoint | null>(null);
   const selectedCluster = useSignal<Waypoint[]>([]);
   const popupPosition = useSignal<{ x: number; y: number } | null>(null);
+  const measuredPopupSize = useSignal<{ width: number; height: number } | null>(null);
   const isMobile = useSignal(false);
   const expandGoal = useSignal<Goal | null>(null);
 
@@ -257,6 +258,7 @@ export function MapIsland() {
     selectedWaypoint.value = null;
     selectedCluster.value = [];
     popupPosition.value = null;
+    measuredPopupSize.value = null;
   }, []);
 
   /** Open the full goal detail modal for a waypoint. */
@@ -484,6 +486,74 @@ export function MapIsland() {
       updateWaypointVisibility();
     }
   }, [updateTiles]);
+
+  const handleDesktopPopupSizeChange = useCallback((size: { width: number; height: number } | null) => {
+    const prev = measuredPopupSize.value;
+    if (!size) {
+      if (prev !== null) {
+        measuredPopupSize.value = null;
+      }
+      return;
+    }
+
+    if (prev && prev.width === size.width && prev.height === size.height) {
+      return;
+    }
+
+    measuredPopupSize.value = size;
+
+    const waypoint = selectedWaypoint.value;
+    if (!waypoint || isMobile.value) {
+      return;
+    }
+
+    const viewportSize = {
+      width: stageSize.value.width,
+      height: stageSize.value.height,
+    };
+
+    const currentScreenPos = getScreenPosition(
+      waypoint,
+      position.value,
+      currentScale.value,
+    );
+
+    const panDelta = calculatePanOffset(
+      currentScreenPos,
+      size,
+      viewportSize,
+      false,
+    );
+
+    if (panDelta) {
+      const meta = metaRef.current;
+      if (meta) {
+        position.value = clampPosition(
+          {
+            x: position.value.x + panDelta.dx,
+            y: position.value.y + panDelta.dy,
+          },
+          currentScale.value,
+          stageSize.value,
+          meta.fullWidth,
+          meta.fullHeight,
+        );
+        applyTransform();
+      }
+    }
+
+    const finalScreenPos = getScreenPosition(
+      waypoint,
+      position.value,
+      currentScale.value,
+    );
+    const popupPos = getOptimalPopupPosition(
+      finalScreenPos,
+      size,
+      viewportSize,
+    );
+    popupPosition.value = { x: popupPos.x, y: popupPos.y };
+  }, [applyTransform]);
 
   /**
    * Center the map on a given map coordinate at a given zoom level.
@@ -836,11 +906,14 @@ export function MapIsland() {
               };
               const mobile = viewportSize.width <= MOBILE_BREAKPOINT;
               isMobile.value = mobile;
+              measuredPopupSize.value = null;
+
+              const popupSize = measuredPopupSize.value ?? INITIAL_POPUP_SIZE;
 
               // Calculate pan offset if needed
               const panDelta = calculatePanOffset(
                 screenPos,
-                POPUP_SIZE,
+                popupSize,
                 viewportSize,
                 mobile,
               );
@@ -891,7 +964,7 @@ export function MapIsland() {
                       );
                       const popupPos = getOptimalPopupPosition(
                         finalScreenPos,
-                        POPUP_SIZE,
+                        popupSize,
                         viewportSize,
                       );
                       selectedWaypoint.value = wp;
@@ -906,7 +979,7 @@ export function MapIsland() {
                 // No pan needed — show popup immediately
                 const popupPos = getOptimalPopupPosition(
                   screenPos,
-                  POPUP_SIZE,
+                  popupSize,
                   viewportSize,
                 );
                 selectedWaypoint.value = wp;
@@ -1103,6 +1176,7 @@ export function MapIsland() {
         onClose={closePopup}
         onExpand={handleExpandWaypoint}
         isMobile={isMobile}
+        onDesktopPopupSizeChange={handleDesktopPopupSizeChange}
       />
       {/* Full goal detail modal (opened from popup expand button) */}
       {expandGoal.value && (

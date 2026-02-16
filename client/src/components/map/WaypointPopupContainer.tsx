@@ -9,7 +9,7 @@
  * instead of a single-goal popup so the user can pick which goal to expand.
  */
 
-import { useEffect, useRef } from 'preact/hooks';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
 import { type Signal, type ReadonlySignal } from '@preact/signals';
 import type { Waypoint } from '../../data/waypoints';
 import { WaypointPopup } from './WaypointPopup';
@@ -30,6 +30,7 @@ export interface WaypointPopupContainerProps {
   onClose: () => void;
   onExpand: (waypointId: number) => void;
   isMobile: Signal<boolean>;
+  onDesktopPopupSizeChange?: (size: { width: number; height: number } | null) => void;
 }
 
 export function WaypointPopupContainer({
@@ -39,11 +40,48 @@ export function WaypointPopupContainer({
   onClose,
   onExpand,
   isMobile,
+  onDesktopPopupSizeChange,
 }: WaypointPopupContainerProps) {
   const waypoint = selectedWaypoint.value;
   const cluster = selectedCluster.value;
   const pos = popupPosition.value;
   const styleInjected = useRef(false);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  const clearPopupObserver = useCallback(() => {
+    if (!resizeObserverRef.current) return;
+    resizeObserverRef.current.disconnect();
+    resizeObserverRef.current = null;
+  }, []);
+
+  const reportPopupSize = useCallback((el: HTMLDivElement | null) => {
+    if (!el || !onDesktopPopupSizeChange) return;
+    const rect = el.getBoundingClientRect();
+    onDesktopPopupSizeChange({
+      width: Math.ceil(rect.width),
+      height: Math.ceil(rect.height),
+    });
+  }, [onDesktopPopupSizeChange]);
+
+  const popupRef = useCallback((el: HTMLDivElement | null) => {
+    clearPopupObserver();
+
+    if (!el || isMobile.value || !onDesktopPopupSizeChange) {
+      return;
+    }
+
+    reportPopupSize(el);
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      reportPopupSize(el);
+    });
+    observer.observe(el);
+    resizeObserverRef.current = observer;
+  }, [clearPopupObserver, isMobile.value, onDesktopPopupSizeChange, reportPopupSize]);
 
   // Inject popup CSS once (server-rendered HTML doesn't load Vite CSS assets)
   useEffect(() => {
@@ -66,6 +104,20 @@ export function WaypointPopupContainer({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [waypoint, onClose]);
+
+  useEffect(() => {
+    if (!onDesktopPopupSizeChange) return;
+    if (!waypoint || isMobile.value || !pos) {
+      onDesktopPopupSizeChange(null);
+      clearPopupObserver();
+    }
+  }, [clearPopupObserver, isMobile.value, onDesktopPopupSizeChange, pos, waypoint]);
+
+  useEffect(() => {
+    return () => {
+      clearPopupObserver();
+    };
+  }, [clearPopupObserver]);
 
   if (!waypoint) return null;
 
@@ -100,6 +152,7 @@ export function WaypointPopupContainer({
         position={pos}
         onClose={onClose}
         onExpand={onExpand}
+        popupRef={popupRef}
       />
     );
   }
@@ -110,6 +163,7 @@ export function WaypointPopupContainer({
       position={pos}
       onClose={onClose}
       onExpand={onExpand}
+      popupRef={popupRef}
     />
   );
 }

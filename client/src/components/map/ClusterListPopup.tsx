@@ -14,11 +14,19 @@ export interface ClusterListPopupProps {
   position: { x: number; y: number };
   onClose: () => void;
   onExpand: (waypointId: number) => void;
+  popupRef?: (el: HTMLDivElement | null) => void;
 }
 
-export function ClusterListPopup({ cluster, position, onClose, onExpand }: ClusterListPopupProps) {
+export function ClusterListPopup({
+  cluster,
+  position,
+  onClose,
+  onExpand,
+  popupRef,
+}: ClusterListPopupProps) {
   return (
     <div
+      ref={popupRef}
       class="waypoint-popup cluster-list-popup"
       style={`left:${position.x}px;top:${position.y}px;`}
       role="dialog"
