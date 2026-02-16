@@ -34,7 +34,7 @@ function makeWaypoint(
   y: number,
   special: string | null = null,
 ): Waypoint {
-  return { id, distance: distanceMiles, title, x, y, special };
+  return { id, distance: distanceMiles, title, x, y, special, image_id: null };
 }
 
 describe('getWaypointCoordinates', () => {

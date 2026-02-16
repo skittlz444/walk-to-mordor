@@ -13,7 +13,7 @@
 
 import Konva from 'konva';
 import type { Point } from '../../utils/map-utils';
-import { markerScale } from '../../utils/map-utils';
+import { markerScale, MILES_TO_KM } from '../../utils/map-utils';
 
 /** Visual size of the marker in screen pixels (maintained across zoom levels). */
 const MARKER_SIZE = 32;
@@ -34,9 +34,6 @@ const RING_STROKE_COLOR = '#FFFFFF'; // White outer ring
 const HALO_COLOR = '#daa520';        // Gold halo
 const TOOLTIP_BG = '#1a1a2e';
 const TOOLTIP_TEXT_COLOR = '#e0e0e0';
-
-/** Conversion factor: miles to km */
-const MILES_TO_KM = 1.60934;
 
 /** Animation duration for position transitions in milliseconds */
 const ANIMATION_DURATION_MS = 400;

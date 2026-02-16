@@ -192,7 +192,7 @@ export function createWaypointMarkers(
   waypoints: Waypoint[],
   userDistance: number,
   stageScale: number,
-  onSelect?: (wp: Waypoint) => void,
+  onSelect?: (wp: Waypoint, cluster?: Waypoint[]) => void,
 ): WaypointMarkerNodes {
   const group = new Konva.Group();
   layer.add(group);
@@ -356,10 +356,10 @@ export function createWaypointMarkers(
             }
           });
           mg.on('click tap', () => {
-            // Select the first unlocked item in the cluster
+            // Select the first unlocked item in the cluster, but pass the full cluster list
             const target = cluster.items.find((w) => w.distance <= uDist) ?? cluster.items[0];
             console.log('[WaypointMarker] Cluster selected:', cluster.items.length, 'items, picked:', target.title);
-            if (onSelect) onSelect(target);
+            if (onSelect) onSelect(target, cluster.items);
           });
         } else {
           mg.listening(false);

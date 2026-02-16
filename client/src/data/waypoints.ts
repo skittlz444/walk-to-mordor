@@ -20,6 +20,8 @@ export interface Waypoint {
   x: number;
   y: number;
   special: string | null;
+  /** Image identifier for goal thumbnail/detail images. */
+  image_id: string | null;
 }
 
 /**
@@ -43,6 +45,7 @@ export function getWaypointCoordinates(
       x: pos.x,
       y: pos.y,
       special: goal.special ?? null,
+      image_id: goal.image_id ?? null,
     };
   });
 }

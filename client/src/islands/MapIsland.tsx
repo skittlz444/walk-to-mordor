@@ -14,7 +14,14 @@ import {
   createWaypointMarkers,
   type WaypointMarkerNodes,
 } from '../components/map/WaypointMarkers';
-import { getUserPosition, type Point } from '../utils/map-utils';
+import { WaypointPopupContainer } from '../components/map/WaypointPopupContainer';
+import { GoalModal } from './GoalModal';
+import { getUserPosition, MILES_TO_KM, type Point } from '../utils/map-utils';
+import {
+  getScreenPosition,
+  getOptimalPopupPosition,
+  calculatePanOffset,
+} from '../utils/map-popup-utils';
 import {
   readLastOpenedDistanceMiles,
   writeLastOpenedDistanceMiles,
@@ -40,6 +47,10 @@ const MAX_ZOOM = 3.0;
 const DEFAULT_CENTER_ZOOM = 1.7;
 /** Total journey distance in miles (Bag End to Bag End, all 9 challenges). */
 const TOTAL_PATH_DISTANCE_MILES = 3991;
+/** Fallback popup dimensions before the real rendered size is measured. */
+const INITIAL_POPUP_SIZE = { width: 280, height: 200 };
+/** Mobile breakpoint matching WaypointPopupContainer. */
+const MOBILE_BREAKPOINT = 768;
 
 /** Dev mode: set window.__MAP_DEV_LOG = true in console to log coordinates on click */
 
@@ -221,7 +232,9 @@ export function MapIsland() {
   const markerRef = useRef<UserMarkerNodes | null>(null);
   const waypointMarkersRef = useRef<WaypointMarkerNodes | null>(null);
   const allWaypointsRef = useRef<Waypoint[]>([]);
-  const selectedWaypointRef = useRef<Waypoint | null>(null);
+  const allGoalsRef = useRef<Goal[]>([]);
+  const isUserPanning = useRef(false);
+  const panAnimRef = useRef<Konva.Animation | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -231,6 +244,29 @@ export function MapIsland() {
   const error = useSignal(false);
   // User's walked distance in miles, fetched from /api/progress on init.
   const userDistance = useSignal(0);
+
+  // Popup state signals
+  const selectedWaypoint = useSignal<Waypoint | null>(null);
+  const selectedCluster = useSignal<Waypoint[]>([]);
+  const popupPosition = useSignal<{ x: number; y: number } | null>(null);
+  const measuredPopupSize = useSignal<{ width: number; height: number } | null>(null);
+  const isMobile = useSignal(false);
+  const expandGoal = useSignal<Goal | null>(null);
+
+  /** Close the waypoint popup. */
+  const closePopup = useCallback(() => {
+    selectedWaypoint.value = null;
+    selectedCluster.value = [];
+    popupPosition.value = null;
+    measuredPopupSize.value = null;
+  }, []);
+
+  /** Open the full goal detail modal for a waypoint. */
+  const handleExpandWaypoint = useCallback((waypointId: number) => {
+    const goal = allGoalsRef.current.find((g) => g.id === waypointId) ?? null;
+    expandGoal.value = goal;
+    closePopup();
+  }, [closePopup]);
 
   const updateTiles = useCallback(() => {
     const meta = metaRef.current;
@@ -451,6 +487,74 @@ export function MapIsland() {
     }
   }, [updateTiles]);
 
+  const handleDesktopPopupSizeChange = useCallback((size: { width: number; height: number } | null) => {
+    const prev = measuredPopupSize.value;
+    if (!size) {
+      if (prev !== null) {
+        measuredPopupSize.value = null;
+      }
+      return;
+    }
+
+    if (prev && prev.width === size.width && prev.height === size.height) {
+      return;
+    }
+
+    measuredPopupSize.value = size;
+
+    const waypoint = selectedWaypoint.value;
+    if (!waypoint || isMobile.value) {
+      return;
+    }
+
+    const viewportSize = {
+      width: stageSize.value.width,
+      height: stageSize.value.height,
+    };
+
+    const currentScreenPos = getScreenPosition(
+      waypoint,
+      position.value,
+      currentScale.value,
+    );
+
+    const panDelta = calculatePanOffset(
+      currentScreenPos,
+      size,
+      viewportSize,
+      false,
+    );
+
+    if (panDelta) {
+      const meta = metaRef.current;
+      if (meta) {
+        position.value = clampPosition(
+          {
+            x: position.value.x + panDelta.dx,
+            y: position.value.y + panDelta.dy,
+          },
+          currentScale.value,
+          stageSize.value,
+          meta.fullWidth,
+          meta.fullHeight,
+        );
+        applyTransform();
+      }
+    }
+
+    const finalScreenPos = getScreenPosition(
+      waypoint,
+      position.value,
+      currentScale.value,
+    );
+    const popupPos = getOptimalPopupPosition(
+      finalScreenPos,
+      size,
+      viewportSize,
+    );
+    popupPosition.value = { x: popupPos.x, y: popupPos.y };
+  }, [applyTransform]);
+
   /**
    * Center the map on a given map coordinate at a given zoom level.
    * Respects map boundaries (edge clamping).
@@ -629,6 +733,12 @@ export function MapIsland() {
       return clampPosition(pos, currentScale.value, stageSize.value, meta.fullWidth, meta.fullHeight);
     });
 
+    // Close popup on user-initiated drag (pan)
+    stage.on('dragstart', () => {
+      isUserPanning.current = true;
+      closePopup();
+    });
+
     // Fix 3 part A: during drag, update position and tiles
     stage.on('dragmove', () => {
       const meta = metaRef.current;
@@ -667,11 +777,13 @@ export function MapIsland() {
       if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
         updateWaypointVisibility();
       }
+      isUserPanning.current = false;
     });
 
-    // Wheel zoom
+    // Wheel zoom — close popup on user zoom
     stage.on('wheel', (e: Konva.KonvaEventObject<WheelEvent>) => {
       e.evt.preventDefault();
+      closePopup();
       const meta = metaRef.current;
       if (!meta) return;
       const pointer = stage.getPointerPosition();
@@ -773,6 +885,7 @@ export function MapIsland() {
         if (goals.length > 0) {
           const waypoints = getWaypointCoordinates(fellowshipPath, goals);
           allWaypointsRef.current = waypoints;
+          allGoalsRef.current = goals;
 
           // Initial waypoint markers (empty - will be populated by updateWaypointVisibility)
           waypointMarkersRef.current = createWaypointMarkers(
@@ -780,9 +893,99 @@ export function MapIsland() {
             [],
             initialDistance,
             initialZoom,
-            (wp) => {
-              selectedWaypointRef.current = wp;
-              console.log('[Map] Waypoint selected:', wp.title);
+            (wp, cluster) => {
+              // Calculate screen position of waypoint
+              const screenPos = getScreenPosition(
+                wp,
+                position.value,
+                currentScale.value,
+              );
+              const viewportSize = {
+                width: stageSize.value.width,
+                height: stageSize.value.height,
+              };
+              const mobile = viewportSize.width <= MOBILE_BREAKPOINT;
+              isMobile.value = mobile;
+              measuredPopupSize.value = null;
+
+              const popupSize = measuredPopupSize.value ?? INITIAL_POPUP_SIZE;
+
+              // Calculate pan offset if needed
+              const panDelta = calculatePanOffset(
+                screenPos,
+                popupSize,
+                viewportSize,
+                mobile,
+              );
+
+              if (panDelta) {
+                // Animate the stage pan
+                const meta = metaRef.current;
+                if (meta) {
+                  const newPos = clampPosition(
+                    {
+                      x: position.value.x + panDelta.dx,
+                      y: position.value.y + panDelta.dy,
+                    },
+                    currentScale.value,
+                    stageSize.value,
+                    meta.fullWidth,
+                    meta.fullHeight,
+                  );
+
+                  // Stop any running pan animation before starting a new one
+                  if (panAnimRef.current) {
+                    panAnimRef.current.stop();
+                    panAnimRef.current = null;
+                  }
+
+                  // Animate pan with Konva
+                  const startPos = { ...position.value };
+                  const duration = 0.3;
+                  const anim = new Konva.Animation((frame) => {
+                    if (!frame) return;
+                    const t = Math.min(frame.time / (duration * 1000), 1);
+                    // easeInOutQuad: smooth acceleration then deceleration
+                    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                    position.value = {
+                      x: startPos.x + (newPos.x - startPos.x) * ease,
+                      y: startPos.y + (newPos.y - startPos.y) * ease,
+                    };
+                    applyTransform();
+
+                    if (t >= 1) {
+                      anim.stop();
+                      panAnimRef.current = null;
+                      // Update popup position after pan completes
+                      const finalScreenPos = getScreenPosition(
+                        wp,
+                        position.value,
+                        currentScale.value,
+                      );
+                      const popupPos = getOptimalPopupPosition(
+                        finalScreenPos,
+                        popupSize,
+                        viewportSize,
+                      );
+                      selectedWaypoint.value = wp;
+                      selectedCluster.value = cluster ?? [];
+                      popupPosition.value = { x: popupPos.x, y: popupPos.y };
+                    }
+                  }, stage.getLayers()[0]);
+                  panAnimRef.current = anim;
+                  anim.start();
+                }
+              } else {
+                // No pan needed — show popup immediately
+                const popupPos = getOptimalPopupPosition(
+                  screenPos,
+                  popupSize,
+                  viewportSize,
+                );
+                selectedWaypoint.value = wp;
+                selectedCluster.value = cluster ?? [];
+                popupPosition.value = { x: popupPos.x, y: popupPos.y };
+              }
             },
           );
         }
@@ -911,6 +1114,7 @@ export function MapIsland() {
         waypointMarkersRef.current = null;
       }
       allWaypointsRef.current = [];
+      allGoalsRef.current = [];
       stage.destroy();
       stageRef.current = null;
       layerRef.current = null;
@@ -963,6 +1167,24 @@ export function MapIsland() {
             <i className="fas fa-crosshairs" aria-hidden="true"></i>
           </button>
         </div>
+      )}
+      {/* Waypoint detail popup (HTML overlay, outside Konva canvas) */}
+      <WaypointPopupContainer
+        selectedWaypoint={selectedWaypoint}
+        selectedCluster={selectedCluster}
+        popupPosition={popupPosition}
+        onClose={closePopup}
+        onExpand={handleExpandWaypoint}
+        isMobile={isMobile}
+        onDesktopPopupSizeChange={handleDesktopPopupSizeChange}
+      />
+      {/* Full goal detail modal (opened from popup expand button) */}
+      {expandGoal.value && (
+        <GoalModal
+          goal={expandGoal.value}
+          currentDistance={userDistance.value * MILES_TO_KM}
+          onClose={() => { expandGoal.value = null; }}
+        />
       )}
     </div>
   );
