@@ -11,6 +11,7 @@ const baseWaypoint: Waypoint = {
   x: 500,
   y: 300,
   special: null,
+  image_id: null,
 };
 
 describe('WaypointPopup', () => {

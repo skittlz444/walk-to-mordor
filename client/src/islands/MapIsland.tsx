@@ -16,7 +16,7 @@ import {
 } from '../components/map/WaypointMarkers';
 import { WaypointPopupContainer } from '../components/map/WaypointPopupContainer';
 import { GoalModal } from './GoalModal';
-import { getUserPosition, type Point } from '../utils/map-utils';
+import { getUserPosition, MILES_TO_KM, type Point } from '../utils/map-utils';
 import {
   getScreenPosition,
   getOptimalPopupPosition,
@@ -51,8 +51,6 @@ const TOTAL_PATH_DISTANCE_MILES = 3991;
 const POPUP_SIZE = { width: 280, height: 200 };
 /** Mobile breakpoint matching WaypointPopupContainer. */
 const MOBILE_BREAKPOINT = 768;
-/** Miles to km for distance display in Goal types. */
-const MILES_TO_KM_DISPLAY = 1.60934;
 
 /** Dev mode: set window.__MAP_DEV_LOG = true in console to log coordinates on click */
 
@@ -236,6 +234,7 @@ export function MapIsland() {
   const allWaypointsRef = useRef<Waypoint[]>([]);
   const allGoalsRef = useRef<Goal[]>([]);
   const isUserPanning = useRef(false);
+  const panAnimRef = useRef<Konva.Animation | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -861,6 +860,12 @@ export function MapIsland() {
                     meta.fullHeight,
                   );
 
+                  // Stop any running pan animation before starting a new one
+                  if (panAnimRef.current) {
+                    panAnimRef.current.stop();
+                    panAnimRef.current = null;
+                  }
+
                   // Animate pan with Konva
                   const startPos = { ...position.value };
                   const duration = 0.3;
@@ -877,6 +882,7 @@ export function MapIsland() {
 
                     if (t >= 1) {
                       anim.stop();
+                      panAnimRef.current = null;
                       // Update popup position after pan completes
                       const finalScreenPos = getScreenPosition(
                         wp,
@@ -893,6 +899,7 @@ export function MapIsland() {
                       popupPosition.value = { x: popupPos.x, y: popupPos.y };
                     }
                   }, stage.getLayers()[0]);
+                  panAnimRef.current = anim;
                   anim.start();
                 }
               } else {
@@ -1101,7 +1108,7 @@ export function MapIsland() {
       {expandGoal.value && (
         <GoalModal
           goal={expandGoal.value}
-          currentDistance={userDistance.value * MILES_TO_KM_DISPLAY}
+          currentDistance={userDistance.value * MILES_TO_KM}
           onClose={() => { expandGoal.value = null; }}
         />
       )}

@@ -6,15 +6,13 @@
 
 import { useSignal } from '@preact/signals';
 import type { Waypoint } from '../../data/waypoints';
+import { MILES_TO_KM } from '../../utils/map-utils';
 
 export interface ClusterListSheetProps {
   cluster: Waypoint[];
   onClose: () => void;
   onExpand: (waypointId: number) => void;
 }
-
-/** Convert miles to km for display. */
-const MILES_TO_KM = 1.60934;
 
 export function ClusterListSheet({ cluster, onClose, onExpand }: ClusterListSheetProps) {
   return (

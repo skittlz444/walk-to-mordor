@@ -297,3 +297,6 @@ export function markerScale(
 ): number {
   return dynamicStrokeWidth(baseStroke, stageScale, minStroke, maxStroke) / baseStroke;
 }
+
+/** Conversion factor from miles to kilometres. */
+export const MILES_TO_KM = 1.60934;
