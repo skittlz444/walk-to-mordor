@@ -134,6 +134,15 @@ async function createTestEvent(page, distance, dateInfo) {
     
     const cell = await selectCalendarDate(page, testDateInfo);
     
+    // Get the actual date from the selected cell (may differ from testDateInfo if fallback was used)
+    const actualDate = await cell.getAttribute('data-date');
+    const actualDateInfo = actualDate ? {
+      date: actualDate,
+      day: parseInt(actualDate.split('-')[2], 10),
+      month: parseInt(actualDate.split('-')[1], 10),
+      year: parseInt(actualDate.split('-')[0], 10)
+    } : testDateInfo;
+    
     try {
       await cell.click({ force: true, timeout: 10000 });
     } catch (error) {
@@ -167,7 +176,7 @@ async function createTestEvent(page, distance, dateInfo) {
         // Fallback or ignore if already gone
     }
     
-    return { distance: testDistance, dateInfo: testDateInfo };
+    return { distance: testDistance, dateInfo: actualDateInfo };
 }
 
 module.exports = {

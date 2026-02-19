@@ -1,6 +1,6 @@
 # Story 2.7: Map State Management
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -62,71 +62,71 @@ so that **I can seamlessly explore my journey without losing context when naviga
 
 ## Tasks / Subtasks
 
-- [ ] **1. Type Definitions (`client/src/types/map.ts`)**
-    - [ ] Create `UserProgress` interface: `{ totalDistance: number; lastUpdated: Date }`.
-    - [ ] Create `Milestone` interface extending `Goal`: `{ ...Goal, x: number; y: number }`.
-    - [ ] Create `MapViewState` interface: `{ x: number; y: number; scale: number }`.
-    - [ ] Create `MapLoadingState` type: `'idle' | 'loading' | 'success' | 'error'`.
-    - [ ] Export all types for use across map components.
+- [x] **1. Type Definitions (`client/src/types/map.ts`)**
+    - [x] Create `UserProgress` interface: `{ totalDistance: number; lastUpdated: Date }`.
+    - [x] Create `Milestone` interface extending `Goal`: `{ ...Goal, x: number; y: number }`.
+    - [x] Create `MapViewState` interface: `{ x: number; y: number; scale: number }`.
+    - [x] Create `MapLoadingState` type: `'idle' | 'loading' | 'success' | 'error'`.
+    - [x] Export all types for use across map components.
 
-- [ ] **2. Core Store Creation (`client/src/stores/mapStore.ts`)**
-    - [ ] Import `signal`, `computed` from `@preact/signals`.
-    - [ ] Create core signals:
+- [x] **2. Core Store Creation (`client/src/stores/mapStore.ts`)**
+    - [x] Import `signal`, `computed` from `@preact/signals`.
+    - [x] Create core signals:
         - `userProgress: Signal<UserProgress | null>`.
         - `milestones: Signal<Milestone[]>`.
         - `mapViewState: Signal<MapViewState>`.
         - `loadingState: Signal<MapLoadingState>`.
         - `error: Signal<Error | null>`.
-    - [ ] Set initial values:
+    - [x] Set initial values:
         - `userProgress`: `null`.
         - `milestones`: `[]`.
         - `mapViewState`: `{ x: 0, y: 0, scale: 1.0 }` (or from localStorage).
         - `loadingState`: `'idle'`.
         - `error`: `null`.
 
-- [ ] **3. Computed Signals (`client/src/stores/mapStore.ts`)**
-    - [ ] Create `isLoading: computed(() => loadingState.value === 'loading')`.
-    - [ ] Create `hasError: computed(() => error.value !== null)`.
-    - [ ] Create `unlockedMilestones: computed(() => milestones.value.filter(m => m.distance <= (userProgress.value?.totalDistance ?? 0)))`.
-    - [ ] Create `nextMilestone: computed(() => milestones.value.find(m => m.distance > (userProgress.value?.totalDistance ?? 0)))`.
-    - [ ] Create `currentPosition: computed(() => calculatePositionOnPath(userProgress.value?.totalDistance ?? 0))`.
+- [x] **3. Computed Signals (`client/src/stores/mapStore.ts`)**
+    - [x] Create `isLoading: computed(() => loadingState.value === 'loading')`.
+    - [x] Create `hasError: computed(() => error.value !== null)`.
+    - [x] Create `unlockedMilestones: computed(() => milestones.value.filter(m => m.distance <= (userProgress.value?.totalDistance ?? 0)))`.
+    - [x] Create `nextMilestone: computed(() => milestones.value.find(m => m.distance > (userProgress.value?.totalDistance ?? 0)))`.
+    - [x] Create `currentPosition: computed(() => calculatePositionOnPath(userProgress.value?.totalDistance ?? 0))`.
         - Note: Uses path interpolation logic from `map-utils.ts` (Story 2.3).
 
-- [ ] **4. API Integration Functions**
-    - [ ] Create `fetchUserProgress(): Promise<UserProgress>`:
+- [x] **4. API Integration Functions**
+    - [x] Create `fetchUserProgress(): Promise<UserProgress>`:
         - GET `/api/total-distance`.
         - Parse response: `{ totalDistance: number }`.
         - Return `{ totalDistance, lastUpdated: new Date() }`.
         - Throw on non-ok response.
-    - [ ] Create `fetchMilestones(): Promise<Milestone[]>`:
+    - [x] Create `fetchMilestones(): Promise<Milestone[]>`:
         - GET `/api/goals`.
         - Parse response array of Goal objects.
         - For each goal, calculate x,y coordinates by calling the `getWaypointCoordinates` helper built in Story 2.5 (do not reimplement interpolation logic here).
         - Return array of `Milestone` objects.
         - Throw on non-ok response.
 
-- [ ] **5. Cache Layer (`client/src/utils/map-cache.ts`)**
-    - [ ] Create `CACHE_KEYS` constant:
+- [x] **5. Cache Layer (`client/src/utils/map-cache.ts`)**
+    - [x] Create `CACHE_KEYS` constant:
         - `MILESTONES: 'walk-to-mordor-milestones'`.
         - `MAP_VIEW: 'walk-to-mordor-map-state'`.
-    - [ ] Create `getCachedMilestones(): Milestone[] | null`:
+    - [x] Create `getCachedMilestones(): Milestone[] | null`:
         - Read from localStorage.
         - Parse JSON.
         - Check `timestamp` against 24h TTL.
         - Return null if expired or invalid.
-    - [ ] Create `cacheMilestones(milestones: Milestone[]): void`:
+    - [x] Create `cacheMilestones(milestones: Milestone[]): void`:
         - Write to localStorage with `{ data: milestones, timestamp: Date.now() }`.
-    - [ ] Create `getPersistedMapView(): MapViewState | null`:
+    - [x] Create `getPersistedMapView(): MapViewState | null`:
         - Read from localStorage.
         - Parse and validate structure.
         - Check `timestamp` against **24h TTL**.
         - Return null if expired (≥ 24h) or invalid.
-    - [ ] Create `persistMapView(state: MapViewState): void`:
+    - [x] Create `persistMapView(state: MapViewState): void`:
         - Write to localStorage with `{ ...state, timestamp: Date.now() }`.
         - Wrap in try/catch for quota errors.
 
-- [ ] **6. Store Actions**
-    - [ ] Create `initializeMap(): Promise<void>`:
+- [x] **6. Store Actions**
+    - [x] Create `initializeMap(): Promise<void>`:
         - Set `loadingState.value = 'loading'`.
         - Fetch user progress (always fresh).
         - Try cached milestones first, then fetch if expired.
@@ -135,36 +135,36 @@ so that **I can seamlessly explore my journey without losing context when naviga
           - If expired/missing: Calculate initial view centered on user's **current position** at default zoom (1.0).
         - On success: Set `loadingState.value = 'success'`.
         - On error: Set `error.value`, `loadingState.value = 'error'`.
-    - [ ] Create `retryLoad(): Promise<void>`:
+    - [x] Create `retryLoad(): Promise<void>`:
         - Clear `error.value`.
         - Call `initializeMap()`.
-    - [ ] Create `updateMapView(newState: Partial<MapViewState>): void`:
+    - [x] Create `updateMapView(newState: Partial<MapViewState>): void`:
         - Merge with existing state.
         - Update `mapViewState` signal.
         - Debounced persist to localStorage (500ms).
-    - [ ] Create `refreshUserProgress(): Promise<void>`:
+    - [x] Create `refreshUserProgress(): Promise<void>`:
         - Fetch fresh user progress.
         - Update `userProgress` signal.
         - (Used by Story 2.8 after logging a walk).
-    - [ ] Create `centerOnCurrentPosition(): MapViewState`:
+    - [x] Create `centerOnCurrentPosition(): MapViewState`:
         - Calculate user's current x,y from `userProgress.totalDistance`.
         - Return `MapViewState` with x,y offset to center that position in viewport.
         - Use default scale (1.0).
         - (Used on initial load when no valid persisted state exists).
 
-- [ ] **7. Debounced Persistence**
-    - [ ] Implement debounce utility or use existing one.
-    - [ ] Create `debouncedPersistMapView` that waits 500ms after last call.
-    - [ ] Wire into `updateMapView` action.
+- [x] **7. Debounced Persistence**
+    - [x] Implement debounce utility or use existing one.
+    - [x] Create `debouncedPersistMapView` that waits 500ms after last call.
+    - [x] Wire into `updateMapView` action.
 
-- [ ] **8. Integration Ready Exports**
-    - [ ] Export all signals for component consumption.
-    - [ ] Export all actions for component use.
-    - [ ] Export computed signals.
-    - [ ] Ensure TypeScript exports are properly typed.
+- [x] **8. Integration Ready Exports**
+    - [x] Export all signals for component consumption.
+    - [x] Export all actions for component use.
+    - [x] Export computed signals.
+    - [x] Ensure TypeScript exports are properly typed.
 
-- [ ] **9. Testing**
-    - [ ] **Unit Tests** (`client/src/stores/mapStore.test.ts`):
+- [x] **9. Testing**
+    - [x] **Unit Tests** (`client/src/stores/mapStore.test.ts`):
         - Test initial state values.
         - Test `initializeMap` success path (mock fetch).
         - Test `initializeMap` error handling.
@@ -176,7 +176,7 @@ so that **I can seamlessly explore my journey without losing context when naviga
         - Test `nextMilestone` computed returns first locked milestone.
         - Test `updateMapView` updates signal correctly.
         - Test localStorage persistence is called with timestamp.
-    - [ ] **Unit Tests** (`client/src/utils/map-cache.test.ts`):
+    - [x] **Unit Tests** (`client/src/utils/map-cache.test.ts`):
         - Test cache write/read roundtrip.
         - Test milestone TTL expiration logic (24h).
         - Test map view TTL expiration logic (24h).
@@ -280,13 +280,55 @@ interface PersistedMapView {
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5
 
 ### Debug Log References
 
+None - implementation completed without issues.
+
 ### Completion Notes List
+
+- Created type definitions in `client/src/types/map.ts`:
+  - `UserProgress` interface for tracking user distance
+  - `Milestone` interface extending `Goal` with x,y coordinates
+  - `MapViewState` interface for viewport state (x, y, scale)
+  - `MapLoadingState` type union for granular loading states
+  - `CachedMilestones` and `PersistedMapView` interfaces for localStorage structures
+
+- Created centralized store in `client/src/stores/mapStore.ts`:
+  - Core signals: `userProgress`, `milestones`, `mapViewState`, `loadingState`, `error`
+  - Computed signals: `isLoading`, `hasError`, `unlockedMilestones`, `nextMilestone`, `currentPosition`, `visibleMilestones`
+  - API functions: `fetchUserProgress()`, `fetchMilestones()` with proper error handling
+  - Actions: `initializeMap()`, `retryLoad()`, `updateMapView()`, `refreshUserProgress()`, `centerOnCurrentPosition()`, `setViewportSize()`
+  - Debounced persistence (500ms) for map view state
+
+- Created cache utilities in `client/src/utils/map-cache.ts`:
+  - 24-hour TTL for both milestones and map view state
+  - Graceful handling of localStorage unavailability
+  - `CACHE_KEYS` constants for consistency
+
+- Comprehensive unit tests:
+  - 37 tests for mapStore covering all signals, computed values, and actions
+  - 19 tests for map-cache covering TTL expiration, invalid data, and error handling
+
+- Used existing `getWaypointCoordinates()` from Story 2.5 for milestone coordinate calculation
+- Used existing `getUserPosition()` from Story 2.3 for user position interpolation
 
 ### Change Log
 
+- 2026-02-19: Code review fix - Added `visibleMilestones` computed signal (AC #7) and `setViewportSize` action
+- 2026-02-19: Story 2.7 implemented - Map State Management foundation complete
+
 ### File List
+
+**New Files:**
+- `client/src/types/map.ts` - Map-specific type definitions (incl. ViewportSize interface)
+- `client/src/stores/mapStore.ts` - Centralized reactive state store
+- `client/src/stores/mapStore.test.ts` - Store unit tests (37 tests)
+- `client/src/utils/map-cache.ts` - LocalStorage cache utilities
+- `client/src/utils/map-cache.test.ts` - Cache unit tests (19 tests)
+
+**Modified Files:**
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` - Status updated to in-progress → review
+- `tests/ui/helpers/common.js` - Fixed date handling in createTestEvent helper
 

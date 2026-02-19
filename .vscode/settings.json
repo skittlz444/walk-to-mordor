@@ -1,5 +1,8 @@
 {
     "github-actions.workflows.pinned.workflows": [
         ".github/workflows/pr-tests.yml"
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+        "npx playwright": true
+    }
 }
