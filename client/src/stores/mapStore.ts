@@ -383,3 +383,106 @@ export function setViewportSize(size: { width: number; height: number }): void {
   viewportSize.value = size;
 }
 
+// ============================================================================
+// Pan/Zoom Animation Actions
+// ============================================================================
+
+/** Animation frame ID for cleanup. */
+let animationFrameId: number | null = null;
+
+/** Default animation duration in ms. */
+const PAN_ANIMATION_DURATION_MS = 500;
+
+/**
+ * Ease-out cubic function for smooth deceleration.
+ * @param t - Progress from 0 to 1
+ * @returns Eased value from 0 to 1
+ */
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+/**
+ * Smoothly animate the map view to center on a specific position.
+ *
+ * @param position - Target position in map coordinates (x, y).
+ * @param scale - Optional zoom level (default: current scale).
+ * @param durationMs - Animation duration in ms (default: 500).
+ */
+export function panToPosition(
+  position: { x: number; y: number },
+  scale?: number,
+  durationMs: number = PAN_ANIMATION_DURATION_MS,
+): void {
+  // Cancel any existing animation
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+
+  const { width, height } = viewportSize.value;
+  const currentState = mapViewState.value;
+  const targetScale = scale ?? currentState.scale;
+
+  // Calculate target stage position to center the given map coordinates
+  // Stage position is negative of (mapPosition * scale - viewportSize/2)
+  const targetX = -(position.x * targetScale - width / 2);
+  const targetY = -(position.y * targetScale - height / 2);
+
+  // Starting values
+  const startX = currentState.x;
+  const startY = currentState.y;
+  const startScale = currentState.scale;
+  const startTime = performance.now();
+
+  function animate(currentTime: number): void {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / durationMs, 1);
+    const easedProgress = easeOutCubic(progress);
+
+    // Interpolate values
+    const newX = startX + (targetX - startX) * easedProgress;
+    const newY = startY + (targetY - startY) * easedProgress;
+    const newScale = startScale + (targetScale - startScale) * easedProgress;
+
+    // Update map view state
+    mapViewState.value = {
+      x: newX,
+      y: newY,
+      scale: newScale,
+    };
+
+    if (progress < 1) {
+      animationFrameId = requestAnimationFrame(animate);
+    } else {
+      animationFrameId = null;
+      // Persist final position
+      persistMapView(mapViewState.value);
+    }
+  }
+
+  animationFrameId = requestAnimationFrame(animate);
+}
+
+/**
+ * Smoothly animate the map view to center on the user's current position.
+ *
+ * Uses the currentPosition computed signal to get the user's location.
+ * @param scale - Optional zoom level (default: current scale or 1.0).
+ */
+export function panToUserCurrentPosition(scale?: number): void {
+  const position = currentPosition.value;
+  const targetScale = scale ?? Math.max(mapViewState.value.scale, 1.0);
+  panToPosition(position, targetScale);
+}
+
+/**
+ * Cancel any ongoing pan animation.
+ */
+export function cancelPanAnimation(): void {
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+}
+

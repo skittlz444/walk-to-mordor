@@ -36,6 +36,8 @@ import {
   getVisibilityTier,
   type Waypoint,
 } from '../data/waypoints';
+import { MapWalkIsland } from './MapWalkIsland';
+import { userProgress, milestones } from '../stores/mapStore';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
@@ -847,6 +849,12 @@ export function MapIsland() {
 
         userDistance.value = initialDistance;
 
+        // Populate mapStore userProgress for MapWalkIsland to use
+        userProgress.value = {
+          totalDistance: distMiles * MILES_TO_KM,
+          lastUpdated: new Date(),
+        };
+
         const min = computeMinScale(size, data.fullWidth, data.fullHeight);
         minScaleVal.value = min;
 
@@ -886,6 +894,13 @@ export function MapIsland() {
           const waypoints = getWaypointCoordinates(fellowshipPath, goals);
           allWaypointsRef.current = waypoints;
           allGoalsRef.current = goals;
+
+          // Populate mapStore milestones for MapWalkIsland to use
+          milestones.value = waypoints.map((wp, idx) => ({
+            ...goals[idx],
+            x: wp.x,
+            y: wp.y,
+          }));
 
           // Initial waypoint markers (empty - will be populated by updateWaypointVisibility)
           waypointMarkersRef.current = createWaypointMarkers(
@@ -1185,6 +1200,10 @@ export function MapIsland() {
           currentDistance={userDistance.value * MILES_TO_KM}
           onClose={() => { expandGoal.value = null; }}
         />
+      )}
+      {/* Walk logging FAB and congratulations flow (Story 2.8) */}
+      {!loading.value && (
+        <MapWalkIsland currentDistanceKm={userDistance.value * MILES_TO_KM} />
       )}
     </div>
   );

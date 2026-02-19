@@ -4,7 +4,8 @@ function renderMapPage() {
   return renderLayout({
     title: 'Walk to Mordor - Middle Earth',
     description: 'Explore your journey across Middle-earth',
-    stylesheets: ['/css/map.css'],
+    stylesheets: ['/css/map.css', '/css/calendar.css', '/css/progress.css'],
+    scripts: ['/js/calendar.js', '/js/progress.js'],  // Required for MapWalkIsland FAB
     inlineStyles: `          body.map-page { opacity: 0; transition: opacity 0.15s ease; }
           body.map-page.authenticated { opacity: 1; }`,
     bodyClass: 'map-page',

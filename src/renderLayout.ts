@@ -96,6 +96,7 @@ ${extraStylesheets}
       </main>
       
       <!-- Preact Islands - Load before vanilla JS that depends on it -->
+      <link rel="stylesheet" href="/js/client/islands.css">
       <script type="module" src="/js/client/islands.js"></script>
       
       <!-- Scripts -->
