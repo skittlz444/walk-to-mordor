@@ -63,7 +63,7 @@ development_status:
   2-4-current-position-marker: review
   2-5-waypoint-markers: done
   2-6-waypoint-detail-popup: done
-  2-7-map-state-management: ready-for-dev
+  2-7-map-state-management: done
   2-8-map-walk-logging: ready-for-dev
   2-9-map-visual-testing: ready-for-dev
   2-10-user-goal-visibility-preference: ready-for-dev
