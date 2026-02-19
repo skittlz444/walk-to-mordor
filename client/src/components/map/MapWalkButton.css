@@ -10,7 +10,7 @@
   position: absolute;
   bottom: 1rem; /* Above any map attribution */
   right: 1rem;
-  z-index: 100;
+  z-index: 1;
 
   /* Size: touch-friendly (≥48px diameter) */
   width: 56px;
@@ -83,7 +83,7 @@
 /* Mobile: slightly larger touch target */
 @media (max-width: 768px) {
   .map-walk-button {
-    bottom: 1rem; /* Higher on mobile for bottom nav */
+    bottom: 2.5rem; /* Higher on mobile for bottom nav */
     right: 1rem;
     width: 52px;
     height: 52px;
