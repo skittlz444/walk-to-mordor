@@ -13,7 +13,7 @@
  */
 
 import { h } from 'preact';
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useCallback } from 'preact/hooks';
 import { useSignal } from '@preact/signals';
 import { MapWalkButton } from '../components/map/MapWalkButton';
 import { GoalModal } from './GoalModal';
@@ -48,7 +48,18 @@ interface WalkSavedData {
 }
 
 export interface MapWalkIslandProps {
-  /** Current user distance in km (for milestone checking) */
+  /**
+   * Current user distance in km at render time.
+   *
+   * NOTE: This intentionally co-exists with the `userProgress` signal:
+   * - The server / legacy map code passes this value into the island as an explicit prop.
+   * - MapWalkIsland forwards it to children (e.g. GoalModal) that may rely on the
+   *   initial distance when the flow starts, while `userProgress` is used for
+   *   refreshed progress after a walk is saved.
+   *
+   * Do not remove without auditing all MapWalkIsland callers and GoalModal usage;
+   * this prop is part of the public API and is kept for compatibility and clarity.
+   */
   currentDistanceKm: number;
 }
 
@@ -65,10 +76,6 @@ export function MapWalkIsland({ currentDistanceKm }: MapWalkIslandProps): h.JSX.
   
   // Store old progress for comparison after walk is logged
   const oldProgressRef = useRef<number>(0);
-
-  // Cleanup refs
-  const savedCallbackRef = useRef<((data: WalkSavedData) => Promise<void>) | null>(null);
-  const dismissCallbackRef = useRef<(() => void) | null>(null);
 
   /**
    * Handle FAB click - open the calendar modal.
@@ -88,7 +95,7 @@ export function MapWalkIsland({ currentDistanceKm }: MapWalkIslandProps): h.JSX.
   /**
    * Handle walk saved - refresh progress and check for new milestones.
    */
-  const handleWalkSaved = async () => {
+  const handleWalkSaved = useCallback(async () => {
     try {
       // Refresh user progress from API
       await refreshUserProgress();
@@ -120,15 +127,15 @@ export function MapWalkIsland({ currentDistanceKm }: MapWalkIslandProps): h.JSX.
     } catch (err) {
       console.error('[MapWalkIsland] Error handling walk save:', err);
     }
-  };
+  }, []);
 
   /**
    * Handle dismiss button on walk modal (no save).
    * Just clears the ref, no action needed.
    */
-  const handleWalkDismiss = () => {
+  const handleWalkDismiss = useCallback(() => {
     // Nothing to do - user cancelled
-  };
+  }, []);
 
   /**
    * Handle closing a congratulations modal.
@@ -155,10 +162,6 @@ export function MapWalkIsland({ currentDistanceKm }: MapWalkIslandProps): h.JSX.
    * Register callbacks with legacy JS on mount, cleanup on unmount.
    */
   useEffect(() => {
-    // Store callback refs for cleanup
-    savedCallbackRef.current = handleWalkSaved;
-    dismissCallbackRef.current = handleWalkDismiss;
-
     // Register callbacks
     if (window.onWalkSaved) {
       window.onWalkSaved(handleWalkSaved);
@@ -176,7 +179,7 @@ export function MapWalkIsland({ currentDistanceKm }: MapWalkIslandProps): h.JSX.
         window.onWalkDismiss(null);
       }
     };
-  }, []);
+  }, [handleWalkSaved, handleWalkDismiss]);
 
   return (
     <>
