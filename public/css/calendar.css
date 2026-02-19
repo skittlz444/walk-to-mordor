@@ -349,3 +349,105 @@
     margin-top: 0.2em;
   }
 }
+
+/* Calendar Modal Styles (for Map page) */
+.calendar-modal-overlay {
+  z-index: 200; /* Above map controls */
+}
+
+.calendar-modal-dialog {
+  max-width: 400px;
+  width: 95%;
+  max-height: 80vh;
+}
+
+.calendar-modal-content {
+  position: relative;
+  padding: 0.5rem;
+}
+
+.calendar-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  z-index: 10;
+}
+
+.calendar-modal-close:hover {
+  background: var(--hover-overlay);
+  color: var(--text-primary);
+}
+
+#calendar-modal-container {
+  padding-top: 0.5rem;
+}
+
+#calendar-modal-container .custom-calendar {
+  background: transparent;
+}
+
+/* Make calendar cells clickable with visual feedback in modal */
+#calendar-modal-grid .calendar-cell {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+#calendar-modal-grid .calendar-cell:hover {
+  background-color: var(--hover-overlay);
+}
+
+/* ============================================
+   Map Page Calendar Bottom Sheet
+   Matches the journey page calendar style
+   ============================================ */
+.map-calendar-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 200; /* Above map controls and FAB */
+  background: var(--bg-modal-dark);
+  box-shadow: 0 -2px 16px var(--shadow-dark);
+  transform: translateY(100%);
+  transition: transform 0.3s ease-out;
+}
+
+.map-calendar-sheet.open {
+  transform: translateY(0);
+}
+
+/* Close button in calendar header */
+.calendar-close-btn {
+  margin-left: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+}
+
+.calendar-close-btn:hover {
+  background: var(--hover-overlay);
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
+/* Make calendar cells clickable in map sheet */
+.map-calendar-sheet .calendar-cell {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.map-calendar-sheet .calendar-cell:hover {
+  background-color: var(--hover-overlay);
+}

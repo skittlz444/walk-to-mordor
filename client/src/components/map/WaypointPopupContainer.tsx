@@ -16,9 +16,7 @@ import { WaypointPopup } from './WaypointPopup';
 import { WaypointSheet } from './WaypointSheet';
 import { ClusterListPopup } from './ClusterListPopup';
 import { ClusterListSheet } from './ClusterListSheet';
-// Import CSS as inline string — Vite's ?inline query returns raw text
-// so we can inject it ourselves (the HTML is server-rendered, not Vite-managed).
-import popupStyles from './WaypointPopup.css?inline';
+import './WaypointPopup.css';
 
 /** Breakpoint for mobile bottom sheet (matches existing map.css). */
 const MOBILE_BREAKPOINT = 768;
@@ -45,7 +43,6 @@ export function WaypointPopupContainer({
   const waypoint = selectedWaypoint.value;
   const cluster = selectedCluster.value;
   const pos = popupPosition.value;
-  const styleInjected = useRef(false);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   const clearPopupObserver = useCallback(() => {
@@ -82,16 +79,6 @@ export function WaypointPopupContainer({
     observer.observe(el);
     resizeObserverRef.current = observer;
   }, [clearPopupObserver, isMobile.value, onDesktopPopupSizeChange, reportPopupSize]);
-
-  // Inject popup CSS once (server-rendered HTML doesn't load Vite CSS assets)
-  useEffect(() => {
-    if (styleInjected.current) return;
-    styleInjected.current = true;
-    const style = document.createElement('style');
-    style.setAttribute('data-waypoint-popup', '');
-    style.textContent = popupStyles;
-    document.head.appendChild(style);
-  }, []);
 
   // ESC key handler
   useEffect(() => {

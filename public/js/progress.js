@@ -5,6 +5,28 @@ let popupEvent;
 let popupDate;
 let isEdit = false;
 
+// Callback hooks for external integration (e.g., Map island)
+// Called after successful save/update/delete operations
+let onWalkSavedCallback = null;
+// Called when modal is dismissed without saving
+let onDismissCallback = null;
+
+/**
+ * Register a callback to be called after a walk is saved/updated/deleted.
+ * @param {function} callback - Function called with {action: 'save'|'update'|'delete', date: string, distance?: number}
+ */
+window.onWalkSaved = function(callback) {
+  onWalkSavedCallback = callback;
+};
+
+/**
+ * Register a callback to be called when modal is dismissed without saving.
+ * @param {function} callback - Function called with no arguments
+ */
+window.onWalkDismiss = function(callback) {
+  onDismissCallback = callback;
+};
+
 // Helper function to format date with calendar module fallback
 function formatDateWithFallback(date) {
   return window.calendarModule ? window.calendarModule.formatDate(date) : formatDateLocal(date);
@@ -60,6 +82,9 @@ function showDistanceModal(event, date = null) {
 
   document.body.appendChild(modalOverlay);
 
+  // Track if save/delete was triggered (to distinguish from dismiss)
+  let actionTaken = false;
+
   // Helper function to add to current distance
   function addToDistance(amount) {
     const input = document.getElementById('distance-input');
@@ -69,13 +94,28 @@ function showDistanceModal(event, date = null) {
     input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  function closeModal() {
+  function closeModal(wasDismissed = true) {
     modalOverlay.remove();
+    // Only call dismiss callback if no action was taken (user cancelled)
+    if (wasDismissed && !actionTaken && onDismissCallback) {
+      onDismissCallback();
+    }
+  }
+
+  // Wrap save/delete handlers to track that action was taken
+  function handleSaveWithTracking() {
+    actionTaken = true;
+    handleSaveDistance();
+  }
+
+  function handleDeleteWithTracking() {
+    actionTaken = true;
+    handleDeleteDistance();
   }
 
   // Add event listeners
-  document.getElementById('save-btn').addEventListener('click', handleSaveDistance);
-  document.getElementById('cancel-btn').addEventListener('click', closeModal);
+  document.getElementById('save-btn').addEventListener('click', handleSaveWithTracking);
+  document.getElementById('cancel-btn').addEventListener('click', () => closeModal(true));
   
   // Quick entry button handlers
   document.getElementById('quick-add-1').addEventListener('click', function() {
@@ -93,22 +133,31 @@ function showDistanceModal(event, date = null) {
   
   const closeModalBtn = document.getElementById('close-modal');
   if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', closeModal);
+    closeModalBtn.addEventListener('click', () => closeModal(true));
   }
   
   if (isEdit) {
     const deleteBtn = document.getElementById('delete-btn');
     if (deleteBtn) {
-      deleteBtn.addEventListener('click', handleDeleteDistance);
+      deleteBtn.addEventListener('click', handleDeleteWithTracking);
     }
   }
 
   // Close modal when clicking overlay
   modalOverlay.addEventListener('click', function(e) {
     if (e.target === modalOverlay) {
-      closeModal();
+      closeModal(true);
     }
   });
+
+  // Close modal with ESC key
+  function handleEscKey(e) {
+    if (e.key === 'Escape') {
+      closeModal(true);
+      document.removeEventListener('keydown', handleEscKey);
+    }
+  }
+  document.addEventListener('keydown', handleEscKey);
 
   // Focus on input
   setTimeout(() => {
@@ -148,6 +197,10 @@ function handleSaveDistance() {
       if (window.updateCalendarAndTotal) {
         window.updateCalendarAndTotal();
       }
+      // Trigger onWalkSaved callback for Map island integration
+      if (onWalkSavedCallback) {
+        onWalkSavedCallback({ action: 'update', date: selectedDate, distance: newDistance });
+      }
       // Check for newly passed goals after calendar update
       if (window.goalsModule && window.goalsModule.checkForNewlyPassedGoals) {
         window.goalsModule.checkForNewlyPassedGoals(previousTotal, projectedNewTotal).then(newlyPassedGoal => {
@@ -179,6 +232,10 @@ function handleSaveDistance() {
       if (window.updateCalendarAndTotal) {
         window.updateCalendarAndTotal();
       }
+      // Trigger onWalkSaved callback for Map island integration
+      if (onWalkSavedCallback) {
+        onWalkSavedCallback({ action: 'save', date: selectedDate, distance: newDistance });
+      }
       // Check for newly passed goals after calendar update
       if (window.goalsModule && window.goalsModule.checkForNewlyPassedGoals) {
         window.goalsModule.checkForNewlyPassedGoals(currentTotal, projectedNewTotal).then(newlyPassedGoal => {
@@ -207,6 +264,10 @@ function handleDeleteDistance() {
   }).then(response => response).then(() => {
     if (window.updateCalendarAndTotal) {
       window.updateCalendarAndTotal();
+    }
+    // Trigger onWalkSaved callback for Map island integration
+    if (onWalkSavedCallback) {
+      onWalkSavedCallback({ action: 'delete', date: selectedDate });
     }
   }).catch(error => {
     console.error('Error deleting progress:', error);
@@ -260,4 +321,5 @@ window.progressModule = {
 
 // Make functions available globally for compatibility
 window.showProgressModal = showDistanceModal;
+window.showDistanceModal = showDistanceModal; // Map island integration
 window.fetchAndUpdateTotalDistance = fetchAndUpdateTotalDistance;

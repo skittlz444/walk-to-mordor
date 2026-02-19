@@ -1,0 +1,103 @@
+/**
+ * MapWalkButton Styles
+ *
+ * Floating action button for logging walks from the Map view.
+ * Positioned bottom-right, above map attribution.
+ */
+
+.map-walk-button {
+  /* Position: bottom-right corner */
+  position: absolute;
+  bottom: 1rem; /* Above any map attribution */
+  right: 1rem;
+  z-index: 100;
+
+  /* Size: touch-friendly (≥48px diameter) */
+  width: 56px;
+  height: 56px;
+  min-width: 48px;
+  min-height: 48px;
+
+  /* Shape */
+  border-radius: 50%;
+  border: none;
+
+  /* Colors - consistent with map controls */
+  background-color: var(--color-primary, #4a7c59);
+  color: white;
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+
+  /* Layout */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Interaction */
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+
+  /* Prevent text selection */
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.map-walk-button:hover {
+  background-color: var(--color-primary-dark, #3d664a);
+  transform: scale(1.05);
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.35),
+    0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.map-walk-button:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.map-walk-button:focus {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--color-focus-ring, rgba(74, 124, 89, 0.5)),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.map-walk-button:focus-visible {
+  outline: 2px solid var(--color-focus-ring, rgba(74, 124, 89, 0.8));
+  outline-offset: 2px;
+}
+
+/* Icon sizing */
+.map-walk-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Mobile: slightly larger touch target */
+@media (max-width: 768px) {
+  .map-walk-button {
+    bottom: 1rem; /* Higher on mobile for bottom nav */
+    right: 1rem;
+    width: 52px;
+    height: 52px;
+  }
+
+  .map-walk-button svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .map-walk-button {
+    transition: none;
+  }
+}
