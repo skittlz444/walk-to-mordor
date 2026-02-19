@@ -49,13 +49,13 @@ interface WalkSavedData {
 
 export interface MapWalkIslandProps {
   /**
-   * Current user distance in km at render time.
+   * Current user distance in km at render time, used as the distance source
+   * that is forwarded to children such as GoalModal during the walk-logging flow.
    *
    * NOTE: This intentionally co-exists with the `userProgress` signal:
    * - The server / legacy map code passes this value into the island as an explicit prop.
-   * - MapWalkIsland forwards it to children (e.g. GoalModal) that may rely on the
-   *   initial distance when the flow starts, while `userProgress` is used for
-   *   refreshed progress after a walk is saved.
+   * - MapWalkIsland forwards this value to children that need the user's distance,
+   *   while `userProgress` is used by the map store for other derived progress data.
    *
    * Do not remove without auditing all MapWalkIsland callers and GoalModal usage;
    * this prop is part of the public API and is kept for compatibility and clarity.
@@ -131,7 +131,7 @@ export function MapWalkIsland({ currentDistanceKm }: MapWalkIslandProps): h.JSX.
 
   /**
    * Handle dismiss button on walk modal (no save).
-   * Just clears the ref, no action needed.
+   * This is an intentional no-op; user cancelled without saving.
    */
   const handleWalkDismiss = useCallback(() => {
     // Nothing to do - user cancelled

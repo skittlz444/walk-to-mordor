@@ -6,6 +6,17 @@ let popupDate;
 let isEdit = false;
 let escKeyHandler = null; // Store ESC key handler for cleanup
 
+/**
+ * Clean up ESC key listener if present.
+ * Centralized cleanup to prevent memory leaks.
+ */
+function cleanupEscKeyListener() {
+  if (escKeyHandler) {
+    document.removeEventListener('keydown', escKeyHandler);
+    escKeyHandler = null;
+  }
+}
+
 // Callback hooks for external integration (e.g., Map island)
 // Called after successful save/update/delete operations
 let onWalkSavedCallback = null;
@@ -97,10 +108,7 @@ function showDistanceModal(event, date = null) {
 
   function closeModal(wasDismissed = true) {
     // Clean up ESC key listener
-    if (escKeyHandler) {
-      document.removeEventListener('keydown', escKeyHandler);
-      escKeyHandler = null;
-    }
+    cleanupEscKeyListener();
     modalOverlay.remove();
     // Only call dismiss callback if no action was taken (user cancelled)
     if (wasDismissed && !actionTaken && onDismissCallback) {
@@ -253,11 +261,7 @@ function handleSaveDistance() {
   }
   
   // Close modal
-  // Clean up ESC key listener before removing modal
-  if (escKeyHandler) {
-    document.removeEventListener('keydown', escKeyHandler);
-    escKeyHandler = null;
-  }
+  cleanupEscKeyListener();
   document.querySelector('.modal-overlay').remove();
 }
 
@@ -284,11 +288,7 @@ function handleDeleteDistance() {
   });
   
   // Close modal
-  // Clean up ESC key listener before removing modal
-  if (escKeyHandler) {
-    document.removeEventListener('keydown', escKeyHandler);
-    escKeyHandler = null;
-  }
+  cleanupEscKeyListener();
   document.querySelector('.modal-overlay').remove();
 }
 
