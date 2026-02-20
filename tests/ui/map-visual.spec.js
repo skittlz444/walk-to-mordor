@@ -211,16 +211,6 @@ const SNAPSHOT_OPTS = {
 // ===========================================================================
 
 test.describe('Map Visual Regression', () => {
-  // Visual snapshot baselines are generated for Chromium only.
-  // Canvas anti-aliasing differs across browsers, so Firefox / WebKit
-  // baselines would diverge and require separate maintenance.
-  // Mobile viewports are already covered by the dedicated mobile test within
-  // this file (which sets the viewport size explicitly).
-  test.beforeEach(() => {
-    const project = test.info().project.name;
-    test.skip(project !== 'chromium', 'Visual regression baselines target the Desktop Chromium project only');
-  });
-
   // -----------------------------------------------------------------------
   // Default state snapshot (Desktop 1280×720)
   // -----------------------------------------------------------------------

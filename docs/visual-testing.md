@@ -77,7 +77,7 @@ When you intentionally change the map UI (colours, layout, markers, controls, et
 2. **Update baselines** if the changes are intentional:
 
    ```bash
-   npm run test:ui -- --update-snapshots --grep "Map Visual" --project chromium
+   npm run test:ui -- --update-snapshots --grep "Map Visual"
    ```
 
 3. **Commit the updated snapshots** with a clear message:
@@ -119,19 +119,24 @@ npx playwright show-trace test-results/<test-folder>/trace.zip
 
 ## CI Integration
 
-The visual tests run as part of the existing `pr-tests.yml` workflow. They are **automatically skipped** on all Playwright projects except the Desktop `chromium` project. Firefox, Mobile Chrome, and Mobile Firefox projects see the tests as "skipped" — not failed — so CI stays green.
-
-The baseline snapshots are committed to the repository so CI compares against them directly.
+The visual tests run as part of the existing `pr-tests.yml` workflow across all four Playwright projects: Chromium, Firefox, Mobile Chrome, and Mobile Firefox. Each project has its own set of baseline snapshots committed to the repository.
 
 ### Snapshot file naming
 
-Playwright appends the project name and platform to snapshot filenames: `<name>-chromium-linux.png`. The CI environment (Ubuntu + Chromium) matches the naming convention. If you generate baselines on macOS, the suffix will differ (`chromium-darwin.png`) and CI will not find a match. **Always generate baselines in a Linux environment** (or in CI itself) to avoid mismatches.
+Playwright appends the project name and platform to snapshot filenames: `<name>-<project>-linux.png` (e.g., `map-default-zoom-chromium-linux.png`, `map-default-zoom-firefox-linux.png`). The CI environment (Ubuntu) matches the `linux` suffix. If you generate baselines on macOS, the suffix will differ (e.g., `chromium-darwin.png`) and CI will not find a match. **Always generate baselines in a Linux environment** (or in CI itself) to avoid mismatches.
 
 ## Cross-Browser Notes
 
-- **Primary**: Desktop `chromium` project. All baselines target this project. The tests skip automatically on all other projects.
-- **Mobile Chrome**: The mobile viewport is tested within the spec by setting `page.setViewportSize()` explicitly in the Chromium project. It does not run under the separate "Mobile Chrome" Playwright project (to avoid needing duplicate baselines).
-- **Firefox**: Not included for visual snapshots due to minor canvas anti-aliasing differences. Functional map tests (`map-canvas.spec.js`, `map-shell.spec.js`) cover Firefox.
+- **Chromium**: Desktop Chrome — primary baseline target.
+- **Firefox**: Desktop Firefox — separate baselines committed (canvas anti-aliasing may differ slightly from Chromium).
+- **Mobile Chrome**: Pixel 5 viewport via Playwright's `devices['Pixel 5']`.
+- **Mobile Firefox**: Desktop Firefox engine at default viewport.
+
+All four projects run the full visual test suite. When updating baselines, run against all projects:
+
+```bash
+npm run test:ui -- --grep "Map Visual" --update-snapshots
+```
 
 ## Architecture
 
@@ -140,8 +145,10 @@ tests/ui/
 ├── map-visual.spec.js              # Visual regression test file
 ├── map-visual.spec.js-snapshots/   # Baseline PNG images (committed)
 │   ├── map-default-zoom-chromium-linux.png
-│   ├── map-zoomed-out-chromium-linux.png
-│   ├── ...
+│   ├── map-default-zoom-firefox-linux.png
+│   ├── map-default-zoom-Mobile-Chrome-linux.png
+│   ├── map-default-zoom-Mobile-Firefox-linux.png
+│   ├── ...                         # (10 snapshots × 4 projects = 40 files)
 ├── helpers/
 │   └── common.js                   # Shared test fixtures and helpers
 ```
