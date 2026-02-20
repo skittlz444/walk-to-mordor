@@ -466,6 +466,8 @@ test.describe('Map Visual Regression', () => {
     });
 
     test('clicking FAB opens calendar and snapshot captures modal overlay', async ({ page }) => {
+      // Freeze clock so the calendar "today" indicator is deterministic
+      await page.clock.install({ time: new Date('2025-06-15T12:00:00') });
       await setupMapTestState(page, { totalDistance: 100 });
       await page.goto(`${BASE_URL}/map`);
       await waitForCanvasReady(page);
@@ -486,6 +488,8 @@ test.describe('Map Visual Regression', () => {
     });
 
     test('snapshot after calendar modal is dismissed', async ({ page }) => {
+      // Freeze clock so the calendar "today" indicator is deterministic
+      await page.clock.install({ time: new Date('2025-06-15T12:00:00') });
       await setupMapTestState(page, { totalDistance: 100 });
       await page.goto(`${BASE_URL}/map`);
       await waitForCanvasReady(page);
