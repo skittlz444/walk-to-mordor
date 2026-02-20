@@ -119,16 +119,18 @@ npx playwright show-trace test-results/<test-folder>/trace.zip
 
 ## CI Integration
 
-The visual tests run as part of the existing `pr-tests.yml` workflow. They use headless Chromium with a single worker (`workers: 1` on CI). The baseline snapshots are committed to the repository so CI compares against them directly.
+The visual tests run as part of the existing `pr-tests.yml` workflow. They are **automatically skipped** on all Playwright projects except the Desktop `chromium` project. Firefox, Mobile Chrome, and Mobile Firefox projects see the tests as "skipped" — not failed — so CI stays green.
+
+The baseline snapshots are committed to the repository so CI compares against them directly.
 
 ### Snapshot file naming
 
-Playwright appends the browser and platform to snapshot filenames: `<name>-chromium-linux.png`. The CI environment (Ubuntu + Chromium) matches the naming convention. If you generate baselines on macOS, the suffix will differ (`chromium-darwin.png`) and CI will not find a match. **Always generate baselines in a Linux environment** (or in CI itself) to avoid mismatches.
+Playwright appends the project name and platform to snapshot filenames: `<name>-chromium-linux.png`. The CI environment (Ubuntu + Chromium) matches the naming convention. If you generate baselines on macOS, the suffix will differ (`chromium-darwin.png`) and CI will not find a match. **Always generate baselines in a Linux environment** (or in CI itself) to avoid mismatches.
 
 ## Cross-Browser Notes
 
-- **Primary**: Chromium (Desktop Chrome device). All baselines target this browser.
-- **Mobile Chrome**: Tested via Pixel 5 viewport size override.
+- **Primary**: Desktop `chromium` project. All baselines target this project. The tests skip automatically on all other projects.
+- **Mobile Chrome**: The mobile viewport is tested within the spec by setting `page.setViewportSize()` explicitly in the Chromium project. It does not run under the separate "Mobile Chrome" Playwright project (to avoid needing duplicate baselines).
 - **Firefox**: Not included for visual snapshots due to minor canvas anti-aliasing differences. Functional map tests (`map-canvas.spec.js`, `map-shell.spec.js`) cover Firefox.
 
 ## Architecture
