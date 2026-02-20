@@ -248,7 +248,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       
       // Check if user exists
       let { results } = await env.DB.prepare(
-        'SELECT id, username, email, approved FROM users WHERE username = ?'
+        'SELECT id, username, email, approved, show_future_goals_unlocked FROM users WHERE username = ?'
       ).bind(username).all();
 
       let user;
@@ -263,7 +263,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         
         // Fetch the created user to ensure we have the correct ID
         const createdUser = await env.DB.prepare(
-          'SELECT id, username, email, approved FROM users WHERE username = ?'
+          'SELECT id, username, email, approved, show_future_goals_unlocked FROM users WHERE username = ?'
         ).bind(username).first();
         
         user = createdUser;
@@ -275,6 +275,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         userId: user.id,
         username: user.username,
         email: user.email,
+        showFutureGoalsUnlocked: user.show_future_goals_unlocked === 1,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       }, 200);
     } catch (error: any) {
@@ -285,7 +286,7 @@ export async function handleSessionValidation(request: Request, env: any) {
 
   try {
     const { results } = await env.DB.prepare(
-      'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
+      'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved, u.show_future_goals_unlocked FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
     ).bind(sessionId).all();
 
     if (results.length === 0) {
@@ -310,6 +311,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       userId: session.user_id,
       username: session.username,
       email: session.email,
+      showFutureGoalsUnlocked: session.show_future_goals_unlocked === 1,
       expiresAt: session.expires_at
     }, 200);
   } catch (error: any) {
@@ -509,6 +511,40 @@ export async function handleUpdateProfile(request: Request, env: any, body: any)
     }
     
     return createErrorResponse('Internal server error during profile update', 500);
+  }
+}
+
+/**
+ * Handle user preferences update (e.g., goal visibility)
+ */
+export async function handleUpdatePreferences(request: Request, env: any, body: any) {
+  // Validate session
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+
+  const { showFutureGoalsUnlocked } = body || {};
+
+  // Validate input: showFutureGoalsUnlocked must be a boolean
+  if (typeof showFutureGoalsUnlocked !== 'boolean') {
+    return createErrorResponse('Invalid input: showFutureGoalsUnlocked must be a boolean', 400);
+  }
+
+  try {
+    const userId = sessionValidation.userId;
+    const dbValue = showFutureGoalsUnlocked ? 1 : 0;
+
+    await env.DB.prepare(
+      'UPDATE users SET show_future_goals_unlocked = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(dbValue, userId).run();
+
+    return createSuccessResponse({
+      showFutureGoalsUnlocked
+    }, 200);
+  } catch (error: any) {
+    console.error('Database error during preferences update:', error);
+    return createErrorResponse('Internal server error during preferences update', 500);
   }
 }
 

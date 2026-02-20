@@ -60,6 +60,12 @@ export const loadingState = signal<MapLoadingState>('idle');
  */
 export const error = signal<Error | null>(null);
 
+/**
+ * User preference: whether future goals appear unlocked.
+ * Default true = unlocked (new global default once Story 2.10 ships).
+ */
+export const showFutureGoalsUnlocked = signal<boolean>(true);
+
 // ============================================================================
 // Computed Signals (defined in mapStore for full implementation)
 // ============================================================================
@@ -271,6 +277,26 @@ export async function initializeMap(): Promise<void> {
     const progress = await fetchUserProgress();
     userProgress.value = progress;
 
+    // Load user preference from session (default: true/unlocked)
+    try {
+      const token = localStorage.getItem('sessionToken');
+      if (token) {
+        const sessionRes = await fetch('/api/session', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          showFutureGoalsUnlocked.value =
+            typeof sessionData.showFutureGoalsUnlocked === 'boolean'
+              ? sessionData.showFutureGoalsUnlocked
+              : true;
+        }
+      }
+    } catch (prefErr) {
+      // Non-critical - keep default (true/unlocked)
+      console.warn('[mapStore] Could not load preference, using default:', prefErr);
+    }
+
     // Try cached milestones first
     let milestonesData = getCachedMilestones();
     if (!milestonesData) {
@@ -381,6 +407,16 @@ export function centerOnCurrentPosition(): MapViewState {
  */
 export function setViewportSize(size: { width: number; height: number }): void {
   viewportSize.value = size;
+}
+
+/**
+ * Set the user's goal visibility preference.
+ * Called from profile modal or session initialization.
+ *
+ * @param value - true = unlocked (default), false = locked (surprise mode)
+ */
+export function setShowFutureGoalsUnlocked(value: boolean): void {
+  showFutureGoalsUnlocked.value = value;
 }
 
 // ============================================================================

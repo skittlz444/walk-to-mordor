@@ -195,3 +195,38 @@
 #toggle-completed:hover {
   background: var(--bg-button-medium) !important;
 }
+
+/* Locked goal styling */
+.goal-locked {
+  opacity: 0.4;
+  color: var(--text-gray-medium, #666) !important;
+  pointer-events: none;
+}
+
+.goal-locked::before {
+  content: "🔒 ";
+}
+
+/* Next goal "target" styling - distinct from regular locked */
+.goal-next-target {
+  opacity: 1;
+  border: 2px solid var(--accent-gold, #FFD700);
+  border-radius: 8px;
+  padding: 0.5em;
+  background: rgba(255, 215, 0, 0.1);
+  position: relative;
+  pointer-events: auto;
+}
+
+.goal-next-target::before {
+  content: "🎯 Next: ";
+  color: var(--accent-gold, #FFD700);
+  font-weight: bold;
+}
+
+.goal-next-target .distance-remaining {
+  display: block;
+  color: var(--accent-gold, #FFD700);
+  font-size: 1.1em;
+  margin-top: 0.3em;
+}

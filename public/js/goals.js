@@ -185,6 +185,11 @@ function renderGoals(currentDistance) {
 
       // Hydrate next goal Preact island and remaining upcoming goals
       queueMicrotask(() => {
+        // Read user preference (default: true = unlocked)
+        const prefUnlocked = window.userPreferences && typeof window.userPreferences.showFutureGoalsUnlocked === 'boolean'
+          ? window.userPreferences.showFutureGoalsUnlocked
+          : true;
+
         // Hydrate next goal as Preact island with fallback
         if (upcoming.length > 0) {
           const nextGoalMount = document.getElementById('next-goal-mount');
@@ -236,6 +241,14 @@ function renderGoals(currentDistance) {
               // Make fallback clickable
               makeGoalClickable(nextGoalMount.querySelector('.next-goal'), nextGoal, currentDistance);
             }
+
+            // When preference is OFF, apply next-target styling to the first upcoming goal
+            if (!prefUnlocked) {
+              const nextGoalCard = nextGoalMount.querySelector('.upcoming-goal, [class*="next-goal"]') || nextGoalMount.firstElementChild;
+              if (nextGoalCard) {
+                nextGoalCard.classList.add('goal-next-target');
+              }
+            }
           }
         }
 
@@ -254,10 +267,18 @@ function renderGoals(currentDistance) {
                 h(UpcomingGoalCard, {
                   goal: goal,
                   currentDistance: Number(currentDistance),
-                  onClick: () => showGoalModal(goal, currentDistance)
+                  onClick: prefUnlocked ? () => showGoalModal(goal, currentDistance) : undefined
                 }),
                 mountPoint
               );
+
+              // When preference is OFF, apply locked styling
+              if (!prefUnlocked) {
+                const goalCard = mountPoint.firstElementChild;
+                if (goalCard) {
+                  goalCard.classList.add('goal-locked');
+                }
+              }
             }
           });
         } else {
@@ -271,15 +292,18 @@ function renderGoals(currentDistance) {
           upcoming.slice(1).forEach((goal, index) => {
             const mountPoint = document.getElementById('upcoming-goal-mount-' + (index + 1));
             if (mountPoint) {
+              const lockedClass = prefUnlocked ? '' : ' goal-locked';
               mountPoint.innerHTML =
-                '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal" data-goal-index="' + (index + 1) + '">' +
+                '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal' + lockedClass + '" data-goal-index="' + (index + 1) + '">' +
                 (goal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + goal.special + '</span>' : '') +
                 '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + goal.title + '</span>' +
                 '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + goal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (goal.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
                 '</div>';
 
-              // Make fallback clickable
-              makeGoalClickable(mountPoint.querySelector('.upcoming-goal'), goal, currentDistance);
+              // Make fallback clickable only if preference is ON
+              if (prefUnlocked) {
+                makeGoalClickable(mountPoint.querySelector('.upcoming-goal'), goal, currentDistance);
+              }
             }
           });
         }
