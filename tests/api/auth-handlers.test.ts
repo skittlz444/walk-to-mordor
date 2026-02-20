@@ -6,6 +6,7 @@ import {
   handleSessionValidation, 
   validateSession,
   handleUpdateProfile,
+  handleUpdatePreferences,
   handlePasswordResetRequest,
   handlePasswordReset,
   handleConfirmEmail,
@@ -1441,6 +1442,187 @@ describe('Auth Handlers', () => {
 
       expect(response.status).toBe(200);
       expect(data.sessionId).toBeDefined();
+    });
+  });
+
+  describe('handleUpdatePreferences', () => {
+    it('should return 401 if not authenticated', async () => {
+      mockRequest.headers.get.mockReturnValue(null);
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: true });
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 400 if showFutureGoalsUnlocked is not a boolean', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
+      const mockBind = jest.fn().mockReturnValue({ all: mockAll });
+      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: 'yes' });
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('boolean');
+    });
+
+    it('should return 400 if showFutureGoalsUnlocked is missing', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
+      const mockBind = jest.fn().mockReturnValue({ all: mockAll });
+      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, {});
+      expect(response.status).toBe(400);
+    });
+
+    it('should update preference to false successfully', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
+      mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: false });
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.showFutureGoalsUnlocked).toBe(false);
+    });
+
+    it('should update preference to true successfully', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
+      mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: true });
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.showFutureGoalsUnlocked).toBe(true);
+    });
+
+    it('should handle database errors', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      // First call succeeds (validateSession), then DB throws
+      let callCount = 0;
+      mockPrepare.mockImplementation(() => {
+        callCount++;
+        if (callCount <= 2) {
+          // validateSession calls
+          return { bind: mockBind, all: mockAll };
+        }
+        throw new Error('DB Error');
+      });
+      mockBind.mockReturnValue({ all: mockAll });
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: false });
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe('handleSessionValidation - showFutureGoalsUnlocked', () => {
+    it('should include showFutureGoalsUnlocked true in session response', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer valid-token');
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 'valid-token',
+          user_id: 1,
+          username: 'testuser',
+          email: 'test@example.com',
+          expires_at: 'future-date',
+          approved: 1,
+          show_future_goals_unlocked: 1
+        }]
+      });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.showFutureGoalsUnlocked).toBe(true);
+    });
+
+    it('should include showFutureGoalsUnlocked false in session response', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer valid-token');
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 'valid-token',
+          user_id: 1,
+          username: 'testuser',
+          email: 'test@example.com',
+          expires_at: 'future-date',
+          approved: 1,
+          show_future_goals_unlocked: 0
+        }]
+      });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.showFutureGoalsUnlocked).toBe(false);
+    });
+
+    it('should include showFutureGoalsUnlocked in mock auth response', async () => {
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1 }] });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.showFutureGoalsUnlocked).toBe(true);
     });
   });
 });

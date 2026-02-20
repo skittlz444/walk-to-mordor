@@ -12,6 +12,7 @@ import {
   currentPosition,
   viewportSize,
   visibleMilestones,
+  showFutureGoalsUnlocked,
   fetchUserProgress,
   initializeMap,
   retryLoad,
@@ -19,6 +20,7 @@ import {
   refreshUserProgress,
   centerOnCurrentPosition,
   setViewportSize,
+  setShowFutureGoalsUnlocked,
 } from './mapStore';
 
 /**
@@ -60,6 +62,7 @@ describe('mapStore', () => {
     loadingState.value = 'idle';
     error.value = null;
     viewportSize.value = { width: 0, height: 0 };
+    showFutureGoalsUnlocked.value = true;
 
     // Setup mock localStorage
     mockStorage = createMockStorage();
@@ -369,6 +372,10 @@ describe('mapStore', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
+          json: async () => ({ showFutureGoalsUnlocked: true }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
           json: async () => [
             { id: 1, distance: 50, title: 'Goal 1' },
           ],
@@ -407,6 +414,10 @@ describe('mapStore', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
+          json: async () => ({ showFutureGoalsUnlocked: true }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
           json: async () => [],
         });
 
@@ -422,6 +433,10 @@ describe('mapStore', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ totalDistance: 0 }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ showFutureGoalsUnlocked: true }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -444,6 +459,10 @@ describe('mapStore', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ totalDistance: 100 }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ showFutureGoalsUnlocked: true }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -482,6 +501,62 @@ describe('mapStore', () => {
 
       // Error state should remain unchanged (not set by background refresh)
       expect(error.value).toBeNull();
+    });
+  });
+
+  describe('showFutureGoalsUnlocked', () => {
+    it('defaults to true', () => {
+      expect(showFutureGoalsUnlocked.value).toBe(true);
+    });
+
+    it('can be set via setShowFutureGoalsUnlocked', () => {
+      setShowFutureGoalsUnlocked(false);
+      expect(showFutureGoalsUnlocked.value).toBe(false);
+
+      setShowFutureGoalsUnlocked(true);
+      expect(showFutureGoalsUnlocked.value).toBe(true);
+    });
+
+    it('is loaded from session during initializeMap', async () => {
+      mockStorage.setItem('sessionToken', 'test-token');
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ totalDistance: 100 }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ showFutureGoalsUnlocked: false }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [],
+        });
+
+      await initializeMap();
+
+      expect(showFutureGoalsUnlocked.value).toBe(false);
+    });
+
+    it('defaults to true if session response omits field', async () => {
+      mockStorage.setItem('sessionToken', 'test-token');
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ totalDistance: 100 }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({}),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => [],
+        });
+
+      await initializeMap();
+
+      expect(showFutureGoalsUnlocked.value).toBe(true);
     });
   });
 });
