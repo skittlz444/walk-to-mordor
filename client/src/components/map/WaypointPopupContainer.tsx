@@ -18,9 +18,6 @@ import { ClusterListPopup } from './ClusterListPopup';
 import { ClusterListSheet } from './ClusterListSheet';
 import './WaypointPopup.css';
 
-/** Breakpoint for mobile bottom sheet (matches existing map.css). */
-const MOBILE_BREAKPOINT = 768;
-
 export interface WaypointPopupContainerProps {
   selectedWaypoint: ReadonlySignal<Waypoint | null>;
   selectedCluster: ReadonlySignal<Waypoint[]>;
