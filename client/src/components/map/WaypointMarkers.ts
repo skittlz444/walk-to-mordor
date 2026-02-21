@@ -225,8 +225,8 @@ export function createWaypointMarkers(
         const isNext = wp.id === nextId;
         const isSpecial = wp.special !== null && wp.special !== undefined && wp.special !== '';
 
-        // When preference is ON, treat future waypoints (except next) as unlocked
-        const showAsUnlocked = isUnlocked || (showFutureGoalsUnlocked.value && !isNext);
+        // When preference is ON, treat ALL future waypoints (including next) as unlocked
+        const showAsUnlocked = isUnlocked || showFutureGoalsUnlocked.value;
 
         const mg = new Konva.Group({
           x: wp.x,
@@ -244,13 +244,6 @@ export function createWaypointMarkers(
         let shadowColor: string;
 
         if (showAsUnlocked) {
-          fill = isSpecial ? SPECIAL_FILL : UNLOCKED_FILL;
-          stroke = isSpecial ? SPECIAL_STROKE : UNLOCKED_STROKE;
-          strokeWidth = isSpecial ? 3 : 2;
-          opacity = 1.0;
-          shadowBlur = 0;
-          shadowColor = '';
-        } else if (isNext) {
           fill = isSpecial ? SPECIAL_FILL : UNLOCKED_FILL;
           stroke = isSpecial ? SPECIAL_STROKE : UNLOCKED_STROKE;
           strokeWidth = isSpecial ? 3 : 2;
@@ -320,7 +313,8 @@ export function createWaypointMarkers(
         });
 
         // Determine if any item in the cluster is unlocked
-        const hasUnlocked = cluster.items.some((w) => w.distance <= uDist || w.id === nextId);
+        // When preference is ON, all waypoints are unlocked
+        const hasUnlocked = showFutureGoalsUnlocked.value || cluster.items.some((w) => w.distance <= uDist);
         const clusterOpacity = hasUnlocked ? 1.0 : LOCKED_OPACITY;
         const clusterFillColor = hasUnlocked ? CLUSTER_FILL : LOCKED_FILL;
 

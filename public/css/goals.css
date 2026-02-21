@@ -230,3 +230,16 @@
   font-size: 1.1em;
   margin-top: 0.3em;
 }
+
+/* Locked + next-target combination: accent-styled but non-interactive */
+.goal-locked.goal-next-target {
+  opacity: 0.75;
+  pointer-events: none;
+  color: var(--text-gray-medium, #666) !important;
+}
+
+.goal-locked.goal-next-target::before {
+  content: "🔒 Next: ";
+  color: var(--accent-gold, #FFD700);
+  font-weight: bold;
+}

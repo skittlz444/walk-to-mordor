@@ -37,11 +37,12 @@ import {
   type Waypoint,
 } from '../data/waypoints';
 import { MapWalkIsland } from './MapWalkIsland';
-import { userProgress, milestones } from '../stores/mapStore';
+import { userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
 const GOALS_API_URL = '/api/goals';
+const SESSION_API_URL = '/api/session';
 const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
@@ -837,9 +838,24 @@ export function MapIsland() {
           .catch(() => [] as Goal[])
       : Promise.resolve([] as Goal[]);
 
-    Promise.all([metaPromise, progressPromise, goalsPromise])
-      .then(([data, distMiles, goals]) => {
+    // Fetch session for user preference (showFutureGoalsUnlocked)
+    interface SessionPreference { showFutureGoalsUnlocked?: boolean }
+    const sessionPromise: Promise<SessionPreference> = token
+      ? fetch(SESSION_API_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => (res.ok ? (res.json() as Promise<SessionPreference>) : {}))
+          .catch(() => ({} as SessionPreference))
+      : Promise.resolve({} as SessionPreference);
+
+    Promise.all([metaPromise, progressPromise, goalsPromise, sessionPromise])
+      .then(([data, distMiles, goals, sessionData]) => {
         metaRef.current = data;
+
+        // Set user preference from session data
+        if (typeof sessionData.showFutureGoalsUnlocked === 'boolean') {
+          showFutureGoalsUnlocked.value = sessionData.showFutureGoalsUnlocked;
+        }
 
         const previousOpenedDistance = readLastOpenedDistanceMiles(localStorage);
         const hasPreviousOpenedDistance = previousOpenedDistance !== null;
@@ -1043,6 +1059,19 @@ export function MapIsland() {
     }
     window.addEventListener('resize', onResize);
 
+    // Listen for preference changes from profile modal toggle
+    function onPreferenceChanged(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail?.showFutureGoalsUnlocked === 'boolean') {
+        showFutureGoalsUnlocked.value = detail.showFutureGoalsUnlocked;
+        // Rebuild waypoint markers with new preference
+        if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
+          updateWaypointVisibility();
+        }
+      }
+    }
+    window.addEventListener('preferenceChanged', onPreferenceChanged);
+
     // Fix 3: Touch pinch-to-zoom with Konva drag suppression
     function handleTouchStart(e: TouchEvent) {
       if (e.touches.length === 2) {
@@ -1117,6 +1146,7 @@ export function MapIsland() {
 
     return () => {
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('preferenceChanged', onPreferenceChanged);
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
