@@ -278,7 +278,7 @@ function renderGoals(currentDistance) {
                 h(UpcomingGoalCard, {
                   goal: goal,
                   currentDistance: Number(currentDistance),
-                  onClick: prefUnlocked ? () => showGoalModal(goal, currentDistance) : undefined
+                  onClick: prefUnlocked ? () => showGoalModal(goal, currentDistance) : () => {}
                 }),
                 mountPoint
               );
