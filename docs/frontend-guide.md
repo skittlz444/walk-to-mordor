@@ -507,6 +507,40 @@ export function GoalsList() {
 
 ---
 
+## Global Preferences Bridge
+
+User preferences are shared between legacy vanilla JS and Preact islands through `window.userPreferences`.
+
+### Reading Preferences
+
+```javascript
+// In legacy JS
+const showUnlocked = window.userPreferences?.showFutureGoalsUnlocked ?? true;
+```
+
+```typescript
+// In Preact islands (via mapStore signal)
+import { showFutureGoalsUnlocked } from '../stores/mapStore';
+const isUnlocked = showFutureGoalsUnlocked.value;
+```
+
+### Listening for Changes
+
+When the user changes a preference in the Profile modal, a `preferenceChanged` custom event is dispatched:
+
+```javascript
+window.addEventListener('preferenceChanged', (e) => {
+  const { showFutureGoalsUnlocked } = e.detail;
+  // Re-render goals, update map markers, etc.
+});
+```
+
+### Updating Preferences
+
+Preferences are saved immediately via `PUT /api/user/preferences`. The profile modal handles this automatically.
+
+---
+
 ## Resources
 
 - [Preact Documentation](https://preactjs.com/)

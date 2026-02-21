@@ -18,6 +18,7 @@
 import Konva from 'konva';
 import type { Waypoint } from '../../data/waypoints';
 import { markerScale } from '../../utils/map-utils';
+import { showFutureGoalsUnlocked } from '../../stores/mapStore';
 
 /** Marker visual size in screen pixels (matches UserMarker MARKER_SIZE). */
 const MARKER_SIZE = 32;
@@ -224,6 +225,9 @@ export function createWaypointMarkers(
         const isNext = wp.id === nextId;
         const isSpecial = wp.special !== null && wp.special !== undefined && wp.special !== '';
 
+        // When preference is ON, treat ALL future waypoints (including next) as unlocked
+        const showAsUnlocked = isUnlocked || showFutureGoalsUnlocked.value;
+
         const mg = new Konva.Group({
           x: wp.x,
           y: wp.y,
@@ -239,7 +243,7 @@ export function createWaypointMarkers(
         let shadowBlur: number;
         let shadowColor: string;
 
-        if (isUnlocked) {
+        if (showAsUnlocked) {
           fill = isSpecial ? SPECIAL_FILL : UNLOCKED_FILL;
           stroke = isSpecial ? SPECIAL_STROKE : UNLOCKED_STROKE;
           strokeWidth = isSpecial ? 3 : 2;
@@ -271,8 +275,8 @@ export function createWaypointMarkers(
           mg.add(createCircleShape(fill, stroke, strokeWidth, opacity, shadowBlur, shadowColor));
         }
 
-        // Interactivity for unlocked waypoints only
-        if (isUnlocked) {
+        // Interactivity for unlocked or preference-visible waypoints only
+        if (showAsUnlocked) {
           mg.listening(true);
           mg.on('mouseenter', () => {
             const stage = layer.getStage();
@@ -309,7 +313,8 @@ export function createWaypointMarkers(
         });
 
         // Determine if any item in the cluster is unlocked
-        const hasUnlocked = cluster.items.some((w) => w.distance <= uDist || w.id === nextId);
+        // When preference is ON, all waypoints are unlocked
+        const hasUnlocked = showFutureGoalsUnlocked.value || cluster.items.some((w) => w.distance <= uDist);
         const clusterOpacity = hasUnlocked ? 1.0 : LOCKED_OPACITY;
         const clusterFillColor = hasUnlocked ? CLUSTER_FILL : LOCKED_FILL;
 

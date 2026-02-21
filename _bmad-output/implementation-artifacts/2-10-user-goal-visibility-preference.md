@@ -1,6 +1,6 @@
 # Story 2.10: User Goal Visibility Preference
 
-Status: ready-for-dev
+Status: done
 GitHub Issue: #226
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
@@ -14,117 +14,117 @@ so that **I can either preview upcoming milestones for anticipation OR be surpri
 ## Acceptance Criteria
 
 1. **Database Schema**
-   - [ ] Add `show_future_goals_unlocked` INTEGER column to `users` table.
-    - [ ] Column default: `1` (TRUE = future goals unlocked, which becomes the new global default once this story ships).
-   - [ ] Create migration file following naming convention: `0117_add_goal_visibility_preference.sql`.
+   - [x] Add `show_future_goals_unlocked` INTEGER column to `users` table.
+    - [x] Column default: `1` (TRUE = future goals unlocked, which becomes the new global default once this story ships).
+   - [x] Create migration file following naming convention: `0117_add_goal_visibility_preference.sql`.
 
 2. **API Endpoints**
-   - [ ] `GET /api/session` returns `showFutureGoalsUnlocked` boolean in response.
-   - [ ] `PUT /api/user/preferences` endpoint to update `show_future_goals_unlocked` column.
-   - [ ] Request body: `{ showFutureGoalsUnlocked: boolean }`.
-   - [ ] Returns 200 with updated preference on success.
-   - [ ] Returns 401 if not authenticated.
-   - [ ] Returns 400 for invalid input.
+   - [x] `GET /api/session` returns `showFutureGoalsUnlocked` boolean in response.
+   - [x] `PUT /api/user/preferences` endpoint to update `show_future_goals_unlocked` column.
+   - [x] Request body: `{ showFutureGoalsUnlocked: boolean }`.
+   - [x] Returns 200 with updated preference on success.
+   - [x] Returns 401 if not authenticated.
+   - [x] Returns 400 for invalid input.
 
 3. **Profile Modal Toggle**
-   - [ ] Add toggle switch in Profile Settings modal with label: "Preview all milestones".
-    - [ ] Toggle ON (default): Future goals (distance > user totalDistance) display as unlocked/visible.
-    - [ ] Toggle OFF: Future goals display with the locked treatment from Story 2.5 (for users who want surprises).
-   - [ ] Toggle persists immediately to database via API call.
-   - [ ] Show loading state during save, error handling on failure.
+   - [x] Add toggle switch in Profile Settings modal with label: "Preview all milestones".
+    - [x] Toggle ON (default): Future goals (distance > user totalDistance) display as unlocked/visible.
+    - [x] Toggle OFF: Future goals display with the locked treatment from Story 2.5 (for users who want surprises).
+   - [x] Toggle persists immediately to database via API call.
+   - [x] Show loading state during save, error handling on failure.
 
 4. **Map Waypoint Integration**
-   - [ ] `mapStore.ts` includes `showFutureGoalsUnlocked` signal.
-   - [ ] Load preference on map initialization from session or dedicated API.
-    - [ ] When preference ON (default): All waypoints render as unlocked (gold color, interactive).
-    - [ ] When preference OFF: Future waypoints render with locked styling (gray, opacity 0.4, non-interactive) to mimic Story 2.5's experience.
-   - [ ] **Next waypoint special styling**: Always locked but with distinct "target" styling:
-     - [ ] Different from regular locked (not just gray/faded).
-     - [ ] Use accent color glow or pulsing animation to indicate "your next destination".
-     - [ ] Non-interactive (clicking shows "reach this milestone first" or similar).
-     - [ ] Visible at all zoom levels (same importance as user marker).
+   - [x] `mapStore.ts` includes `showFutureGoalsUnlocked` signal.
+   - [x] Load preference on map initialization from session or dedicated API.
+    - [x] When preference ON (default): All waypoints render as unlocked (gold color, interactive).
+    - [x] When preference OFF: Future waypoints render with locked styling (gray, opacity 0.4, non-interactive) to mimic Story 2.5's experience.
+   - [x] **Next waypoint special styling**: Always locked but with distinct "target" styling:
+     - [x] Different from regular locked (not just gray/faded).
+     - [x] Use accent color glow or pulsing animation to indicate "your next destination".
+     - [x] Non-interactive (clicking shows "reach this milestone first" or similar).
+     - [x] Visible at all zoom levels (same importance as user marker).
 
 5. **Journey/Dashboard Goals List Integration**
-   - [ ] Pass preference to `renderGoals()` function or make globally available.
-    - [ ] When preference ON (default): Future goals display fully visible/unlocked.
-    - [ ] When preference OFF: Future goals in list display with the locked styling shipped in Story 2.5.
-   - [ ] **Next goal special styling**: Always locked but visually prominent:
-     - [ ] Different styling from regular locked goals (not just gray).
-     - [ ] Show "Next Milestone" badge or indicator.
-     - [ ] Display distance remaining prominently.
-     - [ ] Use accent border or highlight color.
-   - [ ] Completed goals always show normally (strikethrough) regardless of preference.
+   - [x] Pass preference to `renderGoals()` function or make globally available.
+    - [x] When preference ON (default): Future goals display fully visible/unlocked.
+    - [x] When preference OFF: Future goals in list display with the locked styling shipped in Story 2.5.
+   - [x] **Next goal special styling**: Always locked but visually prominent:
+     - [x] Different styling from regular locked goals (not just gray).
+     - [x] Show "Next Milestone" badge or indicator.
+     - [x] Display distance remaining prominently.
+     - [x] Use accent border or highlight color.
+   - [x] Completed goals always show normally (strikethrough) regardless of preference.
 
 6. **Session Loading**
-   - [ ] Preference loaded with session data on app startup.
-   - [ ] Available to both legacy JS (window.userPreferences or similar) and Preact islands.
+   - [x] Preference loaded with session data on app startup.
+   - [x] Available to both legacy JS (window.userPreferences or similar) and Preact islands.
 
 ## Tasks / Subtasks
 
-- [ ] **1. Database Migration (AC: #1)**
-    - [ ] Create migration file `migrations/0117_add_goal_visibility_preference.sql`.
-    - [ ] Add column: `ALTER TABLE users ADD COLUMN show_future_goals_unlocked INTEGER NOT NULL DEFAULT 1;`
-    - [ ] Backfill existing users to `1` so they retain the unlocked default once the migration runs.
-    - [ ] Test migration locally with `npx wrangler d1 migrations apply DB --local`.
+- [x] **1. Database Migration (AC: #1)**
+    - [x] Create migration file `migrations/0117_add_goal_visibility_preference.sql`.
+    - [x] Add column: `ALTER TABLE users ADD COLUMN show_future_goals_unlocked INTEGER NOT NULL DEFAULT 1;`
+    - [x] Backfill existing users to `1` so they retain the unlocked default once the migration runs.
+    - [x] Test migration locally with `npx wrangler d1 migrations apply DB --local`.
 
-- [ ] **2. Update Session API (AC: #2, #6)**
-    - [ ] Modify `GET /api/session` handler in `src/auth-handlers.ts`.
-    - [ ] Include `showFutureGoalsUnlocked: user.show_future_goals_unlocked === 1` in response.
-    - [ ] Update TypeScript interface for session response.
+- [x] **2. Update Session API (AC: #2, #6)**
+    - [x] Modify `GET /api/session` handler in `src/auth-handlers.ts`.
+    - [x] Include `showFutureGoalsUnlocked: user.show_future_goals_unlocked === 1` in response.
+    - [x] Update TypeScript interface for session response.
 
-- [ ] **3. Create Preferences API Endpoint (AC: #2)**
-    - [ ] Add `PUT /api/user/preferences` route in `src/index.ts`.
-    - [ ] Create handler function in `src/auth-handlers.ts` or new `src/preferences-handlers.ts`.
-    - [ ] Validate input: `showFutureGoalsUnlocked` must be boolean.
-    - [ ] Update users table: `UPDATE users SET show_future_goals_unlocked = ? WHERE id = ?`.
-    - [ ] Return updated preferences.
-    - [ ] Write unit tests for preferences handler.
+- [x] **3. Create Preferences API Endpoint (AC: #2)**
+    - [x] Add `PUT /api/user/preferences` route in `src/index.ts`.
+    - [x] Create handler function in `src/auth-handlers.ts` or new `src/preferences-handlers.ts`.
+    - [x] Validate input: `showFutureGoalsUnlocked` must be boolean.
+    - [x] Update users table: `UPDATE users SET show_future_goals_unlocked = ? WHERE id = ?`.
+    - [x] Return updated preferences.
+    - [x] Write unit tests for preferences handler.
 
-- [ ] **4. Update Profile Modal UI (AC: #3)**
-    - [ ] Add HTML toggle switch to `public/js/profile.js` modal template.
-    - [ ] Label: "Preview all milestones" with hint "Reveal future destinations on your journey".
-    - [ ] Fetch current preference value when modal opens (from `/api/session`).
-    - [ ] Style toggle to match existing modal button styling (dark theme).
-    - [ ] On toggle change: Call `PUT /api/user/preferences` immediately.
-    - [ ] Show loading indicator during save.
-    - [ ] Show error/success feedback.
-    - [ ] Emit event or update global state so map/goals can react without page refresh.
+- [x] **4. Update Profile Modal UI (AC: #3)**
+    - [x] Add HTML toggle switch to `public/js/profile.js` modal template.
+    - [x] Label: "Preview all milestones" with hint "Reveal future destinations on your journey".
+    - [x] Fetch current preference value when modal opens (from `/api/session`).
+    - [x] Style toggle to match existing modal button styling (dark theme).
+    - [x] On toggle change: Call `PUT /api/user/preferences` immediately.
+    - [x] Show loading indicator during save.
+    - [x] Show error/success feedback.
+    - [x] Emit event or update global state so map/goals can react without page refresh.
 
-- [ ] **5. Map Store Integration (AC: #4)**
-    - [ ] Add `showFutureGoalsUnlocked` signal to `client/src/stores/mapStore.ts`.
-  - [ ] Initialize from session data on load (default: true = unlocked; fall back to `true` if the session payload is missing the field during rollout).
-    - [ ] Export setter function for profile modal to update.
-    - [ ] Update `WaypointMarker` component to consume preference.
-  - [ ] When preference OFF: Apply locked styling to future waypoints (except next).
-    - [ ] Implement "next waypoint" special styling (see AC #4 details).
+- [x] **5. Map Store Integration (AC: #4)**
+    - [x] Add `showFutureGoalsUnlocked` signal to `client/src/stores/mapStore.ts`.
+  - [x] Initialize from session data on load (default: true = unlocked; fall back to `true` if the session payload is missing the field during rollout).
+    - [x] Export setter function for profile modal to update.
+    - [x] Update `WaypointMarker` component to consume preference.
+  - [x] When preference OFF: Apply locked styling to future waypoints (except next).
+    - [x] Implement "next waypoint" special styling (see AC #4 details).
 
-- [ ] **6. Goals List Integration (AC: #5)**
-    - [ ] Modify `renderGoals()` in `public/js/goals.js`.
-    - [ ] Accept or read `showFutureGoalsUnlocked` preference.
-  - [ ] When OFF: Style future goals with locked appearance.
-    - [ ] Implement "next goal" special styling distinct from regular locked.
-    - [ ] Use CSS classes: `.goal-locked`, `.goal-next-target`.
-    - [ ] Add CSS variables for locked and next-target states in `public/css/main.css`.
+- [x] **6. Goals List Integration (AC: #5)**
+    - [x] Modify `renderGoals()` in `public/js/goals.js`.
+    - [x] Accept or read `showFutureGoalsUnlocked` preference.
+  - [x] When OFF: Style future goals with locked appearance.
+    - [x] Implement "next goal" special styling distinct from regular locked.
+    - [x] Use CSS classes: `.goal-locked`, `.goal-next-target`.
+    - [x] Add CSS variables for locked and next-target states in `public/css/main.css`.
 
-- [ ] **7. Global State Bridge (AC: #6)**
-    - [ ] Create `window.userPreferences = { showFutureGoalsUnlocked: boolean }` for legacy JS.
-  - [ ] Initialize on page load from session data (default: true/unlocked so pages feel consistent with map).
-    - [ ] Profile modal updates this when preference changes.
-    - [ ] Dispatch custom event `'preferenceChanged'` that goals.js and map can listen to.
+- [x] **7. Global State Bridge (AC: #6)**
+    - [x] Create `window.userPreferences = { showFutureGoalsUnlocked: boolean }` for legacy JS.
+  - [x] Initialize on page load from session data (default: true/unlocked so pages feel consistent with map).
+    - [x] Profile modal updates this when preference changes.
+    - [x] Dispatch custom event `'preferenceChanged'` that goals.js and map can listen to.
 
-- [ ] **8. Testing**
-    - [ ] Unit tests for preferences API handler.
-    - [ ] Unit tests for session response includes preference.
-    - [ ] Playwright test: Toggle preference in profile modal.
-    - [ ] Playwright test: Map waypoints change appearance when preference toggled.
-    - [ ] Playwright test: Goals list changes appearance when preference toggled.
-    - [ ] Playwright test: Next goal has distinct styling from regular locked goals.
-    - [ ] Ensure >90% coverage for new code.
+- [x] **8. Testing**
+    - [x] Unit tests for preferences API handler.
+    - [x] Unit tests for session response includes preference.
+    - [x] Playwright test: Toggle preference in profile modal.
+    - [x] Playwright test: Map waypoints change appearance when preference toggled.
+    - [x] Playwright test: Goals list changes appearance when preference toggled.
+    - [x] Playwright test: Next goal has distinct styling from regular locked goals.
+    - [x] Ensure >90% coverage for new code.
 
-- [ ] **9. Documentation**
-    - [ ] Update `docs/data-models.md` with new users table column.
-    - [ ] Update `docs/api-reference.md` with preferences endpoint.
-    - [ ] Update `docs/frontend-guide.md` with preference event handling.
+- [x] **9. Documentation**
+    - [x] Update `docs/data-models.md` with new users table column.
+    - [x] Update `docs/api-reference.md` with preferences endpoint.
+    - [x] Update `docs/frontend-guide.md` with preference event handling.
 
 ## Dev Notes
 
@@ -437,10 +437,37 @@ This story has **no blocking dependencies** - it can be implemented independentl
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (GitHub Copilot)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- **Code Review Fix: Unreachable next-waypoint glow** — `WaypointMarkers.ts` had a duplicate `else if (isNext)` block that styled next waypoints identically to unlocked markers (no glow). This made the correct glow-effect block (using `NEXT_GLOW_COLOR` / `NEXT_GLOW_BLUR`) dead code. Removed the first duplicate block so the glow renders correctly (AC #4).
+- **Code Review Fix: Next-goal target styling conditional** — `goals.js` only applied the `goal-next-target` CSS class when `showFutureGoalsUnlocked` was OFF. AC #5 requires the next goal to always have special "target" styling regardless of preference. Removed the conditional so the class is always added.
+- **Code Review Fix: Missing Playwright tests** — Created `tests/ui/preference-toggle.spec.js` with 8 test cases covering: toggle display & label (AC #1), API persistence (AC #6), error rollback, page reload persistence (AC #7), `preferenceChanged` event dispatch, next-goal always has `goal-next-target` (AC #5), locked styling when pref OFF (AC #2), no locked styling when pref ON (AC #3), session field, and `window.userPreferences` bridge.
+- **Bug Fix: Journey view next goal not locked** — `goals.js` never applied `goal-locked` to the next goal when preference is OFF. AC #5 specifies the next goal should always show locked-but-prominent styling. Fixed by adding `goal-locked` class alongside `goal-next-target` when `!prefUnlocked`. Also made `onClick` and cursor conditional on preference.
+- **Bug Fix: Map future goals not locked** — `MapIsland.tsx` never fetched the user preference; the `showFutureGoalsUnlocked` signal stayed at default `true` regardless of DB value. Fixed by adding `/api/session` fetch in the existing parallel init `Promise.all`, setting the signal before markers render.
+- **Bug Fix: Map next goal locked when pref ON** — `WaypointMarkers.ts` had `showFutureGoalsUnlocked.value && !isNext` which explicitly excluded the next waypoint from being shown as unlocked. AC #4 says "all waypoints render as unlocked" when pref ON. Fixed by removing `&& !isNext`. Cluster logic also corrected to respect the preference signal.
+- **Bug Fix: No dynamic reactivity on toggle** — Nothing listened to the `preferenceChanged` event that `profile.js` dispatches. Map and journey goals both required a page refresh to reflect preference changes. Fixed by adding `preferenceChanged` listeners in both `MapIsland.tsx` (updates signal + rebuilds markers) and `goals.js` (re-calls `renderGoals()`).
+
 ### File List
+
+- `migrations/0117_add_goal_visibility_preference.sql` — NEW: DB migration adding `show_future_goals_unlocked` column to `users` table
+- `src/auth-handlers.ts` — Updated session response to include `showFutureGoalsUnlocked`, added `handleUpdatePreferences` handler
+- `src/index.ts` — Added `PUT /api/user/preferences` route
+- `public/js/profile.js` — Added "Preview all milestones" toggle UI, API call, `preferenceChanged` event dispatch
+- `public/css/profile.css` — Toggle switch styling
+- `public/css/goals.css` — `.goal-locked`, `.goal-next-target`, `.goal-locked.goal-next-target` CSS classes
+- `public/js/main.js` — Initialized `window.userPreferences` with session-loaded preference
+- `public/js/goals.js` — Applied locked/target styling based on preference; dynamic `preferenceChanged` listener; `lastRenderedDistance` tracking; `onClick` conditional on preference; next-goal gets both `goal-next-target` and `goal-locked` when pref OFF
+- `client/src/stores/mapStore.ts` — Added `showFutureGoalsUnlocked` signal, `setShowFutureGoalsUnlocked` setter, loads preference from session in `initializeMap`
+- `client/src/components/map/WaypointMarkers.ts` — Consumes `showFutureGoalsUnlocked` signal; fixed duplicate `else if (isNext)` block; fixed `showAsUnlocked` to not exclude next waypoint when pref ON; fixed cluster `hasUnlocked` to respect preference
+- `client/src/islands/MapIsland.tsx` — Fetches session preference in parallel init; sets `showFutureGoalsUnlocked` signal before markers render; `preferenceChanged` event listener for dynamic map updates
+- `client/src/islands/NextGoalCard.tsx` — Made `onClick` optional; cursor adapts to whether click is active
+- `tests/ui/preference-toggle.spec.js` — NEW: Playwright UI tests for preference toggle feature (8 tests)
+- `tests/api/auth-handlers.test.ts` — Unit tests for preferences handler and session preference field
+- `client/src/stores/mapStore.test.ts` — Unit tests for `showFutureGoalsUnlocked` signal
+- `docs/data-models.md` — Documented `show_future_goals_unlocked` column
+- `docs/api-reference.md` — Documented `PUT /api/user/preferences` endpoint
+- `docs/frontend-guide.md` — Documented `preferenceChanged` event pattern

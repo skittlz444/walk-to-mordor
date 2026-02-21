@@ -23,7 +23,8 @@ Log out the current user.
 ### `GET /api/session`
 Validate current session.
 - **Headers**: Requires Session Cookie.
-- **Response**: `{ valid: boolean, user: { ... } }`
+- **Response**: `{ userId, username, email, showFutureGoalsUnlocked, expiresAt }`
+- **Note**: `showFutureGoalsUnlocked` is a boolean indicating the user's goal visibility preference (default: `true`).
 
 ### `POST /api/password-reset-request`
 Request a password reset email.
@@ -51,6 +52,15 @@ Resend the email confirmation link.
 Update user profile details.
 - **Headers**: Requires Auth.
 - **Body**: Profile fields.
+
+## User Preferences
+
+### `PUT /api/user/preferences`
+Update user preferences.
+- **Headers**: Requires Auth.
+- **Body**: `{ showFutureGoalsUnlocked: boolean }`
+- **Response**: `{ showFutureGoalsUnlocked: boolean }`
+- **Errors**: 400 if `showFutureGoalsUnlocked` is not a boolean, 401 if not authenticated.
 
 ## Progress Tracking
 

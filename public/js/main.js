@@ -68,6 +68,11 @@ async function logout() {
 window.getAuthHeaders = getAuthHeaders;
 window.logout = logout;
 
+// Initialize global user preferences (default: unlocked)
+window.userPreferences = window.userPreferences || {
+  showFutureGoalsUnlocked: true
+};
+
 document.addEventListener("DOMContentLoaded", async function () {
   // Check authentication before initializing app
   const isAuthenticated = await checkAuth();
@@ -77,6 +82,21 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // Reveal page after auth succeeds (lifts CSS auth-wall on map page)
   document.body.classList.add('authenticated');
+
+  // Load user preferences from session
+  try {
+    const sessionResponse = await fetch('/api/session', {
+      headers: getAuthHeaders()
+    });
+    if (sessionResponse.ok) {
+      const sessionData = await sessionResponse.json();
+      if (typeof sessionData.showFutureGoalsUnlocked === 'boolean') {
+        window.userPreferences.showFutureGoalsUnlocked = sessionData.showFutureGoalsUnlocked;
+      }
+    }
+  } catch (prefError) {
+    console.warn('Could not load user preferences:', prefError);
+  }
 
   // Initialize application
   async function initializeApp() {
