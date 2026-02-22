@@ -49,11 +49,11 @@ test.describe('User Goal Visibility Preference', () => {
       await openProfileFromDrawer(page);
 
       // Toggle switch container should be visible (the <input> itself is hidden by toggle-switch CSS)
-      const toggleSwitch = page.locator('.toggle-switch');
+      const toggleSwitch = page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-switch');
       await expect(toggleSwitch).toBeVisible();
 
       // Label should be present
-      await expect(page.locator('.toggle-label')).toContainText('Preview all milestones');
+      await expect(page.locator('label[for="preview-milestones-toggle"]')).toContainText('Preview all milestones');
 
       // Default should be checked (unlocked) — .toBeChecked() works on hidden inputs
       const toggle = page.locator('#preview-milestones-toggle');
@@ -73,7 +73,7 @@ test.describe('User Goal Visibility Preference', () => {
       );
 
       // Click the visible toggle slider to uncheck (the <input> is hidden by toggle-switch CSS)
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
 
       const response = await responsePromise;
       expect(response.status()).toBe(200);
@@ -101,7 +101,7 @@ test.describe('User Goal Visibility Preference', () => {
       });
 
       // Click the visible toggle slider to uncheck
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
 
       // Wait for error status
       const statusDiv = page.locator('#preference-status');
@@ -124,7 +124,7 @@ test.describe('User Goal Visibility Preference', () => {
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
         { timeout: 10000 }
       );
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await responsePromise;
 
       // Close modal
@@ -146,7 +146,7 @@ test.describe('User Goal Visibility Preference', () => {
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
         { timeout: 10000 }
       );
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await restorePromise;
     });
 
@@ -170,7 +170,7 @@ test.describe('User Goal Visibility Preference', () => {
         { timeout: 10000 }
       );
       // Click the visible toggle slider to uncheck
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await responsePromise;
 
       // Check that the event was dispatched
@@ -185,7 +185,7 @@ test.describe('User Goal Visibility Preference', () => {
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
         { timeout: 10000 }
       );
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await restorePromise;
     });
   });
