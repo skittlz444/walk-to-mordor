@@ -66,3 +66,65 @@ NEW: Status: cancelled
 - `_bmad-output/implementation-artifacts/2-9-map-visual-testing.md` — status header updated to `cancelled`
 
 **Next Step:** Once Story 2-4 transitions from `review` to `done`, update `sprint-status.yaml` to mark `epic-2: done`.
+
+---
+
+## Section 6: Sprint Planning Update (SP) — Epic 3 Readiness Gates
+
+The following gates are now mandatory sequencing items for Epic 3 kickoff.
+
+### Gate 1 — CI Reliability (Blocking)
+
+**Intent:** Prevent flakey test infrastructure from invalidating sprint outcomes.
+
+**Entry Criteria:**
+- Critical Playwright flows are identified.
+
+**Exit Criteria:**
+- Deterministic controls are defined and applied (seeded data, stable viewport, clock/animation controls where relevant).
+- CI stability is verified for critical Playwright checks.
+- Any quarantined test has owner + rationale + explicit exit criteria.
+
+### Gate 2 — Requirement-Change Control (Blocking)
+
+**Intent:** Eliminate requirement drift between product decisions and delivery artifacts.
+
+**Exit Criteria:**
+- Requirement delta is documented in the active story artifact.
+- Revised acceptance criteria are acknowledged by Product + Dev before implementation resumes.
+- Story test plan and requirement traceability are updated.
+
+### Gate 2b — Future Story Propagation (Blocking, Non-Negotiable)
+
+**Intent:** Ensure requirement changes are carried forward to downstream planning.
+
+**Exit Criteria:**
+- All impacted future stories are reviewed and updated (ACs, dependencies, sequencing, risks).
+- Impacted stories are tagged with `change-impact` notes.
+- **No impacted story may begin while unresolved `change-impact` flags remain.**
+
+### Gate 3 — Definition-of-Done Traceability (Blocking)
+
+**Intent:** Ensure no accepted requirement is left unverified.
+
+**Exit Criteria:**
+- Story cannot be marked `done` unless each accepted requirement has either:
+	- automated test evidence, or
+	- explicit manual verification note.
+
+### Epic 3 Sequencing Order (Updated)
+
+1. Complete Gate 1 (CI Reliability)
+2. Enforce Gate 2 + Gate 2b (Requirement-Change + Propagation)
+3. Enforce Gate 3 (DoD Traceability)
+4. Start Epic 3 story execution
+
+### Ownership
+
+- **Gate 1:** Dana (QA) + Charlie (Senior Dev)
+- **Gate 2 / 2b:** Alice (PO) + Charlie (Senior Dev) + Bob (Scrum Master)
+- **Gate 3:** Charlie (Senior Dev) + Dana (QA)
+
+### Governance Note
+
+This SP amendment is derived from the Epic 2 retrospective and is now part of the sprint planning baseline for Epic 3.
