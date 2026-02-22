@@ -56,7 +56,7 @@ development_status:
   # ============================================
   # EPIC 2: Interactive Journey Map (#151)
   # ============================================
-  epic-2: in-progress
+  epic-2: done
   2-1-map-page-shell-navigation: done
   2-2-map-canvas-base-image-layer: done
   2-3-journey-path-rendering: done

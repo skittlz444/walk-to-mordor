@@ -65,7 +65,7 @@ NEW: Status: cancelled
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status updated to `cancelled`
 - `_bmad-output/implementation-artifacts/2-9-map-visual-testing.md` — status header updated to `cancelled`
 
-**Next Step:** Once Story 2-4 transitions from `review` to `done`, update `sprint-status.yaml` to mark `epic-2: done`.
+**Next Step:** All Epic 2 stories are now `done` (or `cancelled`) and `epic-2-retrospective` is `done`. `epic-2` has been updated to `done` in `sprint-status.yaml`.
 
 ---
 
@@ -75,7 +75,7 @@ The following gates are now mandatory sequencing items for Epic 3 kickoff.
 
 ### Gate 1 — CI Reliability (Blocking)
 
-**Intent:** Prevent flakey test infrastructure from invalidating sprint outcomes.
+**Intent:** Prevent flaky test infrastructure from invalidating sprint outcomes.
 
 **Entry Criteria:**
 - Critical Playwright flows are identified.
@@ -109,8 +109,8 @@ The following gates are now mandatory sequencing items for Epic 3 kickoff.
 
 **Exit Criteria:**
 - Story cannot be marked `done` unless each accepted requirement has either:
-	- automated test evidence, or
-	- explicit manual verification note.
+  - automated test evidence, or
+  - explicit manual verification note.
 
 ### Epic 3 Sequencing Order (Updated)
 
