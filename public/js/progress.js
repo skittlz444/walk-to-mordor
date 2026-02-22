@@ -310,7 +310,8 @@ async function fetchAndUpdateTotalDistance() {
     });
     if (response.ok) {
       const data = await response.json();
-      document.getElementById('total-distance-value').textContent = `${data.totalDistance} km`;
+      const el = document.getElementById('total-distance-value');
+      if (el) el.textContent = `${data.totalDistance} km`;
       if (window.goalsModule && window.goalsModule.renderGoals) {
         window.goalsModule.renderGoals(data.totalDistance);
       }
@@ -318,11 +319,13 @@ async function fetchAndUpdateTotalDistance() {
       // User not authenticated - this is handled by the overall auth flow
     } else {
       console.error('Failed to fetch total distance:', response.status);
-      document.getElementById('total-distance-value').textContent = '0 km';
+      const el = document.getElementById('total-distance-value');
+      if (el) el.textContent = '0 km';
     }
   } catch (error) {
     console.error('Error fetching total distance:', error);
-    document.getElementById('total-distance-value').textContent = '0 km';
+    const el = document.getElementById('total-distance-value');
+    if (el) el.textContent = '0 km';
   }
 }
 

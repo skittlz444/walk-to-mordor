@@ -293,7 +293,7 @@ export function createWaypointMarkers(
             }
           });
           mg.on('click tap', () => {
-            console.log('[WaypointMarker] Selected:', wp.title, wp);
+            if (window.__MAP_DEV_LOG) console.log('[WaypointMarker] Selected:', wp.title, wp);
             if (onSelect) onSelect(wp);
           });
         } else {
@@ -363,7 +363,7 @@ export function createWaypointMarkers(
           mg.on('click tap', () => {
             // Select the first unlocked item in the cluster, but pass the full cluster list
             const target = cluster.items.find((w) => w.distance <= uDist) ?? cluster.items[0];
-            console.log('[WaypointMarker] Cluster selected:', cluster.items.length, 'items, picked:', target.title);
+            if (window.__MAP_DEV_LOG) console.log('[WaypointMarker] Cluster selected:', cluster.items.length, 'items, picked:', target.title);
             if (onSelect) onSelect(target, cluster.items);
           });
         } else {
