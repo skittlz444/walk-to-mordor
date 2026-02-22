@@ -60,12 +60,12 @@ development_status:
   2-1-map-page-shell-navigation: done
   2-2-map-canvas-base-image-layer: done
   2-3-journey-path-rendering: done
-  2-4-current-position-marker: review
+  2-4-current-position-marker: done
   2-5-waypoint-markers: done
   2-6-waypoint-detail-popup: done
   2-7-map-state-management: done
   2-8-map-walk-logging: done
-  2-9-map-visual-testing: ready-for-dev
+  2-9-map-visual-testing: cancelled
   2-10-user-goal-visibility-preference: done
   epic-2-retrospective: optional
 
