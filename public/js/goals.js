@@ -64,7 +64,11 @@ function makeGoalClickable(element, goal, currentDistance) {
   }
 }
 
+// Track last rendered distance for re-rendering on preference change
+let lastRenderedDistance = null;
+
 function renderGoals(currentDistance) {
+  lastRenderedDistance = currentDistance;
   fetch('/api/goals', {
     headers: window.getAuthHeaders()
   })
@@ -185,6 +189,11 @@ function renderGoals(currentDistance) {
 
       // Hydrate next goal Preact island and remaining upcoming goals
       queueMicrotask(() => {
+        // Read user preference (default: true = unlocked)
+        const prefUnlocked = window.userPreferences && typeof window.userPreferences.showFutureGoalsUnlocked === 'boolean'
+          ? window.userPreferences.showFutureGoalsUnlocked
+          : true;
+
         // Hydrate next goal as Preact island with fallback
         if (upcoming.length > 0) {
           const nextGoalMount = document.getElementById('next-goal-mount');
@@ -204,7 +213,7 @@ function renderGoals(currentDistance) {
                   goal: nextGoal,
                   currentDistance: Number(currentDistance),
                   previousDistance: previousDistance,
-                  onClick: () => showGoalModal(nextGoal, currentDistance)
+                  onClick: prefUnlocked ? () => showGoalModal(nextGoal, currentDistance) : undefined
                 }),
                 nextGoalMount
               );
@@ -224,7 +233,7 @@ function renderGoals(currentDistance) {
               const fillMinWidth = percentage > 0 ? '0' : '1px';
 
               nextGoalMount.innerHTML =
-                '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal next-goal" data-goal-index="0">' +
+                '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;' + (prefUnlocked ? 'cursor:pointer;' : '') + '" class="upcoming-goal next-goal" data-goal-index="0">' +
                 (nextGoal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + nextGoal.special + '</span>' : '') +
                 '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + nextGoal.title + '</span>' +
                 '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + nextGoal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (nextGoal.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
@@ -233,8 +242,23 @@ function renderGoals(currentDistance) {
                 '</div>' +
                 '</div>';
 
-              // Make fallback clickable
-              makeGoalClickable(nextGoalMount.querySelector('.next-goal'), nextGoal, currentDistance);
+              // Make fallback clickable only when preference is ON
+              if (prefUnlocked) {
+                makeGoalClickable(nextGoalMount.querySelector('.next-goal'), nextGoal, currentDistance);
+              }
+            }
+
+            // Always apply next-target styling to the first upcoming goal
+            // The next goal should always be visually prominent regardless of preference
+            // When pref OFF, also mark as locked
+            {
+              const nextGoalCard = nextGoalMount.querySelector('.upcoming-goal, [class*="next-goal"]') || nextGoalMount.firstElementChild;
+              if (nextGoalCard) {
+                nextGoalCard.classList.add('goal-next-target');
+                if (!prefUnlocked) {
+                  nextGoalCard.classList.add('goal-locked');
+                }
+              }
             }
           }
         }
@@ -254,10 +278,18 @@ function renderGoals(currentDistance) {
                 h(UpcomingGoalCard, {
                   goal: goal,
                   currentDistance: Number(currentDistance),
-                  onClick: () => showGoalModal(goal, currentDistance)
+                  onClick: prefUnlocked ? () => showGoalModal(goal, currentDistance) : () => {}
                 }),
                 mountPoint
               );
+
+              // When preference is OFF, apply locked styling
+              if (!prefUnlocked) {
+                const goalCard = mountPoint.firstElementChild;
+                if (goalCard) {
+                  goalCard.classList.add('goal-locked');
+                }
+              }
             }
           });
         } else {
@@ -271,15 +303,18 @@ function renderGoals(currentDistance) {
           upcoming.slice(1).forEach((goal, index) => {
             const mountPoint = document.getElementById('upcoming-goal-mount-' + (index + 1));
             if (mountPoint) {
+              const lockedClass = prefUnlocked ? '' : ' goal-locked';
               mountPoint.innerHTML =
-                '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal" data-goal-index="' + (index + 1) + '">' +
+                '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;' + (prefUnlocked ? 'cursor:pointer;' : '') + '" class="upcoming-goal' + lockedClass + '" data-goal-index="' + (index + 1) + '">' +
                 (goal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + goal.special + '</span>' : '') +
                 '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + goal.title + '</span>' +
                 '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + goal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (goal.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
                 '</div>';
 
-              // Make fallback clickable
-              makeGoalClickable(mountPoint.querySelector('.upcoming-goal'), goal, currentDistance);
+              // Make fallback clickable only if preference is ON
+              if (prefUnlocked) {
+                makeGoalClickable(mountPoint.querySelector('.upcoming-goal'), goal, currentDistance);
+              }
             }
           });
         }
@@ -368,3 +403,10 @@ window.goalsModule = {
   renderGoals,
   checkForNewlyPassedGoals
 };
+
+// Re-render goals when preference changes (dynamic toggle reactivity)
+window.addEventListener('preferenceChanged', function() {
+  if (lastRenderedDistance !== null) {
+    renderGoals(lastRenderedDistance);
+  }
+});

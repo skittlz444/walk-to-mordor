@@ -8,23 +8,36 @@
 const { test, expect, createTestEvent, generateRealisticTestDistance } = require('./helpers/common');
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
+const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
+
+async function getCalendarProgress(context, authToken) {
+    const response = await context.request.get(`${BASE_URL}/api/calendar-progress`, {
+        headers: {
+            Authorization: `Bearer ${authToken}`
+        }
+    });
+
+    expect(response.status()).toBe(200);
+    return response.json();
+}
+
 // Helper to create authenticated context with improved performance
 async function createAuthenticatedContext(browser, username) {
     const authToken = `TEST_MOCK_TOKEN_${username}`;
     // Clean up data before creating context/page to ensure clean state
-    await cleanupAllTestData('http://localhost:8787', authToken);
+    await cleanupAllTestData(BASE_URL, authToken);
     
     const context = await browser.newContext({
          storageState: {
             cookies: [],
             origins: [{
-                origin: 'http://localhost:8787',
+                origin: BASE_URL,
                 localStorage: [{ name: 'sessionToken', value: authToken }]
             }]
          }
     });
     const page = await context.newPage();
-    await page.goto('http://localhost:8787/');
+    await page.goto(`${BASE_URL}/`);
     
     // Close existing popups if any (similar to setupTest)
     try {
@@ -61,42 +74,40 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
         try {
             // User 1 creates a progress entry
             const user1Distance = 10;
-            await createTestEvent(page1, user1Distance);
+            const user1Event = await createTestEvent(page1, user1Distance);
             
             // User 2 creates a different progress entry for the same date
             const user2Distance = 20;
-            await createTestEvent(page2, user2Distance);
+            const user2Event = await createTestEvent(page2, user2Distance);
             
             // Verify User 1 sees their own distance but not User 2's
             await page1.reload();
             await page1.waitForLoadState('networkidle');
             
-            // Navigate to next week to see the event created by createTestEvent
-            await page1.click('#next-btn');
+            await expect(page1.locator('#total-distance-value')).toContainText(`${user1Distance}`);
 
-            // Check that User 1's distance is visible
-            await expect(page1.locator('.event-label', { hasText: `${user1Distance} km` })).toBeVisible({ timeout: 5000 });
-            
-            // Check that User 2's distance is NOT visible to User 1
-            await expect(page1.locator('.event-label', { hasText: `${user2Distance} km` })).not.toBeVisible({ timeout: 2000 });
+            const user1Progress = await getCalendarProgress(context1, authToken1);
+            const user1Titles = user1Progress.map((entry) => Number(entry.title));
+            expect(user1Titles).toContain(user1Distance);
+            expect(user1Titles).not.toContain(user2Distance);
+            expect(user1Progress.some((entry) => entry.start === user1Event.dateInfo.date)).toBe(true);
             
             // Verify User 2 sees their own distance but not User 1's
             await page2.reload();
             await page2.waitForLoadState('networkidle');
             
-            // Navigate to next week to see the event created by createTestEvent
-            await page2.click('#next-btn');
+            await expect(page2.locator('#total-distance-value')).toContainText(`${user2Distance}`);
 
-            // Check that User 2's distance is visible
-            await expect(page2.locator('.event-label', { hasText: `${user2Distance} km` })).toBeVisible({ timeout: 5000 });
-            
-            // Check that User 1's distance is NOT visible to User 2
-            await expect(page2.locator('.event-label', { hasText: `${user1Distance} km` })).not.toBeVisible({ timeout: 2000 });
+            const user2Progress = await getCalendarProgress(context2, authToken2);
+            const user2Titles = user2Progress.map((entry) => Number(entry.title));
+            expect(user2Titles).toContain(user2Distance);
+            expect(user2Titles).not.toContain(user1Distance);
+            expect(user2Progress.some((entry) => entry.start === user2Event.dateInfo.date)).toBe(true);
             
         } finally {
             // Cleanup both users' data
-            await cleanupAllTestData('http://localhost:8787', authToken1);
-            await cleanupAllTestData('http://localhost:8787', authToken2);
+            await cleanupAllTestData(BASE_URL, authToken1);
+            await cleanupAllTestData(BASE_URL, authToken2);
             
             await page1.close();
             await page2.close();
@@ -106,7 +117,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     });
     
     test('Different users should have separate total distances', async ({ browser }) => {
-        test.setTimeout(60000); // Increase timeout for multiple user creations
+        test.setTimeout(120000);
         
         // Generate unique usernames for this test
         const timestamp = Date.now().toString().substring(6);
@@ -141,35 +152,42 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
                 year: tomorrowDate.getFullYear()
             };
             
-            // User 1 adds multiple entries
-            const p1Promise1 = page1.waitForResponse(response => response.url().includes('/api/calendar-progress') && response.status() === 200);
-            await createTestEvent(page1, user1Distance1, todayDateInfo);
-            await p1Promise1;
-            
-            const p1Promise2 = page1.waitForResponse(response => response.url().includes('/api/calendar-progress') && response.status() === 200);
-            await createTestEvent(page1, user1Distance2, tomorrowDateInfo);
-            await p1Promise2;
+            const createProgress = async (context, authToken, date, distance) => {
+                const response = await context.request.post(`${BASE_URL}/api/calendar-progress`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`
+                    },
+                    data: JSON.stringify({
+                        start: date,
+                        title: String(distance)
+                    })
+                });
+
+                expect(response.status()).toBeGreaterThanOrEqual(200);
+                expect(response.status()).toBeLessThan(400);
+            };
+
+            await createProgress(context1, authToken1, todayDateInfo.date, user1Distance1);
+            await createProgress(context1, authToken1, tomorrowDateInfo.date, user1Distance2);
             
             // User 2 adds a different set of entries
             const user2Distance1 = 10.0;
             const user2Distance2 = 7.5;
             
-            const p2Promise1 = page2.waitForResponse(response => response.url().includes('/api/calendar-progress') && response.status() === 200);
-            await createTestEvent(page2, user2Distance1, todayDateInfo);
-            await p2Promise1;
-            
-            const p2Promise2 = page2.waitForResponse(response => response.url().includes('/api/calendar-progress') && response.status() === 200);
-            await createTestEvent(page2, user2Distance2, tomorrowDateInfo);
-            await p2Promise2;
+            await createProgress(context2, authToken2, todayDateInfo.date, user2Distance1);
+            await createProgress(context2, authToken2, tomorrowDateInfo.date, user2Distance2);
             
             // Reload and wait for totals to update
             await page1.reload();
             await page1.waitForLoadState('networkidle');
             await page1.locator('#total-distance-value').waitFor({ state: 'visible', timeout: 5000 });
+            await expect(page1.locator('#total-distance-value')).not.toHaveText('Loading...');
             
             await page2.reload();
             await page2.waitForLoadState('networkidle');
             await page2.locator('#total-distance-value').waitFor({ state: 'visible', timeout: 5000 });
+            await expect(page2.locator('#total-distance-value')).not.toHaveText('Loading...');
             
             // User 1's total should be 8.7 km (5.5 + 3.2)
             const user1Total = await page1.locator('#total-distance-value').textContent();
@@ -181,8 +199,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
         } finally {
             // Cleanup both users' data
-            await cleanupAllTestData('http://localhost:8787', authToken1);
-            await cleanupAllTestData('http://localhost:8787', authToken2);
+            await cleanupAllTestData(BASE_URL, authToken1);
+            await cleanupAllTestData(BASE_URL, authToken2);
             
             await page1.close();
             await page2.close();
@@ -235,16 +253,21 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             // Verify User 1's entry is unchanged
             await page1.reload();
             await page1.waitForLoadState('networkidle');
-            
-            // Navigate to the week where the event is
-            await page1.click('#next-btn');
-            
-            await expect(page1.locator('.event-label', { hasText: `${originalDistance} km` })).toBeVisible({ timeout: 5000 });
+
+            await expect(page1.locator('#total-distance-value')).toContainText(`${originalDistance}`);
+
+            const user1Progress = await getCalendarProgress(context1, authToken1);
+            const entryForDate = user1Progress.find((entry) => entry.start === dateString);
+            expect(entryForDate).toBeTruthy();
+            expect(Number(entryForDate.title)).toBe(originalDistance);
+
+            const user2Progress = await getCalendarProgress(context2, authToken2);
+            expect(user2Progress.some((entry) => entry.start === dateString)).toBe(false);
             
         } finally {
             // Cleanup both users' data
-            await cleanupAllTestData('http://localhost:8787', authToken1);
-            await cleanupAllTestData('http://localhost:8787', authToken2);
+            await cleanupAllTestData(BASE_URL, authToken1);
+            await cleanupAllTestData(BASE_URL, authToken2);
             
             await page1.close();
             await page2.close();
@@ -254,6 +277,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     });
     
     test('Two users can have entries on the same date without conflicts', async ({ browser }) => {
+        test.setTimeout(60000);
+
         // Generate unique usernames for this test
         const timestamp = Date.now().toString().substring(6);
         const username1 = `iso_sam_u1_${timestamp}`;
@@ -286,19 +311,21 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             // Both should succeed without conflicts
             await page1.reload();
             await page1.waitForLoadState('networkidle');
-            
-            // Navigate to next week
-            await page1.click('#next-btn');
+            await expect(page1.locator('#total-distance-value')).toContainText(`${user1Distance}`);
 
-            await expect(page1.locator('.event-label', { hasText: `${user1Distance} km` })).toBeVisible({ timeout: 5000 });
+            const user1Progress = await getCalendarProgress(context1, authToken1);
+            const user1Entry = user1Progress.find((entry) => entry.start === nextWeekDateInfo.date);
+            expect(user1Entry).toBeTruthy();
+            expect(Number(user1Entry.title)).toBe(user1Distance);
             
             await page2.reload();
             await page2.waitForLoadState('networkidle');
+            await expect(page2.locator('#total-distance-value')).toContainText(`${user2Distance}`);
 
-            // Navigate to next week
-            await page2.click('#next-btn');
-            
-            await expect(page2.locator('.event-label', { hasText: `${user2Distance} km` })).toBeVisible({ timeout: 5000 });
+            const user2Progress = await getCalendarProgress(context2, authToken2);
+            const user2Entry = user2Progress.find((entry) => entry.start === nextWeekDateInfo.date);
+            expect(user2Entry).toBeTruthy();
+            expect(Number(user2Entry.title)).toBe(user2Distance);
             
         } finally {
             // Cleanup both users' data

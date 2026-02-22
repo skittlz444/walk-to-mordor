@@ -1,6 +1,6 @@
 # Story 2.6: Waypoint Detail Popup
 
-Status: ready-for-dev
+Status: complete
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -71,15 +71,16 @@ so that **I can explore the lore and imagery associated with locations I've visi
 
 ## Tasks / Subtasks
 
-- [ ] **1. State Management (`mapStore.ts`)**
-    - [ ] Verify `selectedWaypoint: Signal<Waypoint | null>` exists (from Story 2.5).
-    - [ ] Add `popupPosition: Signal<{ x: number; y: number } | null>` for screen coordinates.
-    - [ ] Add `isPopupVisible: computed(() => selectedWaypoint.value !== null)`.
-    - [ ] Add action `closePopup()` that sets `selectedWaypoint.value = null`.
-    - [ ] Add action `selectWaypoint(waypoint: Waypoint, screenX: number, screenY: number)`.
+- [x] **1. State Management (`mapStore.ts`)**
+    - [x] Verify `selectedWaypoint: Signal<Waypoint | null>` exists (from Story 2.5).
+    - [x] Add `popupPosition: Signal<{ x: number; y: number } | null>` for screen coordinates.
+    - [x] Add `isPopupVisible: computed(() => selectedWaypoint.value !== null)`.
+    - [x] Add action `closePopup()` that sets `selectedWaypoint.value = null`.
+    - [x] Add action `selectWaypoint(waypoint: Waypoint, screenX: number, screenY: number)`.
+    - **Note:** State is managed directly in MapIsland.tsx using `useSignal` hooks rather than a separate mapStore.ts file. `selectedWaypoint`, `selectedCluster`, `popupPosition` signals are defined inline with `closePopup` callback.
 
-- [ ] **2. Screen Position Calculation & Map Centering**
-    - [ ] Create `client/src/utils/map-popup-utils.ts`:
+- [x] **2. Screen Position Calculation & Map Centering**
+    - [x] Create `client/src/utils/map-popup-utils.ts`:
         - `getScreenPosition(waypoint: Waypoint, stage: Konva.Stage): { x: number; y: number }`:
           - Converts waypoint's canvas coordinates to screen (DOM) coordinates.
           - Uses `stage.getAbsolutePosition()` and `stage.scaleX()`.
@@ -97,14 +98,14 @@ so that **I can explore the lore and imagery associated with locations I've visi
           - If center already in safe zone, return null (no pan needed).
           - Otherwise, return delta to move center into safe zone (toward viewport center, stopping at safe zone edge).
 
-- [ ] **3. Popup Component (`client/src/components/map/WaypointPopup.tsx`)**
-    - [ ] Create stateless Preact component with props:
+- [x] **3. Popup Component (`client/src/components/map/WaypointPopup.tsx`)**
+    - [x] Create stateless Preact component with props:
         - `waypoint: Waypoint` (includes id, title, distance, special, image_id).
         - `position: { x: number; y: number }`.
         - `onClose: () => void`.
         - `onExpand: (waypointId: number) => void`.
-    - [ ] Render as **HTML `<div>`** (NOT Konva shape) positioned absolutely.
-    - [ ] Structure:
+    - [x] Render as **HTML `<div>`** (NOT Konva shape) positioned absolutely.
+    - [x] Structure:
       ```
       ┌─────────────────────────────┬──┐
       │  [Thumbnail]  Title         │ X│
@@ -113,58 +114,59 @@ so that **I can explore the lore and imagery associated with locations I've visi
       │               [⤢ Expand]     │  │
       └─────────────────────────────┴──┘
       ```
-    - [ ] Only show "Special text" row if `waypoint.special` is not null.
-    - [ ] Expand button uses icon (arrows-expand, external-link, or similar) - NOT text link.
-    - [ ] Apply dark theme styles (CSS or inline).
-    - [ ] Add click handler on container that stops propagation (prevents closing on internal click).
-    - [ ] Add close button with X icon.
+    - [x] Only show "Special text" row if `waypoint.special` is not null.
+    - [x] Expand button uses icon (arrows-expand, external-link, or similar) - NOT text link.
+    - [x] Apply dark theme styles (CSS or inline).
+    - [x] Add click handler on container that stops propagation (prevents closing on internal click).
+    - [x] Add close button with X icon.
 
-- [ ] **4. Mobile Sheet Variant (`client/src/components/map/WaypointSheet.tsx`)**
-    - [ ] Create mobile-optimized bottom sheet component.
-    - [ ] Slides up from bottom with animation.
-    - [ ] Full width, ~40% viewport height.
-    - [ ] Swipe-down to dismiss (optional, nice-to-have).
-    - [ ] Same content structure as desktop popup.
+- [x] **4. Mobile Sheet Variant (`client/src/components/map/WaypointSheet.tsx`)**
+    - [x] Create mobile-optimized bottom sheet component.
+    - [x] Slides up from bottom with animation.
+    - [x] Full width, ~40% viewport height.
+    - [ ] Swipe-down to dismiss (optional, nice-to-have). **NOT IMPLEMENTED**
+    - [x] Same content structure as desktop popup.
 
-- [ ] **5. Popup Container / Controller (`client/src/components/map/WaypointPopupContainer.tsx`)**
-    - [ ] Subscribes to `selectedWaypoint` and `popupPosition` signals.
-    - [ ] Determines mobile vs desktop via `window.innerWidth` or media query hook.
-    - [ ] Renders `<WaypointPopup>` (desktop) or `<WaypointSheet>` (mobile).
-    - [ ] Handles dismiss logic:
-        - [ ] Click-outside detection (add overlay or document click listener).
-        - [ ] ESC key listener (add/remove on mount/unmount).
-    - [ ] Manages enter/exit animations (CSS transitions or `@preact/signals` for animation state).
+- [x] **5. Popup Container / Controller (`client/src/components/map/WaypointPopupContainer.tsx`)**
+    - [x] Subscribes to `selectedWaypoint` and `popupPosition` signals.
+    - [x] Determines mobile vs desktop via `window.innerWidth` or media query hook.
+    - [x] Renders `<WaypointPopup>` (desktop) or `<WaypointSheet>` (mobile).
+    - [x] Handles dismiss logic:
+        - [x] Click-outside detection (add overlay or document click listener).
+        - [x] ESC key listener (add/remove on mount/unmount).
+    - [x] Manages enter/exit animations (CSS transitions or `@preact/signals` for animation state).
+    - **Bonus:** Also supports clustered waypoints via `ClusterListPopup` and `ClusterListSheet` components.
 
-- [ ] **6. Integration with MapIsland**
-    - [ ] Import and render `<WaypointPopupContainer />` **outside** Konva Stage (as sibling in DOM).
-    - [ ] Wire waypoint click handler (from Story 2.5) to call `selectWaypoint(waypoint, screenX, screenY)`.
-    - [ ] Add event listener to Stage for `dragstart` and `wheel` (zoom) → call `closePopup()`.
-    - [ ] Ensure popup z-index is above map canvas.
-    - [ ] **Map Centering Integration**:
-        - [ ] On waypoint click, calculate pan offset using `calculatePanOffset()`.
-        - [ ] If offset is non-null, animate stage position using Konva `to()` tween.
-        - [ ] Tween duration: ~300ms with easing (e.g., `Konva.Easings.EaseInOut`).
-        - [ ] After pan completes, update popup position if needed (or calculate position post-pan).
+- [x] **6. Integration with MapIsland**
+    - [x] Import and render `<WaypointPopupContainer />` **outside** Konva Stage (as sibling in DOM).
+    - [x] Wire waypoint click handler (from Story 2.5) to call `selectWaypoint(waypoint, screenX, screenY)`.
+    - [x] Add event listener to Stage for `dragstart` and `wheel` (zoom) → call `closePopup()`.
+    - [x] Ensure popup z-index is above map canvas.
+    - [x] **Map Centering Integration**:
+        - [x] On waypoint click, calculate pan offset using `calculatePanOffset()`.
+        - [x] If offset is non-null, animate stage position using Konva `to()` tween.
+        - [x] Tween duration: ~300ms with easing (e.g., `Konva.Easings.EaseInOut`).
+        - [x] After pan completes, update popup position if needed (or calculate position post-pan).
 
-- [ ] **7. Goal Image Loading**
-    - [ ] Fetch goal thumbnail from `/images/goals/thumbs/{image_id}.webp`.
-    - [ ] Implement lazy loading with placeholder (gray box or blurred mini-thumb).
-    - [ ] Handle image load error (show fallback icon).
+- [x] **7. Goal Image Loading**
+    - [x] Fetch goal thumbnail from `/img/thumbs/{image_id}-thumb.webp`. (Path differs slightly from spec)
+    - [x] Implement lazy loading with placeholder (gray box or blurred mini-thumb).
+    - [x] Handle image load error (show fallback icon).
 
-- [ ] **8. Expand to Full Modal**
-    - [ ] Expand button click opens the full goal detail modal (NOT navigation).
-    - [ ] Reuse existing `GoalModal.tsx` component from `client/src/islands/`.
-    - [ ] Pass goal ID to modal; modal fetches full details including description.
-    - [ ] When modal opens, close the popup (or keep popup visible behind modal).
-    - [ ] Modal should have its own close behavior (X button, ESC, click outside).
+- [x] **8. Expand to Full Modal**
+    - [x] Expand button click opens the full goal detail modal (NOT navigation).
+    - [x] Reuse existing `GoalModal.tsx` component from `client/src/islands/`.
+    - [x] Pass goal ID to modal; modal fetches full details including description.
+    - [x] When modal opens, close the popup (or keep popup visible behind modal).
+    - [x] Modal should have its own close behavior (X button, ESC, click outside).
 
-- [ ] **9. Testing**
-    - [ ] **Unit Tests** (`client/src/components/map/WaypointPopup.test.tsx`):
+- [x] **9. Testing**
+    - [x] **Unit Tests** (`client/src/components/map/WaypointPopup.test.tsx`):
         - Test renders waypoint title, distance, image.
         - Test renders special text only when not null.
         - Test close button calls onClose.
         - Test expand button calls onExpand with correct ID.
-    - [ ] **Unit Tests** (`client/src/utils/map-popup-utils.test.ts`):
+    - [x] **Unit Tests** (`client/src/utils/map-popup-utils.test.ts`):
         - Test screen position calculation.
         - Test popup positioning avoids viewport overflow.
         - Test `calculateSafeZoneBounds` returns correct 25% margins.
@@ -172,7 +174,7 @@ so that **I can explore the lore and imagery associated with locations I've visi
         - Test `calculatePanOffset` returns null when already in safe zone.
         - Test `calculatePanOffset` returns correct delta for desktop (marker + popup).
         - Test `calculatePanOffset` returns correct delta for mobile (marker only).
-    - [ ] **Playwright Visual** (`tests/ui/map-popup.spec.js`):
+    - [x] **Playwright Visual** (`tests/ui/map-popup.spec.js`):
         - Snapshot popup on desktop view.
         - Snapshot sheet on mobile viewport.
         - Test ESC key closes popup.

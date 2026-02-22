@@ -25,12 +25,14 @@ import {
   handleLogout,
   handleSessionValidation,
   handleUpdateProfile,
+  handleUpdatePreferences,
   handlePasswordResetRequest,
   handlePasswordReset,
   handleConfirmEmail,
   handleResendConfirmation,
   validateSession
 } from "./auth-handlers";
+import { handleMapPage } from "./map-handlers";
 
 export default {
   async fetch(request, env): Promise<Response> {
@@ -93,6 +95,8 @@ export default {
         return handleSessionValidation(request, env);
       } else if (url.pathname === "/api/profile" && method === "PUT") {
         return handleUpdateProfile(request, env, body);
+      } else if (url.pathname === "/api/user/preferences" && method === "PUT") {
+        return handleUpdatePreferences(request, env, body);
       } else if (url.pathname === "/api/password-reset-request" && method === "POST") {
         return handlePasswordResetRequest(request, env, body);
       } else if (url.pathname === "/api/password-reset" && method === "POST") {
@@ -171,6 +175,10 @@ export default {
         },
       });
     }
+
+    if (url.pathname === "/map") {
+      return handleMapPage(request, env);
+    }
     
     // Main app page - will check auth in JavaScript
     return new Response(renderHtml(), {
@@ -199,6 +207,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/auth/resend-confirmation":
       return ['POST'];
     case "/api/profile":
+    case "/api/user/preferences":
       return ['PUT'];
     default:
       return ['GET'];

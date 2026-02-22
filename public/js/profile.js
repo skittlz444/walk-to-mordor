@@ -7,6 +7,7 @@ async function showProfileModal() {
   // Fetch current user info
   let currentUsername = '';
   let currentEmail = '';
+  let showFutureGoalsUnlocked = true;
   
   try {
     const response = await fetch('/api/session', {
@@ -17,6 +18,7 @@ async function showProfileModal() {
       const data = await response.json();
       currentUsername = data.username || '';
       currentEmail = data.email || '';
+      showFutureGoalsUnlocked = typeof data.showFutureGoalsUnlocked === 'boolean' ? data.showFutureGoalsUnlocked : true;
     }
   } catch (error) {
     console.error('Error fetching user info:', error);
@@ -50,6 +52,17 @@ async function showProfileModal() {
             <input type="email" id="profile-email" value="${escapeHtml(currentEmail)}" placeholder="Enter email" />
             <small class="field-hint">Valid email address</small>
           </div>
+          <div class="form-group toggle-group">
+            <label for="preview-milestones-toggle" class="toggle-label">
+              Preview all milestones
+              <small class="field-hint">Reveal future destinations on your journey</small>
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="preview-milestones-toggle" ${showFutureGoalsUnlocked ? 'checked' : ''} />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div id="preference-status" class="preference-status"></div>
           <div id="profile-error" class="error-message"></div>
           <div id="profile-success" class="success-message"></div>
         </div>
@@ -71,6 +84,51 @@ async function showProfileModal() {
   document.getElementById('logout-modal-btn').addEventListener('click', handleLogoutFromModal);
   document.getElementById('cancel-profile-btn').addEventListener('click', closeProfileModal);
   document.getElementById('close-profile-modal').addEventListener('click', closeProfileModal);
+
+  // Toggle preference listener
+  document.getElementById('preview-milestones-toggle').addEventListener('change', async function(e) {
+    const toggle = e.target;
+    const statusDiv = document.getElementById('preference-status');
+    const newValue = toggle.checked;
+    
+    statusDiv.textContent = 'Saving...';
+    statusDiv.className = 'preference-status saving';
+    
+    try {
+      const response = await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...window.getAuthHeaders()
+        },
+        body: JSON.stringify({ showFutureGoalsUnlocked: newValue })
+      });
+      
+      if (response.ok) {
+        statusDiv.textContent = 'Saved';
+        statusDiv.className = 'preference-status saved';
+        setTimeout(() => { statusDiv.textContent = ''; statusDiv.className = 'preference-status'; }, 1500);
+        
+        // Update global state
+        if (window.userPreferences) {
+          window.userPreferences.showFutureGoalsUnlocked = newValue;
+        }
+        window.dispatchEvent(new CustomEvent('preferenceChanged', {
+          detail: { showFutureGoalsUnlocked: newValue }
+        }));
+      } else {
+        const data = await response.json();
+        statusDiv.textContent = data.error || 'Failed to save';
+        statusDiv.className = 'preference-status error';
+        toggle.checked = !newValue; // Revert toggle
+      }
+    } catch (error) {
+      console.error('Error saving preference:', error);
+      statusDiv.textContent = 'Network error';
+      statusDiv.className = 'preference-status error';
+      toggle.checked = !newValue; // Revert toggle
+    }
+  });
 
   // Close modal when clicking overlay
   modalOverlay.addEventListener('click', function(e) {

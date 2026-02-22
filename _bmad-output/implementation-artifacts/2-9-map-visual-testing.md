@@ -1,6 +1,6 @@
 # Story 2.9: Map Visual Testing
 
-Status: ready-for-dev
+Status: cancelled
 GitHub Issue: #225
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->

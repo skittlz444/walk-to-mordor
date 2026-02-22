@@ -4,7 +4,7 @@ interface NextGoalCardProps {
   goal: Goal;
   currentDistance: number;
   previousDistance: number;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 /**
@@ -32,7 +32,7 @@ export function NextGoalCard({ goal, currentDistance, previousDistance, onClick 
         flexDirection: 'column',
         alignItems: 'center',
         wordBreak: 'break-word',
-        cursor: 'pointer'
+        cursor: onClick ? 'pointer' : 'default'
       }}
     >
       {goal.special && (

@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [preact()],
   resolve: {
     alias: {
-      // Required for react-konva compatibility (future use)
+      // Required for React-compatible libraries (e.g. Konva ecosystem)
       'react': 'preact/compat',
       'react-dom': 'preact/compat',
     },
@@ -18,7 +18,13 @@ export default defineConfig({
       output: {
         entryFileNames: 'islands.js',
         chunkFileNames: 'chunks/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
+        // Use predictable name for CSS (no hash) for server-rendered HTML linking
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name?.endsWith('.css')) {
+            return 'islands.css';
+          }
+          return 'assets/[name]-[hash].[ext]';
+        },
       },
     },
   },

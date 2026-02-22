@@ -1,18 +1,24 @@
 import { render, h } from 'preact';
 import { AuthForms } from './islands/AuthForms';
+import { DrawerIsland } from './islands/DrawerIsland';
 import { GoalModal } from './islands/GoalModal';
+import { MapIsland } from './islands/MapIsland';
 import { NextGoalCard } from './islands/NextGoalCard';
 import { UpcomingGoalCard } from './islands/UpcomingGoalCard';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
   AuthForms,
+  DrawerIsland,
+  MapIsland,
 };
 
 // All islands including those rendered programmatically
 const allIslands = {
   AuthForms,
+  DrawerIsland,
   GoalModal,
+  MapIsland,
   NextGoalCard,
   UpcomingGoalCard,
 };
@@ -45,26 +51,25 @@ window.preactIslands = allIslands;
 function hydrateIslands() {
   // Find all elements with data-island attribute
   const islandElements = document.querySelectorAll('[data-island]');
-  
+
   islandElements.forEach((element) => {
     const islandName = element.getAttribute('data-island') as IslandName;
-    
+
     if (!islandName) {
       console.warn('Island element found without island name:', element);
       return;
     }
 
     const IslandComponent = autoHydratedIslands[islandName];
-    
+
     if (!IslandComponent) {
       console.error(`Island component "${islandName}" not found in registry`);
       return;
     }
 
     // Render the island component into the target element
-    // @ts-expect-error - TypeScript incorrectly infers that these islands require props, but AuthForms accepts none
     render(h(IslandComponent, null), element);
-    
+
     console.log(`✅ Hydrated island: ${islandName}`);
   });
 }

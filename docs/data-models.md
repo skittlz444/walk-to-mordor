@@ -13,6 +13,7 @@ Stores user credentials and profile status.
 - `salt`: TEXT
 - `approved`: INTEGER (0 or 1, for manual approval flows — legacy, superseded by email verification)
 - `email_verified`: INTEGER (0 or 1, default 0 — account inactive until verified via confirmation email)
+- `show_future_goals_unlocked`: INTEGER (0 or 1, default 1 — controls whether future goals display as unlocked/visible or locked/hidden)
 - `created_at`: DATETIME
 - `updated_at`: DATETIME
 
@@ -78,6 +79,7 @@ erDiagram
         string password_hash
         string salt
         int email_verified
+        int show_future_goals_unlocked
     }
     
     sessions {

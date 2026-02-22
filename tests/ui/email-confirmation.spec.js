@@ -60,10 +60,12 @@ test.describe('Email Confirmation UI', () => {
         
         // If we are on dashboard (first user case), logout
         if (page.url() === '/' || page.url().endsWith('/')) {
-             // Try to find profile icon and logout
-             const profileBtn = page.locator('.profile-icon');
-             if (await profileBtn.isVisible()) {
-                 await profileBtn.click();
+             // Try to open drawer and logout via profile modal
+             const menuBtn = page.locator('.menu-icon');
+             if (await menuBtn.isVisible()) {
+                 await menuBtn.click();
+                 await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+                 await page.click('.drawer-profile');
                  // Assuming logout is in profile modal
                  // In profile.spec.js: should have logout button in profile modal
                  await page.click('button:has-text("Logout")');

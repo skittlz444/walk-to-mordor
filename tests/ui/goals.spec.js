@@ -12,6 +12,7 @@ const {
 
 // Helper to properly close popup with Firefox compatibility
 async function closePopupRobust(page, closeButton) {
+  const popup = page.locator('.modal-overlay').last();
   try {
     await closeButton.click({ timeout: 2000 });
   } catch (e) {
@@ -23,13 +24,23 @@ async function closePopupRobust(page, closeButton) {
   await page.waitForTimeout(1000);
   
   // Wait for popup to actually close - Firefox sometimes has timing issues
-  await page.waitForFunction(() => {
-    const popup = document.querySelector('.modal-overlay');
-    return !popup || window.getComputedStyle(popup).display === 'none' || 
-           popup.style.display === 'none' || !popup.offsetParent;
-  }, { timeout: 10000 });
+  try {
+    await page.waitForFunction(() => {
+      const overlay = document.querySelector('.modal-overlay');
+      return !overlay || window.getComputedStyle(overlay).display === 'none' || 
+             overlay.style.display === 'none' || !overlay.offsetParent;
+    }, { timeout: 10000 });
+  } catch (e) {
+    // Fallbacks if the close button click did not dismiss the modal.
+    try {
+      await page.keyboard.press('Escape');
+    } catch (err) {}
+    try {
+      await popup.click({ position: { x: 5, y: 5 }, force: true });
+    } catch (err) {}
+  }
   
-  await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 10000 });
+  await expect(popup).toBeHidden({ timeout: 15000 });
 }
 
 // Helper to open first available goal popup

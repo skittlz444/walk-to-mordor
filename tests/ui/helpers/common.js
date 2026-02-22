@@ -1,6 +1,8 @@
 const { test: base, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./cleanup');
 
+const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
+
 // Extend test with unique auth token fixture
 const test = base.extend({
   authToken: async ({ }, use) => {
@@ -9,15 +11,15 @@ const test = base.extend({
     const token = `TEST_MOCK_TOKEN_${username}`;
     await use(token);
     // Cleanup after test
-    await cleanupAllTestData('http://localhost:8787', token);
+    await cleanupAllTestData(BASE_URL, token);
   },
 });
 
 async function setupTest({ page, authToken }) {
     // Ensure clean state for this user
-    await cleanupAllTestData('http://localhost:8787', authToken);
+    await cleanupAllTestData(BASE_URL, authToken);
 
-    await page.goto('http://localhost:8787/');
+    await page.goto(`${BASE_URL}/`);
     
     // Set mock session token for auth
     await page.evaluate((token) => {
@@ -25,7 +27,7 @@ async function setupTest({ page, authToken }) {
     }, authToken);
     
     // Navigate back to root to apply auth state
-    await page.goto('http://localhost:8787/');
+    await page.goto(`${BASE_URL}/`);
     
     // Wait for the calendar to be initialized (proof of successful login and app load)
     // This helps avoid race conditions where tests try to interact with elements before the app is ready
@@ -132,6 +134,15 @@ async function createTestEvent(page, distance, dateInfo) {
     
     const cell = await selectCalendarDate(page, testDateInfo);
     
+    // Get the actual date from the selected cell (may differ from testDateInfo if fallback was used)
+    const actualDate = await cell.getAttribute('data-date');
+    const actualDateInfo = actualDate ? {
+      date: actualDate,
+      day: parseInt(actualDate.split('-')[2], 10),
+      month: parseInt(actualDate.split('-')[1], 10),
+      year: parseInt(actualDate.split('-')[0], 10)
+    } : testDateInfo;
+    
     try {
       await cell.click({ force: true, timeout: 10000 });
     } catch (error) {
@@ -165,7 +176,7 @@ async function createTestEvent(page, distance, dateInfo) {
         // Fallback or ignore if already gone
     }
     
-    return { distance: testDistance, dateInfo: testDateInfo };
+    return { distance: testDistance, dateInfo: actualDateInfo };
 }
 
 module.exports = {

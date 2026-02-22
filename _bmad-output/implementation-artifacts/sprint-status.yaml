@@ -57,16 +57,16 @@ development_status:
   # EPIC 2: Interactive Journey Map (#151)
   # ============================================
   epic-2: in-progress
-  2-1-map-page-shell-navigation: ready-for-dev
-  2-2-map-canvas-base-image-layer: ready-for-dev
-  2-3-journey-path-rendering: ready-for-dev
-  2-4-current-position-marker: ready-for-dev
-  2-5-waypoint-markers: ready-for-dev
-  2-6-waypoint-detail-popup: ready-for-dev
-  2-7-map-state-management: ready-for-dev
-  2-8-map-walk-logging: ready-for-dev
-  2-9-map-visual-testing: ready-for-dev
-  2-10-user-goal-visibility-preference: ready-for-dev
+  2-1-map-page-shell-navigation: done
+  2-2-map-canvas-base-image-layer: done
+  2-3-journey-path-rendering: done
+  2-4-current-position-marker: done
+  2-5-waypoint-markers: done
+  2-6-waypoint-detail-popup: done
+  2-7-map-state-management: done
+  2-8-map-walk-logging: done
+  2-9-map-visual-testing: cancelled
+  2-10-user-goal-visibility-preference: done
   epic-2-retrospective: optional
 
   # ============================================

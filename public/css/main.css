@@ -107,7 +107,7 @@ h1 {
   font-weight: bold;
   text-shadow: 2px 2px 8px var(--border-gray);
   margin: 0;
-  padding: 0 70px; /* Prevent overlap with profile icon on mobile */
+  padding: 0 70px; /* Prevent overlap with menu icon on mobile */
 }
 
 #total-distance-value {
@@ -120,7 +120,7 @@ h1 {
 }
 
 
-/* Profile icon styles - circular avatar button */
+/* Menu icon styles - circular button */
 .header-controls {
   position: absolute;
   top: 1rem;
@@ -128,7 +128,7 @@ h1 {
   z-index: 10;
 }
 
-.profile-icon {
+.menu-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,7 +147,7 @@ h1 {
   font-family: inherit;
 }
 
-.profile-icon:hover {
+.menu-icon:hover {
   background: var(--accent-dark-blue);
   border-color: var(--accent-teal);
   color: var(--text-primary);
@@ -155,11 +155,11 @@ h1 {
   box-shadow: 0 4px 12px var(--gold-glow-light);
 }
 
-.profile-icon:active {
+.menu-icon:active {
   transform: scale(0.98);
 }
 
-.profile-icon:focus {
+.menu-icon:focus {
   outline: 2px solid var(--accent-teal);
   outline-offset: 2px;
 }
@@ -172,7 +172,7 @@ h1 {
   
   h1 {
     font-size: 1.8em;
-    padding: 0 60px; /* Ensure space for profile icon */
+    padding: 0 60px; /* Ensure space for menu icon */
   }
   
   .header-controls {
@@ -180,7 +180,7 @@ h1 {
     right: 0.75rem;
   }
   
-  .profile-icon {
+  .menu-icon {
     width: 40px;
     height: 40px;
     font-size: 1.1rem;
