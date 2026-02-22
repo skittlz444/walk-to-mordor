@@ -80,6 +80,7 @@ window.userPreferences = window.userPreferences || {
   if (window.location.pathname === '/') {
     try {
       if (localStorage.getItem('defaultViewMap') === 'true') {
+        window.__defaultViewRedirecting = true;
         window.location.replace('/map');
       }
     } catch (e) { /* localStorage may be unavailable */ }
@@ -111,8 +112,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         try {
           localStorage.setItem('defaultViewMap', sessionData.defaultViewMap ? 'true' : 'false');
         } catch (e) { /* localStorage may be unavailable */ }
-        // Redirect if on journey page and default view is map
-        if (sessionData.defaultViewMap && window.location.pathname === '/') {
+        // Redirect if on journey page, default view is map, and not already redirecting
+        if (sessionData.defaultViewMap && window.location.pathname === '/' && !window.__defaultViewRedirecting) {
           window.location.replace('/map');
           return;
         }
