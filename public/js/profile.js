@@ -8,6 +8,7 @@ async function showProfileModal() {
   let currentUsername = '';
   let currentEmail = '';
   let showFutureGoalsUnlocked = true;
+  let defaultViewMap = false;
   
   try {
     const response = await fetch('/api/session', {
@@ -19,6 +20,7 @@ async function showProfileModal() {
       currentUsername = data.username || '';
       currentEmail = data.email || '';
       showFutureGoalsUnlocked = typeof data.showFutureGoalsUnlocked === 'boolean' ? data.showFutureGoalsUnlocked : true;
+      defaultViewMap = typeof data.defaultViewMap === 'boolean' ? data.defaultViewMap : false;
     }
   } catch (error) {
     console.error('Error fetching user info:', error);
@@ -59,6 +61,16 @@ async function showProfileModal() {
             </label>
             <label class="toggle-switch">
               <input type="checkbox" id="preview-milestones-toggle" ${showFutureGoalsUnlocked ? 'checked' : ''} />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="form-group toggle-group">
+            <label for="default-view-toggle" class="toggle-label">
+              Default to map view
+              <small class="field-hint">Open the map instead of the journey page on launch</small>
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="default-view-toggle" ${defaultViewMap ? 'checked' : ''} />
               <span class="toggle-slider"></span>
             </label>
           </div>
@@ -115,6 +127,54 @@ async function showProfileModal() {
         }
         window.dispatchEvent(new CustomEvent('preferenceChanged', {
           detail: { showFutureGoalsUnlocked: newValue }
+        }));
+      } else {
+        const data = await response.json();
+        statusDiv.textContent = data.error || 'Failed to save';
+        statusDiv.className = 'preference-status error';
+        toggle.checked = !newValue; // Revert toggle
+      }
+    } catch (error) {
+      console.error('Error saving preference:', error);
+      statusDiv.textContent = 'Network error';
+      statusDiv.className = 'preference-status error';
+      toggle.checked = !newValue; // Revert toggle
+    }
+  });
+
+  // Default view toggle listener
+  document.getElementById('default-view-toggle').addEventListener('change', async function(e) {
+    const toggle = e.target;
+    const statusDiv = document.getElementById('preference-status');
+    const newValue = toggle.checked;
+    
+    statusDiv.textContent = 'Saving...';
+    statusDiv.className = 'preference-status saving';
+    
+    try {
+      const response = await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...window.getAuthHeaders()
+        },
+        body: JSON.stringify({ defaultViewMap: newValue })
+      });
+      
+      if (response.ok) {
+        statusDiv.textContent = 'Saved';
+        statusDiv.className = 'preference-status saved';
+        setTimeout(() => { statusDiv.textContent = ''; statusDiv.className = 'preference-status'; }, 1500);
+        
+        // Update global state and localStorage
+        if (window.userPreferences) {
+          window.userPreferences.defaultViewMap = newValue;
+        }
+        try {
+          localStorage.setItem('defaultViewMap', newValue ? 'true' : 'false');
+        } catch (e) { /* localStorage may be unavailable */ }
+        window.dispatchEvent(new CustomEvent('preferenceChanged', {
+          detail: { defaultViewMap: newValue }
         }));
       } else {
         const data = await response.json();

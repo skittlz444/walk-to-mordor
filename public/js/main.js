@@ -61,6 +61,7 @@ async function logout() {
   }
 
   clearSession();
+  try { localStorage.removeItem('defaultViewMap'); } catch (e) { /* ignore */ }
   window.location.href = '/login';
 }
 
@@ -68,10 +69,22 @@ async function logout() {
 window.getAuthHeaders = getAuthHeaders;
 window.logout = logout;
 
-// Initialize global user preferences (default: unlocked)
+// Initialize global user preferences (default: unlocked, journey view)
 window.userPreferences = window.userPreferences || {
-  showFutureGoalsUnlocked: true
+  showFutureGoalsUnlocked: true,
+  defaultViewMap: false
 };
+
+// Fast redirect for default view preference (before DOM loads)
+(function() {
+  if (window.location.pathname === '/') {
+    try {
+      if (localStorage.getItem('defaultViewMap') === 'true') {
+        window.location.replace('/map');
+      }
+    } catch (e) { /* localStorage may be unavailable */ }
+  }
+})();
 
 document.addEventListener("DOMContentLoaded", async function () {
   // Check authentication before initializing app
@@ -92,6 +105,17 @@ document.addEventListener("DOMContentLoaded", async function () {
       const sessionData = await sessionResponse.json();
       if (typeof sessionData.showFutureGoalsUnlocked === 'boolean') {
         window.userPreferences.showFutureGoalsUnlocked = sessionData.showFutureGoalsUnlocked;
+      }
+      if (typeof sessionData.defaultViewMap === 'boolean') {
+        window.userPreferences.defaultViewMap = sessionData.defaultViewMap;
+        try {
+          localStorage.setItem('defaultViewMap', sessionData.defaultViewMap ? 'true' : 'false');
+        } catch (e) { /* localStorage may be unavailable */ }
+        // Redirect if on journey page and default view is map
+        if (sessionData.defaultViewMap && window.location.pathname === '/') {
+          window.location.replace('/map');
+          return;
+        }
       }
     }
   } catch (prefError) {
