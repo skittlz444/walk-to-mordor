@@ -17,6 +17,18 @@ function cleanupEscKeyListener() {
   }
 }
 
+function unmountAndRemoveModal(modalOverlay) {
+  const preact = window.preact;
+  if (preact && preact.render) {
+    try {
+      preact.render(null, modalOverlay);
+    } catch (e) {
+      // Ignore unmount errors; removing the container is sufficient cleanup.
+    }
+  }
+  modalOverlay.remove();
+}
+
 // Callback hooks for external integration (e.g., Map island)
 // Called after successful save/update/delete operations
 let onWalkSavedCallback = null;
@@ -84,15 +96,6 @@ function showDistanceModal(event, date = null) {
   // Track if save/delete was triggered (to distinguish from dismiss)
   let actionTaken = false;
 
-  function unmountAndRemoveModal() {
-    try {
-      render(null, modalOverlay);
-    } catch (e) {
-      // Ignore unmount errors; removing the container is sufficient cleanup.
-    }
-    modalOverlay.remove();
-  }
-
   // Helper function to add to current distance
   function addToDistance(amount) {
     const input = document.getElementById('distance-input');
@@ -105,7 +108,7 @@ function showDistanceModal(event, date = null) {
   function closeModal(wasDismissed = true) {
     // Clean up ESC key listener
     cleanupEscKeyListener();
-    unmountAndRemoveModal();
+    unmountAndRemoveModal(modalOverlay);
     // Only call dismiss callback if no action was taken (user cancelled)
     if (wasDismissed && !actionTaken && onDismissCallback) {
       onDismissCallback();
@@ -260,15 +263,7 @@ function handleSaveDistance() {
   cleanupEscKeyListener();
   const modalOverlay = document.querySelector('.modal-overlay');
   if (modalOverlay) {
-    const preact = window.preact;
-    if (preact && preact.render) {
-      try {
-        preact.render(null, modalOverlay);
-      } catch (e) {
-        // Ignore unmount errors; removing the container is sufficient cleanup.
-      }
-    }
-    modalOverlay.remove();
+    unmountAndRemoveModal(modalOverlay);
   }
 }
 
@@ -298,15 +293,7 @@ function handleDeleteDistance() {
   cleanupEscKeyListener();
   const modalOverlay = document.querySelector('.modal-overlay');
   if (modalOverlay) {
-    const preact = window.preact;
-    if (preact && preact.render) {
-      try {
-        preact.render(null, modalOverlay);
-      } catch (e) {
-        // Ignore unmount errors; removing the container is sufficient cleanup.
-      }
-    }
-    modalOverlay.remove();
+    unmountAndRemoveModal(modalOverlay);
   }
 }
 
