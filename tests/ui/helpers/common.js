@@ -26,7 +26,7 @@ async function setupTest({ page, authToken }) {
       localStorage.setItem('sessionToken', token);
     }, authToken);
     
-    // Navigate back to root to apply auth state
+    // Navigate back to the journey page to apply auth state
     await page.goto(`${BASE_URL}/journey`);
     
     // Wait for the calendar to be initialized (proof of successful login and app load)
