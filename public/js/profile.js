@@ -8,6 +8,7 @@ async function showProfileModal() {
   let currentUsername = '';
   let currentEmail = '';
   let showFutureGoalsUnlocked = true;
+  let defaultViewMap = false;
   
   try {
     const response = await fetch('/api/session', {
@@ -19,6 +20,7 @@ async function showProfileModal() {
       currentUsername = data.username || '';
       currentEmail = data.email || '';
       showFutureGoalsUnlocked = typeof data.showFutureGoalsUnlocked === 'boolean' ? data.showFutureGoalsUnlocked : true;
+      defaultViewMap = typeof data.defaultViewMap === 'boolean' ? data.defaultViewMap : false;
     }
   } catch (error) {
     console.error('Error fetching user info:', error);
@@ -62,6 +64,16 @@ async function showProfileModal() {
               <span class="toggle-slider"></span>
             </label>
           </div>
+          <div class="form-group toggle-group">
+            <label for="default-view-toggle" class="toggle-label">
+              Default to map view
+              <small class="field-hint">Open the map instead of the journey page on launch</small>
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="default-view-toggle" ${defaultViewMap ? 'checked' : ''} />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
           <div id="preference-status" class="preference-status"></div>
           <div id="profile-error" class="error-message"></div>
           <div id="profile-success" class="success-message"></div>
@@ -85,15 +97,15 @@ async function showProfileModal() {
   document.getElementById('cancel-profile-btn').addEventListener('click', closeProfileModal);
   document.getElementById('close-profile-modal').addEventListener('click', closeProfileModal);
 
-  // Toggle preference listener
-  document.getElementById('preview-milestones-toggle').addEventListener('change', async function(e) {
-    const toggle = e.target;
+  /**
+   * Save a single preference toggle via the API.
+   * Handles status display, error rollback, and event dispatch.
+   */
+  async function savePreference(toggle, preferenceKey, newValue) {
     const statusDiv = document.getElementById('preference-status');
-    const newValue = toggle.checked;
-    
     statusDiv.textContent = 'Saving...';
     statusDiv.className = 'preference-status saving';
-    
+
     try {
       const response = await fetch('/api/user/preferences', {
         method: 'PUT',
@@ -101,20 +113,28 @@ async function showProfileModal() {
           'Content-Type': 'application/json',
           ...window.getAuthHeaders()
         },
-        body: JSON.stringify({ showFutureGoalsUnlocked: newValue })
+        body: JSON.stringify({ [preferenceKey]: newValue })
       });
-      
+
       if (response.ok) {
         statusDiv.textContent = 'Saved';
         statusDiv.className = 'preference-status saved';
         setTimeout(() => { statusDiv.textContent = ''; statusDiv.className = 'preference-status'; }, 1500);
-        
+
         // Update global state
         if (window.userPreferences) {
-          window.userPreferences.showFutureGoalsUnlocked = newValue;
+          window.userPreferences[preferenceKey] = newValue;
         }
+
+        // Persist defaultViewMap to localStorage for fast redirect
+        if (preferenceKey === 'defaultViewMap') {
+          try {
+            localStorage.setItem('defaultViewMap', newValue ? 'true' : 'false');
+          } catch (e) { /* localStorage may be unavailable */ }
+        }
+
         window.dispatchEvent(new CustomEvent('preferenceChanged', {
-          detail: { showFutureGoalsUnlocked: newValue }
+          detail: { [preferenceKey]: newValue }
         }));
       } else {
         const data = await response.json();
@@ -128,6 +148,16 @@ async function showProfileModal() {
       statusDiv.className = 'preference-status error';
       toggle.checked = !newValue; // Revert toggle
     }
+  }
+
+  // Toggle preference listener
+  document.getElementById('preview-milestones-toggle').addEventListener('change', function(e) {
+    savePreference(e.target, 'showFutureGoalsUnlocked', e.target.checked);
+  });
+
+  // Default view toggle listener
+  document.getElementById('default-view-toggle').addEventListener('change', function(e) {
+    savePreference(e.target, 'defaultViewMap', e.target.checked);
   });
 
   // Close modal when clicking overlay

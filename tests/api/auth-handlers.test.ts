@@ -1546,6 +1546,90 @@ describe('Auth Handlers', () => {
       const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: false });
       expect(response.status).toBe(500);
     });
+
+    it('should update defaultViewMap to true successfully', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
+      mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: true });
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.defaultViewMap).toBe(true);
+    });
+
+    it('should update defaultViewMap to false successfully', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
+      mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: false });
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.defaultViewMap).toBe(false);
+    });
+
+    it('should return 400 if defaultViewMap is not a boolean', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
+      const mockBind = jest.fn().mockReturnValue({ all: mockAll });
+      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: 'yes' });
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('boolean');
+    });
+
+    it('should update both preferences at once', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun, all: mockAll });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
+      mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
+
+      const response = await handleUpdatePreferences(mockRequest, mockEnv, {
+        showFutureGoalsUnlocked: false,
+        defaultViewMap: true
+      });
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.showFutureGoalsUnlocked).toBe(false);
+      expect(data.defaultViewMap).toBe(true);
+    });
   });
 
   describe('handleSessionValidation - showFutureGoalsUnlocked', () => {
@@ -1567,7 +1651,8 @@ describe('Auth Handlers', () => {
           email: 'test@example.com',
           expires_at: 'future-date',
           approved: 1,
-          show_future_goals_unlocked: 1
+          show_future_goals_unlocked: 1,
+          default_view_map: 0
         }]
       });
 
@@ -1595,7 +1680,8 @@ describe('Auth Handlers', () => {
           email: 'test@example.com',
           expires_at: 'future-date',
           approved: 1,
-          show_future_goals_unlocked: 0
+          show_future_goals_unlocked: 0,
+          default_view_map: 0
         }]
       });
 
@@ -1616,13 +1702,93 @@ describe('Auth Handlers', () => {
       mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
       mockBind.mockReturnValue({ all: mockAll });
 
-      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1 }] });
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 0 }] });
 
       const response = await handleSessionValidation(mockRequest, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
       expect(data.showFutureGoalsUnlocked).toBe(true);
+    });
+  });
+
+  describe('handleSessionValidation - defaultViewMap', () => {
+    it('should include defaultViewMap false (default) in session response', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer valid-token');
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 'valid-token',
+          user_id: 1,
+          username: 'testuser',
+          email: 'test@example.com',
+          expires_at: 'future-date',
+          approved: 1,
+          show_future_goals_unlocked: 1,
+          default_view_map: 0
+        }]
+      });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.defaultViewMap).toBe(false);
+    });
+
+    it('should include defaultViewMap true in session response', async () => {
+      mockRequest.headers.get.mockReturnValue('Bearer valid-token');
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      mockAll.mockResolvedValueOnce({
+        results: [{
+          id: 'valid-token',
+          user_id: 1,
+          username: 'testuser',
+          email: 'test@example.com',
+          expires_at: 'future-date',
+          approved: 1,
+          show_future_goals_unlocked: 1,
+          default_view_map: 1
+        }]
+      });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.defaultViewMap).toBe(true);
+    });
+
+    it('should include defaultViewMap in mock auth response', async () => {
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll });
+      mockBind.mockReturnValue({ all: mockAll });
+
+      mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 1 }] });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.defaultViewMap).toBe(true);
     });
   });
 });

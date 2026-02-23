@@ -19,15 +19,15 @@ async function setupTest({ page, authToken }) {
     // Ensure clean state for this user
     await cleanupAllTestData(BASE_URL, authToken);
 
-    await page.goto(`${BASE_URL}/`);
+    await page.goto(`${BASE_URL}/journey`);
     
     // Set mock session token for auth
     await page.evaluate((token) => {
       localStorage.setItem('sessionToken', token);
     }, authToken);
     
-    // Navigate back to root to apply auth state
-    await page.goto(`${BASE_URL}/`);
+    // Navigate back to the journey page to apply auth state
+    await page.goto(`${BASE_URL}/journey`);
     
     // Wait for the calendar to be initialized (proof of successful login and app load)
     // This helps avoid race conditions where tests try to interact with elements before the app is ready

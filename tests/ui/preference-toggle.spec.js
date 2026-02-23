@@ -49,11 +49,11 @@ test.describe('User Goal Visibility Preference', () => {
       await openProfileFromDrawer(page);
 
       // Toggle switch container should be visible (the <input> itself is hidden by toggle-switch CSS)
-      const toggleSwitch = page.locator('.toggle-switch');
+      const toggleSwitch = page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-switch');
       await expect(toggleSwitch).toBeVisible();
 
       // Label should be present
-      await expect(page.locator('.toggle-label')).toContainText('Preview all milestones');
+      await expect(page.locator('label[for="preview-milestones-toggle"]')).toContainText('Preview all milestones');
 
       // Default should be checked (unlocked) — .toBeChecked() works on hidden inputs
       const toggle = page.locator('#preview-milestones-toggle');
@@ -73,7 +73,7 @@ test.describe('User Goal Visibility Preference', () => {
       );
 
       // Click the visible toggle slider to uncheck (the <input> is hidden by toggle-switch CSS)
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
 
       const response = await responsePromise;
       expect(response.status()).toBe(200);
@@ -101,7 +101,7 @@ test.describe('User Goal Visibility Preference', () => {
       });
 
       // Click the visible toggle slider to uncheck
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
 
       // Wait for error status
       const statusDiv = page.locator('#preference-status');
@@ -124,7 +124,7 @@ test.describe('User Goal Visibility Preference', () => {
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
         { timeout: 10000 }
       );
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await responsePromise;
 
       // Close modal
@@ -146,7 +146,7 @@ test.describe('User Goal Visibility Preference', () => {
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
         { timeout: 10000 }
       );
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await restorePromise;
     });
 
@@ -170,7 +170,7 @@ test.describe('User Goal Visibility Preference', () => {
         { timeout: 10000 }
       );
       // Click the visible toggle slider to uncheck
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await responsePromise;
 
       // Check that the event was dispatched
@@ -185,7 +185,7 @@ test.describe('User Goal Visibility Preference', () => {
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
         { timeout: 10000 }
       );
-      await page.locator('.toggle-slider').click();
+      await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await restorePromise;
     });
   });
@@ -278,12 +278,207 @@ test.describe('User Goal Visibility Preference', () => {
       expect(typeof sessionData.showFutureGoalsUnlocked).toBe('boolean');
     });
 
+    test('session should include defaultViewMap field', async ({ page }) => {
+      const authToken = await page.evaluate(() => localStorage.getItem('sessionToken'));
+      const sessionData = await page.evaluate(async (token) => {
+        const res = await fetch('/api/session', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        return res.json();
+      }, authToken);
+
+      expect(typeof sessionData.defaultViewMap).toBe('boolean');
+    });
+
     test('window.userPreferences should be initialized from session', async ({ page }) => {
       await page.waitForLoadState('networkidle');
 
       const prefs = await page.evaluate(() => window.userPreferences);
       expect(prefs).toBeDefined();
       expect(typeof prefs.showFutureGoalsUnlocked).toBe('boolean');
+      expect(typeof prefs.defaultViewMap).toBe('boolean');
+    });
+  });
+
+  test.describe('Default View Toggle', () => {
+    test('should display default view toggle in profile modal', async ({ page }) => {
+      await openProfileFromDrawer(page);
+
+      // Toggle switch container should be visible
+      const toggleSwitches = page.locator('.toggle-switch');
+      const count = await toggleSwitches.count();
+      expect(count).toBeGreaterThanOrEqual(2);
+
+      // Label should be present
+      await expect(page.locator('label[for="default-view-toggle"]')).toContainText('Default to map view');
+
+      // Default should be unchecked (journey view)
+      const toggle = page.locator('#default-view-toggle');
+      await expect(toggle).not.toBeChecked();
+    });
+
+    test('should toggle default view preference and persist via API', async ({ page }) => {
+      await openProfileFromDrawer(page);
+
+      const toggle = page.locator('#default-view-toggle');
+      await expect(toggle).not.toBeChecked();
+
+      // Listen for API call
+      const responsePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+
+      // Click the toggle slider (second one in the modal)
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+
+      const response = await responsePromise;
+      expect(response.status()).toBe(200);
+      const data = await response.json();
+      expect(data.defaultViewMap).toBe(true);
+
+      // Status should show "Saved" briefly
+      const statusDiv = page.locator('#preference-status');
+      await expect(statusDiv).toHaveText('Saved', { timeout: 5000 });
+
+      // Restore default (toggle back OFF) for clean state
+      const restorePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await restorePromise;
+    });
+
+    test('should persist default view preference across navigation', async ({ page }) => {
+      await openProfileFromDrawer(page);
+
+      const toggle = page.locator('#default-view-toggle');
+
+      // Toggle ON
+      const responsePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await responsePromise;
+
+      // Close modal
+      await closePopupRobust(page, page.locator('#close-profile-modal'));
+
+      // Reload page (navigate to map since default view is now map)
+      await page.goto(BASE_URL + '/map');
+      await page.waitForSelector('header', { timeout: 10000 });
+
+      // Open profile modal on map page
+      await openProfileFromDrawer(page);
+
+      // Toggle should still be checked
+      const toggleAfterReload = page.locator('#default-view-toggle');
+      await expect(toggleAfterReload).toBeChecked({ timeout: 5000 });
+
+      // Restore default (toggle back OFF) for clean state
+      const restorePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await restorePromise;
+    });
+
+    test('root should follow preference while /journey remains directly accessible', async ({ page }) => {
+      await openProfileFromDrawer(page);
+
+      const enablePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await enablePromise;
+
+      await closePopupRobust(page, page.locator('#close-profile-modal'));
+
+      // Root should apply default-map preference.
+      await page.goto(BASE_URL + '/');
+      await expect(page).toHaveURL(/\/map$/);
+
+      // Journey route should remain accessible explicitly.
+      await page.goto(BASE_URL + '/journey');
+      await page.waitForSelector('header', { timeout: 10000 });
+      await expect(page).toHaveURL(/\/journey$/);
+
+      await openProfileFromDrawer(page);
+      const restorePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await restorePromise;
+    });
+
+    test('should revert default view toggle on API failure', async ({ page }) => {
+      await openProfileFromDrawer(page);
+
+      const toggle = page.locator('#default-view-toggle');
+      await expect(toggle).not.toBeChecked();
+
+      // Intercept API to simulate failure
+      await page.route('**/api/user/preferences', (route) => {
+        route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Server error' }),
+        });
+      });
+
+      // Click the toggle
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+
+      // Wait for error status
+      const statusDiv = page.locator('#preference-status');
+      await expect(statusDiv).toHaveClass(/error/, { timeout: 5000 });
+
+      // Toggle should revert back to unchecked
+      await expect(toggle).not.toBeChecked({ timeout: 5000 });
+
+      // Clean up route
+      await page.unroute('**/api/user/preferences');
+    });
+
+    test('should dispatch preferenceChanged event with defaultViewMap when toggled', async ({ page }) => {
+      // Set up event listener before opening modal
+      await page.evaluate(() => {
+        window.__preferenceEventFired = false;
+        window.__preferenceEventDetail = null;
+        window.addEventListener('preferenceChanged', (e) => {
+          window.__preferenceEventFired = true;
+          window.__preferenceEventDetail = e.detail;
+        });
+      });
+
+      await openProfileFromDrawer(page);
+
+      const responsePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await responsePromise;
+
+      // Check that the event was dispatched
+      const eventFired = await page.evaluate(() => window.__preferenceEventFired);
+      expect(eventFired).toBe(true);
+
+      const eventDetail = await page.evaluate(() => window.__preferenceEventDetail);
+      expect(eventDetail).toEqual({ defaultViewMap: true });
+
+      // Restore default
+      const restorePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await restorePromise;
     });
   });
 });

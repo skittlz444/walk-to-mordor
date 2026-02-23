@@ -248,7 +248,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       
       // Check if user exists
       let { results } = await env.DB.prepare(
-        'SELECT id, username, email, approved, show_future_goals_unlocked FROM users WHERE username = ?'
+        'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map FROM users WHERE username = ?'
       ).bind(username).all();
 
       let user;
@@ -263,7 +263,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         
         // Fetch the created user to ensure we have the correct ID
         const createdUser = await env.DB.prepare(
-          'SELECT id, username, email, approved, show_future_goals_unlocked FROM users WHERE username = ?'
+          'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map FROM users WHERE username = ?'
         ).bind(username).first();
         
         user = createdUser;
@@ -276,6 +276,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         username: user.username,
         email: user.email,
         showFutureGoalsUnlocked: user.show_future_goals_unlocked === 1,
+        defaultViewMap: user.default_view_map === 1,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       }, 200);
     } catch (error: any) {
@@ -286,7 +287,7 @@ export async function handleSessionValidation(request: Request, env: any) {
 
   try {
     const { results } = await env.DB.prepare(
-      'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved, u.show_future_goals_unlocked FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
+      'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved, u.show_future_goals_unlocked, u.default_view_map FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
     ).bind(sessionId).all();
 
     if (results.length === 0) {
@@ -312,6 +313,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       username: session.username,
       email: session.email,
       showFutureGoalsUnlocked: session.show_future_goals_unlocked === 1,
+      defaultViewMap: session.default_view_map === 1,
       expiresAt: session.expires_at
     }, 200);
   } catch (error: any) {
@@ -515,7 +517,7 @@ export async function handleUpdateProfile(request: Request, env: any, body: any)
 }
 
 /**
- * Handle user preferences update (e.g., goal visibility)
+ * Handle user preferences update (e.g., goal visibility, default view)
  */
 export async function handleUpdatePreferences(request: Request, env: any, body: any) {
   // Validate session
@@ -524,24 +526,49 @@ export async function handleUpdatePreferences(request: Request, env: any, body: 
     return sessionValidation.error;
   }
 
-  const { showFutureGoalsUnlocked } = body || {};
+  const { showFutureGoalsUnlocked, defaultViewMap } = body || {};
 
-  // Validate input: showFutureGoalsUnlocked must be a boolean
-  if (typeof showFutureGoalsUnlocked !== 'boolean') {
+  // At least one preference must be provided
+  const hasShowFutureGoals = typeof showFutureGoalsUnlocked !== 'undefined';
+  const hasDefaultView = typeof defaultViewMap !== 'undefined';
+
+  if (!hasShowFutureGoals && !hasDefaultView) {
+    return createErrorResponse('At least one preference must be provided', 400);
+  }
+
+  // Validate types for provided preferences
+  if (hasShowFutureGoals && typeof showFutureGoalsUnlocked !== 'boolean') {
     return createErrorResponse('Invalid input: showFutureGoalsUnlocked must be a boolean', 400);
+  }
+  if (hasDefaultView && typeof defaultViewMap !== 'boolean') {
+    return createErrorResponse('Invalid input: defaultViewMap must be a boolean', 400);
   }
 
   try {
     const userId = sessionValidation.userId;
-    const dbValue = showFutureGoalsUnlocked ? 1 : 0;
+    const updates: string[] = [];
+    const values: (number | string)[] = [];
 
-    await env.DB.prepare(
-      'UPDATE users SET show_future_goals_unlocked = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(dbValue, userId).run();
+    if (hasShowFutureGoals) {
+      updates.push('show_future_goals_unlocked = ?');
+      values.push(showFutureGoalsUnlocked ? 1 : 0);
+    }
+    if (hasDefaultView) {
+      updates.push('default_view_map = ?');
+      values.push(defaultViewMap ? 1 : 0);
+    }
 
-    return createSuccessResponse({
-      showFutureGoalsUnlocked
-    }, 200);
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(userId);
+
+    const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+    await env.DB.prepare(query).bind(...values).run();
+
+    const response: Record<string, boolean> = {};
+    if (hasShowFutureGoals) response.showFutureGoalsUnlocked = showFutureGoalsUnlocked;
+    if (hasDefaultView) response.defaultViewMap = defaultViewMap;
+
+    return createSuccessResponse(response, 200);
   } catch (error: any) {
     console.error('Database error during preferences update:', error);
     return createErrorResponse('Internal server error during preferences update', 500);

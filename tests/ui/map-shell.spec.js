@@ -23,14 +23,16 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(page.locator('.drawer-profile')).toBeVisible();
 
     await page.click('.drawer-link:has-text("Journey")');
-    await page.waitForURL(/\/(login)?$/);
+    await page.waitForURL((url) => {
+      return url.pathname.endsWith('/journey') || url.pathname.endsWith('/login');
+    });
 
     if (page.url().endsWith('/login')) {
       await page.evaluate((token) => {
         localStorage.setItem('sessionToken', token);
       }, authToken);
-      await page.goto(`${BASE_URL}/`);
-      await page.waitForURL('**/');
+      await page.goto(`${BASE_URL}/journey`);
+      await page.waitForURL('**/journey');
     }
 
     await page.click('.menu-icon');

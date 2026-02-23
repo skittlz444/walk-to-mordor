@@ -61,6 +61,7 @@ async function logout() {
   }
 
   clearSession();
+  try { localStorage.removeItem('defaultViewMap'); } catch (e) { /* ignore */ }
   window.location.href = '/login';
 }
 
@@ -68,9 +69,10 @@ async function logout() {
 window.getAuthHeaders = getAuthHeaders;
 window.logout = logout;
 
-// Initialize global user preferences (default: unlocked)
+// Initialize global user preferences (default: unlocked, journey view)
 window.userPreferences = window.userPreferences || {
-  showFutureGoalsUnlocked: true
+  showFutureGoalsUnlocked: true,
+  defaultViewMap: false
 };
 
 document.addEventListener("DOMContentLoaded", async function () {
@@ -92,6 +94,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       const sessionData = await sessionResponse.json();
       if (typeof sessionData.showFutureGoalsUnlocked === 'boolean') {
         window.userPreferences.showFutureGoalsUnlocked = sessionData.showFutureGoalsUnlocked;
+      }
+      if (typeof sessionData.defaultViewMap === 'boolean') {
+        window.userPreferences.defaultViewMap = sessionData.defaultViewMap;
+        try {
+          localStorage.setItem('defaultViewMap', sessionData.defaultViewMap ? 'true' : 'false');
+        } catch (e) { /* localStorage may be unavailable */ }
       }
     }
   } catch (prefError) {
