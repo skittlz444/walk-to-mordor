@@ -395,4 +395,76 @@ test.describe('User Profile Modal', () => {
         await expect(logoutBtn).toHaveText('Logout');
         await expect(logoutBtn).toHaveClass(/btn-danger/);
     });
+
+    test('should close modal when pressing Escape key', async ({ page }) => {
+        await openProfileFromDrawer(page);
+        await expect(page.locator('.modal-overlay')).toBeVisible();
+
+        // Press Escape key
+        await page.keyboard.press('Escape');
+
+        // Verify modal is closed
+        await expect(page.locator('.modal-overlay')).not.toBeVisible({ timeout: 10000 });
+    });
+
+    test('should close modal and trigger logout when clicking Logout', async ({ page }) => {
+        await openProfileFromDrawer(page);
+        await expect(page.locator('.modal-overlay')).toBeVisible();
+
+        // Click logout button
+        await page.click('#logout-modal-btn');
+
+        // Modal should be removed
+        await expect(page.locator('.modal-overlay')).not.toBeVisible({ timeout: 10000 });
+    });
+
+    test('should show network error when profile save fails', async ({ page }) => {
+        await openProfileFromDrawer(page);
+        await expect(page.locator('.modal-overlay')).toBeVisible();
+        await waitForProfileFormReady(page);
+
+        // Intercept profile API to simulate network error
+        await page.route('**/api/profile', (route) => {
+            route.abort('connectionfailed');
+        });
+
+        const newUsername = uniqueUsername('neterr');
+        await setFieldValueRobust(page, '#profile-username', newUsername);
+
+        await page.click('#save-profile-btn');
+
+        // Should show network error message
+        await expect(page.locator('.error-message')).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.error-message')).toContainText('Network error');
+
+        // Clean up route
+        await page.unroute('**/api/profile');
+    });
+
+    test('should show server error when profile save returns 400', async ({ page }) => {
+        await openProfileFromDrawer(page);
+        await expect(page.locator('.modal-overlay')).toBeVisible();
+        await waitForProfileFormReady(page);
+
+        // Intercept profile API to simulate server error
+        await page.route('**/api/profile', (route) => {
+            route.fulfill({
+                status: 400,
+                contentType: 'application/json',
+                body: JSON.stringify({ error: 'Username already taken' }),
+            });
+        });
+
+        const newUsername = uniqueUsername('srverr');
+        await setFieldValueRobust(page, '#profile-username', newUsername);
+
+        await page.click('#save-profile-btn');
+
+        // Should show the error from the API
+        await expect(page.locator('.error-message')).toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.error-message')).toContainText('Username already taken');
+
+        // Clean up route
+        await page.unroute('**/api/profile');
+    });
 });

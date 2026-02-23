@@ -167,12 +167,21 @@ async function showProfileModal() {
     }
   });
 
+  // Close modal on Escape key
+  function escKeyHandler(e) {
+    if (e.key === 'Escape') {
+      closeProfileModal();
+    }
+  }
+  document.addEventListener('keydown', escKeyHandler);
+
   // Focus on username input
   setTimeout(() => {
     document.getElementById('profile-username').focus();
   }, 100);
 
   function closeProfileModal() {
+    document.removeEventListener('keydown', escKeyHandler);
     modalOverlay.remove();
   }
 }
