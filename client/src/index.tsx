@@ -1,4 +1,5 @@
 import { render, h } from 'preact';
+import { DistanceModal } from './islands/DistanceModal';
 import { AuthForms } from './islands/AuthForms';
 import { DrawerIsland } from './islands/DrawerIsland';
 import { GoalModal } from './islands/GoalModal';
@@ -16,6 +17,7 @@ const autoHydratedIslands = {
 // All islands including those rendered programmatically
 const allIslands = {
   AuthForms,
+  DistanceModal,
   DrawerIsland,
   GoalModal,
   MapIsland,
