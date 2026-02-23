@@ -22,6 +22,7 @@ const autoHydratedIslands = {
   AppBootstrapIsland,
   AuthForms,
   CalendarIsland,
+  CalendarSheetIsland,
   DistanceModalIsland,
   DrawerIsland,
   GoalsSectionIsland,

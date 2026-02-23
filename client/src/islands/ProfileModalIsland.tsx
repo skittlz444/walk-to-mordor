@@ -75,10 +75,15 @@ export function ProfileModalIsland({ onClose, initialData }: ProfileModalIslandP
     fetchSession();
   }, [initialData]);
 
-  // Focus username input after mount
+  // Focus username input after mount (only if no other field is already focused)
   useEffect(() => {
     const timer = setTimeout(() => {
-      usernameRef.current?.focus();
+      const active = document.activeElement;
+      const modalEl = usernameRef.current?.closest('.modal-overlay');
+      const alreadyFocused = active && modalEl?.contains(active) && active.tagName === 'INPUT';
+      if (!alreadyFocused) {
+        usernameRef.current?.focus();
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, []);
