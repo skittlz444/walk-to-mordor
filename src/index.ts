@@ -1,4 +1,5 @@
 import { renderHtml } from "./renderHtml";
+import { renderHomePage } from "./renderHomePage";
 import { renderAuthPage } from "./renderAuthPage";
 import { renderPasswordResetRequestPage, renderPasswordResetPage } from "./renderPasswordResetPage";
 import { 
@@ -149,7 +150,7 @@ export default {
       });
     }
 
-    // Main page - serve auth page for /login, main app for root
+    // Main page - serve auth page for /login
     if (url.pathname === "/login" || url.pathname === "/wtm/login") {
       return new Response(renderAuthPage(), {
         headers: {
@@ -179,8 +180,26 @@ export default {
     if (url.pathname === "/map") {
       return handleMapPage(request, env);
     }
+
+    if (url.pathname === "/" || url.pathname === "/wtm") {
+      return new Response(renderHomePage(), {
+        headers: {
+          "content-type": "text/html",
+          "cache-control": "no-store, no-cache, must-revalidate",
+          "pragma": "no-cache",
+        },
+      });
+    }
+
+    if (url.pathname === "/journey" || url.pathname === "/wtm/journey") {
+      return new Response(renderHtml(), {
+        headers: {
+          "content-type": "text/html",
+        },
+      });
+    }
     
-    // Main app page - will check auth in JavaScript
+    // Main app fallback page
     return new Response(renderHtml(), {
       headers: {
         "content-type": "text/html",

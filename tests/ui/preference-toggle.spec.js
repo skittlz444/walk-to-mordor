@@ -386,6 +386,36 @@ test.describe('User Goal Visibility Preference', () => {
       await restorePromise;
     });
 
+    test('root should follow preference while /journey remains directly accessible', async ({ page }) => {
+      await openProfileFromDrawer(page);
+
+      const enablePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await enablePromise;
+
+      await closePopupRobust(page, page.locator('#close-profile-modal'));
+
+      // Root should apply default-map preference.
+      await page.goto(BASE_URL + '/');
+      await expect(page).toHaveURL(/\/map$/);
+
+      // Journey route should remain accessible explicitly.
+      await page.goto(BASE_URL + '/journey');
+      await page.waitForSelector('header', { timeout: 10000 });
+      await expect(page).toHaveURL(/\/journey$/);
+
+      await openProfileFromDrawer(page);
+      const restorePromise = page.waitForResponse(
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
+        { timeout: 10000 }
+      );
+      await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
+      await restorePromise;
+    });
+
     test('should revert default view toggle on API failure', async ({ page }) => {
       await openProfileFromDrawer(page);
 

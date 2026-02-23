@@ -2,7 +2,6 @@
 const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}';
 const CACHE_NAME = `walk-to-mordor-{{BUILD_TIMESTAMP}}`;
 const urlsToCache = [
-  '/',
   '/css/main.css',
   '/css/mobiscroll.javascript.min.css',
   '/js/main.js',
@@ -49,6 +48,26 @@ self.addEventListener('fetch', (event) => {
   if (requestUrl.origin !== self.location.origin) {
     return;
   }
+
+  // Never cache API responses - always fetch fresh auth/session/preferences data.
+  if (requestUrl.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Never cache HTML navigations to avoid stale redirect/auth behavior.
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return new Response('Offline - Please check your connection', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      })
+    );
+    return;
+  }
   
   event.respondWith(
     caches.match(event.request)
@@ -68,13 +87,19 @@ self.addEventListener('fetch', (event) => {
             
             // Clone the response
             const responseToCache = response.clone();
+
+            // Cache only static assets.
+            const isStaticAsset =
+              event.request.destination === 'style' ||
+              event.request.destination === 'script' ||
+              event.request.destination === 'image' ||
+              event.request.destination === 'font' ||
+              event.request.destination === 'manifest' ||
+              requestUrl.pathname.startsWith('/css/') ||
+              requestUrl.pathname.startsWith('/js/') ||
+              requestUrl.pathname === '/manifest.json';
             
-            // Cache static assets but exclude distance-related API endpoints
-            const url = event.request.url;
-            const shouldCache = !url.includes('/api/calendar-progress') &&
-                               !url.includes('/api/total-distance');
-            
-            if (shouldCache) {
+            if (isStaticAsset) {
               caches.open(CACHE_NAME)
                 .then((cache) => {
                   cache.put(event.request, responseToCache);
@@ -84,21 +109,14 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch(() => {
-            // If both cache and network fail, return a basic offline page
-            if (event.request.headers.get('accept').includes('text/html')) {
-              return caches.match('/').then((cachedResponse) => {
-                if (cachedResponse) {
-                  return cachedResponse;
-                }
-                // Return a basic offline message
-                return new Response('Offline - Please check your connection', {
-                  status: 503,
-                  statusText: 'Service Unavailable',
-                  headers: { 'Content-Type': 'text/plain' }
-                });
+            // Return a basic offline message when cache and network fail.
+            if (event.request.headers.get('accept')?.includes('text/html')) {
+              return new Response('Offline - Please check your connection', {
+                status: 503,
+                statusText: 'Service Unavailable',
+                headers: { 'Content-Type': 'text/plain' }
               });
             }
-
             return Response.error();
           });
       })

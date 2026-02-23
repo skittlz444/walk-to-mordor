@@ -1,4 +1,5 @@
 import { renderHtml } from '../../src/renderHtml';
+import { renderHomePage } from '../../src/renderHomePage';
 import { 
   isValidDateFormat, 
   isValidDistance, 
@@ -16,6 +17,7 @@ import {
 
 // Mock the modules at module level
 jest.mock('../../src/renderHtml');
+jest.mock('../../src/renderHomePage');
 jest.mock('../../src/validators');
 jest.mock('../../src/goals-handlers');
 jest.mock('../../src/auth-handlers');
@@ -25,6 +27,7 @@ import worker from '../../src/index';
 import { calculateTotalDistance, handleGoalsGet } from '../../src/goals-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
+const mockRenderHomePage = jest.mocked(renderHomePage);
 const mockIsValidDateFormat = jest.mocked(isValidDateFormat);
 const mockIsValidDistance = jest.mocked(isValidDistance);
 const mockSafeJsonParse = jest.mocked(safeJsonParse);
@@ -81,6 +84,7 @@ describe('Cloudflare Worker Index', () => {
     
     // Setup default mock returns
     mockRenderHtml.mockReturnValue('<html>Mock HTML</html>');
+    mockRenderHomePage.mockReturnValue('<html>Mock Home HTML</html>');
     mockIsValidDateFormat.mockReturnValue(true);
     mockIsValidDistance.mockReturnValue(true);
     mockIsValidMethod.mockReturnValue(true);
@@ -195,16 +199,16 @@ describe('Cloudflare Worker Index', () => {
       const data = await response.json();
       expect(data.allowedMethods).toContain('POST');
     });
-  it('should call renderHtml for main page', async () => {
+  it('should call renderHomePage for root page', async () => {
     const request = createRequest('https://example.com/');
     const response = await worker.fetch(request, mockEnv);
     
-    expect(mockRenderHtml).toHaveBeenCalled();
+    expect(mockRenderHomePage).toHaveBeenCalled();
     expect(response.status).toBe(200);
   });
 
-  it('should render main page', async () => {
-    const request = createRequest('https://example.com/');
+  it('should render journey page for /journey route', async () => {
+    const request = createRequest('https://example.com/journey');
     const response = await worker.fetch(request, mockEnv);
     
     expect(mockRenderHtml).toHaveBeenCalled();
@@ -590,7 +594,7 @@ describe('Cloudflare Worker Index', () => {
 
     const response = await worker.fetch(authRequest, mockEnv);
     
-    expect(mockRenderHtml).toHaveBeenCalledWith(); // No parameters in new architecture
+    expect(mockRenderHomePage).toHaveBeenCalledWith();
     expect(response.status).toBe(200);
   });
 
@@ -610,7 +614,7 @@ describe('Cloudflare Worker Index', () => {
 
     await worker.fetch(authRequest, mockEnv);
     
-    expect(mockRenderHtml).toHaveBeenCalledWith(); // No parameters in new architecture
+    expect(mockRenderHomePage).toHaveBeenCalledWith();
   });
 
   it('should handle HEAD requests for assets', async () => {
