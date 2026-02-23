@@ -74,6 +74,6 @@
   "dependencies": {
     "@preact/signals": "^2.8.0",
     "konva": "^9.3.18",
-    "preact": "^10.28.3"
+    "preact": "^10.28.4"
   }
 }
