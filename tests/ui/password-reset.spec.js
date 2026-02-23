@@ -136,6 +136,54 @@ test.describe('Password Reset', () => {
         await expect(page.locator('#strength-number')).toContainText('✓');
     });
 
+    test('should validate each strength criterion independently', async ({ page }) => {
+        await page.goto('/reset-password?token=test-token-123');
+        
+        const passwordInput = page.locator('#new-password');
+        
+        // Lowercase only (short) - only lower passes
+        await passwordInput.fill('ab');
+        await expect(page.locator('#strength-length')).toContainText('✗');
+        await expect(page.locator('#strength-upper')).toContainText('✗');
+        await expect(page.locator('#strength-lower')).toContainText('✓');
+        await expect(page.locator('#strength-number')).toContainText('✗');
+        
+        // Lowercase meeting length - length + lower pass
+        await passwordInput.fill('abcdefgh');
+        await expect(page.locator('#strength-length')).toContainText('✓');
+        await expect(page.locator('#strength-upper')).toContainText('✗');
+        await expect(page.locator('#strength-lower')).toContainText('✓');
+        await expect(page.locator('#strength-number')).toContainText('✗');
+        
+        // Add uppercase - length + upper + lower pass
+        await passwordInput.fill('Abcdefgh');
+        await expect(page.locator('#strength-length')).toContainText('✓');
+        await expect(page.locator('#strength-upper')).toContainText('✓');
+        await expect(page.locator('#strength-lower')).toContainText('✓');
+        await expect(page.locator('#strength-number')).toContainText('✗');
+        
+        // Uppercase only (short) - only upper passes
+        await passwordInput.fill('AB');
+        await expect(page.locator('#strength-length')).toContainText('✗');
+        await expect(page.locator('#strength-upper')).toContainText('✓');
+        await expect(page.locator('#strength-lower')).toContainText('✗');
+        await expect(page.locator('#strength-number')).toContainText('✗');
+        
+        // Number/symbol only - only number passes
+        await passwordInput.fill('123');
+        await expect(page.locator('#strength-length')).toContainText('✗');
+        await expect(page.locator('#strength-upper')).toContainText('✗');
+        await expect(page.locator('#strength-lower')).toContainText('✗');
+        await expect(page.locator('#strength-number')).toContainText('✓');
+        
+        // Clear field - all should reset to invalid
+        await passwordInput.fill('');
+        await expect(page.locator('#strength-length')).toContainText('✗');
+        await expect(page.locator('#strength-upper')).toContainText('✗');
+        await expect(page.locator('#strength-lower')).toContainText('✗');
+        await expect(page.locator('#strength-number')).toContainText('✗');
+    });
+
     test('should show error for invalid token on password reset', async ({ page }) => {
         await page.goto('/reset-password?token=invalid-token-123');
         

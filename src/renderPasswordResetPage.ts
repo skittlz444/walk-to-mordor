@@ -27,6 +27,7 @@ export function renderPasswordResetRequestPage() {
         <!-- Stylesheets -->
         <link href="/css/main.css" rel="stylesheet" />
         <link href="/css/auth.css" rel="stylesheet" />
+        <link rel="stylesheet" href="/js/client/islands.css" />
       </head>
       <body>
         <div class="auth-container">
@@ -35,28 +36,11 @@ export function renderPasswordResetRequestPage() {
             <p>Password Reset</p>
           </header>
           
-          <div class="auth-forms">
-            <div class="auth-form active">
-              <h2>Reset Your Password</h2>
-              <p>Enter your email address and we'll generate a password reset token for you.</p>
-              <form id="password-reset-request-form">
-                <div class="form-group">
-                  <label for="reset-email">Email</label>
-                  <input type="email" id="reset-email" name="email" required autocomplete="email" />
-                </div>
-                <div id="reset-error" class="error-message"></div>
-                <div id="reset-success" class="success-message"></div>
-                <button type="submit" class="btn-primary">Request Password Reset</button>
-              </form>
-              <p class="auth-toggle">
-                <a href="/login">Back to Login</a>
-              </p>
-            </div>
-          </div>
+          <div data-island="PasswordResetIsland" data-mode="request"></div>
         </div>
         
         <!-- Scripts -->
-        <script src="/js/password-reset.js"></script>
+        <script type="module" src="/js/client/islands.js"></script>
       </body>
     </html>
   `;
@@ -89,6 +73,7 @@ export function renderPasswordResetPage() {
         <!-- Stylesheets -->
         <link href="/css/main.css" rel="stylesheet" />
         <link href="/css/auth.css" rel="stylesheet" />
+        <link rel="stylesheet" href="/js/client/islands.css" />
       </head>
       <body>
         <div class="auth-container">
@@ -97,35 +82,11 @@ export function renderPasswordResetPage() {
             <p>Set New Password</p>
           </header>
           
-          <div class="auth-forms">
-            <div class="auth-form active">
-              <h2>Set Your New Password</h2>
-              <form id="password-reset-form">
-                <input type="hidden" id="reset-token" name="token" />
-                <div class="form-group">
-                  <label for="new-password">New Password</label>
-                  <input type="password" id="new-password" name="password" required autocomplete="new-password" />
-                  <small>At least 8 characters with uppercase, lowercase, and number/symbol</small>
-                </div>
-                <div id="password-strength" class="password-strength">
-                  <div class="strength-item" id="strength-length">✗ At least 8 characters</div>
-                  <div class="strength-item" id="strength-upper">✗ One uppercase letter</div>
-                  <div class="strength-item" id="strength-lower">✗ One lowercase letter</div>
-                  <div class="strength-item" id="strength-number">✗ One number or symbol</div>
-                </div>
-                <div id="reset-error" class="error-message"></div>
-                <div id="reset-success" class="success-message"></div>
-                <button type="submit" class="btn-primary">Set New Password</button>
-              </form>
-              <p class="auth-toggle">
-                <a href="/login">Back to Login</a>
-              </p>
-            </div>
-          </div>
+          <div data-island="PasswordResetIsland" data-mode="reset"></div>
         </div>
         
         <!-- Scripts -->
-        <script src="/js/password-reset.js"></script>
+        <script type="module" src="/js/client/islands.js"></script>
       </body>
     </html>
   `;

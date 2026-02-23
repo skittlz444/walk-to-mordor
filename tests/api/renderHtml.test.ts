@@ -24,14 +24,11 @@ describe('renderHtml', () => {
     expect(result).toContain('apple-mobile-web-app-capable');
   });
 
-  it('should include JavaScript files', () => {
+  it('should include Preact islands bundle', () => {
     const result = renderHtml();
     
-    expect(result).toContain('main.js');
-    expect(result).toContain('calendar.js');
-    expect(result).toContain('progress.js');
-    expect(result).toContain('goals.js');
-    expect(result).toContain('validators.js');
+    expect(result).toContain('islands.js');
+    expect(result).toContain('islands.css');
   });
 
   it('should include CSS files', () => {
@@ -45,9 +42,10 @@ describe('renderHtml', () => {
     
     expect(result).toContain('<header>');
     expect(result).toContain('<section id="goals-section">');
-    expect(result).toContain('<div id="eventcalendar-container">');
-    expect(result).toContain('<div id="goals-list">');
-    expect(result).toContain('<div id="eventcalendar">');
+    expect(result).toContain('data-island="GoalsSectionIsland"');
+    expect(result).toContain('data-island="CalendarIsland"');
+    expect(result).toContain('data-island="DistanceModalIsland"');
+    expect(result).toContain('data-island="AppBootstrapIsland"');
   });
 
   it('should include service worker registration script', () => {

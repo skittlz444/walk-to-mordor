@@ -10,16 +10,9 @@ export function renderHtml() {
         <div id="last-goal"></div>`,
     mainContent: `
         <section id="goals-section">
-          <div id="goals-list"></div>
+          <div data-island="GoalsSectionIsland"></div>
         </section>
-        <div id="eventcalendar-container">
-          <div id="eventcalendar"></div>
-        </div>`,
-    scripts: [
-      '/js/validators.js',
-      '/js/calendar.js',
-      '/js/progress.js',
-      '/js/goals.js',
-    ],
+        <div data-island="CalendarIsland"></div>
+        <div data-island="DistanceModalIsland"></div>`,
   });
 }

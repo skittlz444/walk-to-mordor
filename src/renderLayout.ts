@@ -15,7 +15,7 @@ export interface PageConfig {
     mainContent: string;
     /** CSS class for <main> tag */
     mainClass?: string;
-    /** Additional <script> tags to load before profile.js / main.js */
+    /** Additional <script> tags to load */
     scripts?: string[];
 }
 
@@ -101,8 +101,7 @@ ${extraStylesheets}
       
       <!-- Scripts -->
 ${extraScripts}
-      <script src="/js/profile.js"></script>
-      <script src="/js/main.js"></script>
+      <div data-island="AppBootstrapIsland"></div>
       </body>
     </html>
 `;
