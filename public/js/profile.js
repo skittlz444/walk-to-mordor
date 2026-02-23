@@ -97,15 +97,15 @@ async function showProfileModal() {
   document.getElementById('cancel-profile-btn').addEventListener('click', closeProfileModal);
   document.getElementById('close-profile-modal').addEventListener('click', closeProfileModal);
 
-  // Toggle preference listener
-  document.getElementById('preview-milestones-toggle').addEventListener('change', async function(e) {
-    const toggle = e.target;
+  /**
+   * Save a single preference toggle via the API.
+   * Handles status display, error rollback, and event dispatch.
+   */
+  async function savePreference(toggle, preferenceKey, newValue) {
     const statusDiv = document.getElementById('preference-status');
-    const newValue = toggle.checked;
-    
     statusDiv.textContent = 'Saving...';
     statusDiv.className = 'preference-status saving';
-    
+
     try {
       const response = await fetch('/api/user/preferences', {
         method: 'PUT',
@@ -113,20 +113,28 @@ async function showProfileModal() {
           'Content-Type': 'application/json',
           ...window.getAuthHeaders()
         },
-        body: JSON.stringify({ showFutureGoalsUnlocked: newValue })
+        body: JSON.stringify({ [preferenceKey]: newValue })
       });
-      
+
       if (response.ok) {
         statusDiv.textContent = 'Saved';
         statusDiv.className = 'preference-status saved';
         setTimeout(() => { statusDiv.textContent = ''; statusDiv.className = 'preference-status'; }, 1500);
-        
+
         // Update global state
         if (window.userPreferences) {
-          window.userPreferences.showFutureGoalsUnlocked = newValue;
+          window.userPreferences[preferenceKey] = newValue;
         }
+
+        // Persist defaultViewMap to localStorage for fast redirect
+        if (preferenceKey === 'defaultViewMap') {
+          try {
+            localStorage.setItem('defaultViewMap', newValue ? 'true' : 'false');
+          } catch (e) { /* localStorage may be unavailable */ }
+        }
+
         window.dispatchEvent(new CustomEvent('preferenceChanged', {
-          detail: { showFutureGoalsUnlocked: newValue }
+          detail: { [preferenceKey]: newValue }
         }));
       } else {
         const data = await response.json();
@@ -140,54 +148,16 @@ async function showProfileModal() {
       statusDiv.className = 'preference-status error';
       toggle.checked = !newValue; // Revert toggle
     }
+  }
+
+  // Toggle preference listener
+  document.getElementById('preview-milestones-toggle').addEventListener('change', function(e) {
+    savePreference(e.target, 'showFutureGoalsUnlocked', e.target.checked);
   });
 
   // Default view toggle listener
-  document.getElementById('default-view-toggle').addEventListener('change', async function(e) {
-    const toggle = e.target;
-    const statusDiv = document.getElementById('preference-status');
-    const newValue = toggle.checked;
-    
-    statusDiv.textContent = 'Saving...';
-    statusDiv.className = 'preference-status saving';
-    
-    try {
-      const response = await fetch('/api/user/preferences', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...window.getAuthHeaders()
-        },
-        body: JSON.stringify({ defaultViewMap: newValue })
-      });
-      
-      if (response.ok) {
-        statusDiv.textContent = 'Saved';
-        statusDiv.className = 'preference-status saved';
-        setTimeout(() => { statusDiv.textContent = ''; statusDiv.className = 'preference-status'; }, 1500);
-        
-        // Update global state and localStorage
-        if (window.userPreferences) {
-          window.userPreferences.defaultViewMap = newValue;
-        }
-        try {
-          localStorage.setItem('defaultViewMap', newValue ? 'true' : 'false');
-        } catch (e) { /* localStorage may be unavailable */ }
-        window.dispatchEvent(new CustomEvent('preferenceChanged', {
-          detail: { defaultViewMap: newValue }
-        }));
-      } else {
-        const data = await response.json();
-        statusDiv.textContent = data.error || 'Failed to save';
-        statusDiv.className = 'preference-status error';
-        toggle.checked = !newValue; // Revert toggle
-      }
-    } catch (error) {
-      console.error('Error saving preference:', error);
-      statusDiv.textContent = 'Network error';
-      statusDiv.className = 'preference-status error';
-      toggle.checked = !newValue; // Revert toggle
-    }
+  document.getElementById('default-view-toggle').addEventListener('change', function(e) {
+    savePreference(e.target, 'defaultViewMap', e.target.checked);
   });
 
   // Close modal when clicking overlay

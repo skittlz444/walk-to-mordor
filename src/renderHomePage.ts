@@ -11,7 +11,13 @@ export function renderHomePage() {
         <p>Redirecting...</p>
         <script>
           (async function () {
-            const token = localStorage.getItem('sessionToken');
+            var token;
+            try {
+              token = localStorage.getItem('sessionToken');
+            } catch (e) {
+              window.location.replace('/journey');
+              return;
+            }
             if (!token) {
               window.location.replace('/login');
               return;
@@ -25,8 +31,8 @@ export function renderHomePage() {
               });
 
               if (!response.ok) {
-                localStorage.removeItem('sessionToken');
                 try {
+                  localStorage.removeItem('sessionToken');
                   localStorage.removeItem('defaultViewMap');
                 } catch (e) {
                   // localStorage may be unavailable

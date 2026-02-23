@@ -350,7 +350,7 @@ test.describe('User Goal Visibility Preference', () => {
       await restorePromise;
     });
 
-    test('should persist default view preference across page reload', async ({ page }) => {
+    test('should persist default view preference across navigation', async ({ page }) => {
       await openProfileFromDrawer(page);
 
       const toggle = page.locator('#default-view-toggle');
