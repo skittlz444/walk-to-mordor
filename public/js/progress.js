@@ -17,6 +17,18 @@ function cleanupEscKeyListener() {
   }
 }
 
+function unmountAndRemoveModal(modalOverlay) {
+  const preact = window.preact;
+  if (preact && preact.render) {
+    try {
+      preact.render(null, modalOverlay);
+    } catch (e) {
+      // Ignore unmount errors; removing the container is sufficient cleanup.
+    }
+  }
+  modalOverlay.remove();
+}
+
 // Callback hooks for external integration (e.g., Map island)
 // Called after successful save/update/delete operations
 let onWalkSavedCallback = null;
@@ -61,38 +73,25 @@ function showDistanceModal(event, date = null) {
   // Create modal overlay
   const modalOverlay = document.createElement('div');
   modalOverlay.className = 'modal-overlay';
-  modalOverlay.innerHTML = `
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Date: ${selectedDate}</label>
-          </div>
-          <div class="form-group">
-            <label for="distance-input">Distance:</label>
-            <div class="input-with-suffix">
-              <input type="number" id="distance-input" step="0.01" min="0" value="${distanceValue}" placeholder="0.00">
-              <span class="km-suffix">km</span>
-            </div>
-            <div class="quick-entry-group">
-              <button type="button" class="quick-btn" id="quick-add-1">+1 km</button>
-              <button type="button" class="quick-btn" id="quick-add-5">+5 km</button>
-              <button type="button" class="quick-btn" id="quick-reset">Reset</button>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer modal-footer-full">
-          <div class="modal-footer-btns modal-footer-btns-edit">
-            ${isEdit ? '<button type="button" class="btn btn-danger" id="delete-btn">Delete</button>' : ''}
-            <button type="button" class="btn btn-primary" id="save-btn">${isEdit ? 'Save' : 'Add'}</button>
-            <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
   document.body.appendChild(modalOverlay);
+  const preact = window.preact;
+  const islands = window.preactIslands;
+
+  if (!preact || !preact.render || !preact.h || !islands || !islands.DistanceModal) {
+    console.error('DistanceModal island not available. Ensure islands.js is loaded before progress.js');
+    modalOverlay.remove();
+    return;
+  }
+  const { render, h } = preact;
+  const { DistanceModal } = islands;
+  render(
+    h(DistanceModal, {
+      selectedDate,
+      distanceValue,
+      isEdit
+    }),
+    modalOverlay
+  );
 
   // Track if save/delete was triggered (to distinguish from dismiss)
   let actionTaken = false;
@@ -109,7 +108,7 @@ function showDistanceModal(event, date = null) {
   function closeModal(wasDismissed = true) {
     // Clean up ESC key listener
     cleanupEscKeyListener();
-    modalOverlay.remove();
+    unmountAndRemoveModal(modalOverlay);
     // Only call dismiss callback if no action was taken (user cancelled)
     if (wasDismissed && !actionTaken && onDismissCallback) {
       onDismissCallback();
@@ -262,7 +261,10 @@ function handleSaveDistance() {
   
   // Close modal
   cleanupEscKeyListener();
-  document.querySelector('.modal-overlay').remove();
+  const modalOverlay = document.querySelector('.modal-overlay');
+  if (modalOverlay) {
+    unmountAndRemoveModal(modalOverlay);
+  }
 }
 
 function handleDeleteDistance() {
@@ -289,7 +291,10 @@ function handleDeleteDistance() {
   
   // Close modal
   cleanupEscKeyListener();
-  document.querySelector('.modal-overlay').remove();
+  const modalOverlay = document.querySelector('.modal-overlay');
+  if (modalOverlay) {
+    unmountAndRemoveModal(modalOverlay);
+  }
 }
 
 
