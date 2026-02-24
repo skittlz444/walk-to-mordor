@@ -23,8 +23,11 @@ async function closePopupRobust(page, closeButton) {
 }
 
 async function openProfileFromDrawer(page) {
-  await page.click('.menu-icon');
-  await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+  const menuButton = page.locator('.menu-icon');
+  await expect(menuButton).toBeVisible({ timeout: 10000 });
+  await expect(menuButton).toBeEnabled({ timeout: 10000 });
+  await menuButton.click();
+  await expect(page.locator('body')).toHaveClass(/drawer-open/, { timeout: 10000 });
   const profileButton = page.locator('.drawer-profile');
   await expect(profileButton).toBeVisible();
   await expect(profileButton).toBeEnabled();
@@ -386,7 +389,7 @@ test.describe('User Goal Visibility Preference', () => {
       await restorePromise;
     });
 
-    test('root should follow preference while /journey remains directly accessible', async ({ page }) => {
+    test('root should follow preference while /journey remains directly accessible', async ({ page, authToken }) => {
       await openProfileFromDrawer(page);
 
       const enablePromise = page.waitForResponse(

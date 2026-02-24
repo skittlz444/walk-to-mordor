@@ -30,15 +30,21 @@ async function setupTest({ page, authToken }) {
 
     // Navigate directly to journey using the initialized auth state.
     await page.goto(`${BASE_URL}/journey`, { waitUntil: 'domcontentloaded' });
-    await page.waitForURL(/\/journey$/, { timeout: 10000 });
-    
-    // Wait for the calendar to be initialized (proof of successful login and app load)
-    // This helps avoid race conditions where tests try to interact with elements before the app is ready
-    try {
-      await page.waitForSelector('#next-btn', { state: 'visible', timeout: 10000 });
-    } catch (e) {
-      console.log('Setup wait warning: Calendar next button did not appear', e.message);
+    await page.waitForURL(/\/(journey|login)$/, { timeout: 10000 });
+
+    // Recover if auth check redirected to login before localStorage token was observed.
+    if (new URL(page.url()).pathname === '/login') {
+      await page.evaluate((token) => {
+        localStorage.setItem('sessionToken', token);
+      }, authToken);
+      await page.goto(`${BASE_URL}/journey`, { waitUntil: 'domcontentloaded' });
+      await page.waitForURL(/\/journey$/, { timeout: 10000 });
     }
+    
+    // Wait for shell controls to be interactive before tests start.
+    const menuButton = page.locator('.menu-icon');
+    await expect(menuButton).toBeVisible({ timeout: 10000 });
+    await expect(menuButton).toBeEnabled({ timeout: 10000 });
     
     try {
       // Close any existing popups that might interfere with the next test

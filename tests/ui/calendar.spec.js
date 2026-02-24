@@ -17,12 +17,12 @@ test.describe('Calendar Functionality', () => {
     await expect(page.locator('#week-view')).toBeChecked();
 
     // Should render week-view container with exactly 7 cells
-    await expect(page.locator('.week-view')).toBeVisible();
-    const cells = page.locator('.week-view .calendar-cell');
+    await expect(page.locator('#calendar-grid .week-view')).toBeVisible();
+    const cells = page.locator('#calendar-grid .week-view .calendar-cell');
     await expect(cells).toHaveCount(7);
 
     // Day headers should be present
-    const headers = page.locator('.week-view .day-header');
+    const headers = page.locator('#calendar-grid .week-view .day-header');
     await expect(headers).toHaveCount(7);
     await expect(headers.first()).toHaveText('Sun');
     await expect(headers.last()).toHaveText('Sat');
@@ -30,21 +30,24 @@ test.describe('Calendar Functionality', () => {
 
   test('Month/week view toggle works', async ({ page }) => {
     // Start in week view
-    await expect(page.locator('.week-view')).toBeVisible();
+    await expect(page.locator('#calendar-grid .week-view')).toBeVisible();
 
     // Switch to month view
     await page.locator('label[for="month-view"]').click();
     await expect(page.locator('#month-view')).toBeChecked();
-    await expect(page.locator('.month-view')).toBeVisible();
+    await expect(page.locator('#calendar-grid .month-view')).toBeVisible();
 
     // Month view should have more than 7 cells (a full month grid)
-    const monthCells = page.locator('.month-view .calendar-cell');
-    expect(await monthCells.count()).toBeGreaterThan(7);
+    const monthCells = page.locator('#calendar-grid .month-view .calendar-cell');
+    await expect(monthCells.first()).toBeVisible();
+    await expect
+      .poll(async () => monthCells.count())
+      .toBeGreaterThan(7);
 
     // Switch back to week view
     await page.locator('label[for="week-view"]').click();
     await expect(page.locator('#week-view')).toBeChecked();
-    await expect(page.locator('.week-view')).toBeVisible();
+    await expect(page.locator('#calendar-grid .week-view')).toBeVisible();
   });
 
   test('Navigation previous/next buttons work', async ({ page }) => {

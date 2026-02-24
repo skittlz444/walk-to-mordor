@@ -231,11 +231,16 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goals section renders and controls work', async ({ page }) => {
+    await page.waitForLoadState('networkidle');
     await expect(page.locator('#goals-list')).toBeVisible();
+
     const completedToggle = page.locator('#toggle-completed-visibility');
+    await expect(completedToggle).toBeVisible({ timeout: 10000 });
+
     await completedToggle.click();
     await expect(completedToggle).toContainText('Show Completed');
     await expect(page.locator('#completed-goals-wrapper')).toBeHidden();
+
     await completedToggle.click({ force: true });
     await expect(completedToggle).toContainText('Hide Completed');
     await page.waitForFunction(() => {
@@ -243,9 +248,13 @@ test.describe('Goals Functionality', () => {
       return !!wrapper && window.getComputedStyle(wrapper).display !== 'none';
     }, { timeout: 10000 });
     await expect(page.locator('#completed-goals-wrapper')).toBeVisible();
-    await page.click('#toggle-completed');
+
+    const completedListToggle = page.locator('#toggle-completed');
+    await expect(completedListToggle).toBeVisible({ timeout: 10000 });
+
+    await completedListToggle.click();
     await expect(page.locator('#all-completed-goals')).toBeVisible();
-    await page.click('#toggle-completed');
+    await completedListToggle.click();
     await expect(page.locator('#completed-goals')).toBeVisible();
   });
 
