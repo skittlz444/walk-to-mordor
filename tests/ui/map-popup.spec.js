@@ -2,37 +2,72 @@ const { test, expect } = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
-/**
- * Helper: click on the first unlocked (listening) waypoint marker in the Konva canvas.
- * Uses Konva internal API to find the marker's screen position.
- * Returns true if a marker was found and clicked, false otherwise.
- */
-async function clickUnlockedWaypoint(page, index = 0) {
-  const clicked = await page.evaluate((idx) => {
-    const stages = window.Konva && window.Konva.stages;
-    if (!stages || !stages.length) return false;
-    const stage = stages[0];
-    const layers = stage.getLayers();
-    if (layers.length < 3) return false;
-    const markerLayer = layers[2];
-    const rootGroups = markerLayer.getChildren();
-    const wpGroup = rootGroups.find(
-      (g) => g.x() === 0 && g.y() === 0 && g.children && g.children.length > 3,
-    );
-    if (!wpGroup) return false;
-    const listening = wpGroup.children.filter((c) => c.listening());
-    if (idx >= listening.length) return false;
-    const wp = listening[idx];
-    // Fire Konva click directly to avoid coordinate and timing flakiness.
-    // Bubble enabled so stage/listeners receive the event consistently.
-    wp.fire('click', undefined, true);
-    return true;
-  }, index);
+// ── Tile-request interception ──
+// Only intercepts tile *images* (not metadata.json) so the map uses its real
+// dimensions and waypoint coordinates remain valid. This eliminates network
+// latency for tile images which is the main source of CI slowness.
 
-  return clicked;
+// Small 10×10 red PNG for tile stubs
+const SMALL_TILE_BUFFER = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFklEQVQYV2P8z8BQz0BFwMgwasChAwAMDAn/xe0DwQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+function interceptTileRequests(page) {
+  return page.route('**/img/map/tiles/**', async (route) => {
+    const url = route.request().url();
+    // Let metadata.json pass through so the map uses real dimensions
+    if (url.endsWith('metadata.json')) {
+      await route.fallback();
+    } else {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: SMALL_TILE_BUFFER,
+      });
+    }
+  });
 }
 
-async function waitForPopupOrSheet(page, timeout = 5000) {
+/**
+ * Helper: click on the first unlocked (listening) waypoint marker in the Konva canvas.
+ * Uses Konva internal API to find the marker and fire a click event.
+ * Polls for up to `timeout` ms so the test is resilient to render timing.
+ * Returns true if a marker was found and clicked, false otherwise.
+ */
+async function clickUnlockedWaypoint(page, index = 0, timeout = 10000) {
+  try {
+    await page.waitForFunction(
+      (idx) => {
+        const stages = window.Konva && window.Konva.stages;
+        if (!stages || !stages.length) return false;
+        const stage = stages[0];
+        const layers = stage.getLayers();
+        if (layers.length < 3) return false;
+        const markerLayer = layers[2];
+        const rootGroups = markerLayer.getChildren();
+        const wpGroup = rootGroups.find(
+          (g) => g.x() === 0 && g.y() === 0 && g.children && g.children.length > 0,
+        );
+        if (!wpGroup) return false;
+        const listening = wpGroup.children.filter((c) => c.listening());
+        if (idx >= listening.length) return false;
+        const wp = listening[idx];
+        // Fire Konva click directly to avoid coordinate and timing flakiness.
+        // Bubble enabled so stage/listeners receive the event consistently.
+        wp.fire('click', undefined, true);
+        return true;
+      },
+      index,
+      { timeout },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function waitForPopupOrSheet(page, timeout = 10000) {
   await page.waitForFunction(
     () => {
       const popup = document.querySelector('.waypoint-popup');
@@ -46,7 +81,7 @@ async function waitForPopupOrSheet(page, timeout = 5000) {
 
 /**
  * Wait for the Konva map to be fully loaded with waypoint markers.
- * Polls the Konva stage for markers on the marker layer.
+ * Polls the Konva stage for at least one marker on the marker layer.
  */
 async function waitForMapReady(page) {
   await page.waitForSelector('.map-canvas-wrapper canvas', { timeout: 15000 });
@@ -60,9 +95,11 @@ async function waitForMapReady(page) {
       const markerLayer = layers[2];
       const rootGroups = markerLayer.getChildren();
       const wpGroup = rootGroups.find(
-        (g) => g.x() === 0 && g.y() === 0 && g.children && g.children.length > 3,
+        (g) => g.x() === 0 && g.y() === 0 && g.children && g.children.length > 0,
       );
-      return !!wpGroup;
+      if (!wpGroup) return false;
+      // Ensure at least one listening (unlocked) marker exists
+      return wpGroup.children.some((c) => c.listening());
     },
     { timeout: 15000 },
   );
@@ -70,13 +107,15 @@ async function waitForMapReady(page) {
 
 test.describe('Waypoint Detail Popup - Functional Tests', () => {
   test.beforeEach(async ({ page, authToken }) => {
+    test.slow(); // triple timeout for CI tile & marker init
     await page.addInitScript((token) => {
       localStorage.setItem('sessionToken', token);
     }, authToken);
+    await interceptTileRequests(page);
   });
 
   test('no popup visible on initial map load', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     await expect(page.locator('.waypoint-popup')).not.toBeVisible();
@@ -84,7 +123,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('clicking unlocked waypoint opens popup with correct content', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -113,7 +152,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('X button closes popup', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -129,7 +168,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('ESC key closes popup', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -150,7 +189,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('zoom wheel dismisses popup', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -168,7 +207,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('drag/pan dismisses popup', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -188,7 +227,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('only one popup open at a time', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -200,7 +239,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('popup is rendered as HTML overlay, not Konva', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -218,7 +257,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('popup CSS styles are injected at runtime', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const hasStyles = await page.evaluate(() => {
@@ -237,7 +276,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
   });
 
   test('expand button opens goal modal', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -260,14 +299,16 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
 
 test.describe('Waypoint Popup - Mobile', () => {
   test.beforeEach(async ({ page, authToken }) => {
+    test.slow(); // triple timeout for CI tile & marker init
     await page.addInitScript((token) => {
       localStorage.setItem('sessionToken', token);
     }, authToken);
+    await interceptTileRequests(page);
   });
 
   test('mobile viewport shows bottom sheet instead of desktop popup', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
@@ -294,7 +335,7 @@ test.describe('Waypoint Popup - Mobile', () => {
 
   test('mobile sheet overlay click dismisses sheet', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(`${BASE_URL}/map`);
+    await page.goto(`${BASE_URL}/map`, { waitUntil: 'networkidle' });
     await waitForMapReady(page);
 
     const clicked = await clickUnlockedWaypoint(page);
