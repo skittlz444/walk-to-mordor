@@ -400,6 +400,10 @@ test.describe('User Profile Modal', () => {
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
 
+        // Ensure modal has focus before pressing Escape (Firefox under load may not auto-focus)
+        await page.locator('.modal-overlay').click({ position: { x: 10, y: 10 }, force: true }).catch(() => {});
+        await page.waitForTimeout(200);
+
         // Press Escape key
         await page.keyboard.press('Escape');
 

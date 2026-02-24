@@ -736,8 +736,9 @@ test.describe('Goals Functionality', () => {
   test('Goal popup does not show congratulations when opened manually', async ({ page }) => {
     await page.waitForLoadState('networkidle');
 
-    // Wait for goals to load
+    // Wait for goals to load and render goal items
     await expect(page.locator('#goals-list')).toBeVisible();
+    await page.waitForSelector('.upcoming-goal, .completed-goal', { timeout: 10000 });
 
     // Try to click on an upcoming goal directly
     const upcomingGoals = page.locator('.upcoming-goal');

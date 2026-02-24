@@ -37,7 +37,10 @@ async function createAuthenticatedContext(browser, username) {
          }
     });
     const page = await context.newPage();
-    await page.goto(`${BASE_URL}/`);
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
+    // Wait for page to be interactive (may redirect to /journey or /login)
+    await page.waitForURL(/\/(journey|login|map)$/, { timeout: 15000 });
+    await page.waitForLoadState('networkidle');
     
     // Close existing popups if any (similar to setupTest)
     try {
