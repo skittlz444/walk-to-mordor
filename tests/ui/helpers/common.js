@@ -1,7 +1,7 @@
 const { test: base, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./cleanup');
 
-const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:8787';
 
 // Extend test with unique auth token fixture
 const test = base.extend({
@@ -19,15 +19,18 @@ async function setupTest({ page, authToken }) {
     // Ensure clean state for this user
     await cleanupAllTestData(BASE_URL, authToken);
 
-    await page.goto(`${BASE_URL}/journey`);
-    
-    // Set mock session token for auth
-    await page.evaluate((token) => {
-      localStorage.setItem('sessionToken', token);
+    // Seed auth state before any app scripts run to avoid redirect races.
+    await page.addInitScript((token) => {
+      try {
+        localStorage.setItem('sessionToken', token);
+      } catch (e) {
+        // noop in environments where localStorage is unavailable
+      }
     }, authToken);
-    
-    // Navigate back to the journey page to apply auth state
-    await page.goto(`${BASE_URL}/journey`);
+
+    // Navigate directly to journey using the initialized auth state.
+    await page.goto(`${BASE_URL}/journey`, { waitUntil: 'domcontentloaded' });
+    await page.waitForURL(/\/journey$/, { timeout: 10000 });
     
     // Wait for the calendar to be initialized (proof of successful login and app load)
     // This helps avoid race conditions where tests try to interact with elements before the app is ready

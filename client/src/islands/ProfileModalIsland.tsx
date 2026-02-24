@@ -29,12 +29,6 @@ declare global {
   }
 }
 
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 export function ProfileModalIsland({ onClose, initialData }: ProfileModalIslandProps) {
   const [username, setUsername] = useState(initialData?.username || '');
   const [email, setEmail] = useState(initialData?.email || '');

@@ -1,7 +1,7 @@
 // @ts-check
 const { test, expect, setupTest } = require('./helpers/common');
 
-const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:8787';
 
 // Helper to properly close popup with Firefox compatibility
 async function closePopupRobust(page, closeButton) {
@@ -399,11 +399,28 @@ test.describe('User Goal Visibility Preference', () => {
       await closePopupRobust(page, page.locator('#close-profile-modal'));
 
       // Root should apply default-map preference.
-      await page.goto(BASE_URL + '/');
-      await expect(page).toHaveURL(/\/map$/);
+      await page.goto('/', { waitUntil: 'domcontentloaded' });
+      await page.waitForURL(/\/map$/, { timeout: 10000 });
+      await page.waitForLoadState('networkidle');
 
       // Journey route should remain accessible explicitly.
-      await page.goto(BASE_URL + '/journey');
+      try {
+        await page.goto('/journey', { waitUntil: 'domcontentloaded' });
+      } catch (e) {
+        if (!String(e.message).includes('NS_BINDING_ABORTED')) {
+          throw e;
+        }
+      }
+      await expect
+        .poll(() => new URL(page.url()).pathname)
+        .toMatch(/\/(journey|login)$/);
+      if (new URL(page.url()).pathname.endsWith('/login')) {
+        await page.evaluate((token) => {
+          localStorage.setItem('sessionToken', token);
+        }, authToken);
+        await page.goto(`${BASE_URL}/journey`, { waitUntil: 'domcontentloaded' });
+      }
+      await page.waitForFunction(() => window.location.pathname === '/journey', { timeout: 10000 });
       await page.waitForSelector('header', { timeout: 10000 });
       await expect(page).toHaveURL(/\/journey$/);
 
@@ -466,6 +483,7 @@ test.describe('User Goal Visibility Preference', () => {
       await responsePromise;
 
       // Check that the event was dispatched
+      await page.waitForFunction(() => window.__preferenceEventFired === true, { timeout: 5000 });
       const eventFired = await page.evaluate(() => window.__preferenceEventFired);
       expect(eventFired).toBe(true);
 

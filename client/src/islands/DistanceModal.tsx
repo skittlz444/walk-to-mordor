@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'preact/hooks';
+import { isValidDistance } from '../utils/validators';
 
 export interface DistanceModalProps {
   selectedDate: string;
@@ -33,7 +34,7 @@ export function DistanceModal({
 
   const handleSave = useCallback(() => {
     const value = parseFloat(distance);
-    if (isNaN(value) || value < 0 || distance === '') {
+    if (distance === '' || !isValidDistance(value)) {
       alert('Please enter a valid distance');
       return;
     }

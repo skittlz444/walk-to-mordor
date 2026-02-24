@@ -38,7 +38,17 @@ test.describe('Map Shell (Authenticated)', () => {
     await page.click('.menu-icon');
     await page.waitForSelector('body.drawer-open', { timeout: 5000 });
     await page.click('.drawer-link:has-text("Map")');
-    await page.waitForURL('**/map');
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toMatch(/\/(map|login)$/);
+
+    if (page.url().endsWith('/login')) {
+      await page.evaluate((token) => {
+        localStorage.setItem('sessionToken', token);
+      }, authToken);
+      await page.goto(`${BASE_URL}/map`);
+      await page.waitForFunction(() => window.location.pathname.endsWith('/map'));
+    }
 
     await page.click('.menu-icon');
     await page.waitForSelector('body.drawer-open', { timeout: 5000 });

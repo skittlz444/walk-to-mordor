@@ -12,7 +12,7 @@ const {
 
 // Helper to properly close popup with Firefox compatibility
 async function closePopupRobust(page, closeButton) {
-  const popup = page.locator('.modal-overlay').last();
+  const popup = page.locator('#goal-modal-container .modal-overlay').last();
   try {
     await closeButton.click({ timeout: 2000 });
   } catch (e) {
@@ -26,7 +26,7 @@ async function closePopupRobust(page, closeButton) {
   // Wait for popup to actually close - Firefox sometimes has timing issues
   try {
     await page.waitForFunction(() => {
-      const overlay = document.querySelector('.modal-overlay');
+      const overlay = document.querySelector('#goal-modal-container .modal-overlay');
       return !overlay || window.getComputedStyle(overlay).display === 'none' || 
              overlay.style.display === 'none' || !overlay.offsetParent;
     }, { timeout: 10000 });
@@ -232,9 +232,16 @@ test.describe('Goals Functionality', () => {
 
   test('Goals section renders and controls work', async ({ page }) => {
     await expect(page.locator('#goals-list')).toBeVisible();
-    await page.click('#toggle-completed-visibility');
+    const completedToggle = page.locator('#toggle-completed-visibility');
+    await completedToggle.click();
+    await expect(completedToggle).toContainText('Show Completed');
     await expect(page.locator('#completed-goals-wrapper')).toBeHidden();
-    await page.click('#toggle-completed-visibility');
+    await completedToggle.click({ force: true });
+    await expect(completedToggle).toContainText('Hide Completed');
+    await page.waitForFunction(() => {
+      const wrapper = document.getElementById('completed-goals-wrapper');
+      return !!wrapper && window.getComputedStyle(wrapper).display !== 'none';
+    }, { timeout: 10000 });
     await expect(page.locator('#completed-goals-wrapper')).toBeVisible();
     await page.click('#toggle-completed');
     await expect(page.locator('#all-completed-goals')).toBeVisible();

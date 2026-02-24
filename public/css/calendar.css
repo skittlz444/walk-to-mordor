@@ -253,7 +253,8 @@
   gap: 0.5rem;
 }
 
-#eventcalendar-container {
+#eventcalendar-container,
+#eventcalendar {
   position: fixed;
   bottom: 0;
   left: 0;

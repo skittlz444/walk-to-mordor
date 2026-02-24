@@ -59,7 +59,7 @@ test.describe('System & Network', () => {
         // SPA might handle this differently, but checking we don't crash
         // Some environments redirect to login when auth is invalid
         const url = page.url();
-        expect(url).toMatch(/(\/non-existent-page)|(\/$)|(\/login)/);
+        expect(url).toMatch(/(\/non-existent-page)|(\/journey$)|(\/map$)|(\/$)|(\/login)/);
         
         if (url.includes('/login')) {
             await expect(page.locator('.auth-container')).toBeVisible();

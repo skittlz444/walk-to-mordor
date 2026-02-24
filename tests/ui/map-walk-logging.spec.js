@@ -209,8 +209,12 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
       // Save
       await page.locator('#save-btn').click();
 
-      // Modal should close
-      await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 5000 });
+      // Distance modal should close (other modal overlays, like goal congratulations,
+      // may legitimately appear after save)
+      const distanceModalOverlay = page.locator('.modal-overlay').filter({
+        has: page.locator('#distance-input'),
+      });
+      await expect(distanceModalOverlay).toBeHidden({ timeout: 5000 });
     });
 
     test('quick entry buttons update distance', async ({ page }) => {

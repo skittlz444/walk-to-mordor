@@ -162,7 +162,6 @@ export function CalendarSheetIsland() {
       if (el) {
         const onEnd = () => {
           el.style.display = 'none';
-          el.removeEventListener('transitionend', onEnd);
         };
         el.addEventListener('transitionend', onEnd, { once: true });
       }

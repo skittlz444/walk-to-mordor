@@ -137,6 +137,23 @@ describe('DistanceModal', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it('alerts when distance exceeds max value and does not call onSave', () => {
+    const onSave = vi.fn();
+    window.alert = vi.fn();
+    const { container } = render(
+      <DistanceModal
+        selectedDate="2026-02-23"
+        distanceValue="1000000000"
+        isEdit={false}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.click(container.querySelector('#save-btn')!);
+    expect(window.alert).toHaveBeenCalledWith('Please enter a valid distance');
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it('preserves CSS classes and IDs for test compatibility', () => {
     const { container } = render(
       <DistanceModal
