@@ -143,3 +143,50 @@ The following are suggestions for the product owner to consider based on the req
 5. **Party max member limit:** Consider whether parties should have an optional max member count, configurable by the leader.
 
 6. **Notification preferences per party:** Since users can be in multiple parties, consider per-party notification preferences to avoid notification fatigue.
+
+---
+
+## Section 7: Product Owner Decisions on Suggestions (2026-02-25)
+
+The following decisions were made by the product owner (Hayden) in response to Section 6 suggestions.
+
+### Suggested Changes — Decisions
+
+| # | Suggestion | Decision | Action |
+|---|-----------|----------|--------|
+| 1 | `distance_at_departure` column | **REJECTED** | Not needed — contributed distances are calculable from `distance_at_join` combined with a `departed_at` timestamp via the `progress` table, and the `party_progress_log` serves as an audit trail. Re-join handling clarified: creates a new `party_members` record (preserving old records for history). |
+| 2 | Party settings update API | **ACCEPTED** | Add `PUT /api/party/:id/settings` endpoint to Story 3.5. Leaders can update `distance_mode` and `leave_distance_behavior` after creation. |
+| 3 | `GET /api/user/parties` endpoint | **ACCEPTED** | Add to Story 3.3 as a new endpoint. Returns all parties the user is an active member of. |
+| 4 | Leadership transfer endpoint | **ACCEPTED** | Add `POST /api/party/:id/transfer-leadership` endpoint to Story 3.5. Leaders can step down without leaving. |
+| 5 | Party dissolution | **ACCEPTED** | Auto-dissolve (soft-delete) empty parties when all members have left. Added to Story 3.5 as part of leave/kick handling. |
+
+### Ideas — Decisions
+
+| # | Idea | Decision | Action |
+|---|------|----------|--------|
+| 1 | Party activity indicator on selector | Deferred | Not in current scope |
+| 2 | Member color coding on Map | **ACCEPTED** | Add per-member color-coded segments to Story 3.6 (Map Party Selector). Use a preset color palette assigned by member join order. |
+| 3 | Party leaderboard within a party | Deferred | Not in current scope |
+| 4 | Invite link expiry | **REJECTED** | Not needed |
+| 5 | Party max member limit | **REJECTED** | Not needed |
+| 6 | Notification preferences per party | **REJECTED** | Not needed |
+
+### Follow-Up Items Identified
+
+The following new items were identified during the review and should be tracked for future implementation:
+
+1. **User custom map icon (FR_PARTY_13):** Users can set a custom icon/avatar to distinguish themselves on the Map view. Requires a profile icon field on the `users` table and an upload/selection UI in the profile modal.
+
+2. **Fellowship profile icon (FR_PARTY_14):** Party leaders can set a profile icon for their Fellowship. Requires an icon field on the `parties` table and management UI on the Fellowships page.
+
+3. **Navigation link to Fellowships:** The DrawerIsland navigation needs a link to the `/party` (Fellowships) page. Covered in Story 3.7.
+
+4. **Walk logging → party_progress_log integration:** When a user logs a walk, entries should be automatically inserted into `party_progress_log` for each of their active parties. This enables both the activity feed (Story 3.8) and provides the audit trail for departed member contributions. Should be specified in Story 3.4 or as a cross-cutting concern.
+
+### Schema Impact from Decisions
+
+**`party_members` table — new column:**
+- `departed_at` (DATETIME, default NULL) — set when member status changes to 'left' or 'kicked'. Used with `distance_at_join` and the `progress` table to calculate departed member contributions without needing a `distance_at_departure` column.
+
+**Re-join mechanism:**
+- When a user re-joins a party they previously left/were kicked from, a **new** `party_members` record is created with fresh `distance_at_join` and `departed_at = NULL`. The old record is preserved with its original `distance_at_join`, `departed_at`, and status for contribution history.

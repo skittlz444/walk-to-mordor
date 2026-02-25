@@ -299,6 +299,7 @@ parties
 ├── invite_code (UNIQUE)
 ├── distance_mode (TEXT: 'cumulative' | 'incremental', default 'incremental')
 ├── leave_distance_behavior (TEXT: 'keep' | 'remove', default 'keep')
+├── dissolved_at (DATETIME, default NULL — set when auto-dissolved)
 ├── created_at
 
 party_members
@@ -309,6 +310,7 @@ party_members
 ├── status (TEXT: 'active' | 'left' | 'kicked')
 ├── distance_at_join (DECIMAL)
 ├── last_viewed_distance (DECIMAL, default 0)
+├── departed_at (DATETIME, default NULL — set when left/kicked)
 ├── joined_at
 ```
 
@@ -320,7 +322,10 @@ party_members
 - `leave_distance_behavior` on the party controls whether a departing member's contributed distance is kept or removed from the party total
 - `last_viewed_distance` on party_members enables milestone notification tracking when a user switches between party views
 - `status` field supports 'kicked' state for leader-initiated removals distinct from voluntary leaves
+- `departed_at` enables calculating departed member contributions without a separate `distance_at_departure` column — contribution is derivable from `distance_at_join` + `departed_at` via the `progress` table
 - Multi-party support: no unique constraint on `user_id` in `party_members`, allowing users to join multiple parties
+- Re-join: creates a **new** `party_members` record; old records preserved with `departed_at` set for contribution history
+- `dissolved_at` enables soft-delete of empty parties when all members depart
 
 **Note**: Detailed schema and sharing rules to be finalized during Phase 3 planning.
 

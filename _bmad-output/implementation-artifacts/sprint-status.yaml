@@ -77,9 +77,9 @@ development_status:
   3-2-create-fellowship-api: ready-for-dev
   3-3-invite-join-fellowship-api: ready-for-dev
   3-4-fellowship-progress-calculation-api: backlog
-  3-5-leave-fellowship-api: backlog
-  3-6-fellowship-ui-dashboard-integration: backlog
-  3-7-fellowship-ui-management-page: backlog
+  3-5-leave-kick-party-management-api: backlog
+  3-6-fellowship-ui-journey-map-party-selector: backlog
+  3-7-fellowship-ui-fellowships-management-page: backlog
   3-8-fellowship-progress-activity-feed: backlog
   3-9-fellowship-notifications-party-milestones: backlog
   epic-3-retrospective: optional

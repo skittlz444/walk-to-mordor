@@ -102,11 +102,13 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 ### Phase 3: The Fellowship (Multiplayer)
 *Focus: Adding social and competitive layers on top of the solid solo foundation.*
 *   **Party Management:** Create/Invite/View/Leave Party features (#139). Users can belong to multiple parties simultaneously.
-*   **Party Settings:** Party leaders configure distance calculation mode (cumulative/incremental) and member leave behavior (keep/remove contributed distance) at creation time.
-*   **Shared Progress:** Combined distance tracking with per-member contribution segments visible on Journey and Map pages.
-*   **Party Leader Controls:** Leaders can kick members with optional distance removal override.
-*   **Multi-Party UI:** Journey and Map pages include a party selector (hidden if user has no parties) to toggle between personal distance and any party's combined distance. Fellowships page starts with party selection.
+*   **Party Settings:** Party leaders configure distance calculation mode (cumulative/incremental) and member leave behavior (keep/remove contributed distance) at creation time. Settings can be updated after creation.
+*   **Shared Progress:** Combined distance tracking with per-member color-coded contribution segments visible on Journey and Map pages.
+*   **Party Leader Controls:** Leaders can kick members with optional distance removal override. Leaders can transfer leadership to another active member without leaving.
+*   **Party Lifecycle:** Empty parties (all members departed) are automatically dissolved (soft-deleted). Users who leave or are kicked can re-join via invite code.
+*   **Multi-Party UI:** Journey and Map pages include a party selector (hidden if user has no parties) to toggle between personal distance and any party's combined distance. Fellowships page starts with party selection. Navigation drawer includes link to Fellowships page.
 *   **Party Milestone Notifications:** Swapping to a party view that has passed a new milestone since the user last viewed it triggers the milestone modal.
+*   **Personalization (Future):** User custom map icons and fellowship profile icons for visual distinction.
 *   **Races:** Challenge functionality between users/parties.
 *   *Requirement:* This phase introduces complex database relations and potential privacy refactoring.
 
@@ -158,11 +160,16 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 *   **FR_PARTY_02:** Users can invite other users to join their Fellowship via shareable invite codes.
 *   **FR_PARTY_03:** Users can join a Fellowship by entering or clicking an invite code (joining is the consent action).
 *   **FR_PARTY_04:** Users can view combined Fellowship progress (total distance), with the distance calculation mode (cumulative or incremental) configured as a party setting by the leader.
-*   **FR_PARTY_05:** Users can see individual member contributions within the Fellowship, including per-member segments on the Map view.
+*   **FR_PARTY_05:** Users can see individual member contributions within the Fellowship, including per-member color-coded segments on the Map view.
 *   **FR_PARTY_06:** Users can leave a Fellowship at any time; the party's leave-distance setting (keep or remove contributed distance) determines the impact on party progress.
 *   **FR_PARTY_07:** Party leaders can kick members from the Fellowship, with the ability to override the default leave-distance setting (e.g., remove a cheater's distance even if the default is to keep it).
 *   **FR_PARTY_08:** Users can select between their personal distance and any of their parties' combined distance on the Journey and Map pages. The selector is hidden if the user is not a member of any party.
 *   **FR_PARTY_09:** When a user switches to view a party that has passed a new milestone since the user last viewed that party's distance, the milestone modal is displayed for the latest passed milestone. This does not re-trigger when simply toggling between parties at different positions.
+*   **FR_PARTY_10:** Party leaders can update party settings (distance calculation mode, leave-distance behavior) after party creation.
+*   **FR_PARTY_11:** Party leaders can transfer leadership to another active member without leaving the party.
+*   **FR_PARTY_12:** When all members have left a party, the party is automatically dissolved (soft-deleted). Members cannot re-join a dissolved party.
+*   **FR_PARTY_13 (Future):** Users can set a custom icon/avatar to distinguish themselves on the Map view.
+*   **FR_PARTY_14 (Future):** Party leaders can set a profile icon for their Fellowship.
 
 ## Non-Functional Requirements
 
