@@ -647,7 +647,6 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Set creator as leader in party_members with `distance_at_join` = current total distance
 - [ ] Return party details including invite code
 - [ ] Validate: name required, max 50 chars
-- [ ] Validate: user not already leader of another active party (optional limit)
 - [ ] Return 401 if not authenticated
 
 **FRs:** FR_PARTY_01
@@ -663,14 +662,12 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Description:** API endpoints for inviting users and joining via invite code.
 
 **Acceptance Criteria:**
-- [ ] GET `/api/party/join/:inviteCode` - Preview party before joining (name, member count)
+- [ ] GET `/api/party/join/:inviteCode` - Preview party before joining (name, member count, and current distance)
 - [ ] POST `/api/party/join/:inviteCode` - Join party via invite code
 - [ ] On join: Record `distance_at_join` = user's current total distance
 - [ ] POST `/api/party/:id/invite` - Generate new invite link (leader only)
-- [ ] Validate: User can only be in one active party at a time
 - [ ] Validate: Cannot join own party twice
 - [ ] Return 404 for invalid invite codes
-- [ ] Return 403 if user already in a different party
 - [ ] **Security:** Verify implicit opt-in (joining is the consent action)
 - [ ] **Security:** Validate Invite Code integrity (prevent enumeration/brute-force)
 
