@@ -187,6 +187,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - Auto-dissolution of empty parties
 - Re-join support (users can re-join parties they previously left/were kicked from)
 - Navigation link to Fellowships page in DrawerIsland
+- 3-page fellowship flow: list (`/party`) → detail (`/party/:id`) → management (`/party/:id/manage`, leader only)
+- Activity feed on fellowship detail page
 - Privacy controls (opt-in sharing)
 
 **Future follow-ups:** User custom map icons (FR_PARTY_13), Fellowship profile icons (FR_PARTY_14)
@@ -820,31 +822,48 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 3.7: Fellowship UI - Fellowships Management Page (Issue #175)
+#### Story 3.7: Fellowship UI - Fellowships Pages (Issue #175)
 
 **Priority:** P2
 
-**Description:** Dedicated "Fellowships" page for managing party membership. Starts with selecting which party to view from a list of the user's parties, plus a create button.
+**Description:** Three-page fellowship UI flow accessible from the navigation drawer. The flow is: nav drawer → Fellowships list (select or create) → Fellowship detail (members, contributions, progress, milestone) → Fellowship management (leader only).
 
 **Acceptance Criteria:**
+
+**Page 1: Fellowships List (`/party`)**
 - [ ] Create `/party` route (titled "Fellowships")
 - [ ] **Add "Fellowships" link to the DrawerIsland navigation** (alongside Journey and Map links)
-- [ ] **Page opens with a party list/selector** showing all parties the user belongs to, with a "Create Fellowship" button
-- [ ] Selecting a party shows: party name, invite code (copyable), member list, party settings (distance_mode, leave_distance_behavior)
-- [ ] Member list shows: name, contribution, joined date, status (active/left/kicked), **color** (matching Map segment color)
-- [ ] Contribution display based on party's configured distance mode
-- [ ] Leader actions: regenerate invite code, **kick member** (with optional distance removal override), **update party settings** (distance_mode, leave_distance_behavior), **transfer leadership** to another active member
-- [ ] Member actions: Leave party button with confirmation (showing what will happen to their contributed distance based on party setting)
-- [ ] Create party form: name, distance_mode selector, leave_distance_behavior selector
-- [ ] Join party form with invite code input (shows preview before confirming, including party settings)
+- [ ] Page shows a **list of all parties** the user belongs to (via `GET /api/user/parties` from Story 3.3), each showing party name and member count
+- [ ] **"Create Fellowship" button** opens a create party form: name, distance_mode selector, leave_distance_behavior selector
+- [ ] **"Join Fellowship" section** with invite code input (shows preview before confirming, including party settings)
+- [ ] Clicking a party navigates to the Fellowship detail page (`/party/:id`)
 - [ ] **Party list updates** when a new party is created or joined
 - [ ] **Show dissolved parties** in a separate "Dissolved" section (read-only, for history) or hide them
+
+**Page 2: Fellowship Detail (`/party/:id`)**
+- [ ] Shows **party name** and basic info
+- [ ] Displays **total party progress** (combined distance) and **distance to next milestone**
+- [ ] Shows **last milestone crossed** by the party (name and distance)
+- [ ] **Member list** showing: name, contribution, joined date, status (active/left/kicked), **color** (matching Map segment color)
+- [ ] Contribution display based on party's configured distance mode
+- [ ] **Activity feed** (last 10 activities, per Story 3.8 — displayed inline on this page)
+- [ ] Member actions: **Leave party button** with confirmation (showing what will happen to their contributed distance based on party setting)
+- [ ] If user is party leader: show **"Manage Fellowship" link/button** navigating to `/party/:id/manage`
+- [ ] **Invite code** displayed (copyable) for sharing
+
+**Page 3: Fellowship Management (`/party/:id/manage`, leader only)**
+- [ ] Return 403/redirect if user is not the party leader
+- [ ] **Update party settings:** distance_mode selector, leave_distance_behavior selector (via `PUT /api/party/:id/settings`)
+- [ ] **Kick member** controls (with optional distance removal override)
+- [ ] **Transfer leadership** to another active member (via `POST /api/party/:id/transfer-leadership`)
+- [ ] **Regenerate invite code** button
+- [ ] Navigation back to Fellowship detail page
 
 **FRs:** FR_PARTY_01, FR_PARTY_02, FR_PARTY_05, FR_PARTY_06, FR_PARTY_07, FR_PARTY_08, FR_PARTY_10, FR_PARTY_11, FR_PARTY_12
 
 **Dependencies:** Story 3.6
 
-**change-impact:** Added navigation link to DrawerIsland. Added leadership transfer UI (FR_PARTY_11). Added party settings update UI (FR_PARTY_10). Dissolved party display. Member color shown in list. Join preview includes party settings. Future: User custom map icon (FR_PARTY_13) and Fellowship profile icon (FR_PARTY_14) are follow-up items not in this story.
+**change-impact:** Restructured from single-page to 3-page flow (list → detail → management). Fellowship detail page now shows total progress, last milestone crossed, member contributions, and activity feed. Management page is leader-only. Added navigation link to DrawerIsland. Future: User custom map icon (FR_PARTY_13) and Fellowship profile icon (FR_PARTY_14) are follow-up items not in this story.
 
 ---
 
@@ -852,10 +871,10 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Priority:** P2
 
-**Description:** Show recent activity from Fellowship members as a feed. Scoped per-party since users can belong to multiple parties.
+**Description:** Show recent activity from Fellowship members as a feed on the Fellowship detail page (`/party/:id`). Scoped per-party since users can belong to multiple parties.
 
 **Acceptance Criteria:**
-- [ ] Display last 10 party member activities for the **currently selected party**
+- [ ] Display last 10 party member activities on the **Fellowship detail page** (`/party/:id`)
 - [ ] Format: "[Member] walked [X] km on [Date]"
 - [ ] Auto-refresh every 60 seconds (or on page focus)
 - [ ] Distinguish own activities from others
@@ -866,7 +885,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Dependencies:** Story 3.7
 
-**change-impact:** Minor — clarified that feed is scoped to the currently selected party (multi-party context).
+**change-impact:** Activity feed now lives on the Fellowship detail page (`/party/:id`) instead of a generic "currently selected party" context. Still scoped per-party.
 
 ---
 

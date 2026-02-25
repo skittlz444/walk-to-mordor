@@ -190,3 +190,38 @@ The following new items were identified during the review and should be tracked 
 
 **Re-join mechanism:**
 - When a user re-joins a party they previously left/were kicked from, a **new** `party_members` record is created with fresh `distance_at_join` and `departed_at = NULL`. The old record is preserved with its original `distance_at_join`, `departed_at`, and status for contribution history.
+
+---
+
+## Section 8: Fellowship UI Restructuring (2026-02-25)
+
+**Problem:** Story 3.7 originally specified a single `/party` page combining fellowship listing, detail viewing, and management functionality. Product owner feedback requires a clear page separation to improve UX flow and navigation.
+
+**Decision:** Restructure the Fellowship UI into a 3-page flow:
+
+| Page | Route | Purpose | Access |
+|------|-------|---------|--------|
+| Fellowships List | `/party` | Select fellowship, create new, join via code | All authenticated users |
+| Fellowship Detail | `/party/:id` | View members, contributions, total progress, last milestone, activity feed, leave button, invite code | Party members |
+| Fellowship Management | `/party/:id/manage` | Update settings, kick members, transfer leadership, regenerate invite | Party leader only |
+
+**Navigation Flow:**
+```
+DrawerIsland → "Fellowships" link → /party (list)
+  → Click party → /party/:id (detail)
+    → "Manage Fellowship" button (leader only) → /party/:id/manage (management)
+```
+
+**Story Impact:**
+
+| Story | Impact |
+|-------|--------|
+| 3.7 | **High** — Restructured from single-page to 3-page flow. Story renamed to "Fellowship UI - Fellowships Pages". Detail page shows total progress, last milestone, member contributions, activity feed inline. Management page is leader-only. |
+| 3.8 | **Medium** — Activity feed now explicitly lives on the Fellowship detail page (`/party/:id`) instead of a generic "currently selected party" context. |
+| 3.6 | **None** — Party selector on Journey/Map pages remains unchanged. |
+| 3.9 | **None** — Milestone notifications remain on Journey/Map party selector switch. |
+
+**Additional UI observations from this PR:**
+- DrawerIsland navigation link to `/party` was already specified in Story 3.7 but is now confirmed as part of the flow.
+- The Fellowship detail page (`/party/:id`) consolidates what was previously scattered: member list, contributions, party progress, last milestone, and activity feed.
+- No new API endpoints are required beyond those already specified in Stories 3.3–3.5. The UI pages consume the same APIs.
