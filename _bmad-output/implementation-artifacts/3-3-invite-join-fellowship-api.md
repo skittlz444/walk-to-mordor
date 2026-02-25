@@ -17,7 +17,7 @@ so that I can share my walking journey and progress with others across multiple 
 3. On join: Insert the user into the `party_members` table and record `distance_at_join` equal to the user's current total distance, `last_viewed_distance` = 0, and `departed_at` = NULL.
 4. **Re-join:** If user previously left/was kicked from the party, create a **new** `party_members` record (old record preserved with `departed_at` set for contribution history). Return 400 if party is dissolved (`dissolved_at` is not NULL).
 5. Create a `POST /api/party/:id/invite` endpoint to generate a new invite link (leader only).
-6. **Create a `GET /api/user/parties` endpoint** to return the list of all parties the user is an active member of (id, name, role, distance_mode, leave_distance_behavior).
+6. **Create a `GET /api/user/parties` endpoint** to return the list of all parties the user is an active member of (id, name, role, distance_mode, leave_distance_behavior, active_member_count). Exclude dissolved parties by default. Accept optional `?include_dissolved=true` query parameter to also return dissolved parties (with `dissolved_at` field) for the Fellowships list page history section.
 7. Validate: Prevent a user from joining a party they already have an active membership in (no duplicate active memberships).
 8. Allow users to join multiple different parties — no single-party restriction.
 9. Return a 404 Not Found error for invalid invite codes.
@@ -43,8 +43,9 @@ so that I can share my walking journey and progress with others across multiple 
   - [ ] For `POST` invite generation, verify the current user is the leader of the specified party.
   - [ ] Generate a new cryptographically secure invite code and update the `parties` table.
 - [ ] Task 4: User Parties Endpoint (AC: 6)
-  - [ ] Query `party_members` and `parties` tables to return all parties where user has status = 'active' and party is not dissolved.
-  - [ ] Return: id, name, role, distance_mode, leave_distance_behavior for each party.
+  - [ ] Query `party_members` and `parties` tables to return all parties where user has status = 'active' and party is not dissolved (by default).
+  - [ ] Accept optional `?include_dissolved=true` query parameter. When true, also return parties where user has a membership record AND party is dissolved (with `dissolved_at` field).
+  - [ ] Return: id, name, role, distance_mode, leave_distance_behavior, active_member_count, dissolved_at (if applicable) for each party.
 
 ## Dev Notes
 

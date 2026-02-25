@@ -311,7 +311,16 @@ party_members
 ├── distance_at_join (DECIMAL)
 ├── last_viewed_distance (DECIMAL, default 0)
 ├── departed_at (DATETIME, default NULL — set when left/kicked)
+├── distance_kept (BOOLEAN, default NULL — records whether contribution was kept or removed on departure)
 ├── joined_at
+
+party_progress_log
+├── id (PK)
+├── party_id (FK → parties)
+├── logged_by_user_id (FK → users)
+├── distance (DECIMAL)
+├── date (DATE — correlates with progress table entry)
+├── logged_at (DATETIME)
 ```
 
 **Rationale**:
@@ -323,6 +332,8 @@ party_members
 - `last_viewed_distance` on party_members enables milestone notification tracking when a user switches between party views
 - `status` field supports 'kicked' state for leader-initiated removals distinct from voluntary leaves
 - `departed_at` enables calculating departed member contributions without a separate `distance_at_departure` column — contribution is derivable from `distance_at_join` + `departed_at` via the `progress` table
+- `distance_kept` on party_members records the distance disposition decision at departure time, preserving any kick-specific override so that later progress calculations remain accurate even if the party's `leave_distance_behavior` setting changes
+- `party_progress_log` has a `date` column correlating with the `progress` table, enabling accurate updates when walks are edited or deleted
 - Multi-party support: no unique constraint on `user_id` in `party_members`, allowing users to join multiple parties
 - Re-join: creates a **new** `party_members` record; old records preserved with `departed_at` set for contribution history
 - `dissolved_at` enables soft-delete of empty parties when all members depart

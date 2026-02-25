@@ -224,4 +224,49 @@ DrawerIsland → "Fellowships" link → /party (list)
 **Additional UI observations from this PR:**
 - DrawerIsland navigation link to `/party` was already specified in Story 3.7 but is now confirmed as part of the flow.
 - The Fellowship detail page (`/party/:id`) consolidates what was previously scattered: member list, contributions, party progress, last milestone, and activity feed.
-- No new API endpoints are required beyond those already specified in Stories 3.3–3.5. The UI pages consume the same APIs.
+- One new API endpoint added: `GET /api/party/:id/activity` in Story 3.4 for the activity feed on the detail page.
+
+---
+
+## Section 9: Deep Review Findings (2026-02-25)
+
+**Context:** Multi-persona deep review (Architect, QA, UX, Business Analyst) performed on all Epic 3 planning artifacts. All Critical and High-severity findings have been resolved and applied to the artifacts.
+
+### Critical Findings Resolved
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 1 | **Walk logging → party_progress_log integration unowned** — no story had an AC for modifying walk logging to cross-post to party_progress_log | Added explicit ACs to Story 3.4 for POST/PUT/DELETE integration with walk logging |
+| 2 | **Departed member contribution formula error** — incremental mode formula subtracted `distance_at_join` from a date-range SUM (wrong units) | Fixed formula: incremental departed = SUM(progress.distance WHERE date BETWEEN joined_at AND departed_at) — no subtraction needed |
+| 3 | **Cumulative mode re-join double-counting** — summing cumulative contributions across multiple records for the same user would massively over-count | Added specification: cumulative mode uses only current active record's total for re-joined members; incremental sums across records |
+| 4 | **Kick distance override not stored** — no schema column to record whether a kicked member's distance was kept or removed | Added `distance_kept` (BOOLEAN) column to `party_members` schema, set on departure |
+| 5 | **FR Inventory stale** — epics.md FR table only listed FR_PARTY_01–06, missing 07–12 | Updated FR Inventory to include all 12 active FRs with expanded descriptions |
+| 6 | **FR_PARTY_03 wording stale** — still said "accept or decline" instead of "join via invite code" | Updated wording to match PRD |
+
+### High Findings Resolved
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 1 | **Missing activity feed API endpoint** — Story 3.8 consumes data but no endpoint was defined | Added `GET /api/party/:id/activity` to Story 3.4 |
+| 2 | **FR_PARTY_09 dual ownership** — both Story 3.6 and 3.9 claimed the party-switch milestone modal | Story 3.6 now owns the modal trigger; Story 3.9 clarified to only cover proactive push notifications |
+| 3 | **Story 3.8 missing dependency on Story 3.4** | Added Story 3.4 as explicit dependency |
+| 4 | **Dissolved parties API conflict** — `GET /api/user/parties` excluded dissolved, but Story 3.7 needs them | Added `?include_dissolved=true` query parameter |
+| 5 | **party_progress_log missing date column** — couldn't correlate with progress table for edits/deletes | Added `date` (DATE) column to schema |
+| 6 | **Auto-dissolve race condition** — concurrent departures could create zombie parties | Added D1 batch transaction specification to Story 3.5 |
+| 7 | **No back-navigation pattern** — 3-page flow had no back button/breadcrumb spec | Added breadcrumb-style back navigation headers to Story 3.7 Pages 2 and 3 |
+| 8 | **No loading/error states** — none of the UI stories specified loading or error handling | Added loading skeletons, error handling for 403/404/kicked, and confirmation dialogs to Story 3.7 |
+| 9 | **Color assignment fragile** — join-order-based colors unstable with re-joins and departures | Changed to `user_id % palette_size` deterministic assignment in Stories 3.4 and 3.6 |
+| 10 | **Settings labels are jargon** — "distance_mode" and "leave_distance_behavior" are database names | Added user-friendly label specifications to Story 3.7 create form |
+
+### Medium Findings — Documented for Implementation Phase
+
+The following findings are acknowledged and should be resolved during story implementation (not blocking ready-for-dev):
+
+1. **Caching strategy (Story 3.4):** "Cache for 5 minutes" needs technology decision (Cache API recommended for Workers). Evaluate if caching is needed given data volume.
+2. **`last_viewed_distance` update on GET is non-RESTful:** Pragmatic tradeoff accepted — document in Story 3.4 dev notes.
+3. **`distance_mode` change after contributions exist (Story 3.5):** Confirmation dialog added to Story 3.7 management page.
+4. **`getAllowedMethods()` doesn't handle parameterized routes:** Noted in Story 3.4 tech notes as prerequisite for Story 3.2.
+5. **Milestone modal could be disorienting on party switch:** Consider toast/banner alternative during Story 3.6 implementation.
+6. **Party name validation details:** Minimum length, character restrictions, and same-name handling to be specified during Story 3.2 implementation.
+7. **Invite code collision handling:** Retry on collision — document during Story 3.2 implementation.
+8. **Story 3.5 dependency may be too strict:** Could depend on Story 3.2 instead of 3.3 — evaluate during sprint planning.
