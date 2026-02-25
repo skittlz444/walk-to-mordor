@@ -63,10 +63,10 @@ Walk to Mordor is a gamified fitness tracking Progressive Web App (PWA) that tra
 *   **Resolution:** He feels powerful and efficient. The tool didn't get in his way.
 
 ### 4. The "Aragorn" (Fellowship Leader)
-*   **Scene:** Aragorn wants to organize a group (Fellowship) and ensure everyone succeeds.
-*   **Action:** (Future Vision) He checks the group status, sees Frodo is lagging behind.
-*   **Climax:** He sends a "Don't give up!" nudge.
-*   **Resolution:** The group stays active and motivated.
+*   **Scene:** Aragorn has created two Fellowships — one for his running club and one for a family challenge.
+*   **Action:** He opens the Fellowships page, selects his running club party, sees the member list and combined progress.
+*   **Climax:** He notices a suspicious entry from one member. He kicks them (removing their distance) and checks the Map view — each member's contributed segment is clearly visible.
+*   **Resolution:** The group stays fair and motivated. He swaps to his family party on the Journey page to check their progress toward Rivendell.
 
 ### 5. The "Gandalf" (System Admin/Developer)
 *   **Scene:** Gandalf receives a user suggestion for a "Dark Mode" to save battery on long hikes.
@@ -101,8 +101,12 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 
 ### Phase 3: The Fellowship (Multiplayer)
 *Focus: Adding social and competitive layers on top of the solid solo foundation.*
-*   **Party Management:** Create/Invite/View Party features (#139).
-*   **Shared Progress:** Combined distance tracking and "Party Pace" calculations.
+*   **Party Management:** Create/Invite/View/Leave Party features (#139). Users can belong to multiple parties simultaneously.
+*   **Party Settings:** Party leaders configure distance calculation mode (cumulative/incremental) and member leave behavior (keep/remove contributed distance) at creation time.
+*   **Shared Progress:** Combined distance tracking with per-member contribution segments visible on Journey and Map pages.
+*   **Party Leader Controls:** Leaders can kick members with optional distance removal override.
+*   **Multi-Party UI:** Journey and Map pages include a party selector (hidden if user has no parties) to toggle between personal distance and any party's combined distance. Fellowships page starts with party selection.
+*   **Party Milestone Notifications:** Swapping to a party view that has passed a new milestone since the user last viewed it triggers the milestone modal.
 *   **Races:** Challenge functionality between users/parties.
 *   *Requirement:* This phase introduces complex database relations and potential privacy refactoring.
 
@@ -148,6 +152,17 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 *   **FR_MAP_01:** Users can view their current calculated position projected onto a stylized map of Middle-earth.
 *   **FR_MAP_02:** Users can see a visual "breadcrumb" trail corresponding to their completed journey segments on the map.
 *   **FR_MAP_03:** Users can click interactive points on the map corresponding to unlocked milestones to view their details.
+
+### 6. Fellowship Features (Phase 3)
+*   **FR_PARTY_01:** Users can create a new Fellowship (party) and become the leader. Users can be members or leaders of multiple parties simultaneously.
+*   **FR_PARTY_02:** Users can invite other users to join their Fellowship via shareable invite codes.
+*   **FR_PARTY_03:** Users can join a Fellowship by entering or clicking an invite code (joining is the consent action).
+*   **FR_PARTY_04:** Users can view combined Fellowship progress (total distance), with the distance calculation mode (cumulative or incremental) configured as a party setting by the leader.
+*   **FR_PARTY_05:** Users can see individual member contributions within the Fellowship, including per-member segments on the Map view.
+*   **FR_PARTY_06:** Users can leave a Fellowship at any time; the party's leave-distance setting (keep or remove contributed distance) determines the impact on party progress.
+*   **FR_PARTY_07:** Party leaders can kick members from the Fellowship, with the ability to override the default leave-distance setting (e.g., remove a cheater's distance even if the default is to keep it).
+*   **FR_PARTY_08:** Users can select between their personal distance and any of their parties' combined distance on the Journey and Map pages. The selector is hidden if the user is not a member of any party.
+*   **FR_PARTY_09:** When a user switches to view a party that has passed a new milestone since the user last viewed that party's distance, the milestone modal is displayed for the latest passed milestone. This does not re-trigger when simply toggling between parties at different positions.
 
 ## Non-Functional Requirements
 
