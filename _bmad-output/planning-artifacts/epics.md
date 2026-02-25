@@ -194,6 +194,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - Re-join support (users can re-join parties they previously left/were kicked from)
 - Navigation link to Fellowships page in DrawerIsland
 - 3-page fellowship flow: list (`/party`) → detail (`/party/:id`) → management (`/party/:id/manage`, leader only)
+- Deep-link invite flow: shareable invite URLs (`/party/join/:inviteCode`) with preview for both authenticated and non-authenticated users
 - Activity feed on fellowship detail page
 - Privacy controls (opt-in sharing)
 
@@ -711,7 +712,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] POST `/api/party/join/:inviteCode` - Join party via invite code
 - [ ] On join: Record `distance_at_join` = user's current total distance, `last_viewed_distance` = 0, `departed_at` = NULL
 - [ ] **Re-join:** If user previously left/was kicked from the party, create a **new** `party_members` record (old record preserved for contribution history). Return 400 if party is dissolved.
-- [ ] POST `/api/party/:id/invite` - Generate new invite link (leader only)
+- [ ] POST `/api/party/:id/invite` - Generate new invite code (leader only). Response includes the new invite code **and** the full shareable invite URL (format: `{request.origin}/party/join/{inviteCode}`)
 - [ ] **GET `/api/user/parties`** - Return list of all parties the user is an active member of (id, name, role, distance_mode, leave_distance_behavior, active_member_count). Exclude dissolved parties by default. Accept optional `?include_dissolved=true` query parameter to also return dissolved parties (with `dissolved_at` field) for the Fellowships list page history section (Story 3.7).
 - [ ] Validate: Cannot join the same party twice (no duplicate active memberships)
 - [ ] **Allow joining multiple different parties** — no single-party restriction
@@ -844,7 +845,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Priority:** P2
 
-**Description:** Three-page fellowship UI flow accessible from the navigation drawer. The flow is: nav drawer → Fellowships list (select or create) → Fellowship detail (members, contributions, progress, milestone) → Fellowship management (leader only). Each route renders via SSR (following `renderLayout()` pattern) with a corresponding Preact island.
+**Description:** Fellowship UI flow with four routes: three pages accessible from the navigation drawer (list → detail → management), plus a join landing page for deep-link invite URLs. The flow is: nav drawer → Fellowships list (select or create) → Fellowship detail (members, contributions, progress, milestone) → Fellowship management (leader only). Additionally, `/party/join/:inviteCode` serves as a deep-link landing page when users click a shared invite link. Each route renders via SSR (following `renderLayout()` pattern) with a corresponding Preact island.
 
 **Acceptance Criteria:**
 
@@ -870,7 +871,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] **Activity feed** (last 10 activities via `GET /api/party/:id/activity`, per Story 3.8 — displayed inline on this page)
 - [ ] Member actions: **Leave party button** with confirmation dialog showing: party name, user's contributed distance, impact statement based on leave_distance_behavior ("Your XX.X km will remain in the party total" / "⚠️ Your XX.X km will be removed from the party total"), and if leader: "⚠️ Leadership will transfer to [oldest active member]" or "This party will be dissolved" if sole member
 - [ ] If user is party leader: show **"Manage Fellowship" button** navigating to `/party/:id/manage`
-- [ ] **Invite code** displayed (copyable) for sharing
+- [ ] **Invite link sharing:** Display the full invite URL (format: `{origin}/party/join/{inviteCode}`) with a **"Copy Link" button** that copies the full URL to clipboard. Additionally, show a **"Share" button** that uses the Web Share API (navigator.share) on supported devices (mobile PWA) to share the invite link with a pre-filled message ("Join my Fellowship on Walk to Mordor!"). Fallback to copy-only on unsupported devices. The raw invite code should also be visible for manual entry.
 - [ ] **Loading skeleton** while data is being fetched
 - [ ] **Error handling**: if API returns 403 (kicked/departed), show "You are no longer a member of this Fellowship" with button to return to Fellowships list. If 404, show "This Fellowship no longer exists."
 - [ ] **Graceful handling** when party is dissolved or user is kicked while viewing (on next API call/refresh, show appropriate message)
@@ -884,16 +885,24 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] **Regenerate invite code** button with confirmation ("Previous invite code will stop working. Continue?")
 - [ ] **Loading states** for all management actions
 
+**Join Landing Page (`/party/join/:inviteCode`)**
+- [ ] Create `/party/join/:inviteCode` route with SSR shell (new `renderPartyJoinPage.ts` following `renderLayout()` pattern) and a Preact island
+- [ ] **Authenticated users:** Show party preview (name, member count, combined distance, distance_mode, leave_distance_behavior in user-friendly labels) via `GET /api/party/join/:inviteCode`. Display a **"Join Fellowship" button** that calls `POST /api/party/join/:inviteCode`. On success, redirect to `/party/:id` (the newly joined party's detail page).
+- [ ] **Non-authenticated users:** Show the same party preview (name, member count — using the public preview endpoint). Display a **"Log in to Join"** button that redirects to the login page with `returnTo=/party/join/:inviteCode` so the user returns to the join page after authentication. After login redirect, the page loads with the authenticated join flow.
+- [ ] **Error states:** Invalid invite code → "This invite link is invalid or has expired" with link to `/party`. Dissolved party → "This Fellowship no longer exists." Already a member → "You're already a member of this Fellowship!" with link to `/party/:id`. Network error → retry prompt.
+- [ ] **Post-join redirect:** After successful join, navigate to `/party/:id` for the joined party.
+- [ ] **Loading skeleton** while preview is being fetched
+
 **Cross-cutting:**
 - [ ] All new interactive elements follow existing accessibility patterns (ARIA labels, focus management, keyboard navigation, WCAG AA contrast)
 - [ ] All fellowship pages must be functional and usable on screens ≥320px wide (mobile-first, matching existing PWA patterns)
 - [ ] Use `history.pushState` for navigation between pages so browser back button works
 
-**FRs:** FR_PARTY_01, FR_PARTY_02, FR_PARTY_05, FR_PARTY_06, FR_PARTY_07, FR_PARTY_08, FR_PARTY_10, FR_PARTY_11, FR_PARTY_12
+**FRs:** FR_PARTY_01, FR_PARTY_02, FR_PARTY_03, FR_PARTY_05, FR_PARTY_06, FR_PARTY_07, FR_PARTY_08, FR_PARTY_10, FR_PARTY_11, FR_PARTY_12
 
 **Dependencies:** Story 3.6
 
-**change-impact:** Restructured from single-page to 3-page flow (list → detail → management). Fellowship detail page now shows total progress, last milestone crossed, member contributions, and activity feed. Management page is leader-only with confirmation dialogs for destructive actions. Added navigation link to DrawerIsland. Back-navigation pattern established for hierarchical pages. SSR + Preact island rendering pattern specified. Error handling and loading states defined. Future: User custom map icon (FR_PARTY_13) and Fellowship profile icon (FR_PARTY_14) are follow-up items not in this story.
+**change-impact:** Restructured from single-page to 3-page flow (list → detail → management) plus a join landing page for deep-link invite URLs. Fellowship detail page now shows total progress, last milestone crossed, member contributions, and activity feed. Management page is leader-only with confirmation dialogs for destructive actions. Added navigation link to DrawerIsland. Back-navigation pattern established for hierarchical pages. SSR + Preact island rendering pattern specified. Error handling and loading states defined. **Added:** `/party/join/:inviteCode` deep-link landing page for clickable invite links (FR_PARTY_03). Invite sharing expanded with full URL, Copy Link, and Web Share API. Non-authenticated user flow for invite deep-links with login redirect. FR_PARTY_03 added to story coverage. Future: User custom map icon (FR_PARTY_13) and Fellowship profile icon (FR_PARTY_14) are follow-up items not in this story.
 
 ---
 

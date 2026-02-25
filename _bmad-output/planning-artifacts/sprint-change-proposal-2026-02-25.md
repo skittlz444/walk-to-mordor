@@ -270,3 +270,14 @@ The following findings are acknowledged and should be resolved during story impl
 6. **Party name validation details:** Minimum length, character restrictions, and same-name handling to be specified during Story 3.2 implementation.
 7. **Invite code collision handling:** Retry on collision — document during Story 3.2 implementation.
 8. **Story 3.5 dependency may be too strict:** Could depend on Story 3.2 instead of 3.3 — evaluate during sprint planning.
+
+### Additional Findings — Invite Deep-Link Flow (2026-02-25)
+
+| # | Finding | Resolution |
+|---|---------|------------|
+| 1 | **No `/party/join/:inviteCode` page route** — FR_PARTY_03 says "entering **or clicking** an invite code" but only a text input on `/party` existed; no clickable invite link support | Added Join Landing Page (`/party/join/:inviteCode`) to Story 3.7 with SSR shell + Preact island, handling both authenticated and non-authenticated users |
+| 2 | **Invite sharing limited to "copyable" text** — no full URL, no Web Share API support | Expanded invite display on detail page: full URL with "Copy Link" button + "Share" button (Web Share API on mobile, fallback to copy) |
+| 3 | **Non-authenticated user flow missing** — no specification for what happens when someone without an account clicks an invite link | Added: show party preview (public preview endpoint), "Log in to Join" button with `returnTo` redirect back to join page |
+| 4 | **Invite URL format unspecified** — `POST /api/party/:id/invite` didn't specify response format | Updated Story 3.3: response includes both `inviteCode` and `inviteUrl` (format: `{origin}/party/join/{inviteCode}`) |
+| 5 | **Preview endpoint required authentication** — blocked non-authenticated users from seeing party preview on deep-link | Updated Story 3.3: `GET /api/party/join/:inviteCode` preview works without authentication (returns limited public info) |
+| 6 | **FR_PARTY_03 not listed in Story 3.7 FRs** — the "clicking an invite code" requirement was missing from UI story coverage | Added FR_PARTY_03 to Story 3.7 FR list |
