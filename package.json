@@ -54,6 +54,7 @@
     "dev:client": "cd client && vite build --watch",
     "deploy": "npm run build && wrangler deploy",
     "dev": "npm run build:sw:reset && npm run seedLocalD1 && concurrently \"npm run dev:client\" \"wrangler dev --var ALLOW_TEST_AUTH:true\"",
+    "dev:ci": "wrangler dev --var ALLOW_TEST_AUTH:true",
     "predeploy": "wrangler d1 migrations apply DB --remote",
     "seedLocalD1": "wrangler d1 migrations apply DB --local",
     "test": "jest",
