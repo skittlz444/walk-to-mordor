@@ -102,7 +102,7 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 ### Phase 3: The Fellowship (Multiplayer)
 *Focus: Adding social and competitive layers on top of the solid solo foundation.*
 *   **Party Management:** Create/Invite/View/Leave Party features (#139). Users can belong to multiple parties simultaneously.
-*   **Party Settings:** Party leaders configure distance calculation mode (cumulative/incremental) and member leave behavior (keep/remove contributed distance) at creation time. Settings can be updated after creation.
+*   **Party Settings:** Party leaders configure distance calculation mode (cumulative/incremental) and member leave behavior (keep/remove contributed distance) at creation time. After creation, leaders may update the party name and leave behavior, but the distance calculation mode is immutable.
 *   **Shared Progress:** Combined distance tracking with per-member color-coded contribution segments visible on Journey and Map pages.
 *   **Party Leader Controls:** Leaders can kick members with optional distance removal override. Leaders can transfer leadership to another active member without leaving.
 *   **Party Lifecycle:** Empty parties (all members departed) are automatically dissolved (soft-deleted). Users who leave or are kicked can re-join via invite code.
