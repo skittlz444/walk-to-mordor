@@ -165,7 +165,7 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 *   **FR_PARTY_07:** Party leaders can kick members from the Fellowship, with the ability to override the default leave-distance setting (e.g., remove a cheater's distance even if the default is to keep it).
 *   **FR_PARTY_08:** Users can select between their personal distance and any of their parties' combined distance on the Journey and Map pages. The selector is hidden if the user is not a member of any party.
 *   **FR_PARTY_09:** When a user switches to view a party that has passed a new milestone since the user last viewed that party's distance, the milestone modal is displayed for the latest passed milestone. This does not re-trigger when simply toggling between parties at different positions.
-*   **FR_PARTY_10:** Party leaders can update party settings (distance calculation mode, leave-distance behavior) after party creation.
+*   **FR_PARTY_10:** Party leaders can update mutable party settings (e.g., party name and leave-distance behavior) after party creation. The distance calculation mode is immutable once the party is created.
 *   **FR_PARTY_11:** Party leaders can transfer leadership to another active member without leaving the party.
 *   **FR_PARTY_12:** When all members have left a party, the party is automatically dissolved (soft-deleted). Members cannot re-join a dissolved party.
 *   **FR_PARTY_13 (Future):** Users can set a custom icon/avatar to distinguish themselves on the Map view.

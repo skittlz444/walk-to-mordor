@@ -165,7 +165,7 @@ The following decisions were made by the product owner (Hayden) in response to S
 | # | Idea | Decision | Action |
 |---|------|----------|--------|
 | 1 | Party activity indicator on selector | Deferred | Not in current scope |
-| 2 | Member color coding on Map | **ACCEPTED** | Add per-member color-coded segments to Story 3.6 (Map Party Selector). Use a preset color palette assigned by member join order. |
+| 2 | Member color coding on Map | **ACCEPTED** | Add per-member color-coded segments to Story 3.6 (Map Party Selector). Use a preset color palette with deterministic assignment per member based on `user_id` (for example, `user_id % palette_size`). |
 | 3 | Party leaderboard within a party | Deferred | Not in current scope |
 | 4 | Invite link expiry | **REJECTED** | Not needed |
 | 5 | Party max member limit | **REJECTED** | Not needed |

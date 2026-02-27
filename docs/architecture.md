@@ -331,11 +331,11 @@ party_progress_log
 - `leave_distance_behavior` on the party controls whether a departing member's contributed distance is kept or removed from the party total
 - `last_viewed_distance` on party_members enables milestone notification tracking when a user switches between party views
 - `status` field supports 'kicked' state for leader-initiated removals distinct from voluntary leaves
-- `departed_at` enables calculating departed member contributions without a separate `distance_at_departure` column — contribution is derivable from `distance_at_join` + `departed_at` via the `progress` table
+- `departed_at` marks the end of a member's contribution window, while `contribution_at_departure` snapshots the member's total contributed distance at leave time to avoid expensive historical recalculation against the `progress` table
 - `distance_kept` on party_members records the distance disposition decision at departure time, preserving any kick-specific override so that later progress calculations remain accurate even if the party's `leave_distance_behavior` setting changes
 - `party_progress_log` has a `date` column correlating with the `progress` table, enabling accurate updates when walks are edited or deleted
-- Multi-party support: no unique constraint on `user_id` in `party_members`, allowing users to join multiple parties
-- Re-join: creates a **new** `party_members` record; old records preserved with `departed_at` set for contribution history
+- Multi-party support: users may join multiple parties, but there is a single `party_members` row per `(party_id, user_id)` (enabling a `UNIQUE(party_id, user_id)` constraint)
+- Re-join: reactivates the existing `party_members` row for that `(party_id, user_id)` (e.g., setting `status` back to active and clearing `departed_at`), preserving a continuous contribution history on a single record
 - `dissolved_at` enables soft-delete of empty parties when all members depart
 
 **Note**: Detailed schema and sharing rules to be finalized during Phase 3 planning.

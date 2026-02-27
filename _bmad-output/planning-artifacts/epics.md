@@ -662,16 +662,16 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - `last_viewed_distance` on `party_members` tracks the party's total distance as of the user's last view of that party, enabling milestone modal display when switching between party views.
 - `departed_at` on `party_members` records when a member left or was kicked.
 - `distance_kept` on `party_members` (BOOLEAN, default NULL) — set on departure to record whether the member's contributed distance was kept (`true`) or removed (`false`) from the party total. This captures any kick-specific distance override (Story 3.5) so that later progress calculations don't lose the disposition decision. NULL for active members.
-- `contribution_at_departure` on `party_members` stores a locked contribution snapshot computed at leave/kick time (based on party `distance_mode`) so departed contributions do not require perpetual date-range recalculation.
+- `contribution_at_departure` on `party_members` stores a locked contribution snapshot computed at leave/kick time (based on party `distance_mode`) so departed contributions do not require perpetual date-range recalculation. This snapshot-based model is the authoritative design for departed-member contributions and **supersedes** the earlier ADR-004 / sprint change proposal behavior that derived departed contributions from `distance_at_join` + `departed_at` via the `progress` table; those older references MUST be treated as obsolete and updated to match this snapshot approach.
 - `dissolved_at` on `parties` is set when a party is auto-dissolved (all members departed). Dissolved parties cannot be re-joined.
 - `status` supports 'kicked' to distinguish leader-initiated removals from voluntary leaves.
-- **Re-join:** When a user re-joins a party they previously left/were kicked from, reactivate the existing `party_members` record (set status back to active, refresh `joined_at` and `distance_at_join`, clear departure fields). Keep one record per (party_id, user_id).
+- **Re-join:** When a user re-joins a party they previously left/were kicked from, **do not create a new `party_members` row**. Instead, reactivate the existing `party_members` record (set status back to active, refresh `joined_at` and `distance_at_join`, clear departure fields). Enforce a single membership row per `(party_id, user_id)`; membership and contribution history come from departure fields and `party_progress_log`, not from multiple membership rows.
 - Index on `party_members(user_id)` is important for efficiently querying all parties a user belongs to (multi-party membership).
 - `party_progress_log` has a `date` column (DATE) correlating with the `progress` table, enabling accurate updates when walks are edited or deleted.
 
 **Dependencies:** None
 
-**change-impact:** Requirements expanded — `departed_at`, `distance_kept`, and `contribution_at_departure` added to `party_members`; `dissolved_at` added to `parties`. Re-join now reactivates existing membership records (single row per user+party). `party_progress_log` serves as contribution audit trail. All downstream stories (3.2–3.8) must reference the updated schema.
+**change-impact:** Requirements expanded — `departed_at`, `distance_kept`, and `contribution_at_departure` added to `party_members`; `dissolved_at` added to `parties`. Re-join reactivates existing membership records (single row per `(party_id, user_id)`); new `party_members` rows are never created on re-join. `party_progress_log` serves as the contribution audit trail and source of historical membership behavior. All downstream stories (3.2–3.8) must reference the updated schema and re-join semantics.
 
 ---
 
