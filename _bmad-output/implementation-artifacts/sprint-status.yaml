@@ -72,16 +72,16 @@ development_status:
   # ============================================
   # EPIC 3: Fellowship Features (#152)
   # ============================================
-  epic-3: backlog
-  3-1-fellowship-database-schema: backlog
-  3-2-create-fellowship-api: backlog
-  3-3-invite-join-fellowship-api: backlog
-  3-4-fellowship-progress-calculation-api: backlog
-  3-5-leave-fellowship-api: backlog
-  3-6-fellowship-ui-dashboard-integration: backlog
-  3-7-fellowship-ui-management-page: backlog
-  3-8-fellowship-progress-activity-feed: backlog
-  3-9-fellowship-notifications-party-milestones: backlog
+  epic-3: in-progress
+  3-1-fellowship-database-schema: ready-for-dev
+  3-2-create-fellowship-api: ready-for-dev
+  3-3-invite-join-fellowship-api: ready-for-dev
+  3-4-fellowship-progress-calculation-api: ready-for-dev
+  3-5-leave-kick-party-management-api: ready-for-dev
+  3-6-fellowship-ui-journey-map-party-selector: ready-for-dev
+  3-7-fellowship-ui-fellowships-pages: ready-for-dev
+  3-8-fellowship-progress-activity-feed: ready-for-dev
+  3-9-fellowship-notifications-party-milestones: cancelled
   epic-3-retrospective: optional
 
   # ============================================

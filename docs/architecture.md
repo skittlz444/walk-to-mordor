@@ -283,33 +283,60 @@ Map feature requires coordinated state (zoom level, pan position, selected waypo
 
 ### ADR-004: Fellowship Data Model Direction
 
-**Decision**: Plan for **new tables** (`parties`, `party_members`)
+**Decision**: Plan for **new tables** (`parties`, `party_members`) with party-level configuration settings
 
 **Status**: Direction set (details deferred to Phase 3)
 
 **Context**: 
-Phase 3 Fellowship features require shared data between users while maintaining privacy defaults.
+Phase 3 Fellowship features require shared data between users while maintaining privacy defaults. Users can belong to multiple parties simultaneously. Party leaders control distance calculation and leave behavior settings.
 
 **Architectural Direction**:
 ```
 parties
 ├── id (PK)
 ├── name
-├── created_by (FK → users)
+├── leader_id (FK → users)
+├── invite_code (UNIQUE)
+├── distance_mode (TEXT: 'cumulative' | 'incremental', default 'incremental')
+├── leave_distance_behavior (TEXT: 'keep' | 'remove', default 'keep')
+├── dissolved_at (DATETIME, default NULL — set when auto-dissolved)
 ├── created_at
 
 party_members
 ├── id (PK)
 ├── party_id (FK → parties)
 ├── user_id (FK → users)
-├── role (leader/member)
+├── role (TEXT: 'leader' | 'member')
+├── status (TEXT: 'active' | 'left' | 'kicked')
+├── distance_at_join (DECIMAL)
+├── last_viewed_distance (DECIMAL, default 0)
+├── departed_at (DATETIME, default NULL — set when left/kicked)
+├── distance_kept (BOOLEAN, default NULL — records whether contribution was kept or removed on departure)
 ├── joined_at
+
+party_progress_log
+├── id (PK)
+├── party_id (FK → parties)
+├── logged_by_user_id (FK → users)
+├── distance (DECIMAL)
+├── date (DATE — correlates with progress table entry)
+├── logged_at (DATETIME)
 ```
 
 **Rationale**:
 - Preserves existing user isolation (no changes to `progress` table)
 - Party progress calculated as aggregate query
 - Opt-in sharing model (join party = consent to share distance with party)
+- `distance_mode` on the party allows leaders to choose between cumulative (all-time) and incremental (since-join) distance tracking
+- `leave_distance_behavior` on the party controls whether a departing member's contributed distance is kept or removed from the party total
+- `last_viewed_distance` on party_members enables milestone notification tracking when a user switches between party views
+- `status` field supports 'kicked' state for leader-initiated removals distinct from voluntary leaves
+- `departed_at` marks the end of a member's contribution window, while `contribution_at_departure` snapshots the member's total contributed distance at leave time to avoid expensive historical recalculation against the `progress` table
+- `distance_kept` on party_members records the distance disposition decision at departure time, preserving any kick-specific override so that later progress calculations remain accurate even if the party's `leave_distance_behavior` setting changes
+- `party_progress_log` has a `date` column correlating with the `progress` table, enabling accurate updates when walks are edited or deleted
+- Multi-party support: users may join multiple parties, but there is a single `party_members` row per `(party_id, user_id)` (enabling a `UNIQUE(party_id, user_id)` constraint)
+- Re-join: reactivates the existing `party_members` row for that `(party_id, user_id)` (e.g., setting `status` back to active and clearing `departed_at`), preserving a continuous contribution history on a single record
+- `dissolved_at` enables soft-delete of empty parties when all members depart
 
 **Note**: Detailed schema and sharing rules to be finalized during Phase 3 planning.
 
