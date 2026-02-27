@@ -67,7 +67,7 @@ Temporary tokens for email verification during registration. Tokens expire after
 Fellowship groups. `distance_mode` and `leave_distance_behavior` govern party-level progress calculation rules.
 - `id`: INTEGER PRIMARY KEY AUTOINCREMENT
 - `name`: TEXT NOT NULL
-- `leader_id`: INTEGER NOT NULL (FK -> users.id)
+- `leader_id`: INTEGER NOT NULL (FK -> users.id, `ON DELETE CASCADE`)
 - `created_at`: DATETIME
 - `invite_code`: TEXT UNIQUE NOT NULL
 - `distance_mode`: TEXT NOT NULL DEFAULT 'incremental' — `'incremental'` (only distance since join counts) or `'cumulative'` (all-time totals summed). Set at creation, immutable.
@@ -81,8 +81,8 @@ Fellowship groups. `distance_mode` and `leave_distance_behavior` govern party-le
 ### `party_members`
 Membership records for each user–party pair. One row per (party_id, user_id). Re-join reactivates the existing row.
 - `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `party_id`: INTEGER (FK -> parties.id)
-- `user_id`: INTEGER (FK -> users.id)
+- `party_id`: INTEGER (FK -> parties.id, `ON DELETE CASCADE`)
+- `user_id`: INTEGER (FK -> users.id, `ON DELETE CASCADE`)
 - `joined_at`: DATETIME
 - `distance_at_join`: REAL NOT NULL DEFAULT 0 — user's total cumulative distance at the exact moment of joining. Required for `incremental` mode calculation.
 - `role`: TEXT NOT NULL DEFAULT 'member' — `'leader'` or `'member'`
@@ -103,8 +103,8 @@ Membership records for each user–party pair. One row per (party_id, user_id). 
 ### `party_progress_log`
 Audit trail and activity feed for party walks. An entry is created for each active party a user belongs to when they log a walk.
 - `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `party_id`: INTEGER (FK -> parties.id)
-- `logged_by_user_id`: INTEGER (FK -> users.id)
+- `party_id`: INTEGER (FK -> parties.id, `ON DELETE CASCADE`)
+- `logged_by_user_id`: INTEGER (FK -> users.id, `ON DELETE CASCADE`)
 - `distance`: REAL NOT NULL — distance logged in this walk entry (km)
 - `date`: DATE NOT NULL — correlates with the `progress` table entry date
 - `logged_at`: DATETIME DEFAULT CURRENT_TIMESTAMP — for activity feed ordering and contribution auditing

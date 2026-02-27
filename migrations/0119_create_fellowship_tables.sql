@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS parties (
     distance_mode TEXT NOT NULL DEFAULT 'incremental' CHECK(distance_mode IN ('incremental', 'cumulative')),
     leave_distance_behavior TEXT NOT NULL DEFAULT 'keep' CHECK(leave_distance_behavior IN ('keep', 'remove')),
     dissolved_at DATETIME DEFAULT NULL,
-    FOREIGN KEY (leader_id) REFERENCES users (id)
+    FOREIGN KEY (leader_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 -- Indexes for parties table
@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS party_members (
     distance_kept INTEGER DEFAULT NULL CHECK(distance_kept IS NULL OR distance_kept IN (0, 1)),
     contribution_at_departure REAL DEFAULT NULL,
     UNIQUE(party_id, user_id),
-    FOREIGN KEY (party_id) REFERENCES parties (id),
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (party_id) REFERENCES parties (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 -- Indexes for party_members table
@@ -69,8 +69,8 @@ CREATE TABLE IF NOT EXISTS party_progress_log (
     date DATE NOT NULL,
     logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(party_id, logged_by_user_id, date),
-    FOREIGN KEY (party_id) REFERENCES parties (id),
-    FOREIGN KEY (logged_by_user_id) REFERENCES users (id)
+    FOREIGN KEY (party_id) REFERENCES parties (id) ON DELETE CASCADE,
+    FOREIGN KEY (logged_by_user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 -- Indexes for party_progress_log table
