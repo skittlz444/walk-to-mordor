@@ -828,15 +828,14 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Use `GET /api/user/parties` (from Story 3.3) to fetch the user's active party list
 - [ ] **Party selector** implemented as a new Preact island (`PartySelector`) mounted above the main content area on both Journey and Map pages
 - [ ] If user is a member of at least one party: Show a selector/dropdown on **Journey page** to choose between "Personal" and each party name
-- [ ] If user is a member of at least one party: Show a selector/dropdown on **Map page** to choose between "Personal" and each party name
+- [ ] If user is a member of at least one party: On the **Map page**, use a button that opens the fellowship selector similar to how there is a button to open the calendar area
 - [ ] **Selector is hidden** if user is not a member of any party
 - [ ] When a party is selected, display a visual indicator banner (e.g., "👥 Viewing: [Fellowship Name]") to distinguish from personal view
 - [ ] When a party is selected on **Journey page**: Display the party's combined distance and milestone progress instead of personal (NextGoalCard and UpcomingGoalCard re-render with party progress). Show brief loading indicator during data fetch.
-- [ ] When a party is selected on **Map page**: Display the party's combined distance path, showing **per-member contributed segments with color-coded lines** (each member assigned a distinct color computed deterministically from `user_id % palette_size` for stability across sessions and re-joins). Include a map legend showing member name + color swatch when in party view.
-- [ ] **Color palette:** Define a 12-color maximum distinctness palette. For members beyond 12, cycle with a different line pattern (dashed). Departed members whose contributions are kept: show in muted/desaturated version of their color. Departed with removed contributions: don't show.
+- [ ] When a party is selected on **Map page**: Display the party's combined distance path, showing **per-member contributed segments with color-coded lines** (each member assigned a distinct color computed deterministically from `user_id % palette_size` for stability across sessions and re-joins). Include a map legend showing member name + color swatch when in party view. Goals on the map should be locked/unlocked based on the viewed fellowship's total distance and the individual user's lock/unlock preference.
+- [ ] **Color palette:** Define a 12-color maximum distinctness palette. For members beyond 12, just repeat the colors (they will be spread out enough). Departed members whose contributions are kept: show in muted/desaturated version of their color. Departed with removed contributions: don't show.
 - [ ] When switching to a party view: Call GET `/api/party/:id/progress` and check `newly_passed_milestones` — if any exist, display the **milestone modal for the latest passed milestone** (FR_PARTY_09). This is the primary owner of the party-switch milestone modal behavior.
 - [ ] **Do not re-trigger** milestone modal when simply toggling between parties at different positions — only trigger when the party has progressed past a new milestone since the user's last view. The `last_viewed_distance` is updated on each progress API call, ensuring the modal fires at most once per milestone per party per user.
-- [ ] Page focus + 60-second polling for party data (consistent with Story 3.8 refresh pattern)
 - [ ] Persist the user's last selected view (personal/party) in localStorage for page reload continuity. **Edge case:** If persisted party ID returns 403/404 from API (user kicked, party dissolved), fall back to "Personal" view silently and clear the stale localStorage value.
 
 **FRs:** FR_PARTY_04, FR_PARTY_05, FR_PARTY_08, FR_PARTY_09
@@ -859,9 +858,10 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Create `/party` route (titled "Fellowships") with SSR shell (new `renderPartyListPage.ts` following `renderLayout()` pattern) and a Preact island
 - [ ] **Add "Fellowships" link to the DrawerIsland navigation** (alongside Journey and Map links)
 - [ ] Page shows a **list of all parties** the user belongs to (via `GET /api/user/parties` from Story 3.3), each showing party name and **active member count**
-- [ ] **Empty state** when user has no parties: illustration + "You haven't joined a Fellowship yet" message with prominent "Create" and "Join" CTAs
+- [ ] **Always show "Create Fellowship" and "Join Fellowship" buttons/sections**, regardless of whether the user is in a party or not
+- [ ] **Empty state** when user has no parties: illustration + "You haven't joined a Fellowship yet" message
 - [ ] **"Create Fellowship" button** opens a create party form: name (required, max 50 chars, with character counter and inline validation), distance_mode selector (user-friendly labels: "Only distance walked after joining" / "All distance walked, all time"), leave_distance_behavior selector (user-friendly labels: "Keep their contributed distance" / "Remove their contributed distance")
-- [ ] **Distance mode clarity at creation (required):** show plain-language helper text and simple examples next to selector (e.g., incremental: "Sam joins today; only distance from today counts"; cumulative: "Sam joins today; all prior logged distance counts"). Indicate explicitly that distance mode cannot be changed later.
+- [ ] **Distance mode clarity at creation (required):** show plain-language helper text and simple examples next to selector that are sufficiently descriptive so the user has no ambiguity on what the toggles do (e.g., incremental: "Sam joins today; only distance from today counts"; cumulative: "Sam joins today; all prior logged distance counts"). Indicate explicitly that distance mode cannot be changed later.
 - [ ] **"Join Fellowship" section** with invite code input (shows preview before confirming, including party settings). Error states: invalid code, dissolved party, already a member, network error
 - [ ] Clicking a party navigates to the Fellowship detail page (`/party/:id`)
 - [ ] **Party list updates** when a new party is created or joined
@@ -870,8 +870,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Page 2: Fellowship Detail (`/party/:id`)**
 - [ ] **Back navigation**: header shows `← Fellowships / [Party Name]` with clickable back link to `/party`
-- [ ] Shows **party name** and basic info (distance_mode, leave_distance_behavior displayed in user-friendly labels)
-- [ ] Displays **total party progress** (combined distance) and **distance to next milestone**
+- [ ] Shows **party name**
+- [ ] Displays **total party progress** (combined distance) and **distance to next milestone**. Clicking on the next/last milestone should open their goal modals, with the next one being locked based on the individual user's preference.
 - [ ] Shows **last milestone crossed** by the party (name and distance)
 - [ ] **Member list** showing: name, contribution, joined date, status (active/left/kicked), **color** (matching Map segment color). Active member count displayed prominently.
 - [ ] Contribution display based on party's configured distance mode

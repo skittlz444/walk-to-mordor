@@ -33,11 +33,11 @@ so that users can form parties with customized distance calculation and leave be
   - [ ] Validate `distance_mode` is 'cumulative' or 'incremental' if provided, default to 'incremental'.
   - [ ] Validate `leave_distance_behavior` is 'keep' or 'remove' if provided, default to 'keep'.
   - [ ] Create a utility for cryptographically secure 8-character invite code generation (e.g., using `crypto.getRandomValues`).
-- [ ] Task 3: Database Insertion (AC: 6)
+- [ ] Task 3: Database Insertion (AC: 6, 7)
   - [ ] Retrieve the user's current total distance (from progress aggregate or pre-calculated fields) for `distance_at_join`.
   - [ ] Insert the new party into the `parties` table with `distance_mode` and `leave_distance_behavior` settings.
   - [ ] Insert the user as the leader into the `party_members` table with `last_viewed_distance` = 0. Using SQLite transactions is recommended to ensure consistency.
-- [ ] Task 4: Response Handling (AC: 7)
+- [ ] Task 4: Response Handling (AC: 8)
   - [ ] Return the party details (id, name, invite_code, distance_mode, leave_distance_behavior) as JSON.
 
 ## Dev Notes

@@ -1,0 +1,88 @@
+# Story 3.6: Fellowship UI - Journey & Map Party Selector
+
+Status: ready-for-dev
+
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+
+## Story
+
+As a User who belongs to one or more Fellowships,
+I want to be able to toggle between my personal progress and my parties' combined progress on the Journey and Map pages,
+so that I can visualize our shared journey and see the specific contributions of each party member.
+
+## Acceptance Criteria
+
+1. Create a `PartySelector` Preact island component that fetches the user's active parties via `GET /api/user/parties`.
+2. Mount the `PartySelector` above the main content area on the Journey (Dashboard) page. On the Map page, use a button that opens the fellowship selector similar to how there is a button to open the calendar area.
+3. If the user is not a member of any party, the selector should be hidden.
+4. If the user is a member of at least one party, show a dropdown/selector to choose between "Personal" and each party name.
+5. When a party is selected, display a visual indicator banner (e.g., "👥 Viewing: [Fellowship Name]") to distinguish it from the personal view.
+6. **Journey Page Integration:** When a party is selected, display the party's combined distance and milestone progress instead of personal progress. The `NextGoalCard` and `UpcomingGoalCard` components must re-render with the party's progress data. Show a brief loading indicator during data fetch.
+7. **Map Page Integration:** When a party is selected, display the party's combined distance path. Show per-member contributed segments with color-coded lines. Each member is assigned a distinct color computed deterministically from `user_id % palette_size` (palette size = 12). Goals on the map should be locked/unlocked based on the viewed fellowship's total distance and the individual user's lock/unlock preference.
+8. **Map Legend:** Include a map legend showing member name + color swatch when in party view.
+9. **Color Palette:** Define a 12-color maximum distinctness palette. For members beyond 12, just repeat the colors (they will be spread out enough). Departed members whose contributions are kept should be shown in a muted/desaturated version of their color. Departed members with removed contributions should not be shown.
+10. **Milestone Modal Trigger:** When switching to a party view, call `GET /api/party/:id/progress` and check `newly_passed_milestones`. If any exist, display the milestone modal for the latest passed milestone. Do not re-trigger the modal when simply toggling between parties at different positions unless a new milestone was passed since the last view.
+11. Persist the user's last selected view (personal/party ID) in `localStorage` for page reload continuity.
+12. **Edge Case Handling:** If the persisted party ID returns a 403 (user kicked) or 404 (party dissolved) from the API, fall back to the "Personal" view silently and clear the stale `localStorage` value.
+
+## Tasks / Subtasks
+
+- [ ] Task 1: PartySelector Component (AC: 1, 2, 3, 4, 5, 11, 12)
+  - [ ] Create `PartySelector.tsx` in `client/src/islands/`.
+  - [ ] Fetch user parties on mount.
+  - [ ] Implement dropdown UI and visual banner.
+  - [ ] Manage selected state and persist to `localStorage`.
+  - [ ] Handle 403/404 errors by falling back to "Personal" view.
+- [ ] Task 2: Journey Page Integration (AC: 6)
+  - [ ] Update Journey page to use `PartySelector`.
+  - [ ] Fetch party progress when a party is selected.
+  - [ ] Pass party progress data to `NextGoalCard` and `UpcomingGoalCard`.
+- [ ] Task 3: Map Page Integration (AC: 7, 8, 9)
+  - [ ] Update Map page to use `PartySelector` via a button similar to the calendar area.
+  - [ ] Fetch party progress when a party is selected.
+  - [ ] Render color-coded path segments based on member contributions.
+  - [ ] Implement map legend.
+  - [ ] Implement 12-color palette and styling for departed members (repeating colors for >12 members).
+- [ ] Task 4: Milestone Modal Trigger (AC: 10)
+  - [ ] Check `newly_passed_milestones` in the progress response.
+  - [ ] Trigger milestone modal if new milestones exist.
+
+## Dev Notes
+
+- **Architecture Details**: 
+  - The API endpoints were created in Stories 3.3 and 3.4.
+  - The `PartySelector` should be a Preact island that communicates with other islands (like the Map or Goal cards) via Preact Signals or a shared state context.
+- **Color Palette**: Define the 12 colors in CSS variables or a shared JS constant to ensure consistency between the map rendering and the legend.
+- **Map Rendering**: Konva.js is used for the map. You will need to draw multiple `Konva.Line` segments for the party path, one for each member's contribution.
+
+### Project Structure Notes
+
+- New components go in `client/src/islands/` or `client/src/components/`.
+- Ensure CSS variables for the new colors are added to `public/css/main.css` or a dedicated theme file.
+
+### References
+
+- [Source: _bmad-output/planning-artifacts/epics.md#Story 3.6: Fellowship UI - Journey & Map Party Selector]
+- [Source: docs/architecture.md#ADR-004: Fellowship Data Model Direction]
+- [Source: docs/ux-design.md]
+
+### change-impact
+
+Requirements expanded from original spec:
+- This story replaces the original "Dashboard Integration" scope.
+- Now covers multi-party selection on Journey/Map pages.
+- Per-member color-coded map segments (deterministic colors from user ID).
+- Party milestone modal triggering (FR_PARTY_09 primary implementation).
+- Map legend, loading states, stale localStorage handling.
+
+## Dev Agent Record
+
+### Agent Model Used
+
+{{agent_model_name_version}}
+
+### Debug Log References
+
+### Completion Notes List
+
+### File List
