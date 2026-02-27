@@ -185,11 +185,15 @@ The following new items were identified during the review and should be tracked 
 
 ### Schema Impact from Decisions
 
-**`party_members` table — new column:**
-- `departed_at` (DATETIME, default NULL) — set when member status changes to 'left' or 'kicked'. Used with `distance_at_join` and the `progress` table to calculate departed member contributions without needing a `distance_at_departure` column.
+**`party_members` table — new/updated columns:**
+- `departed_at` (DATETIME, default NULL) — set when member status changes to 'left' or 'kicked'. Used with `distance_at_join` to define the contribution window.
+- `contribution_at_departure` (NUMERIC, default NULL) — snapshot of the member's contributed distance calculated at leave/kick time (based on party `distance_mode`). This avoids expensive historical recalculation on progress reads for departed members.
 
 **Re-join mechanism:**
-- When a user re-joins a party they previously left/were kicked from, a **new** `party_members` record is created with fresh `distance_at_join` and `departed_at = NULL`. The old record is preserved with its original `distance_at_join`, `departed_at`, and status for contribution history.
+- There is exactly one `party_members` row per (`party_id`, `user_id`). Re-joining a party **reactivates** the existing row instead of inserting a new one.
+- When a member leaves or is kicked: `departed_at` is set, `contribution_at_departure` is snapshotted, and status changes to 'left'/'kicked'.
+- When a member re-joins: status is set back to 'active', `departed_at` and `contribution_at_departure` are cleared to NULL, `joined_at` and `distance_at_join` are refreshed for a new contribution baseline. No new `party_members` row is created.
+- Contribution and audit history for departed periods is preserved via immutable entries in `party_progress_log` and the snapshotted `contribution_at_departure` value.
 
 ---
 

@@ -31,7 +31,7 @@ so that I can share my walking journey and progress with others across multiple 
   - [ ] Add `POST /api/party/join/:inviteCode` route to the Cloudflare Worker router in `src/index.ts`.
   - [ ] Add `POST /api/party/:id/invite` route to the Cloudflare Worker router in `src/index.ts`.
   - [ ] Add `GET /api/user/parties` route to the Cloudflare Worker router in `src/index.ts`.
-  - [ ] Implement authentication checks for all routes.
+  - [ ] Implement authentication checks for all POST routes and `GET /api/user/parties`; keep `GET /api/party/join/:inviteCode` public (preview-only, no user-specific data) to support the deep-link invite flow where non-authenticated users need to see the party preview before logging in.
 - [ ] Task 2: Join Logic & Validation (AC: 2, 3, 4, 7, 8, 9, 10, 11)
   - [ ] For `GET` preview, query the `parties` and `party_members` table to return the name, member count, current calculated distance, `distance_mode`, and `leave_distance_behavior`. Return 404 if not found. Return 400 if party is dissolved.
   - [ ] For `POST` join, validate the invite code exists (return 404 if not).
