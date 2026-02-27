@@ -184,14 +184,15 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Includes:**
 - Create/invite/view/leave/kick party features (#139)
 - Multi-party membership (users can belong to multiple parties)
-- Party settings: distance mode (cumulative/incremental), leave-distance behavior (keep/remove) — configurable at creation and updatable after
+- Party settings: distance mode (cumulative/incremental) set at creation (immutable), leave-distance behavior (keep/remove) and party name updatable after creation
 - Party selector on Journey and Map pages (hidden if user has no parties)
 - Per-member color-coded contribution segments on Map view
 - Party milestone modal triggered on view switch (when party has passed a new milestone since last viewed)
 - Shared progress tracking with leader-configured calculation mode
 - Leadership transfer without leaving
 - Auto-dissolution of empty parties
-- Re-join support (users can re-join parties they previously left/were kicked from)
+- Invite code rotation (leader can manually regenerate; previous code is immediately invalidated)
+- Re-join support (reactivate existing membership record with a fresh join baseline)
 - Navigation link to Fellowships page in DrawerIsland
 - 3-page fellowship flow: list (`/party`) → detail (`/party/:id`) → management (`/party/:id/manage`, leader only)
 - Deep-link invite flow: shareable invite URLs (`/party/join/:inviteCode`) with preview for both authenticated and non-authenticated users
@@ -646,7 +647,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Acceptance Criteria:**
 - [ ] Create `parties` table: id, name, leader_id, created_at, invite_code (unique), **distance_mode** (TEXT, default 'incremental'), **leave_distance_behavior** (TEXT, default 'keep'), **dissolved_at** (DATETIME, default NULL)
-- [ ] Create `party_members` table: id, party_id, user_id, joined_at, **distance_at_join** (DECIMAL), role (leader/member), status (active/left/**kicked**), **last_viewed_distance** (DECIMAL, default 0), **departed_at** (DATETIME, default NULL), **distance_kept** (BOOLEAN, default NULL — set on departure to record whether the member's contribution was kept or removed, capturing any kick override)
+- [ ] Create `party_members` table: id, party_id, user_id, joined_at, **distance_at_join** (DECIMAL), role (leader/member), status (active/left/**kicked**), **last_viewed_distance** (DECIMAL, default 0), **departed_at** (DATETIME, default NULL), **distance_kept** (BOOLEAN, default NULL — set on departure to record whether the member's contribution was kept or removed, capturing any kick override), **contribution_at_departure** (DECIMAL, default NULL — locked snapshot of contribution at leave/kick time)
 - [ ] Create `party_progress_log` table: id, party_id, logged_by_user_id, distance, **date** (DATE — correlates with the progress table entry), logged_at (for activity feed and contribution audit trail)
 - [ ] Add indexes for common queries (party lookups, member listings, multi-party user lookups)
 - [ ] Create migration file in `migrations/` folder
@@ -656,20 +657,21 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Technical Notes:**
 - `distance_at_join` stores the user's total distance at the moment they join, enabling both "cumulative" and "incremental" progress modes.
-- `distance_mode` on `parties` determines how party progress is calculated: 'cumulative' (all-time totals) or 'incremental' (distance since joining). Set by the leader at party creation, updatable via settings API.
+- `distance_mode` on `parties` determines how party progress is calculated: 'cumulative' (all-time totals) or 'incremental' (distance since joining). Set by the leader at party creation and immutable after creation.
 - `leave_distance_behavior` on `parties` determines what happens to a member's contributed distance when they leave: 'keep' (distance remains) or 'remove' (distance is subtracted). Set by the leader at party creation, updatable via settings API.
 - `last_viewed_distance` on `party_members` tracks the party's total distance as of the user's last view of that party, enabling milestone modal display when switching between party views.
-- `departed_at` on `party_members` records when a member left or was kicked. Used with `distance_at_join` to calculate departed member contributions from the `progress` table without needing a separate `distance_at_departure` column.
+- `departed_at` on `party_members` records when a member left or was kicked.
 - `distance_kept` on `party_members` (BOOLEAN, default NULL) — set on departure to record whether the member's contributed distance was kept (`true`) or removed (`false`) from the party total. This captures any kick-specific distance override (Story 3.5) so that later progress calculations don't lose the disposition decision. NULL for active members.
+- `contribution_at_departure` on `party_members` stores a locked contribution snapshot computed at leave/kick time (based on party `distance_mode`) so departed contributions do not require perpetual date-range recalculation.
 - `dissolved_at` on `parties` is set when a party is auto-dissolved (all members departed). Dissolved parties cannot be re-joined.
 - `status` supports 'kicked' to distinguish leader-initiated removals from voluntary leaves.
-- **Re-join:** When a user re-joins a party they previously left/were kicked from, a **new** `party_members` record is created. The old record is preserved with `departed_at` set for contribution history. No unique constraint on (party_id, user_id) — multiple records per user per party are expected.
+- **Re-join:** When a user re-joins a party they previously left/were kicked from, reactivate the existing `party_members` record (set status back to active, refresh `joined_at` and `distance_at_join`, clear departure fields). Keep one record per (party_id, user_id).
 - Index on `party_members(user_id)` is important for efficiently querying all parties a user belongs to (multi-party membership).
 - `party_progress_log` has a `date` column (DATE) correlating with the `progress` table, enabling accurate updates when walks are edited or deleted.
 
 **Dependencies:** None
 
-**change-impact:** Requirements expanded — `departed_at` added to `party_members`, `dissolved_at` added to `parties`. Re-join creates new records (not updating old). `party_progress_log` serves as contribution audit trail. All downstream stories (3.2–3.9) must reference the updated schema.
+**change-impact:** Requirements expanded — `departed_at`, `distance_kept`, and `contribution_at_departure` added to `party_members`; `dissolved_at` added to `parties`. Re-join now reactivates existing membership records (single row per user+party). `party_progress_log` serves as contribution audit trail. All downstream stories (3.2–3.8) must reference the updated schema.
 
 ---
 
@@ -683,6 +685,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] POST `/api/party` - Create new party
 - [ ] Request body: { name: string, **distance_mode?: 'cumulative' | 'incremental'**, **leave_distance_behavior?: 'keep' | 'remove'** }
 - [ ] `distance_mode` defaults to 'incremental' if not provided
+- [ ] `distance_mode` is immutable after creation (cannot be changed by settings API)
 - [ ] `leave_distance_behavior` defaults to 'keep' if not provided
 - [ ] Generate unique invite code (8 char alphanumeric) - **Must be cryptographically secure/non-enumerable**
 - [ ] Set creator as leader in party_members with `distance_at_join` = current total distance and `last_viewed_distance` = 0
@@ -711,8 +714,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] GET `/api/party/join/:inviteCode` - Preview party before joining (name, member count, current distance, **distance_mode**, **leave_distance_behavior**)
 - [ ] POST `/api/party/join/:inviteCode` - Join party via invite code
 - [ ] On join: Record `distance_at_join` = user's current total distance, `last_viewed_distance` = 0, `departed_at` = NULL
-- [ ] **Re-join:** If user previously left/was kicked from the party, create a **new** `party_members` record (old record preserved for contribution history). Return 400 if party is dissolved.
-- [ ] POST `/api/party/:id/invite` - Generate new invite code (leader only). Response includes the new invite code **and** the full shareable invite URL (format: `{request.origin}/party/join/{inviteCode}`)
+- [ ] **Re-join:** If user previously left/was kicked from the party, reactivate the existing `party_members` record and reset join baseline (`joined_at`, `distance_at_join`, `last_viewed_distance`, departure fields). Return 400 if party is dissolved.
+- [ ] POST `/api/party/:id/invite` - Generate new invite code (leader only). Previous invite code is immediately invalidated. Response includes the new invite code **and** the full shareable invite URL (format: `{request.origin}/party/join/{inviteCode}`)
 - [ ] **GET `/api/user/parties`** - Return list of all parties the user is an active member of (id, name, role, distance_mode, leave_distance_behavior, active_member_count). Exclude dissolved parties by default. Accept optional `?include_dissolved=true` query parameter to also return dissolved parties (with `dissolved_at` field) for the Fellowships list page history section (Story 3.7).
 - [ ] Validate: Cannot join the same party twice (no duplicate active memberships)
 - [ ] **Allow joining multiple different parties** — no single-party restriction
@@ -724,7 +727,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Dependencies:** Story 3.2
 
-**change-impact:** Added `GET /api/user/parties` endpoint. Re-join creates new record (not update). `departed_at` initialized to NULL. Dissolved party check on join.
+**change-impact:** Added `GET /api/user/parties` endpoint. Re-join now reactivates existing membership record (not creating duplicates). `departed_at` initialized to NULL on join/reactivation. Dissolved party check on join. Invite regeneration explicitly invalidates prior codes.
 
 ---
 
@@ -739,13 +742,13 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] **Distance mode is read from the party's `distance_mode` setting** (not a query param) — leader configures this at creation
 - [ ] **Cumulative Mode:** Sum of all active members' total distances (all-time)
 - [ ] **Incremental Mode:** Sum of (member total distance - distance_at_join) for each active member (only counts progress since joining)
-- [ ] **Handle left/kicked members based on `leave_distance_behavior` setting:** If 'keep', include departed members' contributed distance calculated from `distance_at_join` + `departed_at` via the `progress` table. If 'remove', exclude them entirely.
+- [ ] **Handle left/kicked members based on `distance_kept` and locked snapshots:** if `distance_kept = true`, include departed members' stored `contribution_at_departure`; if `distance_kept = false`, exclude them.
 - [ ] Return: total_distance, member_count, calculated_position (milestone), distance_mode, leave_distance_behavior
 - [ ] Include breakdown by member: { user_id, display_name, contribution, status, **color** }
 - [ ] For incremental mode, active member `contribution` = current total - distance_at_join
-- [ ] For departed members with 'keep' behavior: **incremental** `contribution` = SUM(progress.distance WHERE user_id = ? AND date BETWEEN joined_at AND departed_at); **cumulative** `contribution` = SUM(progress.distance WHERE user_id = ? AND date <= departed_at)
-- [ ] For departed members with 'keep' behavior and **kick distance override (`distance_kept = false`):** exclude that member's contribution entirely regardless of party setting
-- [ ] For re-joined members with multiple `party_members` records (and 'keep' behavior): sum contributions from all records (old departed + current active), but avoid double-counting in cumulative mode (use only the current active record's total for cumulative; sum incremental contributions across all records for incremental)
+- [ ] For departed members: use `contribution_at_departure` computed and stored at leave/kick time; do not recalculate historical date ranges during progress reads
+- [ ] For kicked members with distance override (`distance_kept = false`): exclude that member's contribution entirely regardless of party default
+- [ ] For re-joined members (single membership row): contribution is based on current active baseline after reactivation (no multi-row aggregation required)
 - [ ] **Walk logging integration (cross-cutting):** When a walk is logged via `POST /api/calendar-progress`, automatically insert a `party_progress_log` entry for each of the user's active party memberships. When a walk is edited via `PUT /api/calendar-progress`, update corresponding `party_progress_log` entries. When a walk is deleted via `DELETE /api/calendar-progress`, remove corresponding `party_progress_log` entries.
 - [ ] **`GET /api/party/:id/activity`** — Return the last N entries from `party_progress_log` for the given party (for the activity feed on the detail page, Story 3.8). Format: `{ user_id, display_name, distance, logged_at }`. Only accessible to active party members.
 - [ ] **Update `last_viewed_distance` for the requesting user** to current total_distance (for milestone notification tracking)
@@ -759,8 +762,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Technical Notes:**
 - The `distance_at_join` field enables fair contribution tracking regardless of when members joined.
 - The `leave_distance_behavior` setting governs how departed member distance is handled in progress calculations. The `distance_kept` column on `party_members` records the actual disposition at departure time.
-- **No `distance_at_departure` column is needed.** Departed member contribution is calculated from `distance_at_join` + `departed_at` timestamps using the existing `progress` table. For incremental mode, departed contribution = SUM(progress.distance WHERE date BETWEEN joined_at AND departed_at). For cumulative mode, departed contribution = SUM(progress.distance WHERE date <= departed_at). Use `distance_kept` column (not the current party setting) to determine whether to include.
-- For re-joined members: multiple `party_members` records may exist per user per party. For incremental mode with 'keep': sum incremental contributions across all records. For cumulative mode: use only the current active record's total (not sum across all records, to avoid double-counting).
+- `contribution_at_departure` is calculated once at leave/kick time (using the party's immutable `distance_mode`) and stored on `party_members`. Progress reads use this locked value for departed members to avoid repeated historical recalculation.
+- For re-joined members: one `party_members` row per user+party is reactivated with refreshed join baseline; no multi-record aggregation logic is needed.
 - `last_viewed_distance` update enables FR_PARTY_09 (milestone modal on party view switch, owned by Story 3.6).
 - Member `color` is computed deterministically from `user_id % palette_size` for stability across sessions and re-joins.
 - **Walk logging integration (cross-cutting, owned by this story):** When a walk is logged via `POST /api/calendar-progress`, insert a `party_progress_log` entry (with `date` column) for each of the user's active parties. On `PUT /api/calendar-progress`, update corresponding entries. On `DELETE /api/calendar-progress`, remove corresponding entries. This is the only Epic 3 change to existing code.
@@ -769,7 +772,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Dependencies:** Story 3.3
 
-**change-impact:** Departed member calculation formula corrected — incremental mode uses date-range SUM (no distance_at_join subtraction for departed members). Cumulative mode re-join double-counting prevention specified. Walk logging → party_progress_log integration elevated from tech note to explicit AC. Activity feed API endpoint added. Member color assignment changed from join-order to user_id-based for stability. `distance_kept` column used for progress calculations instead of current party setting.
+**change-impact:** Departed member contributions now use locked `contribution_at_departure` snapshots (computed at leave/kick), eliminating perpetual date-range calculations in the progress hot path. Re-join complexity reduced by using one membership row per user+party. Walk logging → party_progress_log integration remains explicit. Activity feed API endpoint retained. Member color assignment remains deterministic by `user_id`.
 
 ---
 
@@ -782,6 +785,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Acceptance Criteria:**
 - [ ] POST `/api/party/:id/leave` - Leave party
 - [ ] Set member status to 'left', **`departed_at` = current timestamp**, and **`distance_kept`** based on the party's `leave_distance_behavior` setting (soft delete, preserve history)
+- [ ] On leave, compute and store **`contribution_at_departure`** once (based on party `distance_mode`) for future progress reads
 - [ ] **Apply party's `leave_distance_behavior` setting:** If 'keep', set `distance_kept = true`. If 'remove', set `distance_kept = false`.
 - [ ] If leader leaves: transfer leadership to oldest active member, or dissolve if no active members remain
 - [ ] **Auto-dissolve:** If no active members remain after departure, set `parties.dissolved_at` = current timestamp (soft-delete the party). Use a D1 batch transaction to prevent race conditions with concurrent departures.
@@ -789,6 +793,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Validate: User must be active member of party (IDOR Check)
 - [ ] POST `/api/party/:id/kick/:userId` - **Kick a member (leader only)**
 - [ ] Set kicked member's status to 'kicked' and **`departed_at` = current timestamp**
+- [ ] On kick, compute and store **`contribution_at_departure`** once (based on party `distance_mode`) before applying keep/remove disposition
 - [ ] **Accept optional `removeDistance` boolean** in request body to override the party's `leave_distance_behavior` setting (e.g., leader can force-remove a cheater's distance even if the default is 'keep')
 - [ ] If `removeDistance` is not provided, fall back to the party's `leave_distance_behavior` setting
 - [ ] **Set `distance_kept`** on the kicked member's record: `true` if distance is being kept, `false` if removed. This preserves the disposition decision for future progress calculations.
@@ -796,7 +801,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Return 400 if leader tries to kick themselves (must use leave instead)
 - [ ] **Auto-dissolve:** Check if no active members remain after kick. If so, set `parties.dissolved_at`.
 - [ ] **PUT `/api/party/:id/settings`** - Update party settings (leader only)
-- [ ] Accept JSON body with optional `{ distance_mode?: 'cumulative' | 'incremental', leave_distance_behavior?: 'keep' | 'remove' }`
+- [ ] Accept JSON body with optional `{ name?: string, leave_distance_behavior?: 'keep' | 'remove' }`
+- [ ] `distance_mode` is immutable after creation and cannot be updated via settings API
 - [ ] Validate values. Return 403 if non-leader. Return 404 if party not found or dissolved.
 - [ ] **POST `/api/party/:id/transfer-leadership`** - Transfer leadership to another active member (leader only)
 - [ ] Accept JSON body with `{ new_leader_id: number }`
@@ -808,7 +814,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Dependencies:** Story 3.3
 
-**change-impact:** Added settings update API (FR_PARTY_10), leadership transfer (FR_PARTY_11), auto-dissolution (FR_PARTY_12). `departed_at` set on leave/kick. Story title updated to reflect expanded scope.
+**change-impact:** Added settings update API (FR_PARTY_10), leadership transfer (FR_PARTY_11), auto-dissolution (FR_PARTY_12). `departed_at`, `distance_kept`, and `contribution_at_departure` are set on leave/kick. Party settings updates now support rename + leave behavior only; `distance_mode` is immutable.
 
 ---
 
@@ -837,7 +843,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Dependencies:** Story 3.4, Story 1.1
 
-**change-impact:** This story replaces the original "Dashboard Integration" scope. Now covers multi-party selection on Journey/Map pages, per-member **color-coded** map segments (deterministic colors from user ID), party milestone modal triggering (FR_PARTY_09 — primary owner; Story 3.9 adds only proactive push notifications), map legend, loading states, stale localStorage handling. Uses `GET /api/user/parties` from Story 3.3. Significantly expanded from original spec.
+**change-impact:** This story replaces the original "Dashboard Integration" scope. Now covers multi-party selection on Journey/Map pages, per-member **color-coded** map segments (deterministic colors from user ID), and party milestone modal triggering (FR_PARTY_09 primary implementation), plus map legend, loading states, stale localStorage handling. Uses `GET /api/user/parties` from Story 3.3. Significantly expanded from original spec.
 
 ---
 
@@ -855,6 +861,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Page shows a **list of all parties** the user belongs to (via `GET /api/user/parties` from Story 3.3), each showing party name and **active member count**
 - [ ] **Empty state** when user has no parties: illustration + "You haven't joined a Fellowship yet" message with prominent "Create" and "Join" CTAs
 - [ ] **"Create Fellowship" button** opens a create party form: name (required, max 50 chars, with character counter and inline validation), distance_mode selector (user-friendly labels: "Only distance walked after joining" / "All distance walked, all time"), leave_distance_behavior selector (user-friendly labels: "Keep their contributed distance" / "Remove their contributed distance")
+- [ ] **Distance mode clarity at creation (required):** show plain-language helper text and simple examples next to selector (e.g., incremental: "Sam joins today; only distance from today counts"; cumulative: "Sam joins today; all prior logged distance counts"). Indicate explicitly that distance mode cannot be changed later.
 - [ ] **"Join Fellowship" section** with invite code input (shows preview before confirming, including party settings). Error states: invalid code, dissolved party, already a member, network error
 - [ ] Clicking a party navigates to the Fellowship detail page (`/party/:id`)
 - [ ] **Party list updates** when a new party is created or joined
@@ -879,7 +886,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Page 3: Fellowship Management (`/party/:id/manage`, leader only)**
 - [ ] **Back navigation**: header shows `← [Party Name] / Manage` with clickable back link to `/party/:id`
 - [ ] Redirect to `/party/:id` if user is not the party leader (with toast message)
-- [ ] **Update party settings:** distance_mode selector, leave_distance_behavior selector (via `PUT /api/party/:id/settings`), with user-friendly labels and confirmation on distance_mode changes ("Changing distance mode will recalculate all member contributions. Continue?")
+- [ ] **Update party settings:** party name and leave_distance_behavior (via `PUT /api/party/:id/settings`) with user-friendly labels and validation
 - [ ] **Kick member** controls with two-step confirmation: click "Kick" → confirmation dialog showing member name, their contributed distance, party default behavior, and toggle to override ("Remove [Name]'s XX.X km from party total?") → destructive confirm button (red styling)
 - [ ] **Transfer leadership** to another active member (via `POST /api/party/:id/transfer-leadership`) with confirmation dialog: "Transfer leadership to [Name]? You will become a regular member and lose management access." After transfer: redirect to `/party/:id` (user loses manage access)
 - [ ] **Regenerate invite code** button with confirmation ("Previous invite code will stop working. Continue?")
@@ -889,7 +896,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 - [ ] Create `/party/join/:inviteCode` route with SSR shell (new `renderPartyJoinPage.ts` following `renderLayout()` pattern) and a Preact island
 - [ ] **Authenticated users:** Show party preview (name, member count, combined distance, distance_mode, leave_distance_behavior in user-friendly labels) via `GET /api/party/join/:inviteCode`. Display a **"Join Fellowship" button** that calls `POST /api/party/join/:inviteCode`. On success, redirect to `/party/:id` (the newly joined party's detail page).
 - [ ] **Non-authenticated users:** Show the same party preview (name, member count — using the public preview endpoint). Display a **"Log in to Join"** button that redirects to the login page with `returnTo=/party/join/:inviteCode` so the user returns to the join page after authentication. After login redirect, the page loads with the authenticated join flow.
-- [ ] **Error states:** Invalid invite code → "This invite link is invalid or has expired" with link to `/party`. Dissolved party → "This Fellowship no longer exists." Already a member → "You're already a member of this Fellowship!" with link to `/party/:id`. Network error → retry prompt.
+- [ ] **Error states:** Invalid invite code → "This invite link is invalid" with link to `/party`. Dissolved party → "This Fellowship no longer exists." Already a member → "You're already a member of this Fellowship!" with link to `/party/:id`. Network error → retry prompt.
 - [ ] **Post-join redirect:** After successful join, navigate to `/party/:id` for the joined party.
 - [ ] **Loading skeleton** while preview is being fetched
 
@@ -925,28 +932,6 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Dependencies:** Story 3.4, Story 3.7
 
 **change-impact:** Activity feed now lives on the Fellowship detail page (`/party/:id`) instead of a generic "currently selected party" context. Depends on Story 3.4 for the `GET /api/party/:id/activity` endpoint and walk-logging → `party_progress_log` integration. Still scoped per-party.
-
----
-
-#### Story 3.9: Fellowship Notifications - Party Milestones (Issue #177)
-
-**Priority:** P3
-
-**Description:** Proactive notifications when the Fellowship reaches a new milestone together. The party-switch milestone modal is implemented in Story 3.6; this story covers server-side notifications (toast/email) and detection logic.
-
-**Acceptance Criteria:**
-- [ ] Detect when party progress crosses a milestone threshold (server-side, on walk log)
-- [ ] In-app notification/toast for all members on next page load (distinct from the party-switch modal in Story 3.6)
-- [ ] **Note:** The party-switch milestone modal (showing the milestone on view switch) is owned by Story 3.6 via `last_viewed_distance` tracking. This story does NOT duplicate that modal — it adds proactive push-style notifications.
-- [ ] Optional: Email notification (digest-style, not per-milestone)
-- [ ] Notification shows: "Your Fellowship reached [Milestone Name]!"
-- [ ] One-time notification per milestone per user (don't repeat)
-
-**FRs:** FR_PARTY_04, FR_PARTY_09, FR_LORE_01
-
-**Dependencies:** Story 3.4, Story 1.2
-
-**change-impact:** Added party view switch milestone modal requirement (FR_PARTY_09). The `last_viewed_distance` tracking mechanism (from Story 3.1/3.4) enables this.
 
 ---
 
