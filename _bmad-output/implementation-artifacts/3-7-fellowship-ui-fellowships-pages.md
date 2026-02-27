@@ -79,7 +79,7 @@ so that I can fully interact with the Fellowship features in a structured and in
 
 - **Architecture Details**: 
   - The API endpoints were created in Stories 3.2, 3.3, 3.4, and 3.5.
-  - Follow the `renderLayout()` pattern used iSSR routing. We will maintain this pattern by creating separate SSR shells for each view (`renderPartyListPage`, `renderPartyDetailPage`, `renderPartyManagePage`, `renderPartyJoinPage`). Each shell will mount its respective Preact island
+  - Follow the `renderLayout()` pattern used in SSR routing. We will maintain this pattern by creating separate SSR shells for each view (`renderPartyListPage`, `renderPartyDetailPage`, `renderPartyManagePage`, `renderPartyJoinPage`). Each shell will mount its respective Preact island
   - Use Preact islands for the interactive components on these pages.
 - **Routing**: The application currently uses a mix of SSR routing and client-side islands. For the `/party/*` routes, you can either use separate SSR pages for each route or a single SSR page that loads a client-side router (like `preact-router`) for the sub-routes. Given the requirements, separate SSR shells (`renderPartyListPage`, `renderPartyJoinPage`) with islands that handle the specific views (`/party`, `/party/:id`, `/party/:id/manage`) might be the most consistent approach with the existing architecture.
 - **Web Share API**: Use `navigator.share()` if available, fallback to clipboard copy.
