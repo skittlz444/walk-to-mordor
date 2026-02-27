@@ -27,7 +27,7 @@ so that I can fully interact with the Fellowship features in a structured and in
    - Show party name.
    - Display total party progress, distance to next milestone, and last milestone crossed. Clicking on the next/last milestone should open their goal modals, with the next one being locked based on the individual user's preference.
    - Member list: name, contribution, joined date, status, and color (matching Map segment color).
-   - Activity feed (last 10 activities via `GET /api/party/:id/activity`) displayed inline.
+   - Activity feed placeholder (actual feed implemented in Story 3.8).
    - "Leave party" button with confirmation dialog explaining the impact based on `leave_distance_behavior`.
    - If leader: show "Manage Fellowship" button navigating to `/party/:id/manage`.
    - Invite link sharing: Display full invite URL with "Copy Link" and "Share" (Web Share API) buttons.
@@ -51,8 +51,10 @@ so that I can fully interact with the Fellowship features in a structured and in
 ## Tasks / Subtasks
 
 - [ ] Task 1: SSR Shells & Routing (AC: 1, 4)
-  - [ ] Create `src/renderPartyListPage.ts`.
-  - [ ] Create `src/renderPartyJoinPage.ts`.
+  - [ ] Create `src/renderPartyListPage.ts` (List view).
+  - [ ] Create `src/renderPartyDetailPage.ts` (Detail view).
+  - [ ] Create `src/renderPartyManagePage.ts` (Manage view).
+  - [ ] Create `src/renderPartyJoinPage.ts` (Join landing view).
   - [ ] Add routes to `src/index.ts` (`/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`).
   - [ ] Update `DrawerIsland.tsx` to include the "Fellowships" link.
 - [ ] Task 2: Fellowships List Page Island (AC: 1)
@@ -61,8 +63,9 @@ so that I can fully interact with the Fellowship features in a structured and in
   - [ ] Fetch data from `/api/user/parties`.
 - [ ] Task 3: Fellowship Detail Page Island (AC: 2)
   - [ ] Create `PartyDetailIsland.tsx`.
-  - [ ] Fetch data from `/api/party/:id/progress` and `/api/party/:id/activity`.
-  - [ ] Implement progress display, member list, activity feed, and leave button.
+  - [ ] Fetch data from `/api/party/:id/progress`.
+  - [ ] Implement progress display, member list, and leave button.
+  - [ ] Leave a UI placeholder for the Activity Feed (to be implemented in Story 3.8).
   - [ ] Implement invite link sharing UI.
 - [ ] Task 4: Fellowship Management Page Island (AC: 3)
   - [ ] Create `PartyManageIsland.tsx`.
@@ -76,7 +79,7 @@ so that I can fully interact with the Fellowship features in a structured and in
 
 - **Architecture Details**: 
   - The API endpoints were created in Stories 3.2, 3.3, 3.4, and 3.5.
-  - Follow the `renderLayout()` pattern used in `src/renderHtml.ts` for the new SSR shells.
+  - Follow the `renderLayout()` pattern used iSSR routing. We will maintain this pattern by creating separate SSR shells for each view (`renderPartyListPage`, `renderPartyDetailPage`, `renderPartyManagePage`, `renderPartyJoinPage`). Each shell will mount its respective Preact island
   - Use Preact islands for the interactive components on these pages.
 - **Routing**: The application currently uses a mix of SSR routing and client-side islands. For the `/party/*` routes, you can either use separate SSR pages for each route or a single SSR page that loads a client-side router (like `preact-router`) for the sub-routes. Given the requirements, separate SSR shells (`renderPartyListPage`, `renderPartyJoinPage`) with islands that handle the specific views (`/party`, `/party/:id`, `/party/:id/manage`) might be the most consistent approach with the existing architecture.
 - **Web Share API**: Use `navigator.share()` if available, fallback to clipboard copy.

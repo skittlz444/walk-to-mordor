@@ -34,7 +34,7 @@ so that I can track shared journey progress with friends and celebrate milestone
 ## Tasks / Subtasks
 
 - [ ] Task 1: Parameterized Route Matching (AC: 1, 10)
-  - [ ] **Prerequisite check:** Verify that Story 3.2/3.3 implementation added parameterized route matching to the Worker router in `src/index.ts`. If not, add a simple path-matching utility that supports `:param` segments (e.g., `/api/party/:id/progress`). The current router uses exact `url.pathname ===` matching which cannot handle `/api/party/123/progress`.
+  - [ ] **Prerequisite check:** Verify that Story 3.3 implementation added parameterized route matching to the Worker router in `src/index.ts`.
   - [ ] Add `GET /api/party/:id/progress` route to `src/index.ts`.
   - [ ] Add `GET /api/party/:id/activity` route to `src/index.ts`.
   - [ ] Both routes require authentication (call `validateSession` first).
@@ -220,8 +220,12 @@ async function syncPartyProgressLog(
 
 - **Story 3.1:** Established the database schema. The migration file should be at `migrations/0119_create_fellowship_tables.sql`. Tables: `parties`, `party_members`, `party_progress_log`.
 - **Story 3.2:** Created `POST /api/party` endpoint. Likely established `src/party-handlers.ts` as the handler file. Used `crypto.getRandomValues()` for invite code generation. Set up D1 batch transactions for atomic party + member creation.
-- **Story 3.3:** Created join, preview, invite regeneration, and user parties endpoints. Established re-join pattern (reactivate existing membership row). Added `GET /api/user/parties` endpoint. Preview endpoint is public (no auth required); all other endpoints require auth.
-- **Router pattern:** Stories 3.2/3.3 required parameterized routing (e.g., `/api/party/:id/invite`, `/api/party/join/:inviteCode`). Check what pattern was implemented and reuse it.
+- **Story 3.3:** Created join, preview, invite regeneration, and user parties endpoints. Established re-join pattern (reactivate existing membership row). Added `GET /api/user/parties` endpoint. Preview endpoint is public (no auth required); all other endpoints require auth. Implemented parameterized routing in `src/index.ts`.
+- **Router pattern:** Story 3.3 introduced parameterized routing (e.g., `/api/party/:id/invite`, `/api/party/join/:inviteCode`). Reuse this pattern.
+
+### Known Limitations (V1)
+
+- **Milestone Notification Side Effect:** The `last_viewed_distance` is updated on every `GET /api/party/:id/progress` call. If the frontend polls this endpoint or if the user navigates away before the milestone modal renders, the `newly_passed_milestones` will be cleared and the notification will be lost. This is accepted for V1. Future iterations may separate the "read progress" action from the "acknowledge milestones" action.
 
 ### Parameterized Routing Guidance
 

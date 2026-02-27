@@ -26,7 +26,8 @@ so that I can share my walking journey and progress with others across multiple 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: API Route Setup (AC: 1, 2, 5, 6)
+- [ ] Task 1: API Route Setup & Parameterized Routing (AC: 1, 2, 5, 6)
+  - [ ] Implement a simple parameterized route matching utility in `src/index.ts` (e.g., to handle `/api/party/join/:inviteCode`).
   - [ ] Add `GET /api/party/join/:inviteCode` route to the Cloudflare Worker router in `src/index.ts`.
   - [ ] Add `POST /api/party/join/:inviteCode` route to the Cloudflare Worker router in `src/index.ts`.
   - [ ] Add `POST /api/party/:id/invite` route to the Cloudflare Worker router in `src/index.ts`.
