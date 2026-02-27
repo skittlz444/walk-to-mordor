@@ -155,7 +155,7 @@ The following decisions were made by the product owner (Hayden) in response to S
 | # | Suggestion | Decision | Action |
 |---|-----------|----------|--------|
 | 1 | `distance_at_departure` column | **REJECTED** | Not needed — contributed distances are calculable from `distance_at_join` combined with a `departed_at` timestamp via the `progress` table, and the `party_progress_log` serves as an audit trail. Re-join handling clarified: creates a new `party_members` record (preserving old records for history). |
-| 2 | Party settings update API | **ACCEPTED** | Add `PUT /api/party/:id/settings` endpoint to Story 3.5. Leaders can update `distance_mode` and `leave_distance_behavior` after creation. |
+| 2 | Party settings update API | **ACCEPTED** | Add `PUT /api/party/:id/settings` endpoint to Story 3.5. Leaders can update `leave_distance_behavior` after creation; `distance_mode` is set at creation time and is immutable thereafter. |
 | 3 | `GET /api/user/parties` endpoint | **ACCEPTED** | Add to Story 3.3 as a new endpoint. Returns all parties the user is an active member of. |
 | 4 | Leadership transfer endpoint | **ACCEPTED** | Add `POST /api/party/:id/transfer-leadership` endpoint to Story 3.5. Leaders can step down without leaving. |
 | 5 | Party dissolution | **ACCEPTED** | Auto-dissolve (soft-delete) empty parties when all members have left. Added to Story 3.5 as part of leave/kick handling. |
