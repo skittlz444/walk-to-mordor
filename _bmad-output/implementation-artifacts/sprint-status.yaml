@@ -73,7 +73,7 @@ development_status:
   # EPIC 3: Fellowship Features (#152)
   # ============================================
   epic-3: in-progress
-  3-1-fellowship-database-schema: ready-for-dev
+  3-1-fellowship-database-schema: done
   3-2-create-fellowship-api: ready-for-dev
   3-3-invite-join-fellowship-api: ready-for-dev
   3-4-fellowship-progress-calculation-api: ready-for-dev
