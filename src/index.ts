@@ -34,6 +34,7 @@ import {
   validateSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
+import { handleCreateParty } from "./party-handlers";
 
 export default {
   async fetch(request, env): Promise<Response> {
@@ -109,6 +110,11 @@ export default {
       }
       
       // Protected endpoints (authentication required)
+      // Party (Fellowship) endpoints
+      if (url.pathname === "/api/party" && method === "POST") {
+        return handleCreateParty(request, env, body);
+      }
+
       // CRUD for calendar events
       if (url.pathname === "/api/calendar-progress" && method === "POST") {
         return handleProgressPost(request, env, body);
@@ -224,6 +230,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/password-reset-request":
     case "/api/password-reset":
     case "/api/auth/resend-confirmation":
+    case "/api/party":
       return ['POST'];
     case "/api/profile":
     case "/api/user/preferences":
