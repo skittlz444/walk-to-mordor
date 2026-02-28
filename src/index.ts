@@ -34,7 +34,28 @@ import {
   validateSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
-import { handleCreateParty } from "./party-handlers";
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties } from "./party-handlers";
+
+/**
+ * Match a URL pathname against a parameterized route pattern.
+ * Returns null if no match, or an object with extracted params.
+ * E.g., matchRoute('/api/party/join/AbCd1234', '/api/party/join/:inviteCode')
+ *   => { inviteCode: 'AbCd1234' }
+ */
+function matchRoute(pathname: string, pattern: string): Record<string, string> | null {
+  const pathParts = pathname.split('/');
+  const patternParts = pattern.split('/');
+  if (pathParts.length !== patternParts.length) return null;
+  const params: Record<string, string> = {};
+  for (let i = 0; i < patternParts.length; i++) {
+    if (patternParts[i].startsWith(':')) {
+      params[patternParts[i].slice(1)] = pathParts[i];
+    } else if (patternParts[i] !== pathParts[i]) {
+      return null;
+    }
+  }
+  return params;
+}
 
 export default {
   async fetch(request, env): Promise<Response> {
@@ -113,6 +134,30 @@ export default {
       // Party (Fellowship) endpoints
       if (url.pathname === "/api/party" && method === "POST") {
         return handleCreateParty(request, env, body);
+      }
+
+      // GET /api/user/parties — list user's party memberships (auth required)
+      if (url.pathname === "/api/user/parties" && method === "GET") {
+        return handleGetUserParties(request, env);
+      }
+
+      // Parameterized party routes
+      const joinParams = matchRoute(url.pathname, '/api/party/join/:inviteCode');
+      if (joinParams) {
+        if (method === "GET") {
+          return handlePreviewParty(request, env, joinParams.inviteCode);
+        } else if (method === "POST") {
+          return handleJoinParty(request, env, joinParams.inviteCode);
+        }
+      }
+
+      const inviteParams = matchRoute(url.pathname, '/api/party/:id/invite');
+      if (inviteParams && method === "POST") {
+        const partyId = Number(inviteParams.id);
+        if (isNaN(partyId) || partyId <= 0) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleRegenerateInvite(request, env, partyId);
       }
 
       // CRUD for calendar events
@@ -223,6 +268,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/total-distance":
     case "/api/session":
     case "/api/auth/confirm-email":
+    case "/api/user/parties":
       return ['GET'];
     case "/api/register":
     case "/api/login":
@@ -236,6 +282,13 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/user/preferences":
       return ['PUT'];
     default:
+      // Parameterized routes
+      if (matchRoute(pathname, '/api/party/join/:inviteCode')) {
+        return ['GET', 'POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/invite')) {
+        return ['POST'];
+      }
       return ['GET'];
   }
 }

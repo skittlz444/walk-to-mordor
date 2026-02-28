@@ -15,6 +15,21 @@ interface PartyRow {
   dissolved_at: string | null;
 }
 
+/** D1 result row for party_members table */
+interface PartyMemberRow {
+  id: number;
+  party_id: number;
+  user_id: number;
+  joined_at: string;
+  distance_at_join: number;
+  role: string;
+  status: string;
+  last_viewed_distance: number;
+  departed_at: string | null;
+  distance_kept: number | null;
+  contribution_at_departure: number | null;
+}
+
 /**
  * Generate a cryptographically secure 8-character alphanumeric invite code.
  * Uses crypto.getRandomValues() for non-enumerable codes.
@@ -152,5 +167,237 @@ export async function handleCreateParty(request: Request, env: { DB: D1Database 
   } catch (error: unknown) {
     console.error('Database error during party creation:', error);
     return createErrorResponse('Internal server error while creating party', 500);
+  }
+}
+
+/**
+ * GET /api/party/join/:inviteCode — Preview a party before joining.
+ *
+ * Public endpoint (no auth required) to support deep-link invite flow.
+ * Returns party name, member count, distance_mode, leave_distance_behavior.
+ * Returns 404 for invalid invite codes, 400 if party is dissolved.
+ */
+export async function handlePreviewParty(request: Request, env: { DB: D1Database }, inviteCode: string): Promise<Response> {
+  try {
+    const party = await env.DB.prepare(
+      'SELECT id, name, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE invite_code = ?'
+    ).bind(inviteCode).first<PartyRow>();
+
+    if (!party) {
+      return createErrorResponse('Invalid invite code', 404);
+    }
+
+    if (party.dissolved_at !== null) {
+      return createErrorResponse('This party has been dissolved', 400);
+    }
+
+    const memberCount = await env.DB.prepare(
+      'SELECT COUNT(*) as count FROM party_members WHERE party_id = ? AND status = ?'
+    ).bind(party.id, 'active').first<{ count: number }>();
+
+    return createSuccessResponse({
+      name: party.name,
+      member_count: memberCount?.count ?? 0,
+      distance_mode: party.distance_mode,
+      leave_distance_behavior: party.leave_distance_behavior,
+    });
+  } catch (error: unknown) {
+    console.error('Database error during party preview:', error);
+    return createErrorResponse('Internal server error while previewing party', 500);
+  }
+}
+
+/**
+ * POST /api/party/join/:inviteCode — Join a party via invite code.
+ *
+ * Requires authentication. Handles fresh joins and re-joins.
+ * On join: records distance_at_join, last_viewed_distance = 0, departed_at = NULL.
+ * Re-join: reactivates existing record with refreshed join fields.
+ * Returns 404 for invalid codes, 400 for dissolved parties or duplicate active membership.
+ */
+export async function handleJoinParty(request: Request, env: { DB: D1Database }, inviteCode: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Look up party by invite code
+    const party = await env.DB.prepare(
+      'SELECT id, name, dissolved_at FROM parties WHERE invite_code = ?'
+    ).bind(inviteCode).first<PartyRow>();
+
+    if (!party) {
+      return createErrorResponse('Invalid invite code', 404);
+    }
+
+    if (party.dissolved_at !== null) {
+      return createErrorResponse('This party has been dissolved', 400);
+    }
+
+    // Check for existing membership (any status)
+    const existingMember = await env.DB.prepare(
+      'SELECT id, status FROM party_members WHERE party_id = ? AND user_id = ?'
+    ).bind(party.id, userId).first<PartyMemberRow>();
+
+    if (existingMember) {
+      if (existingMember.status === 'active') {
+        return createErrorResponse('You are already an active member of this party', 400);
+      }
+
+      // Re-join: reactivate existing record
+      const totalDistance = await calculateTotalDistance(env, userId);
+      await env.DB.prepare(
+        `UPDATE party_members 
+         SET status = 'active', 
+             joined_at = CURRENT_TIMESTAMP, 
+             distance_at_join = ?, 
+             last_viewed_distance = 0, 
+             departed_at = NULL, 
+             distance_kept = NULL, 
+             contribution_at_departure = NULL,
+             role = 'member'
+         WHERE id = ?`
+      ).bind(totalDistance, existingMember.id).run();
+
+      return createSuccessResponse({
+        party_id: party.id,
+        party_name: party.name,
+        rejoined: true,
+      });
+    }
+
+    // Fresh join: insert new membership
+    const totalDistance = await calculateTotalDistance(env, userId);
+    await env.DB.prepare(
+      'INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES (?, ?, ?, ?, 0, ?)'
+    ).bind(party.id, userId, 'member', totalDistance, 'active').run();
+
+    return createSuccessResponse({
+      party_id: party.id,
+      party_name: party.name,
+      rejoined: false,
+    });
+  } catch (error: unknown) {
+    console.error('Database error during party join:', error);
+    return createErrorResponse('Internal server error while joining party', 500);
+  }
+}
+
+/**
+ * POST /api/party/:id/invite — Regenerate invite code (leader only).
+ *
+ * Generates a new cryptographically secure invite code, invalidating the previous one.
+ * Returns both the new inviteCode and the full inviteUrl.
+ */
+export async function handleRegenerateInvite(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Verify user is the leader
+    const party = await env.DB.prepare(
+      'SELECT id, leader_id, dissolved_at FROM parties WHERE id = ?'
+    ).bind(partyId).first<PartyRow>();
+
+    if (!party) {
+      return createErrorResponse('Party not found', 404);
+    }
+
+    if (party.dissolved_at !== null) {
+      return createErrorResponse('This party has been dissolved', 400);
+    }
+
+    if (party.leader_id !== userId) {
+      return createErrorResponse('Only the party leader can regenerate the invite code', 403);
+    }
+
+    // Generate new invite code with retry logic
+    const maxRetries = 5;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const newCode = generateInviteCode();
+
+      // Pre-check uniqueness
+      const existing = await env.DB.prepare(
+        'SELECT id FROM parties WHERE invite_code = ?'
+      ).bind(newCode).first();
+      if (existing) continue;
+
+      try {
+        await env.DB.prepare(
+          'UPDATE parties SET invite_code = ? WHERE id = ?'
+        ).bind(newCode, partyId).run();
+
+        const origin = new URL(request.url).origin;
+        return createSuccessResponse({
+          inviteCode: newCode,
+          inviteUrl: `${origin}/party/join/${newCode}`,
+        });
+      } catch (updateError) {
+        const message = updateError instanceof Error ? updateError.message : String(updateError);
+        if (message.includes('UNIQUE constraint failed') && message.includes('parties.invite_code')) {
+          if (attempt === maxRetries - 1) {
+            return createErrorResponse('Could not generate a unique invite code. Please try again.', 409);
+          }
+          continue;
+        }
+        throw updateError;
+      }
+    }
+
+    return createErrorResponse('Could not generate a unique invite code. Please try again.', 409);
+  } catch (error: unknown) {
+    console.error('Database error during invite regeneration:', error);
+    return createErrorResponse('Internal server error while regenerating invite code', 500);
+  }
+}
+
+/**
+ * GET /api/user/parties — List all party memberships for the current user.
+ *
+ * Returns active memberships by default (non-dissolved parties).
+ * With ?include_dissolved=true, also returns dissolved parties.
+ * Each result includes id, name, role, distance_mode, leave_distance_behavior, active_member_count, dissolved_at.
+ */
+export async function handleGetUserParties(request: Request, env: { DB: D1Database }): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  const url = new URL(request.url);
+  const includeDissolved = url.searchParams.get('include_dissolved') === 'true';
+
+  try {
+    let query: string;
+    if (includeDissolved) {
+      query = `
+        SELECT p.id, p.name, pm.role, p.distance_mode, p.leave_distance_behavior, p.dissolved_at,
+               (SELECT COUNT(*) FROM party_members pm2 WHERE pm2.party_id = p.id AND pm2.status = 'active') as active_member_count
+        FROM party_members pm
+        JOIN parties p ON pm.party_id = p.id
+        WHERE pm.user_id = ? AND pm.status = 'active'
+      `;
+    } else {
+      query = `
+        SELECT p.id, p.name, pm.role, p.distance_mode, p.leave_distance_behavior, p.dissolved_at,
+               (SELECT COUNT(*) FROM party_members pm2 WHERE pm2.party_id = p.id AND pm2.status = 'active') as active_member_count
+        FROM party_members pm
+        JOIN parties p ON pm.party_id = p.id
+        WHERE pm.user_id = ? AND pm.status = 'active' AND p.dissolved_at IS NULL
+      `;
+    }
+
+    const { results } = await env.DB.prepare(query).bind(userId).all();
+
+    return createSuccessResponse({ parties: results });
+  } catch (error: unknown) {
+    console.error('Database error during user parties retrieval:', error);
+    return createErrorResponse('Internal server error while retrieving parties', 500);
   }
 }

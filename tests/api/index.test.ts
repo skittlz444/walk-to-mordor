@@ -4,7 +4,8 @@ import {
   isValidDateFormat, 
   isValidDistance, 
   safeJsonParse, 
-  isValidMethod 
+  isValidMethod,
+  createErrorResponse
 } from '../../src/validators';
 import { 
   validateSession,
@@ -26,7 +27,7 @@ jest.mock('../../src/party-handlers');
 // Import after mocking
 import worker from '../../src/index';
 import { calculateTotalDistance, handleGoalsGet } from '../../src/goals-handlers';
-import { handleCreateParty } from '../../src/party-handlers';
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties } from '../../src/party-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
@@ -34,6 +35,7 @@ const mockIsValidDateFormat = jest.mocked(isValidDateFormat);
 const mockIsValidDistance = jest.mocked(isValidDistance);
 const mockSafeJsonParse = jest.mocked(safeJsonParse);
 const mockIsValidMethod = jest.mocked(isValidMethod);
+const mockCreateErrorResponse = jest.mocked(createErrorResponse);
 const mockCalculateTotalDistance = jest.mocked(calculateTotalDistance);
 const mockHandleGoalsGet = jest.mocked(handleGoalsGet);
 const mockValidateSession = jest.mocked(validateSession);
@@ -43,6 +45,10 @@ const mockHandleLogout = jest.mocked(handleLogout);
 const mockHandleSessionValidation = jest.mocked(handleSessionValidation);
 const mockHandleUpdatePreferences = jest.mocked(handleUpdatePreferences);
 const mockHandleCreateParty = jest.mocked(handleCreateParty);
+const mockHandlePreviewParty = jest.mocked(handlePreviewParty);
+const mockHandleJoinParty = jest.mocked(handleJoinParty);
+const mockHandleRegenerateInvite = jest.mocked(handleRegenerateInvite);
+const mockHandleGetUserParties = jest.mocked(handleGetUserParties);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -93,6 +99,12 @@ describe('Cloudflare Worker Index', () => {
     mockIsValidMethod.mockReturnValue(true);
     mockSafeJsonParse.mockResolvedValue({ success: true, data: {} });
     mockValidateSession.mockResolvedValue({ valid: true, userId: 1 });
+    mockCreateErrorResponse.mockImplementation((error: string, status: number = 400) => {
+      return new Response(JSON.stringify({ error }), {
+        status,
+        headers: { 'content-type': 'application/json' }
+      });
+    });
 
     // Setup handler mocks
     mockCalculateTotalDistance.mockResolvedValue(10);
@@ -107,6 +119,10 @@ describe('Cloudflare Worker Index', () => {
     mockHandleSessionValidation.mockResolvedValue(new Response('Valid Session', { status: 200 }));
     mockHandleUpdatePreferences.mockResolvedValue(new Response(JSON.stringify({ showFutureGoalsUnlocked: true }), { status: 200, headers: { 'content-type': 'application/json' } }));
     mockHandleCreateParty.mockResolvedValue(new Response(JSON.stringify({ id: 1, name: 'Test Party' }), { status: 201, headers: { 'content-type': 'application/json' } }));
+    mockHandlePreviewParty.mockResolvedValue(new Response(JSON.stringify({ name: 'Party', member_count: 3 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleJoinParty.mockResolvedValue(new Response(JSON.stringify({ party_id: 1, rejoined: false }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleRegenerateInvite.mockResolvedValue(new Response(JSON.stringify({ inviteCode: 'NewCode1', inviteUrl: 'https://example.com/party/join/NewCode1' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleGetUserParties.mockResolvedValue(new Response(JSON.stringify({ parties: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
 
     // Create simple mock environment
     mockEnv = {
@@ -217,6 +233,73 @@ describe('Cloudflare Worker Index', () => {
       expect(response.status).toBe(405);
       const data = await response.json();
       expect(data.allowedMethods).toContain('POST');
+    });
+
+    it('should route GET /api/party/join/:inviteCode to handlePreviewParty', async () => {
+      const request = createRequest('http://localhost/api/party/join/AbCd1234', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandlePreviewParty).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 'AbCd1234'
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should route POST /api/party/join/:inviteCode to handleJoinParty', async () => {
+      const request = createRequest('http://localhost/api/party/join/AbCd1234', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleJoinParty).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 'AbCd1234'
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for PUT on /api/party/join/:inviteCode', async () => {
+      const request = createRequest('http://localhost/api/party/join/AbCd1234', 'PUT');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('GET');
+      expect(data.allowedMethods).toContain('POST');
+    });
+
+    it('should route POST /api/party/:id/invite to handleRegenerateInvite', async () => {
+      const request = createRequest('http://localhost/api/party/1/invite', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleRegenerateInvite).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 1
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for GET on /api/party/:id/invite', async () => {
+      const request = createRequest('http://localhost/api/party/1/invite', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('POST');
+    });
+
+    it('should return 400 for invalid party ID in /api/party/:id/invite', async () => {
+      const request = createRequest('http://localhost/api/party/abc/invite', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid party ID');
+    });
+
+    it('should route GET /api/user/parties to handleGetUserParties', async () => {
+      const request = createRequest('http://localhost/api/user/parties', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleGetUserParties).toHaveBeenCalled();
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for POST on /api/user/parties', async () => {
+      const request = createRequest('http://localhost/api/user/parties', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('GET');
     });
   it('should call renderHomePage for root page', async () => {
     const request = createRequest('https://example.com/');
