@@ -157,7 +157,7 @@ export default {
         if (
           !Number.isInteger(partyId) ||
           partyId <= 0 ||
-          String(partyId) !== inviteParams.id.trim()
+          String(partyId) !== inviteParams.id
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
