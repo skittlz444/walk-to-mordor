@@ -345,3 +345,44 @@ GitHub Copilot Coding Agent (Claude Sonnet 4)
 
 **New Files:**
 - `tests/api/party-progress.test.ts` — 24 unit tests for Story 3.4
+
+### Adversarial Review Findings
+
+**Reviewer:** Claude Sonnet 4 (GitHub Copilot Coding Agent) — 2026-02-28
+
+**AC Validation (all 15 ACs checked):**
+
+| AC | Status | Evidence |
+|----|--------|----------|
+| AC 1 | ✅ PASS | `GET /api/party/:id/progress` routed in index.ts:167-178, handled by `handlePartyProgress` in party-handlers.ts:467-588. |
+| AC 2 | ✅ PASS | `distance_mode` read from `parties` table at party-handlers.ts:477. Immutable — set at creation (Story 3.2). |
+| AC 3 | ✅ PASS | Cumulative mode: `contribution = member.total_distance` at party-handlers.ts:519. Total distance from `COALESCE(SUM(p.distance), 0)` subquery. |
+| AC 4 | ✅ PASS | Incremental mode: `contribution = Math.max(0, member.total_distance - member.distance_at_join)` at party-handlers.ts:518. Floor at 0 prevents negative contributions. |
+| AC 5 | ✅ PASS | Departed members with `distance_kept = 1` included via query at party-handlers.ts:533-538. `contribution_at_departure` added to total. Members with `distance_kept = 0` excluded (not in query results). |
+| AC 6 | ✅ PASS | Response includes `total_distance`, `member_count` (active only via `activeMembers.length`), `calculated_position`, `distance_mode`, `leave_distance_behavior` at party-handlers.ts:570-584. |
+| AC 7 | ✅ PASS | Per-member breakdown with `user_id`, `display_name`, `contribution`, `status`, `color` at party-handlers.ts:523-529. Color = `user_id % 12` (party-handlers.ts:528). |
+| AC 8 | ✅ PASS | Member color = `user_id % COLOR_PALETTE_SIZE` where `COLOR_PALETTE_SIZE = 12` (party-handlers.ts:7). Deterministic across sessions. |
+| AC 9 | ✅ PASS | `syncPartyProgressLog` in progress-handlers.ts:20-55. Called from POST (line 138), PUT (line 238), DELETE (line 304). Graceful degradation via try/catch. |
+| AC 10 | ✅ PASS | `handlePartyActivity` at party-handlers.ts:597-638. Returns last 10 `party_progress_log` entries with JOIN on users. Access restricted to active members (line 615-621). |
+| AC 11 | ✅ PASS | `last_viewed_distance` updated at party-handlers.ts:566-568 to current `totalDistance` on each progress call. |
+| AC 12 | ✅ PASS | `newly_passed_milestones` computed at party-handlers.ts:561-563 — milestones between `previousViewedDistance` and `totalDistance`. Returned in response (line 579-583). |
+| AC 13 | ✅ PASS | Caching skipped for V1 per dev notes. D1 co-located with worker. Documented as follow-up optimization. |
+| AC 14 | ✅ PASS | Session validation via `validateSession` at party-handlers.ts:468-471. Active membership check at party-handlers.ts:485-491. Returns 401/403 respectively. |
+| AC 15 | ✅ PASS | Individual progress only visible to confirmed active members (403 guard at party-handlers.ts:489-491). Non-members receive no data. |
+
+**Issues Found:**
+
+1. **MEDIUM — FIXED**: `syncPartyProgressLog` INSERT used plain `INSERT INTO` which could fail on `UNIQUE(party_id, logged_by_user_id, date)` constraint in edge cases (e.g., retry after partial batch failure). Changed to `INSERT OR REPLACE INTO` for idempotency. The entire batch would silently fail under graceful degradation, but idempotent writes are safer.
+2. **LOW**: `syncPartyProgressLog` is called with `userId!` non-null assertion in progress-handlers.ts:138,238,304. While safe (session validation already returned early if invalid), it bypasses TypeScript's null safety. The pattern is consistent with existing code in the file. No change needed.
+3. **LOW**: `handlePartyProgress` active members query uses a correlated subquery (`SELECT SUM(p.distance) FROM progress p WHERE p.user_id = pm.user_id`) inside the main query. D1/SQLite optimizes this well, but for parties with many members, individual queries might be clearer. Acceptable for V1 — party size is bounded by practical limits.
+4. **LOW**: `handlePartyProgress` makes 7 sequential DB queries (party lookup, membership check, active members, departed members, milestone position, newly passed milestones, update last_viewed_distance). Could batch some reads, but D1 co-location minimizes latency. Acceptable for V1.
+5. **LOW**: `totalDistance` rounding to 2 decimal places via `Number(totalDistance.toFixed(2))` at party-handlers.ts:553 — this rounds the sum rather than individual contributions. Floating point drift could cause micro-differences between `totalDistance` and `sum(member.contribution)`. Acceptable precision for distance tracking.
+6. **LOW**: Activity feed query at party-handlers.ts:624-631 doesn't filter by active member status — departed members' walk logs still appear. This is correct behavior (activity feed is historical), but could be confusing. Documented as V1 limitation.
+7. **LOW**: No test for routing validation in index.ts (invalid party ID returns 400 for progress/activity routes). Existing index.test.ts covers this pattern for `/api/party/:id/invite` — consistent coverage gap, not regression.
+
+**Review Decision: APPROVED** — 1 MEDIUM issue fixed (`INSERT OR REPLACE` for idempotency). 6 LOW issues documented (no fixes required). All 15 ACs validated. 345 tests passing.
+
+## Change Log
+
+- **2026-02-28 (Initial Implementation):** Implemented `handlePartyProgress`, `handlePartyActivity`, `syncPartyProgressLog` with cross-cutting integration. Added 2 routes in index.ts, 24 tests. All 345 tests pass.
+- **2026-02-28 (Adversarial Review):** Changed `syncPartyProgressLog` INSERT to `INSERT OR REPLACE INTO` for idempotency on `UNIQUE(party_id, logged_by_user_id, date)` constraint. All 345 tests pass.

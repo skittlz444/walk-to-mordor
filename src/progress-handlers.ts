@@ -36,7 +36,7 @@ export async function syncPartyProgressLog(
     if (operation === 'insert') {
       const stmts = memberships.map((m) =>
         env.DB.prepare(
-          'INSERT INTO party_progress_log (party_id, logged_by_user_id, distance, date, logged_at) VALUES (?, ?, ?, ?, ?)'
+          'INSERT OR REPLACE INTO party_progress_log (party_id, logged_by_user_id, distance, date, logged_at) VALUES (?, ?, ?, ?, ?)'
         ).bind(m.party_id, userId, distance, date, now)
       );
       await env.DB.batch(stmts);
