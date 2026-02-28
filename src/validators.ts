@@ -48,7 +48,7 @@ export async function safeJsonParse(request: Request): Promise<{success: boolean
   try {
     const text = await request.text();
     if (!text || text.trim() === '') {
-      return { success: false, error: 'Request body is empty' };
+      return { success: true, data: {} };
     }
     
     const data = JSON.parse(text);

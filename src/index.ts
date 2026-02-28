@@ -34,7 +34,7 @@ import {
   validateSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
-import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity } from "./party-handlers";
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -192,6 +192,70 @@ export default {
         return handlePartyActivity(request, env, partyId);
       }
 
+      // POST /api/party/:id/leave — leave party
+      const leaveParams = matchRoute(url.pathname, '/api/party/:id/leave');
+      if (leaveParams && method === "POST") {
+        const partyId = Number.parseInt(leaveParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== leaveParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleLeaveParty(request, env, partyId);
+      }
+
+      // POST /api/party/:id/kick/:userId — kick member (leader only)
+      const kickParams = matchRoute(url.pathname, '/api/party/:id/kick/:userId');
+      if (kickParams && method === "POST") {
+        const partyId = Number.parseInt(kickParams.id, 10);
+        const targetUserId = Number.parseInt(kickParams.userId, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== kickParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        if (
+          !Number.isInteger(targetUserId) ||
+          targetUserId <= 0 ||
+          String(targetUserId) !== kickParams.userId
+        ) {
+          return createErrorResponse('Invalid user ID', 400);
+        }
+        return handleKickMember(request, env, partyId, targetUserId, body);
+      }
+
+      // PUT /api/party/:id/settings — update party settings (leader only)
+      const settingsParams = matchRoute(url.pathname, '/api/party/:id/settings');
+      if (settingsParams && method === "PUT") {
+        const partyId = Number.parseInt(settingsParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== settingsParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleUpdatePartySettings(request, env, partyId, body);
+      }
+
+      // POST /api/party/:id/transfer-leadership — transfer leadership (leader only)
+      const transferParams = matchRoute(url.pathname, '/api/party/:id/transfer-leadership');
+      if (transferParams && method === "POST") {
+        const partyId = Number.parseInt(transferParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== transferParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleTransferLeadership(request, env, partyId, body);
+      }
+
       // CRUD for calendar events
       if (url.pathname === "/api/calendar-progress" && method === "POST") {
         return handleProgressPost(request, env, body);
@@ -326,6 +390,18 @@ function getAllowedMethods(pathname: string): string[] {
       }
       if (matchRoute(pathname, '/api/party/:id/activity')) {
         return ['GET'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/leave')) {
+        return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/kick/:userId')) {
+        return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/settings')) {
+        return ['PUT'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/transfer-leadership')) {
+        return ['POST'];
       }
       return ['GET'];
   }

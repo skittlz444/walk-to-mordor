@@ -100,24 +100,24 @@ describe('Validators', () => {
       expect(result.error).toBe('Invalid JSON format');
     });
 
-    it('should reject empty request body', async () => {
+    it('should treat empty request body as empty object', async () => {
       const mockRequest = {
         text: async () => ''
       } as Request;
       
       const result = await safeJsonParse(mockRequest);
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Request body is empty');
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({});
     });
 
-    it('should reject whitespace-only request body', async () => {
+    it('should treat whitespace-only request body as empty object', async () => {
       const mockRequest = {
         text: async () => '   '
       } as Request;
       
       const result = await safeJsonParse(mockRequest);
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Request body is empty');
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({});
     });
 
     it('should reject non-object JSON', async () => {

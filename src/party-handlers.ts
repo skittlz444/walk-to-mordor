@@ -589,6 +589,384 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
 }
 
 /**
+ * Compute a member's contribution_at_departure based on the party's distance_mode.
+ * For 'incremental': contribution = max(0, total_distance - distance_at_join)
+ * For 'cumulative': contribution = total_distance
+ */
+async function computeContribution(
+  env: { DB: D1Database },
+  userId: number,
+  distanceAtJoin: number,
+  distanceMode: string,
+): Promise<number> {
+  const totalDistance = await calculateTotalDistance(env, userId);
+  if (distanceMode === 'incremental') {
+    return Math.max(0, Number((totalDistance - distanceAtJoin).toFixed(2)));
+  }
+  return totalDistance;
+}
+
+/**
+ * POST /api/party/:id/leave — Leave a party.
+ *
+ * Sets member status to 'left', records departed_at, distance_kept (based on party setting),
+ * and contribution_at_departure. If the leader leaves, transfers leadership to the oldest active
+ * member or dissolves the party if none remain. Uses D1 batch for consistency.
+ */
+export async function handleLeaveParty(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Fetch party
+    const party = await env.DB.prepare(
+      'SELECT id, leader_id, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'distance_mode' | 'leave_distance_behavior' | 'dissolved_at'>>();
+
+    if (!party) {
+      return createErrorResponse('Party not found', 404);
+    }
+    if (party.dissolved_at !== null) {
+      return createErrorResponse('This party has been dissolved', 400);
+    }
+
+    // Verify active membership
+    const membership = await env.DB.prepare(
+      'SELECT id, distance_at_join, role FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
+    ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id' | 'distance_at_join' | 'role'>>();
+
+    if (!membership) {
+      return createErrorResponse('You are not an active member of this party', 403);
+    }
+
+    // Compute contribution before departure
+    const contribution = await computeContribution(env, userId, membership.distance_at_join, party.distance_mode);
+    const distanceKept = party.leave_distance_behavior === 'keep' ? 1 : 0;
+
+    // Build batch statements
+    const stmts: D1PreparedStatement[] = [];
+
+    // 1. Update member status
+    stmts.push(
+      env.DB.prepare(
+        `UPDATE party_members SET status = 'left', departed_at = CURRENT_TIMESTAMP, distance_kept = ?, contribution_at_departure = ? WHERE id = ?`
+      ).bind(distanceKept, contribution, membership.id)
+    );
+
+    // Handle leader departure
+    if (membership.role === 'leader') {
+      // Find oldest active member (excluding current user)
+      const nextLeader = await env.DB.prepare(
+        'SELECT id, user_id FROM party_members WHERE party_id = ? AND user_id != ? AND status = ? ORDER BY joined_at ASC LIMIT 1'
+      ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id' | 'user_id'>>();
+
+      if (nextLeader) {
+        // Transfer leadership
+        stmts.push(
+          env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('leader', nextLeader.id)
+        );
+        stmts.push(
+          env.DB.prepare('UPDATE parties SET leader_id = ? WHERE id = ?').bind(nextLeader.user_id, partyId)
+        );
+      } else {
+        // No active members remain — dissolve
+        stmts.push(
+          env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+        );
+      }
+    } else {
+      // Non-leader leaving: check if any active members remain after this departure
+      const remainingCount = await env.DB.prepare(
+        'SELECT COUNT(*) as count FROM party_members WHERE party_id = ? AND user_id != ? AND status = ?'
+      ).bind(partyId, userId, 'active').first<{ count: number }>();
+
+      if (!remainingCount || remainingCount.count === 0) {
+        stmts.push(
+          env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+        );
+      }
+    }
+
+    await env.DB.batch(stmts);
+
+    return createSuccessResponse({ message: 'You have left the party' });
+  } catch (error: unknown) {
+    console.error('Database error during party leave:', error);
+    return createErrorResponse('Internal server error while leaving party', 500);
+  }
+}
+
+/**
+ * POST /api/party/:id/kick/:userId — Kick a member (leader only).
+ *
+ * Sets the kicked member's status to 'kicked', records departed_at, distance_kept,
+ * and contribution_at_departure. Accepts optional removeDistance boolean to override
+ * the party's leave_distance_behavior. Auto-dissolves if no active members remain.
+ */
+export async function handleKickMember(
+  request: Request,
+  env: { DB: D1Database },
+  partyId: number,
+  targetUserId: number,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Fetch party
+    const party = await env.DB.prepare(
+      'SELECT id, leader_id, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'distance_mode' | 'leave_distance_behavior' | 'dissolved_at'>>();
+
+    if (!party) {
+      return createErrorResponse('Party not found', 404);
+    }
+    if (party.dissolved_at !== null) {
+      return createErrorResponse('This party has been dissolved', 400);
+    }
+
+    // Verify requester is the leader
+    if (party.leader_id !== userId) {
+      return createErrorResponse('Only the party leader can kick members', 403);
+    }
+
+    // Cannot kick yourself
+    if (targetUserId === userId) {
+      return createErrorResponse('Cannot kick yourself. Use the leave endpoint instead.', 400);
+    }
+
+    // Verify target is an active member
+    const targetMembership = await env.DB.prepare(
+      'SELECT id, distance_at_join FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
+    ).bind(partyId, targetUserId, 'active').first<Pick<PartyMemberRow, 'id' | 'distance_at_join'>>();
+
+    if (!targetMembership) {
+      return createErrorResponse('Target user is not an active member of this party', 404);
+    }
+
+    // Compute contribution before applying disposition
+    const contribution = await computeContribution(env, targetUserId, targetMembership.distance_at_join, party.distance_mode);
+
+    // Determine distance_kept: removeDistance overrides party default
+    const { removeDistance } = body || {};
+    let distanceKept: number;
+    if (typeof removeDistance === 'boolean') {
+      distanceKept = removeDistance ? 0 : 1;
+    } else {
+      distanceKept = party.leave_distance_behavior === 'keep' ? 1 : 0;
+    }
+
+    // Build batch statements
+    const stmts: D1PreparedStatement[] = [];
+
+    stmts.push(
+      env.DB.prepare(
+        `UPDATE party_members SET status = 'kicked', departed_at = CURRENT_TIMESTAMP, distance_kept = ?, contribution_at_departure = ? WHERE id = ?`
+      ).bind(distanceKept, contribution, targetMembership.id)
+    );
+
+    // Check if any active members remain after kick (excluding the kicked user)
+    const remainingCount = await env.DB.prepare(
+      'SELECT COUNT(*) as count FROM party_members WHERE party_id = ? AND user_id != ? AND status = ?'
+    ).bind(partyId, targetUserId, 'active').first<{ count: number }>();
+
+    if (!remainingCount || remainingCount.count === 0) {
+      stmts.push(
+        env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+      );
+    }
+
+    await env.DB.batch(stmts);
+
+    return createSuccessResponse({ message: 'Member has been kicked from the party' });
+  } catch (error: unknown) {
+    console.error('Database error during member kick:', error);
+    return createErrorResponse('Internal server error while kicking member', 500);
+  }
+}
+
+/**
+ * PUT /api/party/:id/settings — Update party settings (leader only).
+ *
+ * Accepts optional name and leave_distance_behavior.
+ * distance_mode is immutable and rejected if provided.
+ */
+export async function handleUpdatePartySettings(
+  request: Request,
+  env: { DB: D1Database },
+  partyId: number,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Fetch party
+    const party = await env.DB.prepare(
+      'SELECT id, leader_id, dissolved_at FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'dissolved_at'>>();
+
+    if (!party) {
+      return createErrorResponse('Party not found', 404);
+    }
+    if (party.dissolved_at !== null) {
+      return createErrorResponse('This party has been dissolved', 400);
+    }
+    if (party.leader_id !== userId) {
+      return createErrorResponse('Only the party leader can update settings', 403);
+    }
+
+    const { name, leave_distance_behavior, distance_mode } = body || {};
+
+    // Reject distance_mode changes
+    if (distance_mode !== undefined) {
+      return createErrorResponse('distance_mode is immutable and cannot be changed', 400);
+    }
+
+    // Validate at least one field to update
+    if (name === undefined && leave_distance_behavior === undefined) {
+      return createErrorResponse('No valid fields to update. Provide name or leave_distance_behavior.', 400);
+    }
+
+    // Validate name if provided
+    if (name !== undefined) {
+      if (typeof name !== 'string') {
+        return createErrorResponse('Name must be a string', 400);
+      }
+      const trimmedName = name.trim();
+      if (trimmedName.length === 0) {
+        return createErrorResponse('Name cannot be empty', 400);
+      }
+      if (trimmedName.length > 50) {
+        return createErrorResponse('Name must be 50 characters or less', 400);
+      }
+    }
+
+    // Validate leave_distance_behavior if provided
+    if (leave_distance_behavior !== undefined) {
+      const validBehaviors = ['keep', 'remove'];
+      if (typeof leave_distance_behavior !== 'string' || !validBehaviors.includes(leave_distance_behavior)) {
+        return createErrorResponse("Invalid leave_distance_behavior. Must be 'keep' or 'remove'", 400);
+      }
+    }
+
+    // Build dynamic update
+    const setClauses: string[] = [];
+    const bindValues: unknown[] = [];
+
+    if (name !== undefined) {
+      setClauses.push('name = ?');
+      bindValues.push((name as string).trim());
+    }
+    if (leave_distance_behavior !== undefined) {
+      setClauses.push('leave_distance_behavior = ?');
+      bindValues.push(leave_distance_behavior);
+    }
+
+    bindValues.push(partyId);
+
+    await env.DB.prepare(
+      `UPDATE parties SET ${setClauses.join(', ')} WHERE id = ?`
+    ).bind(...bindValues).run();
+
+    // Fetch updated party
+    const updated = await env.DB.prepare(
+      'SELECT id, name, leader_id, distance_mode, leave_distance_behavior FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'name' | 'leader_id' | 'distance_mode' | 'leave_distance_behavior'>>();
+
+    return createSuccessResponse(updated);
+  } catch (error: unknown) {
+    console.error('Database error during party settings update:', error);
+    return createErrorResponse('Internal server error while updating party settings', 500);
+  }
+}
+
+/**
+ * POST /api/party/:id/transfer-leadership — Transfer leadership to another active member (leader only).
+ *
+ * Accepts { new_leader_id: number }. Uses D1 batch for atomic update.
+ */
+export async function handleTransferLeadership(
+  request: Request,
+  env: { DB: D1Database },
+  partyId: number,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Fetch party
+    const party = await env.DB.prepare(
+      'SELECT id, leader_id, dissolved_at FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'dissolved_at'>>();
+
+    if (!party) {
+      return createErrorResponse('Party not found', 404);
+    }
+    if (party.dissolved_at !== null) {
+      return createErrorResponse('This party has been dissolved', 400);
+    }
+    if (party.leader_id !== userId) {
+      return createErrorResponse('Only the party leader can transfer leadership', 403);
+    }
+
+    const { new_leader_id } = body || {};
+
+    if (new_leader_id === undefined || typeof new_leader_id !== 'number' || !Number.isInteger(new_leader_id) || new_leader_id <= 0) {
+      return createErrorResponse('Valid new_leader_id is required', 400);
+    }
+
+    if (new_leader_id === userId) {
+      return createErrorResponse('You are already the leader', 400);
+    }
+
+    // Verify new leader is an active member
+    const newLeaderMembership = await env.DB.prepare(
+      'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
+    ).bind(partyId, new_leader_id, 'active').first<Pick<PartyMemberRow, 'id'>>();
+
+    if (!newLeaderMembership) {
+      return createErrorResponse('Target user is not an active member of this party', 404);
+    }
+
+    // Get current leader's membership row
+    const currentLeaderMembership = await env.DB.prepare(
+      'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
+    ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id'>>();
+
+    if (!currentLeaderMembership) {
+      return createErrorResponse('Current leader membership record not found', 500);
+    }
+
+    // Atomic batch: update roles + parties.leader_id
+    await env.DB.batch([
+      env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('member', currentLeaderMembership.id),
+      env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('leader', newLeaderMembership.id),
+      env.DB.prepare('UPDATE parties SET leader_id = ? WHERE id = ?').bind(new_leader_id, partyId),
+    ]);
+
+    return createSuccessResponse({ message: 'Leadership transferred successfully', new_leader_id });
+  } catch (error: unknown) {
+    console.error('Database error during leadership transfer:', error);
+    return createErrorResponse('Internal server error while transferring leadership', 500);
+  }
+}
+
+/**
  * GET /api/party/:id/activity — Get recent party activity feed.
  *
  * Returns the last 10 entries from party_progress_log for the given party.
