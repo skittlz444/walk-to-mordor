@@ -27,7 +27,7 @@ jest.mock('../../src/party-handlers');
 // Import after mocking
 import worker from '../../src/index';
 import { calculateTotalDistance, handleGoalsGet } from '../../src/goals-handlers';
-import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties } from '../../src/party-handlers';
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from '../../src/party-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
@@ -49,6 +49,10 @@ const mockHandlePreviewParty = jest.mocked(handlePreviewParty);
 const mockHandleJoinParty = jest.mocked(handleJoinParty);
 const mockHandleRegenerateInvite = jest.mocked(handleRegenerateInvite);
 const mockHandleGetUserParties = jest.mocked(handleGetUserParties);
+const mockHandleLeaveParty = jest.mocked(handleLeaveParty);
+const mockHandleKickMember = jest.mocked(handleKickMember);
+const mockHandleUpdatePartySettings = jest.mocked(handleUpdatePartySettings);
+const mockHandleTransferLeadership = jest.mocked(handleTransferLeadership);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -123,6 +127,10 @@ describe('Cloudflare Worker Index', () => {
     mockHandleJoinParty.mockResolvedValue(new Response(JSON.stringify({ party_id: 1, rejoined: false }), { status: 200, headers: { 'content-type': 'application/json' } }));
     mockHandleRegenerateInvite.mockResolvedValue(new Response(JSON.stringify({ inviteCode: 'NewCode1', inviteUrl: 'https://example.com/party/join/NewCode1' }), { status: 200, headers: { 'content-type': 'application/json' } }));
     mockHandleGetUserParties.mockResolvedValue(new Response(JSON.stringify({ parties: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleLeaveParty.mockResolvedValue(new Response(JSON.stringify({ message: 'You have left the party' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleKickMember.mockResolvedValue(new Response(JSON.stringify({ message: 'Member has been kicked from the party' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleUpdatePartySettings.mockResolvedValue(new Response(JSON.stringify({ id: 1, name: 'Updated Party' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleTransferLeadership.mockResolvedValue(new Response(JSON.stringify({ message: 'Leadership transferred successfully', new_leader_id: 2 }), { status: 200, headers: { 'content-type': 'application/json' } }));
 
     // Create simple mock environment
     mockEnv = {
@@ -316,6 +324,114 @@ describe('Cloudflare Worker Index', () => {
       expect(response.status).toBe(405);
       const data = await response.json();
       expect(data.allowedMethods).toContain('GET');
+    });
+
+    it('should route POST /api/party/:id/leave to handleLeaveParty', async () => {
+      const request = createRequest('http://localhost/api/party/1/leave', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleLeaveParty).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 1
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for GET on /api/party/:id/leave', async () => {
+      const request = createRequest('http://localhost/api/party/1/leave', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('POST');
+    });
+
+    it('should return 400 for invalid party ID in /api/party/:id/leave', async () => {
+      const request = createRequest('http://localhost/api/party/abc/leave', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid party ID');
+    });
+
+    it('should route POST /api/party/:id/kick/:userId to handleKickMember', async () => {
+      const request = createRequest('http://localhost/api/party/1/kick/2', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleKickMember).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 1, 2, expect.anything()
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for GET on /api/party/:id/kick/:userId', async () => {
+      const request = createRequest('http://localhost/api/party/1/kick/2', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('POST');
+    });
+
+    it('should return 400 for invalid party ID in /api/party/:id/kick/:userId', async () => {
+      const request = createRequest('http://localhost/api/party/abc/kick/2', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid party ID');
+    });
+
+    it('should return 400 for invalid user ID in /api/party/:id/kick/:userId', async () => {
+      const request = createRequest('http://localhost/api/party/1/kick/abc', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid user ID');
+    });
+
+    it('should route PUT /api/party/:id/settings to handleUpdatePartySettings', async () => {
+      const request = createRequest('http://localhost/api/party/1/settings', 'PUT');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleUpdatePartySettings).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 1, expect.anything()
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for GET on /api/party/:id/settings', async () => {
+      const request = createRequest('http://localhost/api/party/1/settings', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('PUT');
+    });
+
+    it('should return 400 for invalid party ID in /api/party/:id/settings', async () => {
+      const request = createRequest('http://localhost/api/party/abc/settings', 'PUT');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid party ID');
+    });
+
+    it('should route POST /api/party/:id/transfer-leadership to handleTransferLeadership', async () => {
+      const request = createRequest('http://localhost/api/party/1/transfer-leadership', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleTransferLeadership).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 1, expect.anything()
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for GET on /api/party/:id/transfer-leadership', async () => {
+      const request = createRequest('http://localhost/api/party/1/transfer-leadership', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('POST');
+    });
+
+    it('should return 400 for invalid party ID in /api/party/:id/transfer-leadership', async () => {
+      const request = createRequest('http://localhost/api/party/abc/transfer-leadership', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid party ID');
     });
   it('should call renderHomePage for root page', async () => {
     const request = createRequest('https://example.com/');
