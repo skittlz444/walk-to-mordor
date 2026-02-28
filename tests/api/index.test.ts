@@ -21,10 +21,12 @@ jest.mock('../../src/renderHomePage');
 jest.mock('../../src/validators');
 jest.mock('../../src/goals-handlers');
 jest.mock('../../src/auth-handlers');
+jest.mock('../../src/party-handlers');
 
 // Import after mocking
 import worker from '../../src/index';
 import { calculateTotalDistance, handleGoalsGet } from '../../src/goals-handlers';
+import { handleCreateParty } from '../../src/party-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
@@ -40,6 +42,7 @@ const mockHandleLogin = jest.mocked(handleLogin);
 const mockHandleLogout = jest.mocked(handleLogout);
 const mockHandleSessionValidation = jest.mocked(handleSessionValidation);
 const mockHandleUpdatePreferences = jest.mocked(handleUpdatePreferences);
+const mockHandleCreateParty = jest.mocked(handleCreateParty);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -103,6 +106,7 @@ describe('Cloudflare Worker Index', () => {
     mockHandleLogout.mockResolvedValue(new Response('Logged Out', { status: 200 }));
     mockHandleSessionValidation.mockResolvedValue(new Response('Valid Session', { status: 200 }));
     mockHandleUpdatePreferences.mockResolvedValue(new Response(JSON.stringify({ showFutureGoalsUnlocked: true }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleCreateParty.mockResolvedValue(new Response(JSON.stringify({ id: 1, name: 'Test Party' }), { status: 201, headers: { 'content-type': 'application/json' } }));
 
     // Create simple mock environment
     mockEnv = {
@@ -194,6 +198,21 @@ describe('Cloudflare Worker Index', () => {
 
     it('should return 405 for invalid method on auth endpoints', async () => {
       const request = createRequest('http://localhost/api/login', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('POST');
+    });
+
+    it('should route POST /api/party to handleCreateParty', async () => {
+      const request = createRequest('http://localhost/api/party', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleCreateParty).toHaveBeenCalled();
+      expect(response.status).toBe(201);
+    });
+
+    it('should return 405 for GET on /api/party', async () => {
+      const request = createRequest('http://localhost/api/party', 'GET');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(response.status).toBe(405);
       const data = await response.json();
