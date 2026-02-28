@@ -326,6 +326,34 @@ describe('Cloudflare Worker Index', () => {
       expect(data.allowedMethods).toContain('GET');
     });
 
+    it('should route POST /api/party/:id/leave with empty body', async () => {
+      mockSafeJsonParse.mockRestore();
+      const { safeJsonParse: realSafeJsonParse } = jest.requireActual('../../src/validators');
+      mockSafeJsonParse.mockImplementation(realSafeJsonParse);
+
+      const request = createRequest('http://localhost/api/party/1/leave', 'POST');
+      request.text = jest.fn().mockResolvedValue('');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleLeaveParty).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 1
+      );
+      expect(response.status).toBe(200);
+    });
+
+    it('should route POST /api/party/:id/kick/:userId with empty body', async () => {
+      mockSafeJsonParse.mockRestore();
+      const { safeJsonParse: realSafeJsonParse } = jest.requireActual('../../src/validators');
+      mockSafeJsonParse.mockImplementation(realSafeJsonParse);
+
+      const request = createRequest('http://localhost/api/party/1/kick/2', 'POST');
+      request.text = jest.fn().mockResolvedValue('');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleKickMember).toHaveBeenCalledWith(
+        expect.anything(), mockEnv, 1, 2, {}
+      );
+      expect(response.status).toBe(200);
+    });
+
     it('should route POST /api/party/:id/leave to handleLeaveParty', async () => {
       const request = createRequest('http://localhost/api/party/1/leave', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
