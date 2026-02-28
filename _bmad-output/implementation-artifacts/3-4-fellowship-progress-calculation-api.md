@@ -79,8 +79,8 @@ so that I can track shared journey progress with friends and celebrate milestone
 - [x] Task 5: Activity Feed Endpoint (AC: 10, 14, 15)
   - [x] Create `handlePartyActivity(request, env, partyId)` in `src/party-handlers.ts`.
   - [x] Validate session and verify the requesting user is an active member of the party. Return 403 if not.
-  - [ ] Query: `SELECT ppl.logged_by_user_id as user_id, u.username as display_name, ppl.distance, ppl.date, ppl.logged_at FROM party_progress_log ppl JOIN users u ON ppl.logged_by_user_id = u.id WHERE ppl.party_id = ? ORDER BY ppl.logged_at DESC LIMIT 10`.
-  - [ ] Return JSON array of activity entries.
+  - [x] Query: `SELECT ppl.logged_by_user_id as user_id, u.username as display_name, ppl.distance, ppl.date, ppl.logged_at FROM party_progress_log ppl JOIN users u ON ppl.logged_by_user_id = u.id WHERE ppl.party_id = ? ORDER BY ppl.logged_at DESC LIMIT 10`.
+  - [x] Return JSON array of activity entries.
 
 - [x] Task 6: Caching (AC: 13)
   - [x] Skipped for V1 per dev notes recommendation. D1 is co-located with the worker; latency is minimal. Document as optimization follow-up.
