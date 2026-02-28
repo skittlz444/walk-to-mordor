@@ -465,9 +465,12 @@ describe('Party Progress API (Story 3.4)', () => {
 
       await handlePartyProgress(mockRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
 
-      // The 7th prepare call should be the UPDATE for last_viewed_distance
-      const updateCall = mockEnv.DB.prepare.mock.calls[6];
-      expect(updateCall[0]).toContain('UPDATE party_members SET last_viewed_distance');
+      const updatePrepareCall = mockEnv.DB.prepare.mock.calls.find(
+        ([sql]: [string]) =>
+          typeof sql === 'string' &&
+          sql.includes('UPDATE party_members SET last_viewed_distance'),
+      );
+      expect(updatePrepareCall).toBeDefined();
     });
 
     it('should return 500 on database error', async () => {
@@ -559,6 +562,48 @@ describe('Party Progress API (Story 3.4)', () => {
         date: '2026-02-28',
         logged_at: '2026-02-28T10:00:00Z',
       });
+    });
+
+    it('should only return activity entries from active members', async () => {
+      // Party exists
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: null }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10 }),
+      }));
+      // Activity query — only active member entries returned (query filters via JOIN)
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            {
+              user_id: 1,
+              display_name: 'Alice',
+              distance: 5.5,
+              date: '2026-02-28',
+              logged_at: '2026-02-28T10:00:00Z',
+            },
+          ],
+        }),
+      }));
+
+      const response = await handlePartyActivity(mockRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+
+      // Only active member entries are returned (departed filtered by query)
+      expect(data.activities).toHaveLength(1);
+      expect(data.activities[0].user_id).toBe(1);
+
+      // Verify the query includes the active member filter via party_members JOIN
+      const activityQueryCall = mockEnv.DB.prepare.mock.calls.find(
+        ([sql]: [string]) =>
+          typeof sql === 'string' &&
+          sql.includes('party_progress_log') &&
+          sql.includes("pm.status = 'active'"),
+      );
+      expect(activityQueryCall).toBeDefined();
     });
 
     it('should return empty activities array when no logs exist', async () => {

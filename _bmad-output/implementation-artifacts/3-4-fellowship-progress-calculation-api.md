@@ -377,12 +377,13 @@ GitHub Copilot Coding Agent (Claude Sonnet 4)
 3. **LOW**: `handlePartyProgress` active members query uses a correlated subquery (`SELECT SUM(p.distance) FROM progress p WHERE p.user_id = pm.user_id`) inside the main query. D1/SQLite optimizes this well, but for parties with many members, individual queries might be clearer. Acceptable for V1 — party size is bounded by practical limits.
 4. **LOW**: `handlePartyProgress` makes 7 sequential DB queries (party lookup, membership check, active members, departed members, milestone position, newly passed milestones, update last_viewed_distance). Could batch some reads, but D1 co-location minimizes latency. Acceptable for V1.
 5. **LOW**: `totalDistance` rounding to 2 decimal places via `Number(totalDistance.toFixed(2))` at party-handlers.ts:553 — this rounds the sum rather than individual contributions. Floating point drift could cause micro-differences between `totalDistance` and `sum(member.contribution)`. Acceptable precision for distance tracking.
-6. **LOW**: Activity feed query at party-handlers.ts:624-631 doesn't filter by active member status — departed members' walk logs still appear. This is correct behavior (activity feed is historical), but could be confusing. Documented as V1 limitation.
+6. **LOW — FIXED**: Activity feed query at party-handlers.ts:624-632 didn't filter by active member status — departed members' walk logs appeared. Fixed: added `JOIN party_members pm` with `pm.status = 'active'` filter. Added test verifying active-member-only filtering.
 7. **LOW**: No test for routing validation in index.ts (invalid party ID returns 400 for progress/activity routes). Existing index.test.ts covers this pattern for `/api/party/:id/invite` — consistent coverage gap, not regression.
 
-**Review Decision: APPROVED** — 1 MEDIUM issue fixed (`INSERT OR REPLACE` for idempotency). 6 LOW issues documented (no fixes required). All 15 ACs validated. 345 tests passing.
+**Review Decision: APPROVED** — 1 MEDIUM issue fixed (`INSERT OR REPLACE` for idempotency). 1 LOW fixed (activity feed active-member filter). 5 LOW issues documented (no fixes required). All 15 ACs validated. 346 tests passing.
 
 ## Change Log
 
 - **2026-02-28 (Initial Implementation):** Implemented `handlePartyProgress`, `handlePartyActivity`, `syncPartyProgressLog` with cross-cutting integration. Added 2 routes in index.ts, 24 tests. All 345 tests pass.
 - **2026-02-28 (Adversarial Review):** Changed `syncPartyProgressLog` INSERT to `INSERT OR REPLACE INTO` for idempotency on `UNIQUE(party_id, logged_by_user_id, date)` constraint. All 345 tests pass.
+- **2026-02-28 (PR Review Fixes):** Fixed activity feed query to filter by active members via `JOIN party_members`. Fixed `DepartedMemberRow.contribution_at_departure` type to `number | null`. Made `last_viewed_distance` UPDATE test assertion less brittle. Added active-member-only activity test. All 346 tests pass.

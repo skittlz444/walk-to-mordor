@@ -444,7 +444,7 @@ interface DepartedMemberRow {
   user_id: number;
   display_name: string;
   status: string;
-  contribution_at_departure: number;
+  contribution_at_departure: number | null;
 }
 
 /** Row shape for activity feed entries */
@@ -620,13 +620,14 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
       return createErrorResponse('You are not an active member of this party', 403);
     }
 
-    // Get last 10 activity entries
+    // Get last 10 activity entries (active members only)
     const { results: activities } = await env.DB.prepare(
       `SELECT ppl.logged_by_user_id as user_id, u.username as display_name,
               ppl.distance, ppl.date, ppl.logged_at
        FROM party_progress_log ppl
        JOIN users u ON ppl.logged_by_user_id = u.id
-       WHERE ppl.party_id = ?
+       JOIN party_members pm ON pm.party_id = ppl.party_id AND pm.user_id = ppl.logged_by_user_id
+       WHERE ppl.party_id = ? AND pm.status = 'active'
        ORDER BY ppl.logged_at DESC
        LIMIT 10`
     ).bind(partyId).all<ActivityLogRow>();
