@@ -3,6 +3,16 @@ import { validateSession } from "./auth-handlers";
 import { calculateTotalDistance } from "./goals-handlers";
 import { createErrorResponse, createSuccessResponse } from "./validators";
 
+/** Palette size for deterministic member color assignment */
+const COLOR_PALETTE_SIZE = 12;
+
+/** D1 result row for goals table */
+interface GoalRow {
+  id: number;
+  title: string;
+  distance: number;
+}
+
 /** D1 result row for parties table */
 interface PartyRow {
   id: number;
@@ -418,5 +428,212 @@ export async function handleGetUserParties(request: Request, env: { DB: D1Databa
   } catch (error: unknown) {
     console.error('Database error during user parties retrieval:', error);
     return createErrorResponse('Internal server error while retrieving parties', 500);
+  }
+}
+
+/** Row shape for active member with joined distance data */
+interface ActiveMemberDistanceRow {
+  user_id: number;
+  display_name: string;
+  distance_at_join: number;
+  total_distance: number;
+}
+
+/** Row shape for departed member with kept contributions */
+interface DepartedMemberRow {
+  user_id: number;
+  display_name: string;
+  status: string;
+  contribution_at_departure: number;
+}
+
+/** Row shape for activity feed entries */
+interface ActivityLogRow {
+  user_id: number;
+  display_name: string;
+  distance: number;
+  date: string;
+  logged_at: string;
+}
+
+/**
+ * GET /api/party/:id/progress — Get combined party progress.
+ *
+ * Returns total distance, member count, calculated position (latest milestone ≤ total),
+ * per-member breakdown, and newly passed milestones since last view.
+ * Updates last_viewed_distance for the requesting user.
+ * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
+ */
+export async function handlePartyProgress(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Check party exists and is not dissolved
+    const party = await env.DB.prepare(
+      'SELECT id, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'distance_mode' | 'leave_distance_behavior' | 'dissolved_at'>>();
+
+    if (!party || party.dissolved_at !== null) {
+      return createErrorResponse('Party not found', 404);
+    }
+
+    // Verify requesting user is an active member (IDOR prevention)
+    const membership = await env.DB.prepare(
+      'SELECT id, last_viewed_distance FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
+    ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id' | 'last_viewed_distance'>>();
+
+    if (!membership) {
+      return createErrorResponse('You are not an active member of this party', 403);
+    }
+
+    const previousViewedDistance = membership.last_viewed_distance;
+
+    // Get active members with their total distances
+    const { results: activeMembers } = await env.DB.prepare(
+      `SELECT pm.user_id, u.username as display_name, pm.distance_at_join,
+              COALESCE((SELECT SUM(p.distance) FROM progress p WHERE p.user_id = pm.user_id), 0) as total_distance
+       FROM party_members pm
+       JOIN users u ON pm.user_id = u.id
+       WHERE pm.party_id = ? AND pm.status = ?`
+    ).bind(partyId, 'active').all<ActiveMemberDistanceRow>();
+
+    // Calculate active member contributions
+    const members: Array<{
+      user_id: number;
+      display_name: string;
+      contribution: number;
+      status: string;
+      color: number;
+    }> = [];
+
+    let totalDistance = 0;
+
+    for (const member of activeMembers) {
+      let contribution: number;
+      if (party.distance_mode === 'incremental') {
+        contribution = Math.max(0, member.total_distance - member.distance_at_join);
+      } else {
+        contribution = member.total_distance;
+      }
+      totalDistance += contribution;
+      members.push({
+        user_id: member.user_id,
+        display_name: member.display_name,
+        contribution,
+        status: 'active',
+        color: member.user_id % COLOR_PALETTE_SIZE,
+      });
+    }
+
+    // Handle departed members with kept contributions
+    const { results: departedMembers } = await env.DB.prepare(
+      `SELECT pm.user_id, u.username as display_name, pm.status, pm.contribution_at_departure
+       FROM party_members pm
+       JOIN users u ON pm.user_id = u.id
+       WHERE pm.party_id = ? AND pm.status IN ('left', 'kicked') AND pm.distance_kept = 1`
+    ).bind(partyId).all<DepartedMemberRow>();
+
+    for (const departed of departedMembers) {
+      const contribution = departed.contribution_at_departure ?? 0;
+      totalDistance += contribution;
+      members.push({
+        user_id: departed.user_id,
+        display_name: departed.display_name,
+        contribution,
+        status: departed.status,
+        color: departed.user_id % COLOR_PALETTE_SIZE,
+      });
+    }
+
+    // Round to 2 decimal places to avoid floating point drift
+    totalDistance = Number(totalDistance.toFixed(2));
+
+    // Calculate milestone position (latest milestone ≤ total_distance)
+    const calculatedPosition = await env.DB.prepare(
+      'SELECT id, title, distance FROM goals WHERE distance <= ? ORDER BY distance DESC LIMIT 1'
+    ).bind(totalDistance).first<GoalRow>();
+
+    // Get newly passed milestones (between previous last_viewed_distance and current total)
+    const { results: newlyPassedMilestones } = await env.DB.prepare(
+      'SELECT id, title, distance FROM goals WHERE distance > ? AND distance <= ? ORDER BY distance ASC'
+    ).bind(previousViewedDistance, totalDistance).all<GoalRow>();
+
+    // Update last_viewed_distance for the requesting user
+    await env.DB.prepare(
+      'UPDATE party_members SET last_viewed_distance = ? WHERE party_id = ? AND user_id = ?'
+    ).bind(totalDistance, partyId, userId).run();
+
+    return createSuccessResponse({
+      total_distance: totalDistance,
+      member_count: activeMembers.length,
+      calculated_position: calculatedPosition
+        ? { id: calculatedPosition.id, title: calculatedPosition.title, distance: calculatedPosition.distance }
+        : null,
+      distance_mode: party.distance_mode,
+      leave_distance_behavior: party.leave_distance_behavior,
+      members,
+      newly_passed_milestones: newlyPassedMilestones.map((m) => ({
+        id: m.id,
+        title: m.title,
+        distance: m.distance,
+      })),
+    });
+  } catch (error: unknown) {
+    console.error('Database error during party progress calculation:', error);
+    return createErrorResponse('Internal server error while calculating party progress', 500);
+  }
+}
+
+/**
+ * GET /api/party/:id/activity — Get recent party activity feed.
+ *
+ * Returns the last 10 entries from party_progress_log for the given party.
+ * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
+ */
+export async function handlePartyActivity(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Check party exists and is not dissolved
+    const party = await env.DB.prepare(
+      'SELECT id, dissolved_at FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'dissolved_at'>>();
+
+    if (!party || party.dissolved_at !== null) {
+      return createErrorResponse('Party not found', 404);
+    }
+
+    // Verify requesting user is an active member
+    const membership = await env.DB.prepare(
+      'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
+    ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id'>>();
+
+    if (!membership) {
+      return createErrorResponse('You are not an active member of this party', 403);
+    }
+
+    // Get last 10 activity entries
+    const { results: activities } = await env.DB.prepare(
+      `SELECT ppl.logged_by_user_id as user_id, u.username as display_name,
+              ppl.distance, ppl.date, ppl.logged_at
+       FROM party_progress_log ppl
+       JOIN users u ON ppl.logged_by_user_id = u.id
+       WHERE ppl.party_id = ?
+       ORDER BY ppl.logged_at DESC
+       LIMIT 10`
+    ).bind(partyId).all<ActivityLogRow>();
+
+    return createSuccessResponse({ activities });
+  } catch (error: unknown) {
+    console.error('Database error during party activity retrieval:', error);
+    return createErrorResponse('Internal server error while retrieving party activity', 500);
   }
 }
