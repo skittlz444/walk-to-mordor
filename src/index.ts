@@ -34,7 +34,7 @@ import {
   validateSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
-import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties } from "./party-handlers";
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity } from "./party-handlers";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -162,6 +162,34 @@ export default {
           return createErrorResponse('Invalid party ID', 400);
         }
         return handleRegenerateInvite(request, env, partyId);
+      }
+
+      // GET /api/party/:id/progress — party progress calculation
+      const progressParams = matchRoute(url.pathname, '/api/party/:id/progress');
+      if (progressParams && method === "GET") {
+        const partyId = Number.parseInt(progressParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== progressParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handlePartyProgress(request, env, partyId);
+      }
+
+      // GET /api/party/:id/activity — party activity feed
+      const activityParams = matchRoute(url.pathname, '/api/party/:id/activity');
+      if (activityParams && method === "GET") {
+        const partyId = Number.parseInt(activityParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== activityParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handlePartyActivity(request, env, partyId);
       }
 
       // CRUD for calendar events
@@ -292,6 +320,12 @@ function getAllowedMethods(pathname: string): string[] {
       }
       if (matchRoute(pathname, '/api/party/:id/invite')) {
         return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/progress')) {
+        return ['GET'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/activity')) {
+        return ['GET'];
       }
       return ['GET'];
   }
