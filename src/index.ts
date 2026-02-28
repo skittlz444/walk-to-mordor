@@ -153,8 +153,12 @@ export default {
 
       const inviteParams = matchRoute(url.pathname, '/api/party/:id/invite');
       if (inviteParams && method === "POST") {
-        const partyId = Number(inviteParams.id);
-        if (isNaN(partyId) || partyId <= 0) {
+        const partyId = Number.parseInt(inviteParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== inviteParams.id.trim()
+        ) {
           return createErrorResponse('Invalid party ID', 400);
         }
         return handleRegenerateInvite(request, env, partyId);

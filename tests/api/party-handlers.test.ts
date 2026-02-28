@@ -732,6 +732,20 @@ describe('Party Handlers', () => {
       expect(calculateTotalDistance).toHaveBeenCalledWith(mockEnv, 1);
     });
 
+    it('should return 400 on UNIQUE constraint race condition during fresh join', async () => {
+      const mockRun = jest.fn().mockRejectedValue(new Error('UNIQUE constraint failed: party_members.party_id, party_members.user_id'));
+      const mockFirst = jest.fn()
+        .mockResolvedValueOnce({ id: 1, name: 'Party', dissolved_at: null }) // party lookup
+        .mockResolvedValueOnce(null); // no existing member (race: another request inserted between check and insert)
+      const mockBind = jest.fn().mockReturnValue({ first: mockFirst, run: mockRun });
+      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+
+      const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('You are already an active member of this party');
+    });
+
     it('should handle database errors gracefully', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       try {

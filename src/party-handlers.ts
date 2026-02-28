@@ -188,7 +188,7 @@ export async function handlePreviewParty(request: Request, env: { DB: D1Database
   try {
     const party = await env.DB.prepare(
       'SELECT id, name, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE invite_code = ?'
-    ).bind(inviteCode).first<PartyRow>();
+    ).bind(inviteCode).first<Pick<PartyRow, 'id' | 'name' | 'distance_mode' | 'leave_distance_behavior' | 'dissolved_at'>>();
 
     if (!party) {
       return createErrorResponse('Invalid invite code', 404);
@@ -237,7 +237,7 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
     // Look up party by invite code
     const party = await env.DB.prepare(
       'SELECT id, name, dissolved_at FROM parties WHERE invite_code = ?'
-    ).bind(inviteCode).first<PartyRow>();
+    ).bind(inviteCode).first<Pick<PartyRow, 'id' | 'name' | 'dissolved_at'>>();
 
     if (!party) {
       return createErrorResponse('Invalid invite code', 404);
@@ -250,7 +250,7 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
     // Check for existing membership (any status)
     const existingMember = await env.DB.prepare(
       'SELECT id, status FROM party_members WHERE party_id = ? AND user_id = ?'
-    ).bind(party.id, userId).first<PartyMemberRow>();
+    ).bind(party.id, userId).first<Pick<PartyMemberRow, 'id' | 'status'>>();
 
     if (existingMember) {
       if (existingMember.status === 'active') {
@@ -281,9 +281,17 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
 
     // Fresh join: insert new membership
     const totalDistance = await calculateTotalDistance(env, userId);
-    await env.DB.prepare(
-      'INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES (?, ?, ?, ?, 0, ?)'
-    ).bind(party.id, userId, 'member', totalDistance, 'active').run();
+    try {
+      await env.DB.prepare(
+        'INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES (?, ?, ?, ?, 0, ?)'
+      ).bind(party.id, userId, 'member', totalDistance, 'active').run();
+    } catch (insertError: unknown) {
+      const message = insertError instanceof Error ? insertError.message : String(insertError);
+      if (message.includes('UNIQUE constraint failed') && message.includes('party_members')) {
+        return createErrorResponse('You are already an active member of this party', 400);
+      }
+      throw insertError;
+    }
 
     return createSuccessResponse({
       party_id: party.id,
@@ -313,7 +321,7 @@ export async function handleRegenerateInvite(request: Request, env: { DB: D1Data
     // Verify user is the leader
     const party = await env.DB.prepare(
       'SELECT id, leader_id, dissolved_at FROM parties WHERE id = ?'
-    ).bind(partyId).first<PartyRow>();
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'dissolved_at'>>();
 
     if (!party) {
       return createErrorResponse('Party not found', 404);

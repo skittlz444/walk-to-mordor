@@ -287,6 +287,22 @@ describe('Cloudflare Worker Index', () => {
       expect(data.error).toBe('Invalid party ID');
     });
 
+    it('should return 400 for non-integer party ID like 1.5 in /api/party/:id/invite', async () => {
+      const request = createRequest('http://localhost/api/party/1.5/invite', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid party ID');
+    });
+
+    it('should return 400 for scientific notation party ID like 1e2 in /api/party/:id/invite', async () => {
+      const request = createRequest('http://localhost/api/party/1e2/invite', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid party ID');
+    });
+
     it('should route GET /api/user/parties to handleGetUserParties', async () => {
       const request = createRequest('http://localhost/api/user/parties', 'GET');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
