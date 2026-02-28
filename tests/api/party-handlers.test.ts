@@ -557,6 +557,18 @@ describe('Party Handlers', () => {
   });
 
   describe('handlePreviewParty', () => {
+    it('should return 404 for malformed invite code (too short)', async () => {
+      const response = await handlePreviewParty(mockRequest, mockEnv, 'abc');
+      expect(response.status).toBe(404);
+      expect(mockEnv.DB.prepare).not.toHaveBeenCalled();
+    });
+
+    it('should return 404 for malformed invite code (special chars)', async () => {
+      const response = await handlePreviewParty(mockRequest, mockEnv, 'abc!@#$%');
+      expect(response.status).toBe(404);
+      expect(mockEnv.DB.prepare).not.toHaveBeenCalled();
+    });
+
     it('should return 404 for non-existent invite code', async () => {
       const mockFirst = jest.fn().mockResolvedValue(null);
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
@@ -618,6 +630,12 @@ describe('Party Handlers', () => {
   });
 
   describe('handleJoinParty', () => {
+    it('should return 404 for malformed invite code without hitting DB', async () => {
+      const response = await handleJoinParty(mockRequest, mockEnv, 'short');
+      expect(response.status).toBe(404);
+      expect(mockEnv.DB.prepare).not.toHaveBeenCalled();
+    });
+
     it('should return 401 if session is invalid', async () => {
       (validateSession as jest.Mock).mockResolvedValue({
         valid: false,

@@ -170,6 +170,9 @@ export async function handleCreateParty(request: Request, env: { DB: D1Database 
   }
 }
 
+/** Validate invite code format: must be exactly 8 alphanumeric characters */
+const INVITE_CODE_PATTERN = /^[A-Za-z0-9]{8}$/;
+
 /**
  * GET /api/party/join/:inviteCode — Preview a party before joining.
  *
@@ -178,6 +181,10 @@ export async function handleCreateParty(request: Request, env: { DB: D1Database 
  * Returns 404 for invalid invite codes, 400 if party is dissolved.
  */
 export async function handlePreviewParty(request: Request, env: { DB: D1Database }, inviteCode: string): Promise<Response> {
+  if (!INVITE_CODE_PATTERN.test(inviteCode)) {
+    return createErrorResponse('Invalid invite code', 404);
+  }
+
   try {
     const party = await env.DB.prepare(
       'SELECT id, name, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE invite_code = ?'
@@ -216,6 +223,10 @@ export async function handlePreviewParty(request: Request, env: { DB: D1Database
  * Returns 404 for invalid codes, 400 for dissolved parties or duplicate active membership.
  */
 export async function handleJoinParty(request: Request, env: { DB: D1Database }, inviteCode: string): Promise<Response> {
+  if (!INVITE_CODE_PATTERN.test(inviteCode)) {
+    return createErrorResponse('Invalid invite code', 404);
+  }
+
   const sessionValidation = await validateSession(request, env);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
