@@ -76,53 +76,79 @@ export async function handleCreateParty(request: Request, env: { DB: D1Database 
     // Get user's current total distance for distance_at_join
     const totalDistance = await calculateTotalDistance(env, userId);
 
-    // Generate invite code with retry for uniqueness
-    let inviteCode = generateInviteCode();
     const maxRetries = 5;
+
+    // Retry party creation on invite_code UNIQUE constraint violations
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const existing = await env.DB.prepare(
-        'SELECT id FROM parties WHERE invite_code = ?'
-      ).bind(inviteCode).first();
-      if (!existing) break;
-      inviteCode = generateInviteCode();
-      if (attempt === maxRetries - 1) {
-        return createErrorResponse('Failed to generate unique invite code. Please try again.', 500);
+      // Generate invite code with retry for obvious (pre-insert) uniqueness conflicts
+      let inviteCode = generateInviteCode();
+      const maxCodeGenRetries = 5;
+      for (let codeAttempt = 0; codeAttempt < maxCodeGenRetries; codeAttempt++) {
+        const existing = await env.DB.prepare(
+          'SELECT id FROM parties WHERE invite_code = ?'
+        ).bind(inviteCode).first();
+        if (!existing) break;
+        inviteCode = generateInviteCode();
+        if (codeAttempt === maxCodeGenRetries - 1) {
+          return createErrorResponse('Failed to generate unique invite code. Please try again.', 500);
+        }
+      }
+
+      // Use D1 batch for atomic party + member creation
+      const insertPartyStmt = env.DB.prepare(
+        'INSERT INTO parties (name, leader_id, invite_code, distance_mode, leave_distance_behavior) VALUES (?, ?, ?, ?, ?)'
+      ).bind(trimmedName, userId, inviteCode, resolvedDistanceMode, resolvedLeaveBehavior);
+
+      // Use subquery to reference the party by invite_code so both inserts are in one atomic batch
+      const insertMemberStmt = env.DB.prepare(
+        'INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES ((SELECT id FROM parties WHERE invite_code = ?), ?, ?, ?, 0, ?)'
+      ).bind(inviteCode, userId, 'leader', totalDistance, 'active');
+
+      try {
+        const batchResults = await env.DB.batch([insertPartyStmt, insertMemberStmt]);
+
+        // Get the newly created party ID from the first batch result
+        const partyId = batchResults[0].meta.last_row_id;
+
+        // Fetch the created party to return full details
+        const party = await env.DB.prepare(
+          'SELECT id, name, leader_id, created_at, invite_code, distance_mode, leave_distance_behavior FROM parties WHERE id = ?'
+        ).bind(partyId).first<PartyRow>();
+
+        if (!party) {
+          return createErrorResponse('Failed to retrieve created party', 500);
+        }
+
+        return createSuccessResponse({
+          id: party.id,
+          name: party.name,
+          leader_id: party.leader_id,
+          created_at: party.created_at,
+          invite_code: party.invite_code,
+          distance_mode: party.distance_mode,
+          leave_distance_behavior: party.leave_distance_behavior,
+        }, 201);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const isInviteCodeUniqueViolation =
+          message.includes('UNIQUE constraint failed') &&
+          message.includes('parties.invite_code');
+
+        if (isInviteCodeUniqueViolation) {
+          if (attempt === maxRetries - 1) {
+            console.error('Failed to create party due to repeated invite_code uniqueness violations:', error);
+            return createErrorResponse('Could not generate a unique invite code. Please try again.', 409);
+          }
+          continue;
+        }
+
+        // Non-UNIQUE errors fall through to the outer catch
+        throw error;
       }
     }
 
-    // Use D1 batch for atomic party + member creation
-    const insertPartyStmt = env.DB.prepare(
-      'INSERT INTO parties (name, leader_id, invite_code, distance_mode, leave_distance_behavior) VALUES (?, ?, ?, ?, ?)'
-    ).bind(trimmedName, userId, inviteCode, resolvedDistanceMode, resolvedLeaveBehavior);
-
-    // Use subquery to reference the party by invite_code so both inserts are in one atomic batch
-    const insertMemberStmt = env.DB.prepare(
-      'INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES ((SELECT id FROM parties WHERE invite_code = ?), ?, ?, ?, 0, ?)'
-    ).bind(inviteCode, userId, 'leader', totalDistance, 'active');
-
-    const batchResults = await env.DB.batch([insertPartyStmt, insertMemberStmt]);
-
-    // Get the newly created party ID from the first batch result
-    const partyId = batchResults[0].meta.last_row_id;
-
-    // Fetch the created party to return full details
-    const party = await env.DB.prepare(
-      'SELECT id, name, leader_id, created_at, invite_code, distance_mode, leave_distance_behavior FROM parties WHERE id = ?'
-    ).bind(partyId).first<PartyRow>();
-
-    if (!party) {
-      return createErrorResponse('Failed to retrieve created party', 500);
-    }
-
-    return createSuccessResponse({
-      id: party.id,
-      name: party.name,
-      leader_id: party.leader_id,
-      created_at: party.created_at,
-      invite_code: party.invite_code,
-      distance_mode: party.distance_mode,
-      leave_distance_behavior: party.leave_distance_behavior,
-    }, 201);
+    // Should not reach here, but treat as server error if it does
+    return createErrorResponse('Internal server error while creating party', 500);
   } catch (error: unknown) {
     console.error('Database error during party creation:', error);
     return createErrorResponse('Internal server error while creating party', 500);

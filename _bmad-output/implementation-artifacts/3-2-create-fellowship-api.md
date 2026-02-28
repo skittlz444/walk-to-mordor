@@ -90,9 +90,11 @@ No debug issues encountered.
 - ✅ D1 batch transaction for atomic party + member creation using invite_code subquery pattern
 - ✅ Creator set as leader with `distance_at_join` from `calculateTotalDistance`, `last_viewed_distance` = 0
 - ✅ Invite code uniqueness enforced via SELECT check with 5-attempt retry loop + DB UNIQUE constraint safety net
+- ✅ **[CR-Fix]** Added UNIQUE constraint violation retry: batch INSERT catches `UNIQUE constraint failed: parties.invite_code` and retries with new code (up to 5 attempts, returns 409 if exhausted)
 - ✅ Wired `POST /api/party` route in `src/index.ts` with `getAllowedMethods` entry
-- ✅ 24 handler unit tests + 2 routing tests — 100% statement/branch/function/line coverage on `party-handlers.ts`
-- ✅ All 281 tests pass (255 existing + 26 new)
+- ✅ 26 handler unit tests + 2 routing tests — 100% statement/branch/function/line coverage on `party-handlers.ts`
+- ✅ **[CR-Fix]** Test for `console.error` uses `jest.spyOn` with `try/finally` for safe cleanup
+- ✅ All 283 tests pass (255 existing + 28 new)
 - ✅ **[AI-Review]** Adversarial review: all 10 ACs validated against code; 3 LOW-severity notes documented (no fixes required)
 
 ### Adversarial Review Findings
@@ -112,7 +114,7 @@ No debug issues encountered.
 **Issues Found:**
 1. LOW: Modulo bias in invite code — `values[i] % 62` creates ~0.39% bias per char for 8/62 charset chars. Acceptable for invite codes (62^8 ≈ 2.18 × 10^14 combinations). Industry standard approach.
 2. LOW: One wasted `crypto.getRandomValues()` call on final retry loop iteration — negligible performance impact.
-3. LOW: TOCTOU window on invite code uniqueness check between SELECT and INSERT — mitigated by DB UNIQUE constraint on `invite_code`; batch fails atomically if race occurs.
+3. ~~LOW: TOCTOU window on invite code uniqueness check between SELECT and INSERT — mitigated by DB UNIQUE constraint on `invite_code`; batch fails atomically if race occurs.~~ **FIXED**: Added inner retry loop that catches `UNIQUE constraint failed: parties.invite_code` and retries with a new code (returns 409 after 5 attempts).
 
 **Review Decision: APPROVED** — No HIGH or MEDIUM issues. All ACs satisfied. 100% test coverage.
 

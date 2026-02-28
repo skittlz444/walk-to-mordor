@@ -377,24 +377,25 @@ describe('Party Handlers', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      const originalConsoleError = console.error;
-      console.error = jest.fn();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-      const mockFirst = jest.fn().mockResolvedValueOnce(null); // invite code check
-      const mockBind = jest.fn().mockReturnValue({
-        run: jest.fn().mockResolvedValue({ meta: { changes: 1 } }),
-        all: jest.fn().mockResolvedValue({ results: [] }),
-        first: mockFirst
-      });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
-      mockEnv.DB.batch.mockRejectedValueOnce(new Error('DB error'));
+      try {
+        const mockFirst = jest.fn().mockResolvedValueOnce(null); // invite code check
+        const mockBind = jest.fn().mockReturnValue({
+          run: jest.fn().mockResolvedValue({ meta: { changes: 1 } }),
+          all: jest.fn().mockResolvedValue({ results: [] }),
+          first: mockFirst
+        });
+        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        mockEnv.DB.batch.mockRejectedValueOnce(new Error('DB error'));
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
-      expect(response.status).toBe(500);
-      const data = await response.json();
-      expect(data.error).toBe('Internal server error while creating party');
-
-      console.error = originalConsoleError;
+        const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+        expect(response.status).toBe(500);
+        const data = await response.json();
+        expect(data.error).toBe('Internal server error while creating party');
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
     });
 
     it('should return 500 if party cannot be retrieved after creation', async () => {
@@ -495,6 +496,63 @@ describe('Party Handlers', () => {
       expect(response.status).toBe(500);
       const data = await response.json();
       expect(data.error).toContain('Failed to generate unique invite code');
+    });
+
+    it('should retry on invite_code UNIQUE constraint violation during batch insert', async () => {
+      const mockParty = {
+        id: 1,
+        name: 'Test Party',
+        leader_id: 1,
+        created_at: '2026-01-01T00:00:00Z',
+        invite_code: 'NewCode1',
+        distance_mode: 'incremental',
+        leave_distance_behavior: 'keep'
+      };
+
+      // Both pre-checks pass (no collision), but first batch fails with UNIQUE violation
+      const mockFirst = jest.fn()
+        .mockResolvedValueOnce(null) // first invite code pre-check passes
+        .mockResolvedValueOnce(null) // second invite code pre-check passes
+        .mockResolvedValueOnce(mockParty); // fetch created party on second attempt
+      const mockBind = jest.fn().mockReturnValue({
+        run: jest.fn().mockResolvedValue({ meta: { changes: 1 } }),
+        all: jest.fn().mockResolvedValue({ results: [] }),
+        first: mockFirst
+      });
+      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockEnv.DB.batch
+        .mockRejectedValueOnce(new Error('UNIQUE constraint failed: parties.invite_code'))
+        .mockResolvedValueOnce([
+          { meta: { last_row_id: 1, changes: 1 } },
+          { meta: { changes: 1 } }
+        ]);
+
+      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      expect(response.status).toBe(201);
+      expect(mockEnv.DB.batch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should return 409 after exhausting UNIQUE constraint retries', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      try {
+        // All pre-checks pass but all batch inserts fail with UNIQUE violation
+        const mockFirst = jest.fn().mockResolvedValue(null);
+        const mockBind = jest.fn().mockReturnValue({
+          run: jest.fn().mockResolvedValue({ meta: { changes: 1 } }),
+          all: jest.fn().mockResolvedValue({ results: [] }),
+          first: mockFirst
+        });
+        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        mockEnv.DB.batch.mockRejectedValue(new Error('UNIQUE constraint failed: parties.invite_code'));
+
+        const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+        expect(response.status).toBe(409);
+        const data = await response.json();
+        expect(data.error).toContain('Could not generate a unique invite code');
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
     });
   });
 });
