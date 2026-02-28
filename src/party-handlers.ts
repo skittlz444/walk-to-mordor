@@ -948,9 +948,13 @@ export async function handleTransferLeadership(
       'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id'>>();
 
+    if (!currentLeaderMembership) {
+      return createErrorResponse('Current leader membership record not found', 500);
+    }
+
     // Atomic batch: update roles + parties.leader_id
     await env.DB.batch([
-      env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('member', currentLeaderMembership!.id),
+      env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('member', currentLeaderMembership.id),
       env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('leader', newLeaderMembership.id),
       env.DB.prepare('UPDATE parties SET leader_id = ? WHERE id = ?').bind(new_leader_id, partyId),
     ]);
