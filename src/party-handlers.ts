@@ -246,7 +246,7 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
         return createErrorResponse('You are already an active member of this party', 400);
       }
 
-      // Re-join: reactivate existing record
+      // Re-join: reactivate existing record (role resets to 'member' — leadership is not preserved across re-joins)
       const totalDistance = await calculateTotalDistance(env, userId);
       await env.DB.prepare(
         `UPDATE party_members 

@@ -557,7 +557,7 @@ describe('Party Handlers', () => {
   });
 
   describe('handlePreviewParty', () => {
-    it('should return 404 for invalid invite code', async () => {
+    it('should return 404 for non-existent invite code', async () => {
       const mockFirst = jest.fn().mockResolvedValue(null);
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
       mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
@@ -630,7 +630,7 @@ describe('Party Handlers', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 404 for invalid invite code', async () => {
+    it('should return 404 for non-existent invite code', async () => {
       const mockFirst = jest.fn().mockResolvedValue(null);
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
       mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
