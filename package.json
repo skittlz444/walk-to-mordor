@@ -44,7 +44,7 @@
     "typescript": "5.9.3",
     "vite": "^7.3.1",
     "vitest": "^4.0.17",
-    "wrangler": "^4.65.0"
+    "wrangler": "^4.69.0"
   },
   "scripts": {
     "cf-typegen": "wrangler types",
