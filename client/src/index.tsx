@@ -6,6 +6,8 @@ import { GoalModal } from './islands/GoalModal';
 import { MapIsland } from './islands/MapIsland';
 import { NextGoalCard } from './islands/NextGoalCard';
 import { UpcomingGoalCard } from './islands/UpcomingGoalCard';
+import { PartySelector } from './islands/PartySelector';
+import * as partyStore from './stores/partyStore';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
@@ -22,6 +24,7 @@ const allIslands = {
   GoalModal,
   MapIsland,
   NextGoalCard,
+  PartySelector,
   UpcomingGoalCard,
 };
 
@@ -36,12 +39,14 @@ declare global {
       h: typeof h;
     };
     preactIslands: typeof allIslands;
+    partyStore: typeof partyStore;
   }
 }
 
 // @ts-expect-error - Window augmentation type mismatch: TypeScript requires full Preact export but we only expose render/h for vanilla JS bridge
 window.preact = { render, h };
 window.preactIslands = allIslands;
+window.partyStore = partyStore;
 
 /**
  * Discovers and hydrates all Preact islands on the page.

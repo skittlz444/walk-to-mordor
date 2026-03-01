@@ -197,3 +197,271 @@ h1 {
     font-size: 1.4em;
   }
 }
+
+/* ============================================================================
+   Party Selector (Fellowship UI) - Story 3.6
+   ============================================================================ */
+
+/* Party color palette CSS variables */
+:root {
+  --party-color-0: #E6194B;
+  --party-color-1: #3CB44B;
+  --party-color-2: #4363D8;
+  --party-color-3: #F58231;
+  --party-color-4: #911EB4;
+  --party-color-5: #42D4F4;
+  --party-color-6: #F032E6;
+  --party-color-7: #BFEF45;
+  --party-color-8: #FABED4;
+  --party-color-9: #469990;
+  --party-color-10: #DCBEFF;
+  --party-color-11: #9A6324;
+}
+
+.party-selector {
+  text-align: center;
+  padding: 0.5em 1em;
+}
+
+.party-selector--journey {
+  margin: 0 auto;
+  max-width: 500px;
+}
+
+.party-selector--map {
+  position: absolute;
+  top: 0.5em;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px var(--shadow-std);
+  backdrop-filter: blur(8px);
+}
+
+.party-selector__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+}
+
+.party-selector__label {
+  color: var(--text-dim);
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.party-selector__dropdown {
+  background: var(--bg-dark-alt);
+  color: var(--text-primary);
+  border: 1px solid var(--border-gray);
+  border-radius: 6px;
+  padding: 0.35em 0.7em;
+  font-size: 0.9em;
+  font-family: inherit;
+  cursor: pointer;
+  max-width: 200px;
+  text-overflow: ellipsis;
+}
+
+.party-selector__dropdown:focus {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 1px;
+}
+
+.party-selector__dropdown:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.party-selector__loading {
+  color: var(--accent-gold);
+  font-size: 0.85em;
+}
+
+.party-selector__banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  margin-top: 0.4em;
+  padding: 0.3em 0.7em;
+  background: rgba(15, 52, 96, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  flex-wrap: wrap;
+}
+
+.party-selector__banner-icon {
+  font-size: 1.1em;
+}
+
+.party-selector__banner-text {
+  color: var(--text-secondary);
+  font-size: 0.85em;
+}
+
+.party-selector__banner-text strong {
+  color: var(--accent-gold);
+}
+
+.party-selector__banner-distance {
+  color: var(--text-primary);
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.party-selector__banner-members {
+  color: var(--text-dim);
+  font-weight: normal;
+  font-size: 0.9em;
+  margin-left: 0.3em;
+}
+
+/* Map party selector button (toggle) */
+.map-party-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 2px solid var(--accent-gold);
+  color: var(--accent-gold);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px var(--shadow-std);
+  padding: 0;
+  font-family: inherit;
+}
+
+.map-party-toggle:hover {
+  background: var(--accent-dark-blue);
+  border-color: var(--accent-teal);
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+.map-party-toggle.active {
+  background: var(--accent-dark-blue);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+/* Map party selection panel (dropdown from toggle button) */
+.map-party-panel {
+  position: absolute;
+  top: 12px;
+  right: 60px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-gold);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 15;
+  box-shadow: 0 4px 12px var(--shadow-std);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.map-party-option {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.map-party-option:hover {
+  background: var(--accent-dark-blue);
+}
+
+.map-party-option.selected {
+  background: var(--accent-dark-blue);
+  color: var(--accent-gold);
+  font-weight: 600;
+}
+
+/* Map legend (member colors overlay) */
+.map-legend {
+  position: absolute;
+  bottom: 5em;
+  left: 12px;
+  background: rgba(20, 20, 30, 0.92);
+  border: 1px solid var(--accent-gold);
+  border-radius: 8px;
+  padding: 8px 10px;
+  z-index: 12;
+  max-width: 200px;
+  box-shadow: 0 2px 8px var(--shadow-std);
+}
+
+.map-legend-title {
+  color: var(--accent-gold);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.map-legend-members {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-legend-member {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+.map-legend-member.departed {
+  opacity: 0.6;
+}
+
+.map-legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.map-legend-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-legend-distance {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .party-selector--map {
+    max-width: 90vw;
+  }
+  
+}
