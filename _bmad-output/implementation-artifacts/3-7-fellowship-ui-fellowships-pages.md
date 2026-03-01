@@ -75,6 +75,15 @@ so that I can fully interact with the Fellowship features in a structured and in
   - [x] Implement preview display and join/login buttons.
   - [x] Handle `returnTo` logic for unauthenticated users.
 
+### Review Follow-ups (AI)
+
+- [x] [AI-Review][HIGH] Add joined date to Fellowship detail member list and include `joined_at` in `/api/party/:id/progress` member payload (`src/party-handlers.ts`, `client/src/islands/PartyDetailIsland.tsx`).
+- [x] [AI-Review][HIGH] Implement next-milestone lock behavior based on the individual member preference instead of party total distance (`client/src/islands/PartyDetailIsland.tsx`, `client/src/islands/GoalModal.tsx` integration path).
+- [x] [AI-Review][MEDIUM] Display explicit "distance to next milestone" metric on the Fellowship detail page (`client/src/islands/PartyDetailIsland.tsx`).
+- [x] [AI-Review][MEDIUM] Always render a Share action in invite link UI with graceful fallback when Web Share API is unavailable (`client/src/islands/PartyDetailIsland.tsx`).
+- [x] [AI-Review][MEDIUM] Determine join-page auth state via validated session endpoint rather than localStorage token presence (`client/src/islands/PartyJoinIsland.tsx`).
+- [x] [AI-Review][MEDIUM] Restore service worker build timestamp placeholders and document all changed files in Dev Agent Record File List (`public/sw.js`, `public/js/update-cache-version.js`, story File List section).
+
 ## Dev Notes
 
 - **Architecture Details**: 
@@ -129,7 +138,7 @@ Claude Opus 4.6
 - src/renderPartyJoinPage.ts (new)
 - src/renderLayout.ts (modified - added publicPage option to skip auth scripts)
 - src/index.ts (modified - added party page routes and imports)
-- src/party-handlers.ts (modified - added invite_code and leader_id to user parties query)
+- src/party-handlers.ts (modified - added invite_code and leader_id to user parties query; added joined_at and user_total_distance to progress API)
 - client/src/index.tsx (modified - registered 4 new islands)
 - client/src/islands/DrawerIsland.tsx (modified - added Fellowships nav link)
 - client/src/islands/PartyListIsland.tsx (new)
@@ -137,9 +146,42 @@ Claude Opus 4.6
 - client/src/islands/PartyManageIsland.tsx (new)
 - client/src/islands/PartyJoinIsland.tsx (new)
 - public/css/party.css (new)
+- public/sw.js (modified - restored BUILD_TIMESTAMP placeholders)
 - tests/api/party-pages.test.ts (new)
+- tests/api/party-progress.test.ts (modified - added joined_at to member mocks/assertions, user_total_distance assertion)
 - tests/api/index.test.ts (modified - added party page routing tests)
+
+## Senior Developer Review (AI)
+
+### AC Validation
+
+| AC | Status | Evidence |
+| --- | --- | --- |
+| 1 | ✅ Implemented | `src/renderPartyListPage.ts`; `client/src/islands/PartyListIsland.tsx` |
+| 2 | ✅ Implemented | `client/src/islands/PartyDetailIsland.tsx`; `src/party-handlers.ts` — joined_at, user_total_distance, distance-to-next all wired |
+| 3 | ✅ Implemented | `client/src/islands/PartyManageIsland.tsx` |
+| 4 | ✅ Implemented | `src/renderPartyJoinPage.ts`; `client/src/islands/PartyJoinIsland.tsx` — session-validated auth |
+| 5 | ✅ Implemented | `client/src/islands/PartyDetailIsland.tsx`; `public/sw.js` — placeholders restored, Share always visible |
+
+### Findings
+
+1. **[HIGH][Fixed] AC2 missing joined date in member list.**  
+   Added `joined_at` to both active/departed member SQL queries in `src/party-handlers.ts` and rendered join date in `PartyDetailIsland.tsx` member list.
+2. **[HIGH][Fixed] AC2 next milestone lock is not based on individual preference.**  
+   Added `user_total_distance` to API response via `calculateTotalDistance(env, userId)`. `PartyDetailIsland.tsx` now passes user's personal distance to `GoalModal` via `modalDistance` state.
+3. **[MEDIUM][Fixed] AC2 does not display distance to next milestone.**  
+   Next milestone stat label now shows remaining distance (e.g., "1.50 km to go").
+4. **[MEDIUM][Fixed] Invite Share button is conditionally hidden.**  
+   Share button always renders; `handleShare` already falls back to `handleCopyLink` when Web Share API is unavailable.
+5. **[MEDIUM][Fixed] Join-page auth state is token-presence based, not session-validated.**  
+   `checkAuth()` now makes async `fetch('/api/session')` call to validate session server-side.
+6. **[MEDIUM][Fixed] Git/story documentation drift and cache version regression.**  
+   Restored `{{BUILD_TIMESTAMP}}` placeholders in `public/sw.js`. Added missing files to story File List.
+
+**Review Decision:** ✅ All findings addressed.
 
 ## Change Log
 
+- 2026-03-01: Fixed all 6 AI review follow-ups: added joined_at to member API/UI, user_total_distance for milestone lock, distance-to-next display, Share button always visible, session-validated auth on join page, sw.js placeholders restored. 431 tests passing.
+- 2026-03-01: Senior Developer Review completed. Status set to `in-progress`, 6 findings logged (2 HIGH / 4 MEDIUM), and AI follow-up tasks added.
 - 2026-03-01: Story 3.7 implementation complete. Created 4 SSR page shells, 4 Preact islands, party.css, and routing. Added publicPage option to renderLayout for unauthenticated join page. Fixed distance_mode form value mismatch (average→incremental). 23 new tests, 431 total passing. Visual testing verified on mobile and desktop viewports.

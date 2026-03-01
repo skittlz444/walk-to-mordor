@@ -15,12 +15,14 @@ interface PartyMember {
   user_id: number;
   display_name: string;
   contribution: number;
+  joined_at: string;
   status: string;
   color: number;
 }
 
 interface PartyProgressData {
   total_distance: number;
+  user_total_distance?: number;
   member_count: number;
   calculated_position: MilestoneData | null;
   next_position: MilestoneData | null;
@@ -67,6 +69,7 @@ export function PartyDetailIsland() {
   const [leaving, setLeaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [modalGoal, setModalGoal] = useState<Goal | null>(null);
+  const [modalDistance, setModalDistance] = useState<number>(0);
 
   const fetchData = useCallback(async () => {
     if (!partyId) { setError('Invalid party ID'); setLoading(false); return; }
@@ -208,8 +211,8 @@ export function PartyDetailIsland() {
             role="button"
             tabIndex={0}
             aria-label={`Previous milestone: ${progress.calculated_position.title}`}
-            onClick={() => setModalGoal(milestoneToGoal(progress.calculated_position!))}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalGoal(milestoneToGoal(progress.calculated_position!)); } }}
+            onClick={() => { setModalGoal(milestoneToGoal(progress.calculated_position!)); setModalDistance(progress.total_distance); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalGoal(milestoneToGoal(progress.calculated_position!)); setModalDistance(progress.total_distance); } }}
           >
             <span className="party-progress__stat-value">{progress.calculated_position.title}</span>
             <span className="party-progress__stat-label">Previous Milestone</span>
@@ -220,12 +223,12 @@ export function PartyDetailIsland() {
             className="party-progress__stat party-progress__stat--clickable"
             role="button"
             tabIndex={0}
-            aria-label={`Next milestone: ${progress.next_position.title}`}
-            onClick={() => setModalGoal(milestoneToGoal(progress.next_position!))}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalGoal(milestoneToGoal(progress.next_position!)); } }}
+            aria-label={`Next milestone: ${progress.next_position.title} — ${(progress.next_position.distance - progress.total_distance).toFixed(2)} km to go`}
+            onClick={() => { setModalGoal(milestoneToGoal(progress.next_position!)); setModalDistance(progress.user_total_distance ?? progress.total_distance); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalGoal(milestoneToGoal(progress.next_position!)); setModalDistance(progress.user_total_distance ?? progress.total_distance); } }}
           >
             <span className="party-progress__stat-value">{progress.next_position.title}</span>
-            <span className="party-progress__stat-label">Next Milestone</span>
+            <span className="party-progress__stat-label">{(progress.next_position.distance - progress.total_distance).toFixed(2)} km to go</span>
           </div>
         ) : (
           <div className="party-progress__stat">
@@ -257,6 +260,9 @@ export function PartyDetailIsland() {
                       </span>
                     )}
                   </span>
+                  <span className="party-member-joined" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Joined {new Date(member.joined_at).toLocaleDateString()}
+                  </span>
                 </div>
                 <span className="party-member-contribution">{member.contribution.toFixed(2)} km</span>
               </li>
@@ -285,12 +291,10 @@ export function PartyDetailIsland() {
               <i className="fas fa-copy" aria-hidden="true"></i>
               {copied ? 'Copied!' : 'Copy Link'}
             </button>
-            {typeof navigator.share === 'function' && (
-              <button className="party-btn party-btn--secondary party-btn--small" onClick={handleShare}>
-                <i className="fas fa-share-alt" aria-hidden="true"></i>
-                Share
-              </button>
-            )}
+            <button className="party-btn party-btn--secondary party-btn--small" onClick={handleShare}>
+              <i className="fas fa-share-alt" aria-hidden="true"></i>
+              Share
+            </button>
           </div>
         </div>
       </div>
@@ -332,7 +336,7 @@ export function PartyDetailIsland() {
       {modalGoal && (
         <GoalModal
           goal={modalGoal}
-          currentDistance={progress.total_distance}
+          currentDistance={modalDistance}
           onClose={() => setModalGoal(null)}
         />
       )}

@@ -25,9 +25,18 @@ export function PartyJoinIsland() {
   const [joining, setJoining] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const checkAuth = useCallback(() => {
+  const checkAuth = useCallback(async () => {
     const token = localStorage.getItem('sessionToken');
-    setIsAuthenticated(!!token);
+    if (!token) {
+      setIsAuthenticated(false);
+      return;
+    }
+    try {
+      const res = await fetch('/api/session', { headers: { Authorization: `Bearer ${token}` } });
+      setIsAuthenticated(res.ok);
+    } catch {
+      setIsAuthenticated(false);
+    }
   }, []);
 
   const fetchPreview = useCallback(async () => {
