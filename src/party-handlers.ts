@@ -393,7 +393,7 @@ export async function handleRegenerateInvite(request: Request, env: { DB: D1Data
  *
  * Returns active memberships by default (non-dissolved parties).
  * With ?include_dissolved=true, also returns dissolved parties.
- * Each result includes id, name, role, distance_mode, leave_distance_behavior, active_member_count, dissolved_at.
+ * Each result includes id, name, role, distance_mode, leave_distance_behavior, invite_code, leader_id, active_member_count, dissolved_at.
  */
 export async function handleGetUserParties(request: Request, env: { DB: D1Database }): Promise<Response> {
   const sessionValidation = await validateSession(request, env);
@@ -582,8 +582,9 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
       'UPDATE party_members SET last_viewed_distance = ? WHERE party_id = ? AND user_id = ?'
     ).bind(totalDistance, partyId, userId).run();
 
-    // Get requesting user's personal total distance for milestone lock preference
-    const userTotalDistance = await calculateTotalDistance(env, userId);
+    // Extract requesting user's personal total distance from activeMembers (avoids extra DB call)
+    const requestingMember = activeMembers.find((m) => m.user_id === userId);
+    const userTotalDistance = requestingMember ? Number(requestingMember.total_distance) : 0;
 
     return createSuccessResponse({
       total_distance: totalDistance,

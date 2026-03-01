@@ -164,7 +164,7 @@ describe('Party Progress API (Story 3.4)', () => {
       expect(data.distance_mode).toBe('incremental');
       expect(data.leave_distance_behavior).toBe('keep');
       expect(data.calculated_position).toEqual({ id: 5, title: 'Rivendell', distance: 30, description: null, image_id: null, special: null });
-      expect(data.user_total_distance).toBe(42.5);
+      expect(data.user_total_distance).toBe(30);
       expect(data.members).toHaveLength(2);
       expect(data.members[0]).toEqual({
         user_id: 1,
@@ -236,6 +236,60 @@ describe('Party Progress API (Story 3.4)', () => {
       expect(data.distance_mode).toBe('cumulative');
       expect(data.members[0].contribution).toBe(30);
       expect(data.members[1].contribution).toBe(20);
+    });
+
+    it('should return next_position when a goal exists beyond current distance', async () => {
+      // Party lookup
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({
+          id: 1,
+          distance_mode: 'cumulative',
+          leave_distance_behavior: 'keep',
+          dissolved_at: null,
+        }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10, last_viewed_distance: 0 }),
+      }));
+      // Active members
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { user_id: 1, display_name: 'Alice', distance_at_join: 0, total_distance: 50, joined_at: '2026-01-15T00:00:00Z' },
+          ],
+        }),
+      }));
+      // Departed members
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({ results: [] }),
+      }));
+      // Current milestone position (at 45km)
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 7, title: 'Weathertop', distance: 45, description: 'A great hill', image_id: 'img-7', special: null }),
+      }));
+      // Next milestone (at 72km)
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 8, title: 'Rivendell', distance: 72, description: 'Last Homely House', image_id: 'img-8', special: 'rivendell' }),
+      }));
+      // Newly passed milestones
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({ results: [] }),
+      }));
+      // Update last_viewed_distance
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock());
+
+      const response = await handlePartyProgress(mockRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+
+      expect(data.calculated_position).toEqual({
+        id: 7, title: 'Weathertop', distance: 45, description: 'A great hill', image_id: 'img-7', special: null,
+      });
+      expect(data.next_position).toEqual({
+        id: 8, title: 'Rivendell', distance: 72, description: 'Last Homely House', image_id: 'img-8', special: 'rivendell',
+      });
+      expect(data.user_total_distance).toBe(50);
     });
 
     it('should include departed members with distance_kept = 1', async () => {
