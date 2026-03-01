@@ -115,8 +115,50 @@ No debug issues encountered.
 - `client/src/components/map/MemberPaths.test.ts` — NEW: Tests for member path creation
 - `client/src/components/map/MapLegend.test.tsx` — NEW: Tests for legend component
 
+## Adversarial Review Findings
+
+### AC Validation
+
+| AC | Status | Evidence |
+|---|---|---|
+| AC1: PartySelector Preact island fetches via GET /api/user/parties | ✅ PASS | `partyStore.ts:fetchUserParties()` calls `/api/user/parties` on mount |
+| AC2: Mount on Journey (above content) and Map (button) | ✅ PASS | `renderHtml.ts` adds `#party-selector-mount` div; `MapIsland.tsx` adds toggle button `.map-party-toggle` |
+| AC3: Hidden if no parties | ✅ PASS | `PartySelector.tsx:97-99` returns null when `!hasParties.value` |
+| AC4: Dropdown with Personal + party names | ✅ PASS | `PartySelector.tsx:108-121` renders select with personal + party options |
+| AC5: Visual indicator banner | ✅ PASS | `PartySelector.tsx:128-142` renders `.party-selector__banner` with "👥 Viewing: [name]" |
+| AC6: Journey page integration | ✅ PASS | `goals.js:mountPartySelector()` handles view changes, updates distance display, re-renders goals |
+| AC7: Map page integration with color-coded segments | ✅ PASS | `MemberPaths.ts:createMemberPaths()` creates per-member Konva.Line with deterministic colors via `user_id % 12` |
+| AC8: Map legend | ✅ PASS | `MapLegend.tsx` renders member names + color swatches; shown when party view active |
+| AC9: 12-color palette with muted departed colors | ✅ PASS | `party-colors.ts` defines 12 colors, `getMutedMemberColor()` blends 60% toward gray; departed members filtered |
+| AC10: Milestone modal trigger | ✅ PASS | `PartySelector.tsx:75-86` checks `newly_passed_milestones`, deduplicates via `hasTriggeredMilestones` |
+| AC11: localStorage persistence | ✅ PASS | `partyStore.ts:persistView/loadPersistedView` with key `wtm_party_view` |
+| AC12: 403/404 fallback | ✅ PASS | `partyStore.ts:fetchPartyProgress()` checks status 403/404, falls back to personal, clears localStorage |
+
+### Issues Found
+
+**1. Dead CSS — `party-legend` classes unused (LOW)**
+`main.css` lines 324-378 define `.party-legend`, `.party-legend__title`, `.party-legend__item`, `.party-legend__swatch`, `.party-legend__name`, `.party-legend__name--departed`, `.party-legend__contribution` using BEM naming. However, no component references these classes. The actual legend component (`MapLegend.tsx`) uses `.map-legend-*` classes instead. These ~55 lines of CSS are dead code.
+**Status: OPEN**
+
+**2. Duplicate `PartyProgress` interface (LOW)**
+`PartySelector.tsx:38-53` defines a local `PartyProgress` interface that duplicates `PartyProgress` from `partyStore.ts:34-42`. The local version inlines member fields instead of using `PartyMember[]`. If the API shape changes, both must be updated independently. The local interface is only used for the `onViewChange` callback prop type and milestone handling — it should import from `partyStore.ts` instead.
+**Status: OPEN**
+
+**3. Unbounded retry in `tryMountPartySelector` (LOW)**
+`goals.js:491-497` retries every 200ms with no maximum retry count. If `preactIslands.PartySelector` never loads (e.g., JS bundle error), this retries forever. Should cap at ~10-20 attempts.
+**Status: OPEN**
+
+**4. Double fetch of user parties on Map page (LOW)**
+`MapIsland.tsx:761` calls `fetchUserParties()` on mount. If the user later opens the party panel, the data is already loaded. However, if `PartySelector` is also mounted on the same page (which it isn't currently), parties would be fetched twice. The current architecture avoids this since MapIsland manages its own party UI, but the store could benefit from a "fetch once" guard (check if `userParties.value.length > 0` or `partiesLoading.value` before re-fetching).
+**Status: OPEN — Minor optimization**
+
+### Review Decision
+
+**PASS WITH NOTES** — All 12 acceptance criteria are met. The 4 issues found are LOW severity (dead CSS, duplicate type, unbounded retry, minor optimization). Backend tests pass (408/408). Client component test failures (`document is not defined`) are pre-existing on the `feat/fellowships` base branch and not introduced by this story. The non-component client tests (partyStore, party-colors, MemberPaths) pass. Code quality is good overall — clean signal-based architecture, proper error handling, deterministic color assignment, and session-level milestone dedup.
+
 ## Change Log
 
 | Date | Summary |
 |---|---|
 | 2026-03-01 | Story 3.6 implemented: PartySelector island, Journey + Map integration, color-coded member paths, map legend, milestone modal trigger. 268 client tests, 408 backend tests passing. |
+| 2026-03-01 | Adversarial code review: PASS WITH NOTES. All 12 ACs validated. 4 LOW issues found (dead CSS, duplicate type, unbounded retry, double-fetch optimization). |
