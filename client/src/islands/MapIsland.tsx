@@ -735,7 +735,8 @@ export function MapIsland() {
         displayName: m.display_name,
         distanceMiles: m.contribution * KM_TO_MILES,
         colorIndex: m.color,
-        isDeparted: m.status === 'departed',
+        // Treat any non-'active' status as departed (e.g., 'left', 'kicked')
+        isDeparted: m.status !== 'active',
       }));
 
     if (memberData.length > 0) {

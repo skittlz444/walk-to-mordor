@@ -25,6 +25,7 @@ import {
   hasTriggeredMilestones,
   markMilestoneTriggered,
   type PartySelection,
+  type PartyProgress,
 } from '../stores/partyStore';
 
 export interface PartySelectorProps {
@@ -34,22 +35,6 @@ export interface PartySelectorProps {
   onViewChange?: (selection: PartySelection, progress: PartyProgress | null) => void;
   /** Callback for newly passed milestones */
   onNewMilestones?: (milestones: Array<{ id: number; title: string; distance: number }>) => void;
-}
-
-interface PartyProgress {
-  total_distance: number;
-  member_count: number;
-  calculated_position: { id: number; title: string; distance: number } | null;
-  distance_mode: string;
-  leave_distance_behavior: string;
-  members: Array<{
-    user_id: number;
-    display_name: string;
-    contribution: number;
-    status: string;
-    color: number;
-  }>;
-  newly_passed_milestones: Array<{ id: number; title: string; distance: number }>;
 }
 
 export function PartySelector({ variant = 'journey', onViewChange, onNewMilestones }: PartySelectorProps) {
@@ -68,13 +53,25 @@ export function PartySelector({ variant = 'journey', onViewChange, onNewMileston
   const handleSelect = useCallback(async (value: PartySelection) => {
     const progress = await selectView(value);
 
+    // Determine the effective selection after selectView resolves.
+    // If progress is null, treat it as a fallback to personal view.
+    const effectiveSelection: PartySelection =
+      progress === null ? 'personal' : selectedView.value;
+
     if (onViewChange) {
-      onViewChange(value, progress);
+      onViewChange(effectiveSelection, progress);
     }
 
-    // Check for newly passed milestones
-    if (progress && progress.newly_passed_milestones && progress.newly_passed_milestones.length > 0 && onNewMilestones) {
-      const partyId = value as number;
+    // Check for newly passed milestones (only meaningful for a party view)
+    if (
+      progress &&
+      effectiveSelection !== 'personal' &&
+      typeof effectiveSelection === 'number' &&
+      progress.newly_passed_milestones &&
+      progress.newly_passed_milestones.length > 0 &&
+      onNewMilestones
+    ) {
+      const partyId = effectiveSelection;
       const newMilestones = progress.newly_passed_milestones.filter(
         m => !hasTriggeredMilestones(partyId, m.distance)
       );

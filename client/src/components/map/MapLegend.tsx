@@ -19,7 +19,7 @@ export function MapLegend({ members, partyName }: MapLegendProps) {
       <div className="map-legend-title">{partyName}</div>
       <div className="map-legend-members">
         {members.map((member) => {
-          const isDeparted = member.status === 'departed';
+          const isDeparted = member.status !== 'active';
           const color = isDeparted
             ? getMutedMemberColor(member.color)
             : getMemberColor(member.color);

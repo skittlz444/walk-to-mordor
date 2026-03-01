@@ -478,11 +478,13 @@ function mountPartySelector() {
 }
 
 // Mount party selector when islands are ready
+var partySelectorRetries = 0;
+var MAX_PARTY_SELECTOR_RETRIES = 25; // 5 seconds at 200ms intervals
 function tryMountPartySelector() {
   if (window.preactIslands && window.preactIslands.PartySelector) {
     mountPartySelector();
-  } else {
-    // Retry after a short delay for islands to load
+  } else if (partySelectorRetries < MAX_PARTY_SELECTOR_RETRIES) {
+    partySelectorRetries++;
     setTimeout(tryMountPartySelector, 200);
   }
 }

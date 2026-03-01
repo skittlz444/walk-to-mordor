@@ -7,7 +7,7 @@ describe('MapLegend', () => {
   const mockMembers: PartyMember[] = [
     { user_id: 1, display_name: 'Alice', contribution: 42.5, status: 'active', color: 0 },
     { user_id: 2, display_name: 'Bob', contribution: 30.0, status: 'active', color: 1 },
-    { user_id: 3, display_name: 'Charlie', contribution: 15.2, status: 'departed', color: 2 },
+    { user_id: 3, display_name: 'Charlie', contribution: 15.2, status: 'left', color: 2 },
   ];
 
   it('renders party name', () => {

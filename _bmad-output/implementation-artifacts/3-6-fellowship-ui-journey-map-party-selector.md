@@ -138,15 +138,15 @@ No debug issues encountered.
 
 **1. Dead CSS — `party-legend` classes unused (LOW)**
 `main.css` lines 324-378 define `.party-legend`, `.party-legend__title`, `.party-legend__item`, `.party-legend__swatch`, `.party-legend__name`, `.party-legend__name--departed`, `.party-legend__contribution` using BEM naming. However, no component references these classes. The actual legend component (`MapLegend.tsx`) uses `.map-legend-*` classes instead. These ~55 lines of CSS are dead code.
-**Status: OPEN**
+**Status: FIXED** — Removed all unused `.party-legend` CSS rules from main.css.
 
 **2. Duplicate `PartyProgress` interface (LOW)**
 `PartySelector.tsx:38-53` defines a local `PartyProgress` interface that duplicates `PartyProgress` from `partyStore.ts:34-42`. The local version inlines member fields instead of using `PartyMember[]`. If the API shape changes, both must be updated independently. The local interface is only used for the `onViewChange` callback prop type and milestone handling — it should import from `partyStore.ts` instead.
-**Status: OPEN**
+**Status: FIXED** — Removed local interface, now imports `PartyProgress` from `partyStore.ts`.
 
 **3. Unbounded retry in `tryMountPartySelector` (LOW)**
 `goals.js:491-497` retries every 200ms with no maximum retry count. If `preactIslands.PartySelector` never loads (e.g., JS bundle error), this retries forever. Should cap at ~10-20 attempts.
-**Status: OPEN**
+**Status: FIXED** — Capped at 25 retries (5 seconds max).
 
 **4. Double fetch of user parties on Map page (LOW)**
 `MapIsland.tsx:761` calls `fetchUserParties()` on mount. If the user later opens the party panel, the data is already loaded. However, if `PartySelector` is also mounted on the same page (which it isn't currently), parties would be fetched twice. The current architecture avoids this since MapIsland manages its own party UI, but the store could benefit from a "fetch once" guard (check if `userParties.value.length > 0` or `partiesLoading.value` before re-fetching).
@@ -162,3 +162,4 @@ No debug issues encountered.
 |---|---|
 | 2026-03-01 | Story 3.6 implemented: PartySelector island, Journey + Map integration, color-coded member paths, map legend, milestone modal trigger. 268 client tests, 408 backend tests passing. |
 | 2026-03-01 | Adversarial code review: PASS WITH NOTES. All 12 ACs validated. 4 LOW issues found (dead CSS, duplicate type, unbounded retry, double-fetch optimization). |
+| 2026-03-01 | PR review fixes: Fixed departed member status checks (status !== 'active'), PartySelector fallback race condition, removed dead .party-legend CSS, removed duplicate PartyProgress interface, capped retry loop to 25 attempts. |
