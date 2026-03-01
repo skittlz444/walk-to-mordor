@@ -66,15 +66,19 @@ export function PartyManageIsland() {
     setLoading(true);
     setError(null);
     try {
-      // Get current user ID from session
-      const sessionRes = await fetch('/api/session', { headers: getAuthHeaders() });
+      const headers = getAuthHeaders();
+      // Parallel fetch for session, parties, and progress
+      const [sessionRes, partiesRes, progressRes] = await Promise.all([
+        fetch('/api/session', { headers }),
+        fetch('/api/user/parties', { headers }),
+        fetch(`/api/party/${partyId}/progress`, { headers }),
+      ]);
+
       if (sessionRes.ok) {
         const sessionData = await sessionRes.json();
         setCurrentUserId(sessionData.userId ?? null);
       }
 
-      // Get party info
-      const partiesRes = await fetch('/api/user/parties', { headers: getAuthHeaders() });
       if (!partiesRes.ok) {
         if (partiesRes.status === 401) { window.location.href = '/login'; return; }
         throw new Error('Failed to load parties');
@@ -93,8 +97,6 @@ export function PartyManageIsland() {
       setSettingsName(info.name);
       setSettingsLeaveBehavior(info.leave_distance_behavior);
 
-      // Get members
-      const progressRes = await fetch(`/api/party/${partyId}/progress`, { headers: getAuthHeaders() });
       if (progressRes.ok) {
         const progressData: PartyProgressData = await progressRes.json();
         setMembers(progressData.members.filter(m => m.status === 'active'));

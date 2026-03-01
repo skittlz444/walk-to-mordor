@@ -138,6 +138,10 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue({ id: 5, title: 'Rivendell', distance: 30 }),
       }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
       // Newly passed milestones
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
@@ -159,7 +163,7 @@ describe('Party Progress API (Story 3.4)', () => {
       expect(data.member_count).toBe(2);
       expect(data.distance_mode).toBe('incremental');
       expect(data.leave_distance_behavior).toBe('keep');
-      expect(data.calculated_position).toEqual({ id: 5, title: 'Rivendell', distance: 30 });
+      expect(data.calculated_position).toEqual({ id: 5, title: 'Rivendell', distance: 30, description: null, image_id: null, special: null });
       expect(data.members).toHaveLength(2);
       expect(data.members[0]).toEqual({
         user_id: 1,
@@ -206,6 +210,10 @@ describe('Party Progress API (Story 3.4)', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
       // Milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
+      // Next milestone
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue(null),
       }));
@@ -262,6 +270,10 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue(null),
       }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
       // Newly passed milestones
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
@@ -315,6 +327,10 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue(null),
       }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
       // Newly passed milestones
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
@@ -360,6 +376,10 @@ describe('Party Progress API (Story 3.4)', () => {
       }));
       // Milestone
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({ first: jest.fn().mockResolvedValue(null) }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
       // Newly passed milestones
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
@@ -405,6 +425,10 @@ describe('Party Progress API (Story 3.4)', () => {
       // Milestone position
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue({ id: 8, title: 'Weathertop', distance: 90 }),
+      }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
       }));
       // Newly passed milestones (between 50 and 100)
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
@@ -455,6 +479,10 @@ describe('Party Progress API (Story 3.4)', () => {
       }));
       // Milestone
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({ first: jest.fn().mockResolvedValue(null) }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
       // Newly passed milestones
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),

@@ -11,6 +11,9 @@ interface GoalRow {
   id: number;
   title: string;
   distance: number;
+  description?: string | null;
+  image_id?: string | null;
+  special?: string | null;
 }
 
 /** D1 result row for parties table */
@@ -556,7 +559,12 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
 
     // Calculate milestone position (latest milestone ≤ total_distance)
     const calculatedPosition = await env.DB.prepare(
-      'SELECT id, title, distance FROM goals WHERE distance <= ? ORDER BY distance DESC LIMIT 1'
+      'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance <= ? ORDER BY distance DESC LIMIT 1'
+    ).bind(totalDistance).first<GoalRow>();
+
+    // Calculate next milestone (first goal > total_distance)
+    const nextPosition = await env.DB.prepare(
+      'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance > ? ORDER BY distance ASC LIMIT 1'
     ).bind(totalDistance).first<GoalRow>();
 
     // Get newly passed milestones (between previous last_viewed_distance and current total)
@@ -573,7 +581,10 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
       total_distance: totalDistance,
       member_count: activeMembers.length,
       calculated_position: calculatedPosition
-        ? { id: calculatedPosition.id, title: calculatedPosition.title, distance: calculatedPosition.distance }
+        ? { id: calculatedPosition.id, title: calculatedPosition.title, distance: calculatedPosition.distance, description: calculatedPosition.description ?? null, image_id: calculatedPosition.image_id ?? null, special: calculatedPosition.special ?? null }
+        : null,
+      next_position: nextPosition
+        ? { id: nextPosition.id, title: nextPosition.title, distance: nextPosition.distance, description: nextPosition.description ?? null, image_id: nextPosition.image_id ?? null, special: nextPosition.special ?? null }
         : null,
       distance_mode: party.distance_mode,
       leave_distance_behavior: party.leave_distance_behavior,

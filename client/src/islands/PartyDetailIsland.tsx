@@ -1,4 +1,15 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
+import { GoalModal } from './GoalModal';
+import type { Goal } from '../types/goal';
+
+interface MilestoneData {
+  id: number;
+  title: string;
+  distance: number;
+  description?: string | null;
+  image_id?: string | null;
+  special?: string | null;
+}
 
 interface PartyMember {
   user_id: number;
@@ -11,8 +22,8 @@ interface PartyMember {
 interface PartyProgressData {
   total_distance: number;
   member_count: number;
-  calculated_position: { id: number; title: string; distance: number } | null;
-  distance_mode: string;
+  calculated_position: MilestoneData | null;
+  next_position: MilestoneData | null;
   leave_distance_behavior: string;
   members: PartyMember[];
   newly_passed_milestones: Array<{ id: number; title: string; distance: number }>;
@@ -42,6 +53,10 @@ function getPartyIdFromUrl(): number {
   return match ? parseInt(match[1], 10) : 0;
 }
 
+function milestoneToGoal(m: MilestoneData): Goal {
+  return { id: m.id, title: m.title, distance: m.distance, description: m.description ?? null, image_id: m.image_id ?? null, special: m.special ?? null };
+}
+
 export function PartyDetailIsland() {
   const partyId = getPartyIdFromUrl();
   const [progress, setProgress] = useState<PartyProgressData | null>(null);
@@ -51,14 +66,20 @@ export function PartyDetailIsland() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [modalGoal, setModalGoal] = useState<Goal | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!partyId) { setError('Invalid party ID'); setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
-      // Fetch party list to get name/role/invite info
-      const partiesRes = await fetch('/api/user/parties?include_dissolved=true', { headers: getAuthHeaders() });
+      const headers = getAuthHeaders();
+      // Parallel fetch for party info and progress
+      const [partiesRes, progressRes] = await Promise.all([
+        fetch('/api/user/parties?include_dissolved=true', { headers }),
+        fetch(`/api/party/${partyId}/progress`, { headers }),
+      ]);
+
       if (!partiesRes.ok) {
         if (partiesRes.status === 401) { window.location.href = '/login'; return; }
         throw new Error('Failed to load party info');
@@ -68,8 +89,6 @@ export function PartyDetailIsland() {
       if (!info) { setError('Fellowship not found'); setLoading(false); return; }
       setPartyInfo(info);
 
-      // Fetch progress
-      const progressRes = await fetch(`/api/party/${partyId}/progress`, { headers: getAuthHeaders() });
       if (!progressRes.ok) {
         if (progressRes.status === 403) { window.location.href = '/party'; return; }
         if (progressRes.status === 404) { setError('Fellowship not found'); setLoading(false); return; }
@@ -108,7 +127,6 @@ export function PartyDetailIsland() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       const textarea = document.createElement('textarea');
       textarea.value = url;
       document.body.appendChild(textarea);
@@ -136,14 +154,6 @@ export function PartyDetailIsland() {
       handleCopyLink();
     }
   };
-
-  // Find next milestone (the one after calculated_position)
-  const nextMilestoneDistance = progress?.calculated_position
-    ? progress.calculated_position.distance
-    : 0;
-  const distanceToNext = progress
-    ? Math.max(0, (nextMilestoneDistance || 0) - progress.total_distance)
-    : 0;
 
   if (loading) {
     return (
@@ -189,18 +199,39 @@ export function PartyDetailIsland() {
           <span className="party-progress__stat-label">Total Progress</span>
         </div>
         {progress.calculated_position && (
-          <div className="party-progress__stat party-progress__stat--clickable" role="button" tabIndex={0} aria-label={`Last milestone: ${progress.calculated_position.title}`}>
+          <div
+            className="party-progress__stat party-progress__stat--clickable"
+            role="button"
+            tabIndex={0}
+            aria-label={`Previous milestone: ${progress.calculated_position.title}`}
+            onClick={() => setModalGoal(milestoneToGoal(progress.calculated_position!))}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalGoal(milestoneToGoal(progress.calculated_position!)); } }}
+          >
             <span className="party-progress__stat-value">{progress.calculated_position.title}</span>
-            <span className="party-progress__stat-label">Last Milestone</span>
+            <span className="party-progress__stat-label">Previous Milestone</span>
+          </div>
+        )}
+        {progress.next_position ? (
+          <div
+            className="party-progress__stat party-progress__stat--clickable"
+            role="button"
+            tabIndex={0}
+            aria-label={`Next milestone: ${progress.next_position.title}`}
+            onClick={() => setModalGoal(milestoneToGoal(progress.next_position!))}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalGoal(milestoneToGoal(progress.next_position!)); } }}
+          >
+            <span className="party-progress__stat-value">{progress.next_position.title}</span>
+            <span className="party-progress__stat-label">Next Milestone</span>
+          </div>
+        ) : (
+          <div className="party-progress__stat">
+            <span className="party-progress__stat-value">🏔️</span>
+            <span className="party-progress__stat-label">Journey Complete!</span>
           </div>
         )}
         <div className="party-progress__stat">
           <span className="party-progress__stat-value">{progress.member_count}</span>
           <span className="party-progress__stat-label">{progress.member_count === 1 ? 'Member' : 'Members'}</span>
-        </div>
-        <div className="party-progress__stat">
-          <span className="party-progress__stat-value">{progress.distance_mode === 'cumulative' ? 'Cumulative' : 'Average'}</span>
-          <span className="party-progress__stat-label">Distance Mode</span>
         </div>
       </div>
 
@@ -295,6 +326,15 @@ export function PartyDetailIsland() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Goal Modal */}
+      {modalGoal && (
+        <GoalModal
+          goal={modalGoal}
+          currentDistance={progress.total_distance}
+          onClose={() => setModalGoal(null)}
+        />
       )}
     </div>
   );
