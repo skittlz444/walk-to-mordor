@@ -1,6 +1,6 @@
 // Build timestamp - this should be replaced during build process
-const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}';
-const CACHE_NAME = `walk-to-mordor-{{BUILD_TIMESTAMP}}`;
+const BUILD_TIMESTAMP = '20260301-064556';
+const CACHE_NAME = `walk-to-mordor-20260301-064556`;
 const urlsToCache = [
   '/css/main.css',
   '/css/mobiscroll.javascript.min.css',

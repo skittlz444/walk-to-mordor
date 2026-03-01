@@ -23,11 +23,19 @@ jest.mock('../../src/validators');
 jest.mock('../../src/goals-handlers');
 jest.mock('../../src/auth-handlers');
 jest.mock('../../src/party-handlers');
+jest.mock('../../src/renderPartyListPage');
+jest.mock('../../src/renderPartyDetailPage');
+jest.mock('../../src/renderPartyManagePage');
+jest.mock('../../src/renderPartyJoinPage');
 
 // Import after mocking
 import worker from '../../src/index';
 import { calculateTotalDistance, handleGoalsGet } from '../../src/goals-handlers';
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from '../../src/party-handlers';
+import { renderPartyListPage } from '../../src/renderPartyListPage';
+import { renderPartyDetailPage } from '../../src/renderPartyDetailPage';
+import { renderPartyManagePage } from '../../src/renderPartyManagePage';
+import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
@@ -53,6 +61,10 @@ const mockHandleLeaveParty = jest.mocked(handleLeaveParty);
 const mockHandleKickMember = jest.mocked(handleKickMember);
 const mockHandleUpdatePartySettings = jest.mocked(handleUpdatePartySettings);
 const mockHandleTransferLeadership = jest.mocked(handleTransferLeadership);
+const mockRenderPartyListPage = jest.mocked(renderPartyListPage);
+const mockRenderPartyDetailPage = jest.mocked(renderPartyDetailPage);
+const mockRenderPartyManagePage = jest.mocked(renderPartyManagePage);
+const mockRenderPartyJoinPage = jest.mocked(renderPartyJoinPage);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -131,6 +143,10 @@ describe('Cloudflare Worker Index', () => {
     mockHandleKickMember.mockResolvedValue(new Response(JSON.stringify({ message: 'Member has been kicked from the party' }), { status: 200, headers: { 'content-type': 'application/json' } }));
     mockHandleUpdatePartySettings.mockResolvedValue(new Response(JSON.stringify({ id: 1, name: 'Updated Party' }), { status: 200, headers: { 'content-type': 'application/json' } }));
     mockHandleTransferLeadership.mockResolvedValue(new Response(JSON.stringify({ message: 'Leadership transferred successfully', new_leader_id: 2 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockRenderPartyListPage.mockReturnValue('<html>Party List</html>');
+    mockRenderPartyDetailPage.mockReturnValue('<html>Party Detail</html>');
+    mockRenderPartyManagePage.mockReturnValue('<html>Party Manage</html>');
+    mockRenderPartyJoinPage.mockReturnValue('<html>Party Join</html>');
 
     // Create simple mock environment
     mockEnv = {
@@ -475,6 +491,43 @@ describe('Cloudflare Worker Index', () => {
     
     expect(mockRenderHtml).toHaveBeenCalled();
     expect(response.status).toBe(200);
+  });
+
+  // Party page routing tests
+  it('should render party list page for /party route', async () => {
+    const request = createRequest('https://example.com/party');
+    const response = await worker.fetch(request, mockEnv);
+    
+    expect(mockRenderPartyListPage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  it('should render party detail page for /party/:id route', async () => {
+    const request = createRequest('https://example.com/party/42');
+    const response = await worker.fetch(request, mockEnv);
+    
+    expect(mockRenderPartyDetailPage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  it('should render party manage page for /party/:id/manage route', async () => {
+    const request = createRequest('https://example.com/party/42/manage');
+    const response = await worker.fetch(request, mockEnv);
+    
+    expect(mockRenderPartyManagePage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  it('should render party join page for /party/join/:inviteCode route', async () => {
+    const request = createRequest('https://example.com/party/join/AbCd1234');
+    const response = await worker.fetch(request, mockEnv);
+    
+    expect(mockRenderPartyJoinPage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
   });
 
   it('should validate method for API endpoints', async () => {

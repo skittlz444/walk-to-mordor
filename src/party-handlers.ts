@@ -407,6 +407,7 @@ export async function handleGetUserParties(request: Request, env: { DB: D1Databa
     if (includeDissolved) {
       query = `
         SELECT p.id, p.name, pm.role, p.distance_mode, p.leave_distance_behavior, p.dissolved_at,
+               p.invite_code, p.leader_id,
                (SELECT COUNT(*) FROM party_members pm2 WHERE pm2.party_id = p.id AND pm2.status = 'active') as active_member_count
         FROM party_members pm
         JOIN parties p ON pm.party_id = p.id
@@ -415,6 +416,7 @@ export async function handleGetUserParties(request: Request, env: { DB: D1Databa
     } else {
       query = `
         SELECT p.id, p.name, pm.role, p.distance_mode, p.leave_distance_behavior, p.dissolved_at,
+               p.invite_code, p.leader_id,
                (SELECT COUNT(*) FROM party_members pm2 WHERE pm2.party_id = p.id AND pm2.status = 'active') as active_member_count
         FROM party_members pm
         JOIN parties p ON pm.party_id = p.id

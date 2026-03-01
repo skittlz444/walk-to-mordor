@@ -35,6 +35,10 @@ import {
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
+import { renderPartyListPage } from "./renderPartyListPage";
+import { renderPartyDetailPage } from "./renderPartyDetailPage";
+import { renderPartyManagePage } from "./renderPartyManagePage";
+import { renderPartyJoinPage } from "./renderPartyJoinPage";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -326,6 +330,35 @@ export default {
 
     if (url.pathname === "/map") {
       return handleMapPage(request, env);
+    }
+
+    // Party (Fellowship) pages
+    // Must check /party/join/:code before /party/:id to avoid matching "join" as an id
+    const partyJoinPageParams = matchRoute(url.pathname, '/party/join/:inviteCode');
+    if (partyJoinPageParams) {
+      return new Response(renderPartyJoinPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    const partyManagePageParams = matchRoute(url.pathname, '/party/:id/manage');
+    if (partyManagePageParams) {
+      return new Response(renderPartyManagePage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    const partyDetailPageParams = matchRoute(url.pathname, '/party/:id');
+    if (partyDetailPageParams) {
+      return new Response(renderPartyDetailPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    if (url.pathname === "/party") {
+      return new Response(renderPartyListPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
     }
 
     if (url.pathname === "/" || url.pathname === "/wtm") {

@@ -1,6 +1,6 @@
 # Story 3.7: Fellowship UI - Fellowships Pages
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -50,30 +50,30 @@ so that I can fully interact with the Fellowship features in a structured and in
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: SSR Shells & Routing (AC: 1, 4)
-  - [ ] Create `src/renderPartyListPage.ts` (List view).
-  - [ ] Create `src/renderPartyDetailPage.ts` (Detail view).
-  - [ ] Create `src/renderPartyManagePage.ts` (Manage view).
-  - [ ] Create `src/renderPartyJoinPage.ts` (Join landing view).
-  - [ ] Add routes to `src/index.ts` (`/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`).
-  - [ ] Update `DrawerIsland.tsx` to include the "Fellowships" link.
-- [ ] Task 2: Fellowships List Page Island (AC: 1)
-  - [ ] Create `PartyListIsland.tsx`.
-  - [ ] Implement list view, empty state, create form, and join form.
-  - [ ] Fetch data from `/api/user/parties`.
-- [ ] Task 3: Fellowship Detail Page Island (AC: 2)
-  - [ ] Create `PartyDetailIsland.tsx`.
-  - [ ] Fetch data from `/api/party/:id/progress`.
-  - [ ] Implement progress display, member list, and leave button.
-  - [ ] Leave a UI placeholder for the Activity Feed (to be implemented in Story 3.8).
-  - [ ] Implement invite link sharing UI.
-- [ ] Task 4: Fellowship Management Page Island (AC: 3)
-  - [ ] Create `PartyManageIsland.tsx`.
-  - [ ] Implement settings update form, kick member UI, transfer leadership UI, and regenerate invite code UI.
-- [ ] Task 5: Join Landing Page Island (AC: 4)
-  - [ ] Create `PartyJoinIsland.tsx`.
-  - [ ] Implement preview display and join/login buttons.
-  - [ ] Handle `returnTo` logic for unauthenticated users.
+- [x] Task 1: SSR Shells & Routing (AC: 1, 4)
+  - [x] Create `src/renderPartyListPage.ts` (List view).
+  - [x] Create `src/renderPartyDetailPage.ts` (Detail view).
+  - [x] Create `src/renderPartyManagePage.ts` (Manage view).
+  - [x] Create `src/renderPartyJoinPage.ts` (Join landing view).
+  - [x] Add routes to `src/index.ts` (`/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`).
+  - [x] Update `DrawerIsland.tsx` to include the "Fellowships" link.
+- [x] Task 2: Fellowships List Page Island (AC: 1)
+  - [x] Create `PartyListIsland.tsx`.
+  - [x] Implement list view, empty state, create form, and join form.
+  - [x] Fetch data from `/api/user/parties`.
+- [x] Task 3: Fellowship Detail Page Island (AC: 2)
+  - [x] Create `PartyDetailIsland.tsx`.
+  - [x] Fetch data from `/api/party/:id/progress`.
+  - [x] Implement progress display, member list, and leave button.
+  - [x] Leave a UI placeholder for the Activity Feed (to be implemented in Story 3.8).
+  - [x] Implement invite link sharing UI.
+- [x] Task 4: Fellowship Management Page Island (AC: 3)
+  - [x] Create `PartyManageIsland.tsx`.
+  - [x] Implement settings update form, kick member UI, transfer leadership UI, and regenerate invite code UI.
+- [x] Task 5: Join Landing Page Island (AC: 4)
+  - [x] Create `PartyJoinIsland.tsx`.
+  - [x] Implement preview display and join/login buttons.
+  - [x] Handle `returnTo` logic for unauthenticated users.
 
 ## Dev Notes
 
@@ -107,10 +107,39 @@ Requirements expanded from original spec:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Created 4 SSR shell render functions following `renderLayout()` pattern. Added routes in index.ts with correct ordering (join > manage > detail > list). Added "Fellowships" link to DrawerIsland navigation. Created party.css with full responsive styling.
+- Task 2: Created PartyListIsland with active party list, empty state, create fellowship form (name/distance_mode/leave_behavior with helper text), join by invite code with preview step, and collapsed past fellowships section.
+- Task 3: Created PartyDetailIsland with breadcrumb, progress stats grid (total distance, last milestone, member count, mode), sorted member list with color dots, activity feed placeholder for Story 3.8, invite link sharing with Copy Link and Web Share API, leave button with confirmation dialog explaining leave_distance_behavior impact.
+- Task 4: Created PartyManageIsland with leader-only access (redirects non-leaders), settings update form, kick member with two-step confirmation and distance removal toggle, transfer leadership with confirmation, and regenerate invite code with confirmation.
+- Task 5: Created PartyJoinIsland with invite code extraction from URL, party preview display, authenticated join button (redirects to /party/:id on success), and unauthenticated login button with returnTo parameter.
+- API: Added invite_code and leader_id to GET /api/user/parties response to enable invite link sharing and leader identification on detail page.
+- Tests: 23 new tests across party-pages.test.ts (SSR shells) and index.test.ts (routing). All 431 tests pass with zero regressions.
+
 ### File List
+
+- src/renderPartyListPage.ts (new)
+- src/renderPartyDetailPage.ts (new)
+- src/renderPartyManagePage.ts (new)
+- src/renderPartyJoinPage.ts (new)
+- src/renderLayout.ts (modified - added publicPage option to skip auth scripts)
+- src/index.ts (modified - added party page routes and imports)
+- src/party-handlers.ts (modified - added invite_code and leader_id to user parties query)
+- client/src/index.tsx (modified - registered 4 new islands)
+- client/src/islands/DrawerIsland.tsx (modified - added Fellowships nav link)
+- client/src/islands/PartyListIsland.tsx (new)
+- client/src/islands/PartyDetailIsland.tsx (new)
+- client/src/islands/PartyManageIsland.tsx (new)
+- client/src/islands/PartyJoinIsland.tsx (new)
+- public/css/party.css (new)
+- tests/api/party-pages.test.ts (new)
+- tests/api/index.test.ts (modified - added party page routing tests)
+
+## Change Log
+
+- 2026-03-01: Story 3.7 implementation complete. Created 4 SSR page shells, 4 Preact islands, party.css, and routing. Added publicPage option to renderLayout for unauthenticated join page. Fixed distance_mode form value mismatch (average→incremental). 23 new tests, 431 total passing. Visual testing verified on mobile and desktop viewports.
