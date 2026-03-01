@@ -1,6 +1,6 @@
 # Story 3.6: Fellowship UI - Journey & Map Party Selector
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -27,25 +27,25 @@ so that I can visualize our shared journey and see the specific contributions of
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: PartySelector Component (AC: 1, 2, 3, 4, 5, 11, 12)
-  - [ ] Create `PartySelector.tsx` in `client/src/islands/`.
-  - [ ] Fetch user parties on mount.
-  - [ ] Implement dropdown UI and visual banner.
-  - [ ] Manage selected state and persist to `localStorage`.
-  - [ ] Handle 403/404 errors by falling back to "Personal" view.
-- [ ] Task 2: Journey Page Integration (AC: 6)
-  - [ ] Update Journey page to use `PartySelector`.
-  - [ ] Fetch party progress when a party is selected.
-  - [ ] Pass party progress data to `NextGoalCard` and `UpcomingGoalCard`.
-- [ ] Task 3: Map Page Integration (AC: 7, 8, 9)
-  - [ ] Update Map page to use `PartySelector` via a button similar to the calendar area.
-  - [ ] Fetch party progress when a party is selected.
-  - [ ] Render color-coded path segments based on member contributions.
-  - [ ] Implement map legend.
-  - [ ] Implement 12-color palette and styling for departed members (repeating colors for >12 members).
-- [ ] Task 4: Milestone Modal Trigger (AC: 10)
-  - [ ] Check `newly_passed_milestones` in the progress response.
-  - [ ] Trigger milestone modal if new milestones exist.
+- [x] Task 1: PartySelector Component (AC: 1, 2, 3, 4, 5, 11, 12)
+  - [x] Create `PartySelector.tsx` in `client/src/islands/`.
+  - [x] Fetch user parties on mount.
+  - [x] Implement dropdown UI and visual banner.
+  - [x] Manage selected state and persist to `localStorage`.
+  - [x] Handle 403/404 errors by falling back to "Personal" view.
+- [x] Task 2: Journey Page Integration (AC: 6)
+  - [x] Update Journey page to use `PartySelector`.
+  - [x] Fetch party progress when a party is selected.
+  - [x] Pass party progress data to `NextGoalCard` and `UpcomingGoalCard`.
+- [x] Task 3: Map Page Integration (AC: 7, 8, 9)
+  - [x] Update Map page to use `PartySelector` via a button similar to the calendar area.
+  - [x] Fetch party progress when a party is selected.
+  - [x] Render color-coded path segments based on member contributions.
+  - [x] Implement map legend.
+  - [x] Implement 12-color palette and styling for departed members (repeating colors for >12 members).
+- [x] Task 4: Milestone Modal Trigger (AC: 10)
+  - [x] Check `newly_passed_milestones` in the progress response.
+  - [x] Trigger milestone modal if new milestones exist.
 
 ## Dev Notes
 
@@ -79,10 +79,44 @@ Requirements expanded from original spec:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (claude-opus-4.6)
 
 ### Debug Log References
 
+No debug issues encountered.
+
 ### Completion Notes List
 
+- Created partyStore with Preact Signals for shared party state management
+- Created 12-color maximum distinctness palette with muted variants for departed members
+- PartySelector island: dropdown UI, banner, loading states, localStorage persistence, 403/404 fallback
+- Journey page integration: mounts PartySelector above goals, re-renders goals with party distance
+- Map page integration: party toggle button in controls, MemberPaths Konva.Line rendering, MapLegend overlay
+- Milestone modal triggering via newly_passed_milestones with session-level dedup
+- All 268 client tests pass, all 408 backend tests pass
+- Browser-tested on both Journey and Map pages with test account
+
 ### File List
+
+- `client/src/stores/partyStore.ts` — NEW: Party state management (signals, fetch, persist, milestone tracking)
+- `client/src/utils/party-colors.ts` — NEW: 12-color palette, getMemberColor(), getMutedMemberColor()
+- `client/src/islands/PartySelector.tsx` — NEW: Preact island for party/personal view toggle
+- `client/src/components/map/MemberPaths.ts` — NEW: Konva.Line creation for per-member path segments
+- `client/src/components/map/MapLegend.tsx` — NEW: HTML overlay legend with member names + colors
+- `client/src/index.tsx` — MODIFIED: Added PartySelector to island registry, exposed partyStore on window
+- `client/src/islands/MapIsland.tsx` — MODIFIED: Added party toggle button, member paths, legend integration
+- `src/renderHtml.ts` — MODIFIED: Added party-selector-mount div
+- `public/js/goals.js` — MODIFIED: Added party selector mounting + view change handler
+- `public/js/progress.js` — MODIFIED: Store personal distance on window._personalDistance
+- `public/css/main.css` — MODIFIED: Added party color CSS variables, selector/banner/legend/panel styles
+- `client/src/utils/party-colors.test.ts` — NEW: Tests for color palette
+- `client/src/stores/partyStore.test.ts` — NEW: Tests for store signals and actions
+- `client/src/islands/PartySelector.test.tsx` — NEW: Component tests
+- `client/src/components/map/MemberPaths.test.ts` — NEW: Tests for member path creation
+- `client/src/components/map/MapLegend.test.tsx` — NEW: Tests for legend component
+
+## Change Log
+
+| Date | Summary |
+|---|---|
+| 2026-03-01 | Story 3.6 implemented: PartySelector island, Journey + Map integration, color-coded member paths, map legend, milestone modal trigger. 268 client tests, 408 backend tests passing. |

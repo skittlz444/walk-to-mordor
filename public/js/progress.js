@@ -315,6 +315,8 @@ async function fetchAndUpdateTotalDistance() {
     });
     if (response.ok) {
       const data = await response.json();
+      // Store personal distance for party view toggle
+      window._personalDistance = data.totalDistance;
       const el = document.getElementById('total-distance-value');
       if (el) el.textContent = `${data.totalDistance} km`;
       if (window.goalsModule && window.goalsModule.renderGoals) {
