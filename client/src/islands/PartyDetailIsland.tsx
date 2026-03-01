@@ -198,6 +198,10 @@ export function PartyDetailIsland() {
           <span className="party-progress__stat-value">{progress.total_distance.toFixed(2)} km</span>
           <span className="party-progress__stat-label">Total Progress</span>
         </div>
+        <div className="party-progress__stat">
+          <span className="party-progress__stat-value">{progress.member_count}</span>
+          <span className="party-progress__stat-label">{progress.member_count === 1 ? 'Member' : 'Members'}</span>
+        </div>
         {progress.calculated_position && (
           <div
             className="party-progress__stat party-progress__stat--clickable"
@@ -229,10 +233,6 @@ export function PartyDetailIsland() {
             <span className="party-progress__stat-label">Journey Complete!</span>
           </div>
         )}
-        <div className="party-progress__stat">
-          <span className="party-progress__stat-value">{progress.member_count}</span>
-          <span className="party-progress__stat-label">{progress.member_count === 1 ? 'Member' : 'Members'}</span>
-        </div>
       </div>
 
       {/* Members */}
