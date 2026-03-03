@@ -200,6 +200,45 @@ export function calculateCutoffPoint(
 }
 
 /**
+ * Extract the sub-path between two distances on the journey path.
+ * Used for drawing individual member contribution segments that stack
+ * end-to-end rather than all starting from 0.
+ *
+ * @param pathNodes     Ordered path nodes with optional distance anchors.
+ * @param startDistance Start distance in miles (segment begins here).
+ * @param endDistance   End distance in miles (segment ends here).
+ * @returns Flat [x, y, …] array of points for just this segment.
+ */
+export function calculatePathSegment(
+  pathNodes: PathNode[],
+  startDistance: number,
+  endDistance: number,
+): number[] {
+  if (endDistance <= startDistance || pathNodes.length === 0) return [];
+
+  const endResult = calculateCutoffPoint(pathNodes, endDistance);
+
+  if (startDistance <= 0) {
+    return endResult.completedPoints;
+  }
+
+  const startResult = calculateCutoffPoint(pathNodes, startDistance);
+
+  if (startResult.completedPoints.length === 0) {
+    return endResult.completedPoints;
+  }
+
+  // Skip the shared prefix (all flat coords up to but not including
+  // startResult's interpolated cut-point) then prepend the cut-point.
+  const skipCount = Math.max(0, startResult.completedPoints.length - 2);
+  return [
+    startResult.userPosition.x,
+    startResult.userPosition.y,
+    ...endResult.completedPoints.slice(skipCount),
+  ];
+}
+
+/**
  * Truncate the future path so it only extends a limited distance
  * beyond the user's current position. This prevents overlapping lines
  * when the path doubles back on itself (e.g. return journeys).

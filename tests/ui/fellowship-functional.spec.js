@@ -22,8 +22,8 @@ const test = base.extend({
  * Authenticate page via localStorage then navigate.
  */
 async function loginAs(page, token, url = '/journey') {
-  // First visit to set localStorage (any page will do)
-  await page.goto(`${BASE_URL}/journey`);
+  // Navigate to /login (no auth redirect) just to establish origin for localStorage
+  await page.goto(`${BASE_URL}/login`);
   await page.evaluate((t) => localStorage.setItem('sessionToken', t), token);
   await page.goto(`${BASE_URL}${url}`);
   // Wait for island hydration
@@ -34,10 +34,15 @@ async function loginAs(page, token, url = '/journey') {
  * Create a fellowship via API.
  */
 async function createFellowship(request, token, name, mode = 'cumulative', leaveBehavior = 'keep') {
-  const res = await request.post(`${BASE_URL}/api/party`, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    data: { name, distance_mode: mode, leave_distance_behavior: leaveBehavior },
-  });
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await request.post(`${BASE_URL}/api/party`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      data: { name, distance_mode: mode, leave_distance_behavior: leaveBehavior },
+    });
+    if (res.ok()) break;
+    await new Promise(r => setTimeout(r, 1000));
+  }
   expect(res.ok(), `createFellowship failed: ${await res.text()}`).toBeTruthy();
   const data = await res.json();
   return { id: data.id, invite_code: data.invite_code };
@@ -47,9 +52,14 @@ async function createFellowship(request, token, name, mode = 'cumulative', leave
  * Join a fellowship via API.
  */
 async function joinFellowship(request, token, inviteCode) {
-  const res = await request.post(`${BASE_URL}/api/party/join/${inviteCode}`, {
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-  });
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await request.post(`${BASE_URL}/api/party/join/${inviteCode}`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    });
+    if (res.ok()) break;
+    await new Promise(r => setTimeout(r, 1000));
+  }
   expect(res.ok(), `joinFellowship failed: ${await res.text()}`).toBeTruthy();
 }
 

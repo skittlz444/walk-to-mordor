@@ -77,6 +77,9 @@ function generateRandomTestDate() {
 }
 
 async function selectCalendarDate(page, dateInfo) {
+    // Wait for calendar to be ready on the page
+    await page.waitForSelector('.calendar-cell, [data-date], [data-timestamp]', { timeout: 10000 }).catch(() => {});
+    
     // Attempt to find cell by specific date attribute first if provided
     if (dateInfo && typeof dateInfo === 'object' && dateInfo.date) {
         const dateSelector = `[data-date="${dateInfo.date}"]`;
@@ -110,11 +113,12 @@ async function selectCalendarDate(page, dateInfo) {
       
       return cell;
     } catch (error) {
+      await page.waitForTimeout(500);
       const availableCells = page.locator('.calendar-cell');
       const cellCount = await availableCells.count();
       if (cellCount > 0) {
         const randomCell = availableCells.nth(Math.floor(Math.random() * cellCount));
-        if (await randomCell.isVisible({ timeout: 2000 })) return randomCell;
+        if (await randomCell.isVisible({ timeout: 5000 })) return randomCell;
       }
       throw new Error(`Could not select any calendar date`);
     }

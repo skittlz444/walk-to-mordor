@@ -266,6 +266,8 @@ export function MapIsland() {
   const error = useSignal(false);
   // User's walked distance in miles, fetched from /api/progress on init.
   const userDistance = useSignal(0);
+  // Personal distance (miles) saved for restoring when switching from party view.
+  const personalDistanceRef = useRef(0);
 
   // Popup state signals
   const selectedWaypoint = useSignal<Waypoint | null>(null);
@@ -687,6 +689,7 @@ export function MapIsland() {
     const oldDistance = userDistance.value;
     if (newDistanceMiles === oldDistance) return;
 
+    personalDistanceRef.current = newDistanceMiles;
     userDistance.value = newDistanceMiles;
     const newPos = getUserPosition(fellowshipPath, newDistanceMiles);
 
@@ -754,8 +757,39 @@ export function MapIsland() {
   const handlePartyViewChange = useCallback(async (selection: PartySelection) => {
     const progress = await selectView(selection);
     drawMemberPaths(selection === 'personal' ? null : progress);
+
+    // Switch displayed distance: party total when viewing a fellowship,
+    // personal distance when switching back to "My Journey".
+    const newDistanceMiles = selection === 'personal'
+      ? personalDistanceRef.current
+      : progress
+        ? progress.total_distance * KM_TO_MILES
+        : userDistance.value;
+
+    if (newDistanceMiles !== userDistance.value) {
+      userDistance.value = newDistanceMiles;
+      const newPos = getUserPosition(fellowshipPath, newDistanceMiles);
+
+      if (pathNodesRef.current) {
+        updateJourneyPath(pathNodesRef.current, newDistanceMiles, currentScale.value);
+        pathLayerRef.current?.batchDraw();
+      }
+
+      if (markerRef.current) {
+        markerRef.current.setDistance(newDistanceMiles);
+        markerRef.current.setPosition(newPos, true);
+        markerLayerRef.current?.batchDraw();
+      }
+
+      if (waypointMarkersRef.current) {
+        updateWaypointVisibility();
+      }
+
+      centerOnPosition(newPos, currentScale.value, true);
+    }
+
     showPartyPanel.value = false;
-  }, [drawMemberPaths]);
+  }, [drawMemberPaths, centerOnPosition]);
 
   // Fetch user parties on mount
   useEffect(() => {
@@ -939,6 +973,7 @@ export function MapIsland() {
           : distMiles;
 
         userDistance.value = initialDistance;
+        personalDistanceRef.current = distMiles;
 
         // Populate mapStore userProgress for MapWalkIsland to use
         userProgress.value = {
