@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { GoalModal } from './GoalModal';
+import { ActivityFeed } from '../components/ActivityFeed';
 import type { Goal } from '../types/goal';
 
 interface MilestoneData {
@@ -21,6 +22,7 @@ interface PartyMember {
 }
 
 interface PartyProgressData {
+  current_user_id: number;
   total_distance: number;
   user_total_distance?: number;
   member_count: number;
@@ -270,13 +272,10 @@ export function PartyDetailIsland() {
         </ul>
       </div>
 
-      {/* Activity Feed Placeholder */}
+      {/* Activity Feed */}
       <div className="party-card">
         <h3>Activity</h3>
-        <div className="party-activity-placeholder">
-          <i className="fas fa-stream" aria-hidden="true" style={{ marginBottom: '0.3rem', display: 'block' }}></i>
-          Activity feed coming soon
-        </div>
+        <ActivityFeed partyId={partyId} currentUserId={progress.current_user_id} />
       </div>
 
       {/* Invite Link */}

@@ -1,6 +1,6 @@
 # Story 3.8: Fellowship Progress Activity Feed
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,19 +22,19 @@ so that I can stay motivated and see how others are contributing to our shared j
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Activity Feed Component (AC: 1, 2, 3, 5, 6)
-  - [ ] Create `ActivityFeed.tsx` component in `client/src/components/`.
-  - [ ] Implement fetching logic using `GET /api/party/:id/activity`.
-  - [ ] Render the list of activities with appropriate formatting.
-  - [ ] Add visual distinction for the current user's activities (e.g., "You walked...").
-  - [ ] Implement empty state UI.
-- [ ] Task 2: Auto-refresh Logic (AC: 4)
-  - [ ] Implement `setInterval` for 60-second polling.
-  - [ ] Add event listener for `visibilitychange` to refresh on page focus.
-  - [ ] Ensure cleanup of intervals and listeners on component unmount.
-- [ ] Task 3: Integration & Error Handling (AC: 1, 7)
-  - [ ] Integrate `ActivityFeed` into `PartyDetailIsland.tsx` (from Story 3.7).
-  - [ ] Handle API errors (e.g., 403 if kicked) by displaying an appropriate message or hiding the feed.
+- [x] Task 1: Activity Feed Component (AC: 1, 2, 3, 5, 6)
+  - [x] Create `ActivityFeed.tsx` component in `client/src/components/`.
+  - [x] Implement fetching logic using `GET /api/party/:id/activity`.
+  - [x] Render the list of activities with appropriate formatting.
+  - [x] Add visual distinction for the current user's activities (e.g., "You walked...").
+  - [x] Implement empty state UI.
+- [x] Task 2: Auto-refresh Logic (AC: 4)
+  - [x] Implement `setInterval` for 60-second polling.
+  - [x] Add event listener for `visibilitychange` to refresh on page focus.
+  - [x] Ensure cleanup of intervals and listeners on component unmount.
+- [x] Task 3: Integration & Error Handling (AC: 1, 7)
+  - [x] Integrate `ActivityFeed` into `PartyDetailIsland.tsx` (from Story 3.7).
+  - [x] Handle API errors (e.g., 403 if kicked) by displaying an appropriate message or hiding the feed.
 
 ## Dev Notes
 
@@ -65,10 +65,28 @@ Requirements expanded from original spec:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Created ActivityFeed Preact component with fetch, auto-refresh (60s polling + visibilitychange), date formatting (Today/Yesterday/MMM D), own-activity highlighting
+- Integrated into PartyDetailIsland replacing placeholder
+- Added current_user_id to party progress API response for client-side user identification
+- Added CSS styles for activity feed items with own-activity visual distinction
+- 10 new client tests covering all acceptance criteria
+
 ### File List
+
+- client/src/components/ActivityFeed.tsx (NEW)
+- client/src/components/ActivityFeed.test.tsx (NEW)
+- client/src/islands/PartyDetailIsland.tsx (MODIFIED)
+- src/party-handlers.ts (MODIFIED)
+- public/css/party.css (MODIFIED)
+
+## Change Log
+
+| Date | Summary |
+|------|---------|
+| 2026-03-03 | Implemented activity feed component, integration, auto-refresh, tests |

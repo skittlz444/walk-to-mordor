@@ -587,6 +587,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
     const userTotalDistance = requestingMember ? Number(requestingMember.total_distance) : 0;
 
     return createSuccessResponse({
+      current_user_id: userId,
       total_distance: totalDistance,
       user_total_distance: userTotalDistance,
       member_count: activeMembers.length,
