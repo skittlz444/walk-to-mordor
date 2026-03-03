@@ -123,10 +123,14 @@ export function PartyJoinIsland() {
             {preview.member_count} {preview.member_count === 1 ? 'member' : 'members'}
           </div>
           <div className="party-join-preview__detail">
-            Mode: {preview.distance_mode === 'cumulative' ? 'Cumulative' : 'Average'}
+            {preview.distance_mode === 'cumulative'
+              ? '🏃 Everyone\'s distance adds together'
+              : '📊 Progress is averaged across members'}
           </div>
           <div className="party-join-preview__detail">
-            Departures: {preview.leave_distance_behavior === 'keep' ? 'Distance kept' : 'Distance removed'}
+            {preview.leave_distance_behavior === 'keep'
+              ? '✅ Distance stays if someone leaves'
+              : '↩️ Distance removed if someone leaves'}
           </div>
         </div>
 

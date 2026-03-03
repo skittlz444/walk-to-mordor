@@ -194,7 +194,7 @@ export function PartyListIsland() {
           <div>
             <div className="party-list-item__name">{party.name}</div>
             <div className="party-list-item__meta">
-              {party.role === 'leader' && <span>👑 Leader · </span>}
+              {party.role === 'leader' ? <span>👑 Leader · </span> : <span>👤 Member · </span>}
               {party.active_member_count} {party.active_member_count === 1 ? 'member' : 'members'}
             </div>
           </div>

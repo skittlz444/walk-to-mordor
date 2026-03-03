@@ -39,6 +39,8 @@ interface PartyInfo {
   role: string;
   invite_code: string;
   leader_id: number;
+  distance_mode: string;
+  leave_distance_behavior: string;
 }
 
 const MEMBER_COLORS = [
@@ -197,6 +199,16 @@ export function PartyDetailIsland() {
 
       <h2>{partyInfo.name}</h2>
 
+      {/* Fellowship Settings Badges */}
+      <div className="party-settings-badges">
+        <span className="party-settings-badge">
+          📊 {partyInfo.distance_mode === 'cumulative' ? 'Cumulative' : 'Average'} mode
+        </span>
+        <span className="party-settings-badge">
+          🚪 {partyInfo.leave_distance_behavior === 'keep' ? 'Distance kept on departure' : 'Distance removed on departure'}
+        </span>
+      </div>
+
       {/* Progress Stats */}
       <div className="party-progress">
         <div className="party-progress__stat">
@@ -212,6 +224,7 @@ export function PartyDetailIsland() {
             className="party-progress__stat party-progress__stat--clickable"
             role="button"
             tabIndex={0}
+            title={progress.calculated_position.title}
             aria-label={`Previous milestone: ${progress.calculated_position.title}`}
             onClick={() => { setModalGoal(milestoneToGoal(progress.calculated_position!)); setModalDistance(progress.total_distance); }}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalGoal(milestoneToGoal(progress.calculated_position!)); setModalDistance(progress.total_distance); } }}
@@ -225,6 +238,7 @@ export function PartyDetailIsland() {
             className="party-progress__stat party-progress__stat--clickable"
             role="button"
             tabIndex={0}
+            title={`${progress.next_position.title} — ${(progress.next_position.distance - progress.total_distance).toFixed(2)} km to go`}
             aria-label={`Next milestone: ${progress.next_position.title} — ${(progress.next_position.distance - progress.total_distance).toFixed(2)} km to go`}
             onClick={() => { setModalGoal(milestoneToGoal(progress.next_position!)); setModalDistance(progress.user_total_distance ?? progress.total_distance); }}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setModalGoal(milestoneToGoal(progress.next_position!)); setModalDistance(progress.user_total_distance ?? progress.total_distance); } }}
@@ -246,8 +260,10 @@ export function PartyDetailIsland() {
         <ul className="party-member-list" role="list">
           {progress.members
             .sort((a, b) => b.contribution - a.contribution)
-            .map(member => (
-              <li key={member.user_id} className="party-member-item">
+            .map(member => {
+              const isCurrentUser = member.user_id === progress.current_user_id;
+              return (
+              <li key={member.user_id} className={`party-member-item${isCurrentUser ? ' party-member-item--self' : ''}`}>
                 <span
                   className="party-member-color"
                   style={{ backgroundColor: MEMBER_COLORS[member.color] || '#888' }}
@@ -256,19 +272,25 @@ export function PartyDetailIsland() {
                 <div className="party-member-info">
                   <span className="party-member-name">
                     {member.display_name}
+                    {isCurrentUser && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', marginLeft: '0.4em', fontWeight: 400 }}>
+                        (You)
+                      </span>
+                    )}
                     {member.status !== 'active' && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.4em' }}>
                         ({member.status})
                       </span>
                     )}
                   </span>
-                  <span className="party-member-joined" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span className="party-member-joined">
                     Joined {new Date(member.joined_at).toLocaleDateString()}
                   </span>
                 </div>
                 <span className="party-member-contribution">{member.contribution.toFixed(2)} km</span>
               </li>
-            ))}
+              );
+            })}
         </ul>
       </div>
 
