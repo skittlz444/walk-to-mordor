@@ -93,10 +93,8 @@ test.describe('Story 3-7: Fellowships Pages', () => {
     await loginAs(page, skittlz1Token, '/party');
     // Island mount should be visible
     await expect(page.locator('[data-island="PartyListIsland"]')).toBeVisible({ timeout: 5000 });
-    // Should show either the empty state or "Your Fellowships" heading
-    const heading = page.locator('text=Your Fellowships');
-    const emptyState = page.locator('text=haven\'t joined');
-    await expect(heading.or(emptyState)).toBeVisible({ timeout: 8000 });
+    // Should show the "Your Fellowships" heading (always present once loaded)
+    await expect(page.locator('h2', { hasText: 'Your Fellowships' })).toBeVisible({ timeout: 8000 });
   });
 
   test('Create fellowship UI flow', async ({ page, skittlz1Token }) => {
