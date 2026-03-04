@@ -35,6 +35,10 @@ import {
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
+import { renderPartyListPage } from "./renderPartyListPage";
+import { renderPartyDetailPage } from "./renderPartyDetailPage";
+import { renderPartyManagePage } from "./renderPartyManagePage";
+import { renderPartyJoinPage } from "./renderPartyJoinPage";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -298,7 +302,7 @@ export default {
     }
 
     // Main page - serve auth page for /login
-    if (url.pathname === "/login" || url.pathname === "/wtm/login") {
+    if (url.pathname === "/login") {
       return new Response(renderAuthPage(), {
         headers: {
           "content-type": "text/html",
@@ -307,7 +311,7 @@ export default {
     }
     
     // Password reset request page
-    if (url.pathname === "/password-reset" || url.pathname === "/wtm/password-reset") {
+    if (url.pathname === "/password-reset") {
       return new Response(renderPasswordResetRequestPage(), {
         headers: {
           "content-type": "text/html",
@@ -316,7 +320,7 @@ export default {
     }
     
     // Password reset with token page
-    if (url.pathname === "/reset-password" || url.pathname === "/wtm/reset-password") {
+    if (url.pathname === "/reset-password") {
       return new Response(renderPasswordResetPage(), {
         headers: {
           "content-type": "text/html",
@@ -328,7 +332,36 @@ export default {
       return handleMapPage(request, env);
     }
 
-    if (url.pathname === "/" || url.pathname === "/wtm") {
+    // Party (Fellowship) pages
+    // Must check /party/join/:code before /party/:id to avoid matching "join" as an id
+    const partyJoinPageParams = matchRoute(url.pathname, '/party/join/:inviteCode');
+    if (partyJoinPageParams) {
+      return new Response(renderPartyJoinPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    const partyManagePageParams = matchRoute(url.pathname, '/party/:id/manage');
+    if (partyManagePageParams) {
+      return new Response(renderPartyManagePage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    const partyDetailPageParams = matchRoute(url.pathname, '/party/:id');
+    if (partyDetailPageParams) {
+      return new Response(renderPartyDetailPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    if (url.pathname === "/party") {
+      return new Response(renderPartyListPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    if (url.pathname === "/") {
       return new Response(renderHomePage(), {
         headers: {
           "content-type": "text/html",
@@ -338,7 +371,7 @@ export default {
       });
     }
 
-    if (url.pathname === "/journey" || url.pathname === "/wtm/journey") {
+    if (url.pathname === "/journey") {
       return new Response(renderHtml(), {
         headers: {
           "content-type": "text/html",

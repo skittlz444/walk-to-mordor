@@ -131,6 +131,7 @@ export function DrawerIsland() {
         <nav className="drawer-nav">
           <a className="drawer-link" href="/journey" onClick={closeDrawer}>Journey</a>
           <a className="drawer-link" href="/map" onClick={closeDrawer}>Map</a>
+          <a className="drawer-link" href="/party" onClick={closeDrawer}>Fellowships</a>
           <button className="drawer-link drawer-profile" type="button" onClick={handleProfileClick}>Profile</button>
         </nav>
         <div className="drawer-footer">

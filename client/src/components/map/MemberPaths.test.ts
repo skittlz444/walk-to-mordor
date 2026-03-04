@@ -29,10 +29,7 @@ vi.mock('../../data/paths/fellowship-path', () => ({
 }));
 
 vi.mock('../../utils/map-utils', () => ({
-  calculateCutoffPoint: vi.fn(() => ({
-    completedPoints: [0, 0, 50, 0],
-    futurePoints: [50, 0, 100, 0],
-  })),
+  calculatePathSegment: vi.fn(() => [0, 0, 50, 0, 100, 0]),
   dynamicStrokeWidth: vi.fn((_base, _scale, _min, _max) => 4),
 }));
 

@@ -79,8 +79,8 @@ development_status:
   3-4-fellowship-progress-calculation-api: review
   3-5-leave-kick-party-management-api: done
   3-6-fellowship-ui-journey-map-party-selector: review
-  3-7-fellowship-ui-fellowships-pages: ready-for-dev
-  3-8-fellowship-progress-activity-feed: ready-for-dev
+  3-7-fellowship-ui-fellowships-pages: review
+  3-8-fellowship-progress-activity-feed: review
   3-9-fellowship-notifications-party-milestones: cancelled
   epic-3-retrospective: optional
 

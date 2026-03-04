@@ -125,8 +125,8 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
           results: [
-            { user_id: 1, display_name: 'Alice', distance_at_join: 10, total_distance: 30 },
-            { user_id: 2, display_name: 'Bob', distance_at_join: 5, total_distance: 20 },
+            { user_id: 1, display_name: 'Alice', distance_at_join: 10, total_distance: 30, joined_at: '2026-01-15T00:00:00Z' },
+            { user_id: 2, display_name: 'Bob', distance_at_join: 5, total_distance: 20, joined_at: '2026-01-16T00:00:00Z' },
           ],
         }),
       }));
@@ -137,6 +137,10 @@ describe('Party Progress API (Story 3.4)', () => {
       // Milestone position
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue({ id: 5, title: 'Rivendell', distance: 30 }),
+      }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
       }));
       // Newly passed milestones
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
@@ -159,12 +163,14 @@ describe('Party Progress API (Story 3.4)', () => {
       expect(data.member_count).toBe(2);
       expect(data.distance_mode).toBe('incremental');
       expect(data.leave_distance_behavior).toBe('keep');
-      expect(data.calculated_position).toEqual({ id: 5, title: 'Rivendell', distance: 30 });
+      expect(data.calculated_position).toEqual({ id: 5, title: 'Rivendell', distance: 30, description: null, image_id: null, special: null });
+      expect(data.user_total_distance).toBe(30);
       expect(data.members).toHaveLength(2);
       expect(data.members[0]).toEqual({
         user_id: 1,
         display_name: 'Alice',
         contribution: 20,
+        joined_at: '2026-01-15T00:00:00Z',
         status: 'active',
         color: 1 % 12,
       });
@@ -172,6 +178,7 @@ describe('Party Progress API (Story 3.4)', () => {
         user_id: 2,
         display_name: 'Bob',
         contribution: 15,
+        joined_at: '2026-01-16T00:00:00Z',
         status: 'active',
         color: 2 % 12,
       });
@@ -196,8 +203,8 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
           results: [
-            { user_id: 1, display_name: 'Alice', distance_at_join: 10, total_distance: 30 },
-            { user_id: 2, display_name: 'Bob', distance_at_join: 5, total_distance: 20 },
+            { user_id: 1, display_name: 'Alice', distance_at_join: 10, total_distance: 30, joined_at: '2026-01-15T00:00:00Z' },
+            { user_id: 2, display_name: 'Bob', distance_at_join: 5, total_distance: 20, joined_at: '2026-01-16T00:00:00Z' },
           ],
         }),
       }));
@@ -206,6 +213,10 @@ describe('Party Progress API (Story 3.4)', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
       // Milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
+      // Next milestone
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue(null),
       }));
@@ -227,6 +238,60 @@ describe('Party Progress API (Story 3.4)', () => {
       expect(data.members[1].contribution).toBe(20);
     });
 
+    it('should return next_position when a goal exists beyond current distance', async () => {
+      // Party lookup
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({
+          id: 1,
+          distance_mode: 'cumulative',
+          leave_distance_behavior: 'keep',
+          dissolved_at: null,
+        }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10, last_viewed_distance: 0 }),
+      }));
+      // Active members
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { user_id: 1, display_name: 'Alice', distance_at_join: 0, total_distance: 50, joined_at: '2026-01-15T00:00:00Z' },
+          ],
+        }),
+      }));
+      // Departed members
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({ results: [] }),
+      }));
+      // Current milestone position (at 45km)
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 7, title: 'Weathertop', distance: 45, description: 'A great hill', image_id: 'img-7', special: null }),
+      }));
+      // Next milestone (at 72km)
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 8, title: 'Rivendell', distance: 72, description: 'Last Homely House', image_id: 'img-8', special: 'rivendell' }),
+      }));
+      // Newly passed milestones
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({ results: [] }),
+      }));
+      // Update last_viewed_distance
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock());
+
+      const response = await handlePartyProgress(mockRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+
+      expect(data.calculated_position).toEqual({
+        id: 7, title: 'Weathertop', distance: 45, description: 'A great hill', image_id: 'img-7', special: null,
+      });
+      expect(data.next_position).toEqual({
+        id: 8, title: 'Rivendell', distance: 72, description: 'Last Homely House', image_id: 'img-8', special: 'rivendell',
+      });
+      expect(data.user_total_distance).toBe(50);
+    });
+
     it('should include departed members with distance_kept = 1', async () => {
       // Party lookup
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
@@ -245,7 +310,7 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
           results: [
-            { user_id: 1, display_name: 'Alice', distance_at_join: 0, total_distance: 20 },
+            { user_id: 1, display_name: 'Alice', distance_at_join: 0, total_distance: 20, joined_at: '2026-01-15T00:00:00Z' },
           ],
         }),
       }));
@@ -253,12 +318,16 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
           results: [
-            { user_id: 3, display_name: 'Charlie', status: 'left', contribution_at_departure: 15 },
-            { user_id: 4, display_name: 'Diana', status: 'kicked', contribution_at_departure: 8 },
+            { user_id: 3, display_name: 'Charlie', status: 'left', contribution_at_departure: 15, joined_at: '2026-01-10T00:00:00Z' },
+            { user_id: 4, display_name: 'Diana', status: 'kicked', contribution_at_departure: 8, joined_at: '2026-01-11T00:00:00Z' },
           ],
         }),
       }));
       // Milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
+      // Next milestone
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue(null),
       }));
@@ -303,7 +372,7 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
           results: [
-            { user_id: 1, display_name: 'Alice', distance_at_join: 50, total_distance: 30 },
+            { user_id: 1, display_name: 'Alice', distance_at_join: 50, total_distance: 30, joined_at: '2026-01-15T00:00:00Z' },
           ],
         }),
       }));
@@ -312,6 +381,10 @@ describe('Party Progress API (Story 3.4)', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
       // Milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
+      // Next milestone
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue(null),
       }));
@@ -347,10 +420,10 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
           results: [
-            { user_id: 0, display_name: 'U0', distance_at_join: 0, total_distance: 10 },
-            { user_id: 11, display_name: 'U11', distance_at_join: 0, total_distance: 10 },
-            { user_id: 12, display_name: 'U12', distance_at_join: 0, total_distance: 10 },
-            { user_id: 25, display_name: 'U25', distance_at_join: 0, total_distance: 10 },
+            { user_id: 0, display_name: 'U0', distance_at_join: 0, total_distance: 10, joined_at: '2026-01-15T00:00:00Z' },
+            { user_id: 11, display_name: 'U11', distance_at_join: 0, total_distance: 10, joined_at: '2026-01-15T00:00:00Z' },
+            { user_id: 12, display_name: 'U12', distance_at_join: 0, total_distance: 10, joined_at: '2026-01-15T00:00:00Z' },
+            { user_id: 25, display_name: 'U25', distance_at_join: 0, total_distance: 10, joined_at: '2026-01-15T00:00:00Z' },
           ],
         }),
       }));
@@ -360,6 +433,10 @@ describe('Party Progress API (Story 3.4)', () => {
       }));
       // Milestone
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({ first: jest.fn().mockResolvedValue(null) }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
       // Newly passed milestones
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
@@ -394,7 +471,7 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
           results: [
-            { user_id: 1, display_name: 'Alice', distance_at_join: 0, total_distance: 100 },
+            { user_id: 1, display_name: 'Alice', distance_at_join: 0, total_distance: 100, joined_at: '2026-01-15T00:00:00Z' },
           ],
         }),
       }));
@@ -405,6 +482,10 @@ describe('Party Progress API (Story 3.4)', () => {
       // Milestone position
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         first: jest.fn().mockResolvedValue({ id: 8, title: 'Weathertop', distance: 90 }),
+      }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
       }));
       // Newly passed milestones (between 50 and 100)
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
@@ -445,7 +526,7 @@ describe('Party Progress API (Story 3.4)', () => {
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
           results: [
-            { user_id: 1, display_name: 'Alice', distance_at_join: 0, total_distance: 75 },
+            { user_id: 1, display_name: 'Alice', distance_at_join: 0, total_distance: 75, joined_at: '2026-01-15T00:00:00Z' },
           ],
         }),
       }));
@@ -455,6 +536,10 @@ describe('Party Progress API (Story 3.4)', () => {
       }));
       // Milestone
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({ first: jest.fn().mockResolvedValue(null) }));
+      // Next milestone
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
       // Newly passed milestones
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),

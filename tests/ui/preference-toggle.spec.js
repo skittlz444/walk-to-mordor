@@ -401,9 +401,19 @@ test.describe('User Goal Visibility Preference', () => {
       // Root should apply default-map preference.
       await page.goto(BASE_URL + '/');
       await expect(page).toHaveURL(/\/map$/);
+      await page.waitForLoadState('networkidle');
 
       // Journey route should remain accessible explicitly.
-      await page.goto(BASE_URL + '/journey');
+      // Firefox may NS_BINDING_ABORTED if service worker is still active from /map; retry once.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await page.goto(BASE_URL + '/journey');
+          break;
+        } catch (e) {
+          if (attempt === 1 || !String(e).includes('NS_BINDING_ABORTED')) throw e;
+          await page.waitForTimeout(1000);
+        }
+      }
       await page.waitForSelector('header', { timeout: 10000 });
       await expect(page).toHaveURL(/\/journey$/);
 

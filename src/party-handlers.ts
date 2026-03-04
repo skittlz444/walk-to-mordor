@@ -11,6 +11,9 @@ interface GoalRow {
   id: number;
   title: string;
   distance: number;
+  description?: string | null;
+  image_id?: string | null;
+  special?: string | null;
 }
 
 /** D1 result row for parties table */
@@ -390,7 +393,7 @@ export async function handleRegenerateInvite(request: Request, env: { DB: D1Data
  *
  * Returns active memberships by default (non-dissolved parties).
  * With ?include_dissolved=true, also returns dissolved parties.
- * Each result includes id, name, role, distance_mode, leave_distance_behavior, active_member_count, dissolved_at.
+ * Each result includes id, name, role, distance_mode, leave_distance_behavior, invite_code, leader_id, active_member_count, dissolved_at.
  */
 export async function handleGetUserParties(request: Request, env: { DB: D1Database }): Promise<Response> {
   const sessionValidation = await validateSession(request, env);
@@ -407,6 +410,7 @@ export async function handleGetUserParties(request: Request, env: { DB: D1Databa
     if (includeDissolved) {
       query = `
         SELECT p.id, p.name, pm.role, p.distance_mode, p.leave_distance_behavior, p.dissolved_at,
+               p.invite_code, p.leader_id,
                (SELECT COUNT(*) FROM party_members pm2 WHERE pm2.party_id = p.id AND pm2.status = 'active') as active_member_count
         FROM party_members pm
         JOIN parties p ON pm.party_id = p.id
@@ -415,6 +419,7 @@ export async function handleGetUserParties(request: Request, env: { DB: D1Databa
     } else {
       query = `
         SELECT p.id, p.name, pm.role, p.distance_mode, p.leave_distance_behavior, p.dissolved_at,
+               p.invite_code, p.leader_id,
                (SELECT COUNT(*) FROM party_members pm2 WHERE pm2.party_id = p.id AND pm2.status = 'active') as active_member_count
         FROM party_members pm
         JOIN parties p ON pm.party_id = p.id
@@ -437,6 +442,7 @@ interface ActiveMemberDistanceRow {
   display_name: string;
   distance_at_join: number;
   total_distance: number;
+  joined_at: string;
 }
 
 /** Row shape for departed member with kept contributions */
@@ -445,6 +451,7 @@ interface DepartedMemberRow {
   display_name: string;
   status: string;
   contribution_at_departure: number | null;
+  joined_at: string;
 }
 
 /** Row shape for activity feed entries */
@@ -494,11 +501,12 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
 
     // Get active members with their total distances
     const { results: activeMembers } = await env.DB.prepare(
-      `SELECT pm.user_id, u.username as display_name, pm.distance_at_join,
+      `SELECT pm.user_id, u.username as display_name, pm.distance_at_join, pm.joined_at,
               COALESCE((SELECT SUM(p.distance) FROM progress p WHERE p.user_id = pm.user_id), 0) as total_distance
        FROM party_members pm
        JOIN users u ON pm.user_id = u.id
-       WHERE pm.party_id = ? AND pm.status = ?`
+       WHERE pm.party_id = ? AND pm.status = ?
+       ORDER BY pm.joined_at ASC, pm.user_id ASC`
     ).bind(partyId, 'active').all<ActiveMemberDistanceRow>();
 
     // Calculate active member contributions
@@ -506,6 +514,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
       user_id: number;
       display_name: string;
       contribution: number;
+      joined_at: string;
       status: string;
       color: number;
     }> = [];
@@ -524,6 +533,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
         user_id: member.user_id,
         display_name: member.display_name,
         contribution,
+        joined_at: member.joined_at,
         status: 'active',
         color: member.user_id % COLOR_PALETTE_SIZE,
       });
@@ -531,10 +541,11 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
 
     // Handle departed members with kept contributions
     const { results: departedMembers } = await env.DB.prepare(
-      `SELECT pm.user_id, u.username as display_name, pm.status, pm.contribution_at_departure
+      `SELECT pm.user_id, u.username as display_name, pm.status, pm.contribution_at_departure, pm.joined_at
        FROM party_members pm
        JOIN users u ON pm.user_id = u.id
-       WHERE pm.party_id = ? AND pm.status IN ('left', 'kicked') AND pm.distance_kept = 1`
+       WHERE pm.party_id = ? AND pm.status IN ('left', 'kicked') AND pm.distance_kept = 1
+       ORDER BY pm.joined_at ASC, pm.user_id ASC`
     ).bind(partyId).all<DepartedMemberRow>();
 
     for (const departed of departedMembers) {
@@ -544,6 +555,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
         user_id: departed.user_id,
         display_name: departed.display_name,
         contribution,
+        joined_at: departed.joined_at,
         status: departed.status,
         color: departed.user_id % COLOR_PALETTE_SIZE,
       });
@@ -554,7 +566,12 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
 
     // Calculate milestone position (latest milestone ≤ total_distance)
     const calculatedPosition = await env.DB.prepare(
-      'SELECT id, title, distance FROM goals WHERE distance <= ? ORDER BY distance DESC LIMIT 1'
+      'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance <= ? ORDER BY distance DESC LIMIT 1'
+    ).bind(totalDistance).first<GoalRow>();
+
+    // Calculate next milestone (first goal > total_distance)
+    const nextPosition = await env.DB.prepare(
+      'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance > ? ORDER BY distance ASC LIMIT 1'
     ).bind(totalDistance).first<GoalRow>();
 
     // Get newly passed milestones (between previous last_viewed_distance and current total)
@@ -567,11 +584,20 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
       'UPDATE party_members SET last_viewed_distance = ? WHERE party_id = ? AND user_id = ?'
     ).bind(totalDistance, partyId, userId).run();
 
+    // Extract requesting user's personal total distance from activeMembers (avoids extra DB call)
+    const requestingMember = activeMembers.find((m) => m.user_id === userId);
+    const userTotalDistance = requestingMember ? Number(requestingMember.total_distance) : 0;
+
     return createSuccessResponse({
+      current_user_id: userId,
       total_distance: totalDistance,
+      user_total_distance: userTotalDistance,
       member_count: activeMembers.length,
       calculated_position: calculatedPosition
-        ? { id: calculatedPosition.id, title: calculatedPosition.title, distance: calculatedPosition.distance }
+        ? { id: calculatedPosition.id, title: calculatedPosition.title, distance: calculatedPosition.distance, description: calculatedPosition.description ?? null, image_id: calculatedPosition.image_id ?? null, special: calculatedPosition.special ?? null }
+        : null,
+      next_position: nextPosition
+        ? { id: nextPosition.id, title: nextPosition.title, distance: nextPosition.distance, description: nextPosition.description ?? null, image_id: nextPosition.image_id ?? null, special: nextPosition.special ?? null }
         : null,
       distance_mode: party.distance_mode,
       leave_distance_behavior: party.leave_distance_behavior,

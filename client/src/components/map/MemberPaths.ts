@@ -1,14 +1,15 @@
 /**
  * MemberPaths – renders color-coded Konva.Line segments for each party member.
  *
- * Each member gets a segment from 0 to their contribution distance on the path.
+ * Member segments are stacked end-to-end along the shared path so each
+ * contribution occupies its own contiguous section.
  * Colors are assigned deterministically via the party-colors palette.
  * Departed members use muted colors.
  */
 
 import Konva from 'konva';
 import { fellowshipPath } from '../../data/paths/fellowship-path';
-import { calculateCutoffPoint, dynamicStrokeWidth } from '../../utils/map-utils';
+import { calculatePathSegment, dynamicStrokeWidth } from '../../utils/map-utils';
 import { getMemberColor, getMutedMemberColor } from '../../utils/party-colors';
 
 const BASE_STROKE = 4;
@@ -42,23 +43,33 @@ export function createMemberPaths(
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
   const lines: Konva.Line[] = [];
 
-  // Sort by distance so shorter paths are drawn on top of longer ones
-  const sorted = [...members].sort((a, b) => b.distanceMiles - a.distanceMiles);
+  // Calculate cumulative offsets so each member's segment starts
+  // where the previous one ended (stacked along the path).
+  let cumOffset = 0;
+  const segments = members.map(member => {
+    const start = cumOffset;
+    const end = cumOffset + member.distanceMiles;
+    cumOffset = end;
+    return { member, start, end };
+  });
 
-  for (const member of sorted) {
+  for (const { member, start, end } of segments) {
     if (member.distanceMiles <= 0) continue;
 
-    const { completedPoints } = calculateCutoffPoint(
+    const segmentPoints = calculatePathSegment(
       fellowshipPath,
-      member.distanceMiles,
+      start,
+      end,
     );
+
+    if (segmentPoints.length === 0) continue;
 
     const color = member.isDeparted
       ? getMutedMemberColor(member.colorIndex)
       : getMemberColor(member.colorIndex);
 
     const line = new Konva.Line({
-      points: completedPoints,
+      points: segmentPoints,
       stroke: color,
       strokeWidth,
       opacity: member.isDeparted ? 0.5 : 0.85,
