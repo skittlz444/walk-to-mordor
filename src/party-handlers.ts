@@ -505,7 +505,8 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
               COALESCE((SELECT SUM(p.distance) FROM progress p WHERE p.user_id = pm.user_id), 0) as total_distance
        FROM party_members pm
        JOIN users u ON pm.user_id = u.id
-       WHERE pm.party_id = ? AND pm.status = ?`
+       WHERE pm.party_id = ? AND pm.status = ?
+       ORDER BY pm.joined_at ASC, pm.user_id ASC`
     ).bind(partyId, 'active').all<ActiveMemberDistanceRow>();
 
     // Calculate active member contributions
@@ -543,7 +544,8 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
       `SELECT pm.user_id, u.username as display_name, pm.status, pm.contribution_at_departure, pm.joined_at
        FROM party_members pm
        JOIN users u ON pm.user_id = u.id
-       WHERE pm.party_id = ? AND pm.status IN ('left', 'kicked') AND pm.distance_kept = 1`
+       WHERE pm.party_id = ? AND pm.status IN ('left', 'kicked') AND pm.distance_kept = 1
+       ORDER BY pm.joined_at ASC, pm.user_id ASC`
     ).bind(partyId).all<DepartedMemberRow>();
 
     for (const departed of departedMembers) {

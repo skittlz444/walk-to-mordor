@@ -129,7 +129,7 @@ export function PartyListIsland() {
       setInviteCode('');
       setPreview(null);
       setShowJoin(false);
-      setSuccessMsg(`Joined "${data.name}"!`);
+      setSuccessMsg(`Joined "${data.party_name}"!`);
       await fetchParties();
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : 'Failed to join fellowship');

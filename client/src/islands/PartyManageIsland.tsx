@@ -18,6 +18,7 @@ interface PartyInfo {
 interface PartyProgressData {
   total_distance: number;
   member_count: number;
+  current_user_id: number;
   distance_mode: string;
   leave_distance_behavior: string;
   members: PartyMember[];
@@ -67,17 +68,7 @@ export function PartyManageIsland() {
     setError(null);
     try {
       const headers = getAuthHeaders();
-      // Parallel fetch for session, parties, and progress
-      const [sessionRes, partiesRes, progressRes] = await Promise.all([
-        fetch('/api/session', { headers }),
-        fetch('/api/user/parties', { headers }),
-        fetch(`/api/party/${partyId}/progress`, { headers }),
-      ]);
-
-      if (sessionRes.ok) {
-        const sessionData = await sessionRes.json();
-        setCurrentUserId(sessionData.userId ?? null);
-      }
+      const partiesRes = await fetch('/api/user/parties', { headers });
 
       if (!partiesRes.ok) {
         if (partiesRes.status === 401) { window.location.href = '/login'; return; }
@@ -97,8 +88,10 @@ export function PartyManageIsland() {
       setSettingsName(info.name);
       setSettingsLeaveBehavior(info.leave_distance_behavior);
 
+      const progressRes = await fetch(`/api/party/${partyId}/progress`, { headers });
       if (progressRes.ok) {
         const progressData: PartyProgressData = await progressRes.json();
+        setCurrentUserId(progressData.current_user_id ?? null);
         setMembers(progressData.members.filter(m => m.status === 'active'));
       }
     } catch (err) {

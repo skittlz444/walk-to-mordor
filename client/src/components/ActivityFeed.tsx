@@ -81,6 +81,10 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
       });
 
       if (res.status === 403) {
+        if (intervalRef.current !== null) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
         setState({ activities: [], loading: false, error: null, forbidden: true });
         return;
       }

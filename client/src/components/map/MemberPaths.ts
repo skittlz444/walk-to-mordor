@@ -1,7 +1,8 @@
 /**
  * MemberPaths – renders color-coded Konva.Line segments for each party member.
  *
- * Each member gets a segment from 0 to their contribution distance on the path.
+ * Member segments are stacked end-to-end along the shared path so each
+ * contribution occupies its own contiguous section.
  * Colors are assigned deterministically via the party-colors palette.
  * Departed members use muted colors.
  */

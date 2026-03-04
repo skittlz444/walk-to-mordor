@@ -398,15 +398,10 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
 
     const clickableStats = page.locator('.party-progress__stat--clickable');
     const count = await clickableStats.count();
-    if (count > 0) {
-      await clickableStats.first().click();
-      await page.waitForTimeout(1000);
-      // A modal or overlay should appear
-      const modal = page.locator('.goal-modal, .modal, [role="dialog"]');
-      const modalVisible = await modal.isVisible({ timeout: 3000 }).catch(() => false);
-      // Even if modal doesn't show, the click didn't crash
-      expect(true).toBeTruthy();
-    }
+    expect(count).toBeGreaterThan(0);
+    await clickableStats.first().click();
+    await page.waitForTimeout(1000);
+    await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 3000 });
   });
 });
 
@@ -481,7 +476,7 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
     // Toggle for distance removal should exist
     const toggle = dialog.locator('.party-toggle, input[type="checkbox"]');
     const toggleExists = await toggle.count();
-    expect(toggleExists).toBeGreaterThanOrEqual(0); // may or may not have toggle
+    expect(toggleExists).toBeGreaterThan(0);
 
     // Cancel
     await dialog.locator('button:has-text("Cancel")').click();
@@ -948,7 +943,7 @@ test.describe('Story 3-6: Party Selector on Map Page', () => {
     const toggleBtn = page.locator('.map-party-toggle');
     const toggleVisible = await toggleBtn.isVisible({ timeout: 5000 }).catch(() => false);
     // Toggle should appear since user has parties
-    expect(typeof toggleVisible).toBe('boolean');
+    expect(toggleVisible).toBeTruthy();
   });
 });
 

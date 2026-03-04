@@ -261,8 +261,9 @@ test.describe('Story 3-8: Activity Feed', () => {
     // Also check non-own activities exist
     const allItems = page.locator('.party-activity-item');
     const allCount = await allItems.count();
-    // Should have at least 1 activity item (from either user)
-    expect(allCount).toBeGreaterThanOrEqual(0); // relaxed - depends on sync
+    const emptyVisible = await page.locator('text=No recent activity').isVisible().catch(() => false);
+    // Feed should render either activity rows or an explicit empty state
+    expect(allCount > 0 || emptyVisible).toBeTruthy();
   });
 
   test('403 redirects kicked member gracefully', async ({ page, request, skittlz1Token, test1Token }) => {

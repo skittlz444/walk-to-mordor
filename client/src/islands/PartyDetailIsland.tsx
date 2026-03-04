@@ -258,7 +258,7 @@ export function PartyDetailIsland() {
       <div className="party-card">
         <h3>Members</h3>
         <ul className="party-member-list" role="list">
-          {progress.members
+          {[...progress.members]
             .sort((a, b) => b.contribution - a.contribution)
             .map(member => {
               const isCurrentUser = member.user_id === progress.current_user_id;
