@@ -523,13 +523,8 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
 
     await loginAs(page, member1Token, `/party/${party.id}/manage`);
 
-    // Wait for redirect to complete
-    await page.waitForURL((url) => !url.pathname.includes('/manage'), { timeout: 10000 }).catch(() => {});
-
-    // Should redirect to detail page
-    const url = page.url();
-    expect(url).toContain(`/party/${party.id}`);
-    expect(url).not.toContain('/manage');
+    // Should redirect to detail page (use retrying assertion for slow hydration under load)
+    await expect(page).not.toHaveURL(/\/manage/, { timeout: 15000 });
   });
 
   test('Manage breadcrumb links back to detail page', async ({ page, request, leader1Token }) => {

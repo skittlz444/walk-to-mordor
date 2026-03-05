@@ -235,14 +235,15 @@ test.describe('User Profile Modal', () => {
 
         // Update email (keeping same username)
         const newEmail = uniqueEmail('newemail');
-        await setFieldValueRobust(page, '#profile-email', newEmail);
+        await page.locator('#profile-email').fill(newEmail);
+        await expect(page.locator('#profile-email')).toHaveValue(newEmail);
 
-        const saveResponsePromise = waitForProfilePutResponse(page);
+        // Listen for the PUT response BEFORE clicking save (inherits 30s test timeout)
+        const responsePromise = page.waitForResponse(
+            resp => resp.url().includes('/api/profile') && resp.request().method() === 'PUT');
         await page.click('#save-profile-btn');
-
-        const saveResponse = await saveResponsePromise;
-        expect(saveResponse).not.toBeNull();
-        expect(saveResponse.status()).toBe(200);
+        const response = await responsePromise;
+        expect(response.status()).toBe(200);
 
         await waitForProfileSave(page);
 

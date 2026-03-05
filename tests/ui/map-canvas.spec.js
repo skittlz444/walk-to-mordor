@@ -264,12 +264,11 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       return stages[0].scaleX() !== 1;
     }, { timeout: 5000 });
 
-    const metaReqs= tileRequests.filter((u) => u.includes('metadata.json'));
-    const tileImageReqs = tileRequests.filter((u) =>
-      u.includes('/img/map/tiles/') && !u.includes('metadata.json'),
-    );
-    expect(metaReqs.length).toBeGreaterThanOrEqual(1);
-    expect(tileImageReqs.length).toBeGreaterThanOrEqual(1);
+    // Use polling assertions so tile requests captured asynchronously are retried
+    await expect.poll(() => tileRequests.filter((u) => u.includes('metadata.json')).length, { timeout: 15000 })
+      .toBeGreaterThanOrEqual(1);
+    await expect.poll(() => tileRequests.filter((u) => u.includes('/img/map/tiles/') && !u.includes('metadata.json')).length, { timeout: 15000 })
+      .toBeGreaterThanOrEqual(1);
   });
 
   test('loads different tile level when zoomed in', async ({ page }) => {
@@ -321,12 +320,9 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       return stages[0].scaleX() !== 1;
     }, { timeout: 5000 });
 
-    // After zooming, verify that tile image requests were made
-    // (at initial load AND/OR after zoom — the key assertion is tiles were loaded)
-    const tileImageReqs = tileRequests.filter((u) =>
-      u.includes('/img/map/tiles/') && !u.includes('metadata.json'),
-    );
-    expect(tileImageReqs.length).toBeGreaterThanOrEqual(1);
+    // Use polling assertion so tile requests captured asynchronously are retried
+    await expect.poll(() => tileRequests.filter((u) => u.includes('/img/map/tiles/') && !u.includes('metadata.json')).length, { timeout: 15000 })
+      .toBeGreaterThanOrEqual(1);
   });
 
   test('retains backdrop tiles during level transitions', async ({ page }) => {
