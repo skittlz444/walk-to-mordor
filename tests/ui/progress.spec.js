@@ -27,10 +27,8 @@ async function deleteTestEvent(page, distance, authToken) {
     if (await eventLabel.isVisible({ timeout: 2000 })) {
       await eventLabel.click();
       // Wait for popup with delete option to appear
-      await page.locator('text=Delete').first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
-      
-      // Look for delete button in the popup
       const deleteButton = page.locator('text=Delete').first();
+      await expect(deleteButton).toBeVisible({ timeout: 3000 }).catch(() => {});
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
         await page.waitForLoadState('networkidle');

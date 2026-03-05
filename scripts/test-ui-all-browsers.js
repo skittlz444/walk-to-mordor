@@ -7,11 +7,19 @@
  *   node scripts/test-ui-all-browsers.js            # run all 4 browsers
  *   node scripts/test-ui-all-browsers.js chromium    # run specific browser(s)
  */
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const ALL_PROJECTS = ['chromium', 'firefox', 'Mobile Chrome', 'Mobile Firefox'];
 
 const requested = process.argv.slice(2);
+if (requested.length > 0) {
+  const invalid = requested.filter(p => !ALL_PROJECTS.includes(p));
+  if (invalid.length > 0) {
+    console.error(`Unknown project(s): ${invalid.join(', ')}`);
+    console.error(`Valid projects: ${ALL_PROJECTS.join(', ')}`);
+    process.exit(1);
+  }
+}
 const projects = requested.length > 0 ? requested : ALL_PROJECTS;
 
 let failed = 0;
@@ -23,7 +31,7 @@ for (const project of projects) {
   console.log('='.repeat(60));
 
   try {
-    execSync(`npx playwright test --project="${project}" --reporter=line`, {
+    execFileSync('npx', ['playwright', 'test', `--project=${project}`, '--reporter=line'], {
       stdio: 'inherit',
       cwd: process.cwd(),
     });

@@ -167,7 +167,7 @@ test.describe('Story 3-7: Fellowships Pages', () => {
 
     await loginAs(page, test1Token, `/party/${party.id}`);
 
-    const leaveBtn= page.locator('button:has-text("Leave Fellowship")');
+    const leaveBtn = page.locator('button:has-text("Leave Fellowship")');
     await expect(leaveBtn).toBeVisible({ timeout: 5000 });
     await leaveBtn.click();
 
