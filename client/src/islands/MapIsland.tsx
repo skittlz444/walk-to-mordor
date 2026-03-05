@@ -756,11 +756,17 @@ export function MapIsland() {
   /** Handle party view changes from the toggle panel. */
   const handlePartyViewChange = useCallback(async (selection: PartySelection) => {
     const progress = await selectView(selection);
-    drawMemberPaths(selection === 'personal' ? null : progress);
+
+    // Determine the effective selection after selectView resolves.
+    // selectView may fall back to 'personal' on 403/404, so re-read the store.
+    const effectiveSelection: PartySelection =
+      progress === null ? 'personal' : selectedView.value;
+
+    drawMemberPaths(effectiveSelection === 'personal' ? null : progress);
 
     // Switch displayed distance: party total when viewing a fellowship,
     // personal distance when switching back to "My Journey".
-    const newDistanceMiles = selection === 'personal'
+    const newDistanceMiles = effectiveSelection === 'personal'
       ? personalDistanceRef.current
       : progress
         ? progress.total_distance * KM_TO_MILES

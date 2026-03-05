@@ -41,13 +41,19 @@ export async function syncPartyProgressLog(
       );
       await env.DB.batch(stmts);
     } else if (operation === 'update') {
-      await env.DB.prepare(
-        'UPDATE party_progress_log SET distance = ? WHERE logged_by_user_id = ? AND date = ?'
-      ).bind(distance, userId, date).run();
+      const updateStmts = memberships.map((m) =>
+        env.DB.prepare(
+          'UPDATE party_progress_log SET distance = ? WHERE party_id = ? AND logged_by_user_id = ? AND date = ?'
+        ).bind(distance, m.party_id, userId, date)
+      );
+      await env.DB.batch(updateStmts);
     } else if (operation === 'delete') {
-      await env.DB.prepare(
-        'DELETE FROM party_progress_log WHERE logged_by_user_id = ? AND date = ?'
-      ).bind(userId, date).run();
+      const deleteStmts = memberships.map((m) =>
+        env.DB.prepare(
+          'DELETE FROM party_progress_log WHERE party_id = ? AND logged_by_user_id = ? AND date = ?'
+        ).bind(m.party_id, userId, date)
+      );
+      await env.DB.batch(deleteStmts);
     }
   } catch (error) {
     console.error('Error syncing party_progress_log:', error);

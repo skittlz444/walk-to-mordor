@@ -744,23 +744,27 @@ describe('Party Progress API (Story 3.4)', () => {
     });
 
     it('should update entries across all parties on update', async () => {
-      const mockRun = jest.fn().mockResolvedValue({ meta: { changes: 2 } });
+      const mockBatch = jest.fn().mockResolvedValue([]);
+      mockEnv.DB.batch = mockBatch;
       // Active memberships query
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
-          results: [{ party_id: 10 }],
+          results: [{ party_id: 10 }, { party_id: 20 }],
         }),
       }));
-      // Update statement
-      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({ run: mockRun }));
+      // Update statements — prepare will be called per party
+      mockEnv.DB.prepare.mockReturnValue(createChainableMock());
 
       await syncPartyProgressLog(mockEnv as unknown as { DB: D1Database }, 1, '2026-02-28', 7.0, 'update');
 
-      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockBatch).toHaveBeenCalledTimes(1);
+      // Should batch 2 update statements (one per party)
+      expect(mockBatch.mock.calls[0][0]).toHaveLength(2);
     });
 
     it('should delete entries on delete', async () => {
-      const mockRun = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const mockBatch = jest.fn().mockResolvedValue([]);
+      mockEnv.DB.batch = mockBatch;
       // Active memberships query
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({
@@ -768,11 +772,13 @@ describe('Party Progress API (Story 3.4)', () => {
         }),
       }));
       // Delete statement
-      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({ run: mockRun }));
+      mockEnv.DB.prepare.mockReturnValue(createChainableMock());
 
       await syncPartyProgressLog(mockEnv as unknown as { DB: D1Database }, 1, '2026-02-28', 0, 'delete');
 
-      expect(mockRun).toHaveBeenCalledTimes(1);
+      expect(mockBatch).toHaveBeenCalledTimes(1);
+      // Should batch 1 delete statement (one party)
+      expect(mockBatch.mock.calls[0][0]).toHaveLength(1);
     });
 
     it('should do nothing when user has no active memberships', async () => {

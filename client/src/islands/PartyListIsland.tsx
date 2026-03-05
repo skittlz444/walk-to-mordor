@@ -234,12 +234,12 @@ export function PartyListIsland() {
               Distance Mode
               <select value={distanceMode} onChange={(e) => setDistanceMode((e.target as HTMLSelectElement).value)}>
                 <option value="cumulative">Cumulative — Everyone's walking adds together</option>
-                <option value="incremental">Average — Total is the average per member</option>
+                <option value="incremental">Since Join — Only distance walked after joining counts</option>
               </select>
               <span className="helper-text">
                 {distanceMode === 'cumulative'
                   ? 'All members\' distance is summed. More walkers = faster progress.'
-                  : 'The fellowship\'s progress is the average distance walked per member.'}
+                  : 'Each member only contributes distance walked since joining this fellowship. Distance from before joining does not count.'}
               </span>
             </label>
             <label>

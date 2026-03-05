@@ -78,7 +78,7 @@ development_status:
   3-3-invite-join-fellowship-api: done
   3-4-fellowship-progress-calculation-api: done
   3-5-leave-kick-party-management-api: done
-  3-6-fellowship-ui-journey-map-party-selector: rdone
+  3-6-fellowship-ui-journey-map-party-selector: done
   3-7-fellowship-ui-fellowships-pages: done
   3-8-fellowship-progress-activity-feed: done
   3-9-fellowship-notifications-party-milestones: cancelled

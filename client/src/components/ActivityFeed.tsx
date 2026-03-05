@@ -73,12 +73,20 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
   const fetchActivities = useCallback(async () => {
     try {
       const token = localStorage.getItem('sessionToken');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
       const res = await fetch(`/api/party/${partyId}/activity`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
+
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
 
       if (res.status === 403) {
         if (intervalRef.current !== null) {

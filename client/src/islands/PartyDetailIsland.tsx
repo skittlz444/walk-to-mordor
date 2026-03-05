@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { GoalModal } from './GoalModal';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { getMemberColor, getMutedMemberColor } from '../utils/party-colors';
 import type { Goal } from '../types/goal';
 
 interface MilestoneData {
@@ -42,12 +43,6 @@ interface PartyInfo {
   distance_mode: string;
   leave_distance_behavior: string;
 }
-
-const MEMBER_COLORS = [
-  '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
-  '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4',
-  '#469990', '#dcbeff',
-];
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('sessionToken');
@@ -202,7 +197,7 @@ export function PartyDetailIsland() {
       {/* Fellowship Settings Badges */}
       <div className="party-settings-badges">
         <span className="party-settings-badge">
-          📊 {partyInfo.distance_mode === 'cumulative' ? 'Cumulative' : 'Average'} mode
+          📊 {partyInfo.distance_mode === 'cumulative' ? 'Cumulative' : 'Incremental (since join)'} mode
         </span>
         <span className="party-settings-badge">
           🚪 {partyInfo.leave_distance_behavior === 'keep' ? 'Distance kept on departure' : 'Distance removed on departure'}
@@ -266,7 +261,7 @@ export function PartyDetailIsland() {
               <li key={member.user_id} className={`party-member-item${isCurrentUser ? ' party-member-item--self' : ''}`}>
                 <span
                   className="party-member-color"
-                  style={{ backgroundColor: MEMBER_COLORS[member.color] || '#888' }}
+                  style={{ backgroundColor: member.status === 'active' ? getMemberColor(member.color) : getMutedMemberColor(member.color) }}
                   aria-hidden="true"
                 ></span>
                 <div className="party-member-info">
