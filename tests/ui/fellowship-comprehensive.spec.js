@@ -1067,8 +1067,9 @@ test.describe('Cross-Story: Navigation & Accessibility', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await loginAs(page, leader1Token, '/party');
 
-    // List should still be visible
-    await expect(page.locator('[data-island="PartyListIsland"]')).toBeVisible({ timeout: 8000 });
+    // List should still be visible (wait for fully loaded state, not just the island container,
+    // so that pending API requests complete before navigating away — avoids NS_BINDING_ABORTED in Firefox)
+    await expect(page.getByRole('heading', { name: 'Your Fellowships' })).toBeVisible({ timeout: 8000 });
 
     // Detail page
     await page.goto(`${BASE_URL}/party/${party.id}`);
