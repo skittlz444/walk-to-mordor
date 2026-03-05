@@ -123,7 +123,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     });
     
     test('Different users should have separate total distances', async ({ browser }) => {
-        test.setTimeout(120000);
+        test.setTimeout(60000);
         
         // Generate unique usernames for this test
         const timestamp = Date.now().toString().substring(6);

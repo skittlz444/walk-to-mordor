@@ -3,22 +3,42 @@ const { test: base, expect } = require('@playwright/test');
 
 const BASE_URL = 'http://127.0.0.1:8787';
 
+const { cleanupAllTestData } = require('./helpers/cleanup');
+
+function uniqueId() {
+  return Math.random().toString(36).substring(2, 8);
+}
+
 // ─── Multi-user fixtures ────────────────────────────────────────────────────
 const test = base.extend({
-  leader1Token: async ({}, use) => { await use('TEST_MOCK_TOKEN_CompLeader1'); },
-  member1Token: async ({}, use) => { await use('TEST_MOCK_TOKEN_CompMember1'); },
-  member2Token: async ({}, use) => { await use('TEST_MOCK_TOKEN_CompMember2'); },
-  member3Token: async ({}, use) => { await use('TEST_MOCK_TOKEN_CompMember3'); },
+  leader1Token: async ({}, use) => {
+    const token = `TEST_MOCK_TOKEN_Leader1_${uniqueId()}`;
+    await use(token);
+    await cleanupAllTestData(BASE_URL, token);
+  },
+  member1Token: async ({}, use) => {
+    const token = `TEST_MOCK_TOKEN_Member1_${uniqueId()}`;
+    await use(token);
+    await cleanupAllTestData(BASE_URL, token);
+  },
+  member2Token: async ({}, use) => {
+    const token = `TEST_MOCK_TOKEN_Member2_${uniqueId()}`;
+    await use(token);
+    await cleanupAllTestData(BASE_URL, token);
+  },
+  member3Token: async ({}, use) => {
+    const token = `TEST_MOCK_TOKEN_Member3_${uniqueId()}`;
+    await use(token);
+    await cleanupAllTestData(BASE_URL, token);
+  },
 });
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 async function loginAs(page, token, url = '/journey') {
-  // Navigate to /login (no auth redirect) just to establish origin for localStorage
   await page.goto(`${BASE_URL}/login`);
   await page.evaluate((t) => localStorage.setItem('sessionToken', t), token);
   await page.goto(`${BASE_URL}${url}`);
-  await page.waitForTimeout(2000);
 }
 
 async function createFellowship(request, token, name, mode = 'cumulative', leaveBehavior = 'keep') {
@@ -88,7 +108,7 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
 
   test('Empty state shows when user has no parties', async ({ page, member3Token }) => {
     await loginAs(page, member3Token, '/party');
-    await expect(page.locator('[data-island="PartyListIsland"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-island="PartyListIsland"]')).toBeVisible({ timeout: 8000 });
     // Empty state message
     const empty = page.locator('.party-empty');
     const emptyText = page.locator("text=haven't joined");
@@ -97,12 +117,10 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
 
   test('Create Fellowship form shows all fields with helper text', async ({ page, leader1Token }) => {
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(1000);
 
     const createBtn = page.locator('button:has-text("Create Fellowship")');
-    await expect(createBtn).toBeVisible({ timeout: 5000 });
+    await expect(createBtn).toBeVisible({ timeout: 8000 });
     await createBtn.click();
-    await page.waitForTimeout(500);
 
     // Name input
     const nameInput = page.locator('input[placeholder="e.g. The Grey Company"]');
@@ -123,30 +141,25 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
 
   test('Create Fellowship with cumulative mode succeeds', async ({ page, leader1Token }) => {
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(1000);
 
     await page.locator('button:has-text("Create Fellowship")').click();
-    await page.waitForTimeout(500);
 
     const nameInput = page.locator('input[placeholder="e.g. The Grey Company"]');
     await nameInput.fill('Comp Test Fellowship A');
 
     const submitBtn = page.locator('button[type="submit"]:has-text("Create Fellowship")');
     await submitBtn.click();
-    await page.waitForTimeout(2000);
 
     // Success: toast or party appears in list
     const toast = page.locator('.party-toast--success');
     const partyInList = page.locator('.party-list-item__name:has-text("Comp Test Fellowship A")');
-    await expect(toast.or(partyInList).first()).toBeVisible({ timeout: 5000 });
+    await expect(toast.or(partyInList).first()).toBeVisible({ timeout: 8000 });
   });
 
   test('Create Fellowship validates empty name', async ({ page, leader1Token }) => {
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(1000);
 
     await page.locator('button:has-text("Create Fellowship")').click();
-    await page.waitForTimeout(500);
 
     // Leave name empty and submit
     const submitBtn = page.locator('button[type="submit"]:has-text("Create Fellowship")');
@@ -154,7 +167,6 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
     const isDisabled = await submitBtn.isDisabled();
     if (!isDisabled) {
       await submitBtn.click();
-      await page.waitForTimeout(1000);
       // Should show validation error or not navigate
       const currentUrl = page.url();
       expect(currentUrl).toContain('/party');
@@ -167,29 +179,25 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
     const party = await createFellowship(request, leader1Token, 'Comp Join Preview Party');
 
     await loginAs(page, member1Token, '/party');
-    await page.waitForTimeout(1000);
 
-    // Find join section
+    // Wait for "Join Fellowship" button to render (island hydration)
     const joinBtn = page.locator('button:has-text("Join Fellowship")');
-    if (await joinBtn.isVisible({ timeout: 3000 })) {
-      await joinBtn.click();
-      await page.waitForTimeout(500);
-    }
+    await expect(joinBtn).toBeVisible({ timeout: 10000 });
+    await joinBtn.click();
 
     // Enter invite code
     const codeInput = page.locator('input[placeholder="AbCd1234"]');
-    await expect(codeInput).toBeVisible({ timeout: 5000 });
+    await expect(codeInput).toBeVisible({ timeout: 8000 });
     await codeInput.fill(party.invite_code);
 
     // Look for preview button
     const previewBtn = page.locator('button:has-text("Preview")');
     if (await previewBtn.isVisible({ timeout: 2000 })) {
       await previewBtn.click();
-      await page.waitForTimeout(2000);
 
       // Preview should show party name
       const preview = page.locator('.party-join-preview');
-      await expect(preview).toBeVisible({ timeout: 5000 });
+      await expect(preview).toBeVisible({ timeout: 8000 });
       await expect(preview.locator('.party-join-preview__name')).toContainText('Comp Join Preview Party');
     }
   });
@@ -199,11 +207,10 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(2000);
 
     // Find the party item (use .first() since test reuse may create duplicates)
     const partyItem = page.locator('.party-list-item__name:has-text("Comp Listed Party")').first();
-    await expect(partyItem).toBeVisible({ timeout: 5000 });
+    await expect(partyItem).toBeVisible({ timeout: 8000 });
 
     // Member count should show 2
     const meta = partyItem.locator('..').locator('.party-list-item__meta');
@@ -213,33 +220,30 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
   test('Leader badge shows on owned fellowships', async ({ page, request, leader1Token }) => {
     await createFellowship(request, leader1Token, 'Comp Leader Badge Party');
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(2000);
 
     // Find the party meta and check for leader indicator
     const meta = page.locator('.party-list-item__meta:has-text("Leader")');
-    await expect(meta.first()).toBeVisible({ timeout: 5000 });
+    await expect(meta.first()).toBeVisible({ timeout: 8000 });
   });
 
   test('Clicking a fellowship navigates to detail page', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, `Comp Click Nav ${Date.now()}`);
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(2000);
 
     // Click the specific party link by href
     const partyLink = page.locator(`a[href="/party/${party.id}"]`).first();
-    await expect(partyLink).toBeVisible({ timeout: 5000 });
+    await expect(partyLink).toBeVisible({ timeout: 8000 });
     await partyLink.click();
-    await page.waitForURL(`**/party/${party.id}`, { timeout: 5000 });
+    await page.waitForURL(`**/party/${party.id}`, { timeout: 8000 });
   });
 
   test('Create and Join buttons always visible even with existing parties', async ({ page, request, leader1Token }) => {
     await createFellowship(request, leader1Token, 'Comp Always Buttons Party');
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(2000);
 
     // Both create and join should be visible
-    await expect(page.locator('button:has-text("Create Fellowship")')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('button:has-text("Join Fellowship")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('button:has-text("Create Fellowship")')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('button:has-text("Join Fellowship")')).toBeVisible({ timeout: 8000 });
   });
 });
 
@@ -249,9 +253,8 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
   test('Breadcrumb navigation shows party name', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Breadcrumb Party');
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(2000);
 
-    await expect(page.locator('a:has-text("← Fellowships")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('a:has-text("← Fellowships")')).toBeVisible({ timeout: 8000 });
     await expect(page.locator('.current:has-text("Comp Breadcrumb Party")')).toBeVisible();
   });
 
@@ -262,10 +265,9 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     await logDistance(request, member1Token, '2026-02-28', 5);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(3000);
 
     // Total Progress label
-    await expect(page.locator('text=Total Progress')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Total Progress')).toBeVisible({ timeout: 8000 });
     // Members stat (use specific class to avoid strict mode violation with h3)
     await expect(page.locator('.party-progress__stat-label:has-text("Members")')).toBeVisible();
     // Milestone stats
@@ -282,10 +284,9 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     await logDistance(request, member2Token, '2026-02-27', 5);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(3000);
 
     const memberItems = page.locator('.party-member-item');
-    await expect(memberItems).toHaveCount(3, { timeout: 5000 });
+    await expect(memberItems).toHaveCount(3, { timeout: 8000 });
 
     // Color dots present
     const colorDots = page.locator('.party-member-color');
@@ -301,7 +302,9 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(3000);
+
+    // Wait for member items to render
+    await expect(page.locator('.party-member-item').first()).toBeVisible({ timeout: 10000 });
 
     // Join date text
     const joinedTexts = page.locator('.party-member-joined');
@@ -320,9 +323,8 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     }
     expect(party).toBeTruthy();
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(2000);
 
-    await expect(page.locator('h3:has-text("Invite Link")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h3:has-text("Invite Link")')).toBeVisible({ timeout: 8000 });
     const inviteUrl = page.locator('.party-invite__url');
     await expect(inviteUrl).toBeVisible();
     const urlText = await inviteUrl.textContent();
@@ -340,21 +342,20 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, member1Token, `/party/${party.id}`);
-    await page.waitForTimeout(2000);
 
     const leaveBtn = page.locator('button:has-text("Leave Fellowship")');
-    await expect(leaveBtn).toBeVisible({ timeout: 5000 });
+    await expect(leaveBtn).toBeVisible({ timeout: 8000 });
     await leaveBtn.click();
 
     const dialog = page.locator('.party-confirm-dialog');
-    await expect(dialog).toBeVisible({ timeout: 3000 });
+    await expect(dialog).toBeVisible({ timeout: 8000 });
     // Should mention that distance will be kept
     const dialogText = await dialog.textContent();
     expect(dialogText?.toLowerCase()).toMatch(/keep|stay/);
 
     // Cancel works
     await dialog.locator('button:has-text("Cancel")').click();
-    await expect(dialog).toBeHidden({ timeout: 3000 });
+    await expect(dialog).toBeHidden({ timeout: 8000 });
   });
 
   test('Leave fellowship with remove mode shows removal warning', async ({ page, request, leader1Token, member1Token }) => {
@@ -362,11 +363,10 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, member1Token, `/party/${party.id}`);
-    await page.waitForTimeout(2000);
 
     await page.locator('button:has-text("Leave Fellowship")').click();
     const dialog = page.locator('.party-confirm-dialog');
-    await expect(dialog).toBeVisible({ timeout: 3000 });
+    await expect(dialog).toBeVisible({ timeout: 8000 });
     const dialogText = await dialog.textContent();
     expect(dialogText?.toLowerCase()).toMatch(/remove|subtract/);
   });
@@ -374,9 +374,8 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
   test('Leader sees Manage Fellowship button', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Leader Manage Party');
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(2000);
 
-    await expect(page.locator('a:has-text("Manage Fellowship")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('a:has-text("Manage Fellowship")')).toBeVisible({ timeout: 8000 });
   });
 
   test('Non-leader does NOT see Manage button', async ({ page, request, leader1Token, member1Token }) => {
@@ -384,9 +383,8 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, member1Token, `/party/${party.id}`);
-    await page.waitForTimeout(2000);
 
-    await expect(page.locator('a:has-text("Manage Fellowship")')).toBeHidden({ timeout: 3000 });
+    await expect(page.locator('a:has-text("Manage Fellowship")')).toBeHidden({ timeout: 8000 });
   });
 
   test('Milestone stats are clickable', async ({ page, request, leader1Token }) => {
@@ -394,14 +392,14 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     await logDistance(request, leader1Token, '2026-02-26', 25);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(3000);
+
+    // Wait for progress section to load
+    await expect(page.locator('text=Total Progress')).toBeVisible({ timeout: 10000 });
 
     const clickableStats = page.locator('.party-progress__stat--clickable');
-    const count = await clickableStats.count();
-    expect(count).toBeGreaterThan(0);
+    await expect(clickableStats.first()).toBeVisible({ timeout: 8000 });
     await clickableStats.first().click();
-    await page.waitForTimeout(1000);
-    await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 8000 });
   });
 });
 
@@ -411,9 +409,8 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
   test('Settings form loads with current values', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Settings Load Party');
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
-    await page.waitForTimeout(3000);
 
-    await expect(page.locator('h3:has-text("Settings")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h3:has-text("Settings")')).toBeVisible({ timeout: 8000 });
 
     // Name input should have current value
     const nameInput = page.locator('input[type="text"]').first();
@@ -425,7 +422,6 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
   test('Update fellowship name succeeds', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Rename Before Party');
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
-    await page.waitForTimeout(3000);
 
     const nameInput = page.locator('input[type="text"]').first();
     await nameInput.clear();
@@ -433,11 +429,10 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
 
     const saveBtn = page.locator('button:has-text("Save")');
     await saveBtn.click();
-    await page.waitForTimeout(2000);
 
     // Success toast
     const toast = page.locator('.party-toast--success');
-    await expect(toast).toBeVisible({ timeout: 5000 });
+    await expect(toast).toBeVisible({ timeout: 8000 });
   });
 
   test('Kick member UI shows members with kick buttons', async ({ page, request, leader1Token, member1Token, member2Token }) => {
@@ -446,11 +441,10 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
     await joinFellowship(request, member2Token, party.invite_code);
 
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
-    await page.waitForTimeout(3000);
 
     // Kick rows should show 2 kickable members (not self)
     const kickRows = page.locator('.party-kick-row');
-    await expect(kickRows).toHaveCount(2, { timeout: 5000 });
+    await expect(kickRows).toHaveCount(2, { timeout: 8000 });
 
     // Each row has a Kick button
     const kickBtns = page.locator('.party-kick-row button:has-text("Kick")');
@@ -462,7 +456,6 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
-    await page.waitForTimeout(3000);
 
     // Click kick on first member
     const kickBtn = page.locator('.party-kick-row button:has-text("Kick")').first();
@@ -470,7 +463,7 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
 
     // Confirmation dialog
     const dialog = page.locator('.party-confirm-dialog');
-    await expect(dialog).toBeVisible({ timeout: 3000 });
+    await expect(dialog).toBeVisible({ timeout: 8000 });
     await expect(dialog.locator('h3')).toContainText('Kick');
 
     // Toggle for distance removal should exist
@@ -480,7 +473,7 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
 
     // Cancel
     await dialog.locator('button:has-text("Cancel")').click();
-    await expect(dialog).toBeHidden({ timeout: 3000 });
+    await expect(dialog).toBeHidden({ timeout: 8000 });
   });
 
   test('Transfer leadership shows member dropdown', async ({ page, request, leader1Token, member1Token }) => {
@@ -496,11 +489,10 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
-    await page.waitForTimeout(3000);
 
     // Transfer section
     const transferSection = page.locator('text=Transfer Leadership');
-    await expect(transferSection.first()).toBeVisible({ timeout: 5000 });
+    await expect(transferSection.first()).toBeVisible({ timeout: 8000 });
 
     // Select for new leader
     const leaderSelect = page.locator('select').last();
@@ -510,20 +502,19 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
   test('Regenerate invite code button with confirmation', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Regen Code Party');
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
-    await page.waitForTimeout(3000);
 
     const regenBtn = page.locator('button:has-text("Regenerate")');
-    await expect(regenBtn).toBeVisible({ timeout: 5000 });
+    await expect(regenBtn).toBeVisible({ timeout: 8000 });
     await regenBtn.click();
 
     // Confirmation dialog
     const dialog = page.locator('.party-confirm-dialog');
-    await expect(dialog).toBeVisible({ timeout: 3000 });
+    await expect(dialog).toBeVisible({ timeout: 8000 });
     await expect(dialog).toContainText('Regenerate');
 
     // Cancel
     await dialog.locator('button:has-text("Cancel")').click();
-    await expect(dialog).toBeHidden({ timeout: 3000 });
+    await expect(dialog).toBeHidden({ timeout: 8000 });
   });
 
   test('Non-leader is redirected from manage page', async ({ page, request, leader1Token, member1Token }) => {
@@ -531,7 +522,9 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, member1Token, `/party/${party.id}/manage`);
-    await page.waitForTimeout(3000);
+
+    // Wait for redirect to complete
+    await page.waitForURL((url) => !url.pathname.includes('/manage'), { timeout: 10000 }).catch(() => {});
 
     // Should redirect to detail page
     const url = page.url();
@@ -549,13 +542,12 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
     }
     expect(party).toBeTruthy();
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
-    await page.waitForTimeout(3000);
 
     // Breadcrumb should have party name linking back
     const backLink = page.locator('.party-breadcrumb a').first();
-    await expect(backLink).toBeVisible({ timeout: 5000 });
+    await expect(backLink).toBeVisible({ timeout: 8000 });
     await backLink.click();
-    await page.waitForURL(`**/party/${party.id}`, { timeout: 5000 });
+    await page.waitForURL(`**/party/${party.id}`, { timeout: 8000 });
   });
 });
 
@@ -566,28 +558,25 @@ test.describe('Story 3-7: Join Landing Page (/party/join/:code)', () => {
     const party = await createFellowship(request, leader1Token, 'Comp Auth Join Party');
 
     await loginAs(page, member1Token, `/party/join/${party.invite_code}`);
-    await page.waitForTimeout(3000);
 
     // Party name in preview
-    await expect(page.locator('text=Comp Auth Join Party')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Comp Auth Join Party')).toBeVisible({ timeout: 8000 });
 
     // Join button for authenticated user
     const joinBtn = page.locator('button:has-text("Join Fellowship")');
-    await expect(joinBtn).toBeVisible({ timeout: 5000 });
+    await expect(joinBtn).toBeVisible({ timeout: 8000 });
   });
 
   test('Authenticated user can join and is redirected', async ({ page, request, leader1Token, member2Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Join Redirect Party');
 
     await loginAs(page, member2Token, `/party/join/${party.invite_code}`);
-    await page.waitForTimeout(3000);
 
     const joinBtn = page.locator('button:has-text("Join Fellowship")');
-    await expect(joinBtn).toBeVisible({ timeout: 5000 });
+    await expect(joinBtn).toBeVisible({ timeout: 8000 });
     await joinBtn.click();
 
     // Should redirect to party detail or show success
-    await page.waitForTimeout(5000);
     const url = page.url();
     const redirected = url.includes(`/party/${party.id}`) || url.includes('/party/');
     const successToast = await page.locator('.party-toast--success').isVisible().catch(() => false);
@@ -599,24 +588,22 @@ test.describe('Story 3-7: Join Landing Page (/party/join/:code)', () => {
 
     // Visit without setting token
     await page.goto(`${BASE_URL}/party/join/${party.invite_code}`);
-    await page.waitForTimeout(3000);
 
     // Should show party preview
-    await expect(page.locator('text=Comp Unauth Join Party')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Comp Unauth Join Party')).toBeVisible({ timeout: 8000 });
 
     // Login button
     const loginBtn = page.locator('button:has-text("Log in"), a:has-text("Log in")');
-    await expect(loginBtn).toBeVisible({ timeout: 5000 });
+    await expect(loginBtn).toBeVisible({ timeout: 8000 });
   });
 
   test('Invalid invite code shows error', async ({ page, member1Token }) => {
     await loginAs(page, member1Token, '/party/join/BADCODE1');
-    await page.waitForTimeout(3000);
 
     // Error state
     const error = page.locator('.party-error');
     const errorText = page.locator('text=not found, text=invalid, text=error');
-    await expect(error.or(errorText).first()).toBeVisible({ timeout: 5000 });
+    await expect(error.or(errorText).first()).toBeVisible({ timeout: 8000 });
   });
 
   test('Join page shows member count and mode', async ({ page, request, leader1Token, member1Token, member2Token }) => {
@@ -624,11 +611,10 @@ test.describe('Story 3-7: Join Landing Page (/party/join/:code)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, member2Token, `/party/join/${party.invite_code}`);
-    await page.waitForTimeout(3000);
 
     // Preview details
     const preview = page.locator('.party-join-preview');
-    await expect(preview).toBeVisible({ timeout: 5000 });
+    await expect(preview).toBeVisible({ timeout: 8000 });
     const previewText = await preview.textContent();
     expect(previewText).toContain('Comp Preview Details Party');
   });
@@ -647,11 +633,10 @@ test.describe('Story 3-8: Activity Feed', () => {
     await logDistance(request, member1Token, '2026-03-02', 3.2);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(4000);
 
     // Activity section
-    await expect(page.locator('h3:has-text("Activity")')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('.party-activity-feed')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h3:has-text("Activity")')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('.party-activity-feed')).toBeVisible({ timeout: 8000 });
   });
 
   test('Activity items show formatted walk entries', async ({ page, request, leader1Token, member1Token }) => {
@@ -663,7 +648,6 @@ test.describe('Story 3-8: Activity Feed', () => {
     await logDistance(request, member1Token, uniqueDate, 4.3);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(5000);
 
     // Activity items - check with wait for data sync
     const items = page.locator('.party-activity-item');
@@ -685,7 +669,6 @@ test.describe('Story 3-8: Activity Feed', () => {
     await logDistance(request, member1Token, '2026-03-01', 3.5);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(4000);
 
     const ownItems = page.locator('.party-activity-item--own');
     const ownCount = await ownItems.count();
@@ -707,7 +690,6 @@ test.describe('Story 3-8: Activity Feed', () => {
     const party = await createFellowship(request, leader1Token, 'Comp Empty Feed Party');
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(3000);
 
     await expect(page.locator('text=No recent activity')).toBeVisible({ timeout: 10000 });
   });
@@ -723,10 +705,9 @@ test.describe('Story 3-8: Activity Feed', () => {
     await logDistance(request, member2Token, uniqueDate, 2.0);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(5000);
 
     // Activity feed container should be visible
-    await expect(page.locator('.party-activity-feed')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.party-activity-feed')).toBeVisible({ timeout: 8000 });
     // Items may vary due to async sync timing
     const items = page.locator('.party-activity-item');
     const count = await items.count();
@@ -740,7 +721,8 @@ test.describe('Story 3-8: Activity Feed', () => {
 
     // Get member1's user ID
     const progress = await getPartyProgress(request, leader1Token, party.id);
-    const member = progress.members.find((m) => m.display_name === 'CompMember1');
+    const expectedName = member1Token.replace('TEST_MOCK_TOKEN_', '');
+    const member = progress.members.find((m) => m.display_name === expectedName);
 
     if (member) {
       // Kick member1
@@ -750,7 +732,12 @@ test.describe('Story 3-8: Activity Feed', () => {
     }
 
     await loginAs(page, member1Token, `/party/${party.id}`);
-    await page.waitForTimeout(3000);
+
+    // Wait for redirect or error to appear
+    await Promise.race([
+      page.waitForURL('**/party', { timeout: 10000 }).catch(() => {}),
+      page.waitForSelector('.party-error', { timeout: 10000 }).catch(() => {}),
+    ]);
 
     // Should redirect or show error
     const url = page.url();
@@ -768,11 +755,10 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
 
   test('Party selector hidden when user has no parties', async ({ page, member3Token }) => {
     await loginAs(page, member3Token, '/journey');
-    await page.waitForTimeout(3000);
 
     // Selector should not be visible (no parties)
     const selector = page.locator('.party-selector');
-    const selectorVisible = await selector.isVisible({ timeout: 3000 }).catch(() => false);
+    const selectorVisible = await selector.isVisible({ timeout: 8000 }).catch(() => false);
     // Either hidden or not rendered
     expect(selectorVisible).toBeFalsy();
   });
@@ -781,10 +767,9 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     await createFellowship(request, leader1Token, 'Comp Selector Show Party');
 
     await loginAs(page, leader1Token, '/journey');
-    await page.waitForTimeout(3000);
 
     const selectorMount = page.locator('#party-selector-mount');
-    await expect(selectorMount).toBeVisible({ timeout: 5000 });
+    await expect(selectorMount).toBeVisible({ timeout: 8000 });
   });
 
   test('Dropdown shows Personal and party options', async ({ page, request, leader1Token }) => {
@@ -792,10 +777,9 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     await createFellowship(request, leader1Token, 'Comp Selector Options B');
 
     await loginAs(page, leader1Token, '/journey');
-    await page.waitForTimeout(3000);
 
     const dropdown = page.locator('#party-view-select');
-    if (await dropdown.isVisible({ timeout: 3000 })) {
+    if (await dropdown.isVisible({ timeout: 8000 })) {
       // Should have Personal option
       const options = dropdown.locator('option');
       const optionCount = await options.count();
@@ -812,10 +796,9 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     await logDistance(request, leader1Token, '2026-02-25', 5);
 
     await loginAs(page, leader1Token, '/journey');
-    await page.waitForTimeout(3000);
 
     const dropdown = page.locator('#party-view-select');
-    if (await dropdown.isVisible({ timeout: 3000 })) {
+    if (await dropdown.isVisible({ timeout: 8000 })) {
       // Select the party option by finding the matching option value
       const options = await dropdown.locator('option').all();
       let targetValue = null;
@@ -828,11 +811,10 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       }
       expect(targetValue).not.toBeNull();
       await dropdown.selectOption(targetValue);
-      await page.waitForTimeout(2000);
 
       // Banner should appear
       const banner = page.locator('.party-selector__banner');
-      await expect(banner).toBeVisible({ timeout: 5000 });
+      await expect(banner).toBeVisible({ timeout: 8000 });
       const bannerText = await banner.textContent();
       expect(bannerText).toContain('Viewing');
     }
@@ -843,10 +825,9 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     await logDistance(request, leader1Token, '2026-02-24', 5);
 
     await loginAs(page, leader1Token, '/journey');
-    await page.waitForTimeout(3000);
 
     const dropdown = page.locator('#party-view-select');
-    if (await dropdown.isVisible({ timeout: 3000 })) {
+    if (await dropdown.isVisible({ timeout: 8000 })) {
       // Select party by finding matching option value
       const options = await dropdown.locator('option').all();
       let targetValue = null;
@@ -859,13 +840,11 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       }
       expect(targetValue).not.toBeNull();
       await dropdown.selectOption(targetValue);
-      await page.waitForTimeout(2000);
-      await expect(page.locator('.party-selector__banner')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('.party-selector__banner')).toBeVisible({ timeout: 8000 });
 
       // Switch back to Personal
       await dropdown.selectOption('personal');
-      await page.waitForTimeout(1000);
-      await expect(page.locator('.party-selector__banner')).toBeHidden({ timeout: 3000 });
+      await expect(page.locator('.party-selector__banner')).toBeHidden({ timeout: 8000 });
     }
   });
 
@@ -874,10 +853,9 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     await logDistance(request, leader1Token, '2026-02-23', 5);
 
     await loginAs(page, leader1Token, '/journey');
-    await page.waitForTimeout(3000);
 
     const dropdown = page.locator('#party-view-select');
-    if (await dropdown.isVisible({ timeout: 3000 })) {
+    if (await dropdown.isVisible({ timeout: 8000 })) {
       // Select party by finding matching option value
       const pOptions = await dropdown.locator('option').all();
       let pTargetValue = null;
@@ -890,7 +868,6 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       }
       expect(pTargetValue).not.toBeNull();
       await dropdown.selectOption(pTargetValue);
-      await page.waitForTimeout(2000);
 
       // Check localStorage
       const stored = await page.evaluate(() => localStorage.getItem('wtm_party_view'));
@@ -899,11 +876,10 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
 
       // Reload page
       await page.reload();
-      await page.waitForTimeout(3000);
 
       // Should still be in party view
       const banner = page.locator('.party-selector__banner');
-      const bannerVisible = await banner.isVisible({ timeout: 5000 }).catch(() => false);
+      const bannerVisible = await banner.isVisible({ timeout: 8000 }).catch(() => false);
       // If banner visible, persistence worked
       if (bannerVisible) {
         const bannerText = await banner.textContent();
@@ -916,16 +892,14 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     await createFellowship(request, leader1Token, 'Comp Fallback Party');
 
     await loginAs(page, leader1Token, '/journey');
-    await page.waitForTimeout(2000);
 
     // Set an invalid party ID in localStorage
     await page.evaluate(() => localStorage.setItem('wtm_party_view', '99999'));
     await page.reload();
-    await page.waitForTimeout(3000);
 
     // Should fall back to Personal (no banner)
     const banner = page.locator('.party-selector__banner');
-    const bannerVisible = await banner.isVisible({ timeout: 3000 }).catch(() => false);
+    const bannerVisible = await banner.isVisible({ timeout: 8000 }).catch(() => false);
     expect(bannerVisible).toBeFalsy();
   });
 });
@@ -937,13 +911,22 @@ test.describe('Story 3-6: Party Selector on Map Page', () => {
 
     // Navigate directly to map page
     await loginAs(page, leader1Token, '/map');
-    await page.waitForTimeout(4000);
 
-    // Party toggle button on map
+    // Wait for the MapIsland to hydrate (Preact renders children into the mount point)
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-island="MapIsland"]');
+      return el && el.children.length > 0;
+    }, { timeout: 15000 });
+
+    // Wait for map to fully initialize (Konva stage created = loading complete)
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      return stages && stages.length > 0;
+    }, { timeout: 15000 });
+
+    // Party toggle button on map (renders when loading is complete)
     const toggleBtn = page.locator('.map-party-toggle');
-    const toggleVisible = await toggleBtn.isVisible({ timeout: 5000 }).catch(() => false);
-    // Toggle should appear since user has parties
-    expect(toggleVisible).toBeTruthy();
+    await expect(toggleBtn).toBeVisible({ timeout: 8000 });
   });
 });
 
@@ -959,10 +942,9 @@ test.describe('Cross-Story: Multi-Fellowship Interactions', () => {
     await joinFellowship(request, leader1Token, partyB.invite_code);
 
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(2000);
 
-    await expect(page.locator('.party-list-item__name:has-text("Comp Multi-A Party")').first()).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('.party-list-item__name:has-text("Comp Multi-B Party")').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.party-list-item__name:has-text("Comp Multi-A Party")').first()).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('.party-list-item__name:has-text("Comp Multi-B Party")').first()).toBeVisible({ timeout: 8000 });
   });
 
   test('User in multiple fellowships sees all in party selector', async ({ page, request, leader1Token, member1Token }) => {
@@ -971,10 +953,9 @@ test.describe('Cross-Story: Multi-Fellowship Interactions', () => {
     await joinFellowship(request, leader1Token, partyB.invite_code);
 
     await loginAs(page, leader1Token, '/journey');
-    await page.waitForTimeout(3000);
 
     const dropdown = page.locator('#party-view-select');
-    if (await dropdown.isVisible({ timeout: 3000 })) {
+    if (await dropdown.isVisible({ timeout: 8000 })) {
       const options = dropdown.locator('option');
       const texts = await options.allTextContents();
       const hasPartyA = texts.some(t => t.includes('Comp Sel-A'));
@@ -993,15 +974,13 @@ test.describe('Cross-Story: Multi-Fellowship Interactions', () => {
 
     // Visit party A
     await loginAs(page, leader1Token, `/party/${partyA.id}`);
-    await page.waitForTimeout(3000);
-    await expect(page.locator('.current:has-text("Comp Detail-A Party")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.current:has-text("Comp Detail-A Party")')).toBeVisible({ timeout: 8000 });
     const membersA = page.locator('.party-member-item');
     expect(await membersA.count()).toBe(2);
 
     // Visit party B
     await page.goto(`${BASE_URL}/party/${partyB.id}`);
-    await page.waitForTimeout(3000);
-    await expect(page.locator('.current:has-text("Comp Detail-B Party")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.current:has-text("Comp Detail-B Party")')).toBeVisible({ timeout: 8000 });
     const membersB = page.locator('.party-member-item');
     expect(await membersB.count()).toBe(1); // only leader
   });
@@ -1017,10 +996,9 @@ test.describe('Cross-Story: Multi-Fellowship Interactions', () => {
 
     // Member1 visits party list - party should not appear
     await loginAs(page, member1Token, '/party');
-    await page.waitForTimeout(2000);
 
     const partyInList = page.locator('.party-list-item__name:has-text("Comp Leave Update Party")');
-    const visible = await partyInList.isVisible({ timeout: 3000 }).catch(() => false);
+    const visible = await partyInList.isVisible({ timeout: 8000 }).catch(() => false);
     expect(visible).toBeFalsy();
   });
 
@@ -1032,7 +1010,8 @@ test.describe('Cross-Story: Multi-Fellowship Interactions', () => {
 
     // Get member1's user ID and kick
     const progress = await getPartyProgress(request, leader1Token, party.id);
-    const target = progress.members.find(m => m.display_name === 'CompMember1');
+    const expectedName = member1Token.replace('TEST_MOCK_TOKEN_', '');
+    const target = progress.members.find(m => m.display_name === expectedName);
     if (target) {
       await request.post(`${BASE_URL}/api/party/${party.id}/kick/${target.user_id}`, {
         headers: { Authorization: `Bearer ${leader1Token}`, 'Content-Type': 'application/json' },
@@ -1041,7 +1020,9 @@ test.describe('Cross-Story: Multi-Fellowship Interactions', () => {
 
     // Visit detail - should show kicked member status or only 2 active
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(3000);
+
+    // Wait for member list to render
+    await expect(page.locator('.party-member-item').first()).toBeVisible({ timeout: 10000 });
 
     const members = page.locator('.party-member-item');
     const count = await members.count();
@@ -1058,28 +1039,25 @@ test.describe('Cross-Story: Navigation & Accessibility', () => {
 
   test('Drawer contains Fellowships link', async ({ page, leader1Token }) => {
     await loginAs(page, leader1Token, '/journey');
-    await page.waitForTimeout(1000);
 
     const menuBtn = page.locator('[aria-label="Open menu"]')
       .or(page.locator('.menu-toggle'))
       .or(page.locator('.hamburger'))
       .or(page.locator('#drawer-toggle'));
-    if (await menuBtn.isVisible({ timeout: 3000 })) {
+    if (await menuBtn.isVisible({ timeout: 8000 })) {
       await menuBtn.click();
-      await page.waitForTimeout(500);
-      await expect(page.locator('a:has-text("Fellowships")')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('a:has-text("Fellowships")')).toBeVisible({ timeout: 8000 });
     }
   });
 
   test('Breadcrumb from detail navigates to list', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Nav Breadcrumb Party');
     await loginAs(page, leader1Token, `/party/${party.id}`);
-    await page.waitForTimeout(2000);
 
     const backLink = page.locator('a:has-text("← Fellowships")');
-    await expect(backLink).toBeVisible({ timeout: 5000 });
+    await expect(backLink).toBeVisible({ timeout: 8000 });
     await backLink.click();
-    await page.waitForURL('**/party', { timeout: 5000 });
+    await page.waitForURL('**/party', { timeout: 8000 });
   });
 
   test('Party pages are responsive on mobile viewport', async ({ page, request, leader1Token }) => {
@@ -1088,14 +1066,12 @@ test.describe('Cross-Story: Navigation & Accessibility', () => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
     await loginAs(page, leader1Token, '/party');
-    await page.waitForTimeout(2000);
 
     // List should still be visible
-    await expect(page.locator('[data-island="PartyListIsland"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-island="PartyListIsland"]')).toBeVisible({ timeout: 8000 });
 
     // Detail page
     await page.goto(`${BASE_URL}/party/${party.id}`);
-    await page.waitForTimeout(2000);
-    await expect(page.locator('.party-breadcrumb')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.party-breadcrumb')).toBeVisible({ timeout: 8000 });
   });
 });

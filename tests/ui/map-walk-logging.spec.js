@@ -106,7 +106,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
       // Focus inside the sheet first to ensure ESC is handled
       await page.locator('#sheet-close-btn').focus();
-      await page.waitForTimeout(100);
+      await expect(page.locator('#sheet-close-btn')).toBeFocused();
 
       // Press ESC
       await page.keyboard.press('Escape');

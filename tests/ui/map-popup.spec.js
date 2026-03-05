@@ -123,7 +123,6 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
     const popup = page.locator('.waypoint-popup');
     if (await popup.count() > 0) {
       await popup.locator('.waypoint-popup-close').click();
-      await page.waitForTimeout(200);
       await expect(popup).not.toBeVisible();
     }
   });
@@ -143,7 +142,6 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
 
     if (hasPopup || hasSheet) {
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(200);
       await expect(popup).not.toBeVisible();
       await expect(sheet).not.toBeVisible();
     }
@@ -162,7 +160,6 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
       const wrapper = await page.locator('.map-canvas-wrapper').boundingBox();
       await page.mouse.move(wrapper.x + wrapper.width / 2, wrapper.y + wrapper.height / 2);
       await page.mouse.wheel(0, -200);
-      await page.waitForTimeout(500);
       await expect(popup).not.toBeVisible();
     }
   });
@@ -182,7 +179,6 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
       await page.mouse.down();
       await page.mouse.move(wrapper.x + 250, wrapper.y + 250, { steps: 10 });
       await page.mouse.up();
-      await page.waitForTimeout(500);
       await expect(popup).not.toBeVisible();
     }
   });
@@ -308,7 +304,6 @@ test.describe('Waypoint Popup - Mobile', () => {
     if (await overlay.count() > 0) {
       // Click on overlay area (top of screen, outside sheet)
       await page.mouse.click(187, 50);
-      await page.waitForTimeout(200);
       await expect(overlay).not.toBeVisible();
     }
   });

@@ -90,7 +90,9 @@ async function selectCalendarDate(page, dateInfo) {
 
     try {
       await page.click('#next-btn', { timeout: 2000 });
-      await page.waitForTimeout(300);
+      
+      // Wait for calendar to update after navigation
+      await page.waitForSelector('.calendar-cell', { timeout: 5000 });
       
       // If we have a specific date object, try finding it again after navigation
       if (dateInfo && typeof dateInfo === 'object' && dateInfo.date) {
@@ -113,7 +115,6 @@ async function selectCalendarDate(page, dateInfo) {
       
       return cell;
     } catch (error) {
-      await page.waitForTimeout(500);
       const availableCells = page.locator('.calendar-cell');
       const cellCount = await availableCells.count();
       if (cellCount > 0) {
@@ -132,7 +133,7 @@ async function createTestEvent(page, distance, dateInfo) {
       const overlay = page.locator('.mbsc-popup-overlay');
       if (await overlay.isVisible({ timeout: 500 })) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
+        await overlay.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
       }
     } catch (error) {}
     

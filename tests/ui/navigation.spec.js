@@ -27,31 +27,16 @@ test.describe('Navigation & Responsiveness', () => {
 
     // Navigate to next week/month
     await page.click('#next-btn');
-    // Allow time for animation/update
-    await page.waitForTimeout(300);
-    
-    // Depending on the datem navigating next should change the view or title
-    // If it's weekly view, title (Month Year) might stay same if within same month, 
-    // but usually user can navigate enough to change month.
-    
-    // Let's navigate to next month explicitly by clicking multiple times if necessary
-    // or just check if dates changed.
-    // Easier check: The DOM should update.
-    
-    // We can also check if the active dates change.
+    await expect(page.locator('#prev-btn')).toBeEnabled();
     
     // Navigate back to initial
     await page.click('#prev-btn');
-    await page.waitForTimeout(300);
+    await expect(page.locator('#next-btn')).toBeEnabled();
     
-    // If we are back, we might check consistency, or check functionality.
-    
-    // Let's just verify 'next' works.
+    // Navigate forward again
     await page.click('#next-btn');
-    await page.waitForTimeout(300);
     
-    // It's possible title stays same if it's the same month, let's just assert the buttons are interactive
-    // and don't throw errors.
+    // Buttons should still be interactive
     await expect(page.locator('#prev-btn')).toBeEnabled();
     await expect(page.locator('#next-btn')).toBeEnabled();
   });
@@ -91,8 +76,6 @@ test.describe('Navigation & Responsiveness', () => {
 
     for (const size of sizes) {
       await page.setViewportSize(size);
-      // Wait for resize
-      await page.waitForTimeout(200);
       
       // Ensure app doesn't crash and main container is visible
       await expect(page.locator('body')).toBeVisible();

@@ -10,10 +10,7 @@ async function closePopupRobust(page, closeButton) {
       await closeButton.click({ force: true });
   }
   
-  // Firefox may need more time for popup animations/transitions
-  await page.waitForTimeout(500);
-  
-  // Wait for popup to actually close - Firefox sometimes has timing issues
+  // Wait for popup to actually close
   await page.waitForFunction(() => {
     const popup = document.querySelector('.modal-overlay');
     return !popup || window.getComputedStyle(popup).display === 'none' || 
@@ -110,7 +107,7 @@ async function setFieldValueRobust(page, selector, value) {
  * UI Tests - Profile Modal Functionality
  */
 test.describe('User Profile Modal', () => {
-    test.setTimeout(60000); // 60 seconds
+    test.setTimeout(30000);
     const menuSelector = '.menu-icon';
     const profileDrawerSelector = '.drawer-profile';
 

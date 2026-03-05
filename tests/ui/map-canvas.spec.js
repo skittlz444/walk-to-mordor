@@ -94,7 +94,11 @@ test.describe('Map Canvas & Base Image Layer', () => {
     const box = await wrapper.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.wheel(0, -300);
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      return stages[0].scaleX() !== 1;
+    }, { timeout: 5000 });
 
     await expect(canvas.first()).toBeVisible();
   });
@@ -105,7 +109,10 @@ test.describe('Map Canvas & Base Image Layer', () => {
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
     await page.setViewportSize({ width: 800, height: 400 });
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => {
+      const c = document.querySelector('.map-canvas-wrapper canvas');
+      return c && c.width > 0 && c.height > 0;
+    }, { timeout: 5000 });
 
     await expect(canvas.first()).toBeVisible();
     const wrapper = page.locator('.map-canvas-wrapper');
@@ -251,9 +258,13 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       await page.mouse.wheel(0, -180);
       await page.waitForTimeout(70);
     }
-    await page.waitForTimeout(1200);
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      return stages[0].scaleX() !== 1;
+    }, { timeout: 5000 });
 
-    const metaReqs = tileRequests.filter((u) => u.includes('metadata.json'));
+    const metaReqs= tileRequests.filter((u) => u.includes('metadata.json'));
     const tileImageReqs = tileRequests.filter((u) =>
       u.includes('/img/map/tiles/') && !u.includes('metadata.json'),
     );
@@ -286,7 +297,13 @@ test.describe('Map Canvas - Tile Update Logic', () => {
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
     // Wait for initial tiles to load
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const tileLayer = stages[0].getLayers()[0];
+      if (!tileLayer) return false;
+      return tileLayer.getChildren().length > 0;
+    }, { timeout: 10000 });
 
     // Zoom in significantly (multiple scroll events)
     const wrapper = page.locator('.map-canvas-wrapper');
@@ -297,8 +314,12 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       await page.waitForTimeout(100);
     }
 
-    // Wait for potential new tile requests
-    await page.waitForTimeout(2000);
+    // Wait for Konva zoom to settle
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      return stages[0].scaleX() !== 1;
+    }, { timeout: 5000 });
 
     // After zooming, verify that tile image requests were made
     // (at initial load AND/OR after zoom — the key assertion is tiles were loaded)
@@ -316,7 +337,13 @@ test.describe('Map Canvas - Tile Update Logic', () => {
     await expect(canvas.first()).toBeVisible({ timeout: 15000 });
 
     // Wait for initial tiles to fully load and render
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => {
+      const stages = window.Konva?.stages;
+      if (!stages || stages.length === 0) return false;
+      const tileLayer = stages[0].getLayers()[0];
+      if (!tileLayer) return false;
+      return tileLayer.getChildren().length > 0;
+    }, { timeout: 10000 });
 
     // Zoom in to trigger a level change
     const wrapper = page.locator('.map-canvas-wrapper');
