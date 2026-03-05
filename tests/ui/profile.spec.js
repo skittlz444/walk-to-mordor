@@ -233,23 +233,16 @@ test.describe('User Profile Modal', () => {
         await expect(page.locator('.modal-overlay')).toBeVisible();
         await waitForProfileFormReady(page);
 
-        let newEmail = '';
-        let saved = false;
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-            newEmail = uniqueEmail('newemail');
-            await setFieldValueRobust(page, '#profile-email', newEmail);
+        // Update email (keeping same username)
+        const newEmail = uniqueEmail('newemail');
+        await setFieldValueRobust(page, '#profile-email', newEmail);
 
-            const saveResponsePromise = waitForProfilePutResponse(page);
-            await page.click('#save-profile-btn');
-            const saveResponse = await saveResponsePromise;
+        const saveResponsePromise = waitForProfilePutResponse(page);
+        await page.click('#save-profile-btn');
 
-            if (saveResponse && saveResponse.status() === 200) {
-                saved = true;
-                break;
-            }
-        }
-
-        expect(saved).toBe(true);
+        const saveResponse = await saveResponsePromise;
+        expect(saveResponse).not.toBeNull();
+        expect(saveResponse.status()).toBe(200);
 
         await waitForProfileSave(page);
 
@@ -294,14 +287,11 @@ test.describe('User Profile Modal', () => {
         await expect(page.locator('.modal-overlay')).toBeVisible();
         await waitForProfileFormReady(page);
 
-        // Enter invalid email
-        await page.fill('#profile-email', 'invalid-email');
-        await expect(page.locator('#profile-email')).toHaveValue('invalid-email');
-        // Clear username to ensure we isolate email validation and avoid any pre-existing username issues
-        await page.fill('#profile-username', '');
+        // Enter invalid email using robust setter to ensure value sticks across browsers
+        await setFieldValueRobust(page, '#profile-email', 'invalid-email');
 
         const saveResponsePromise = waitForProfilePutResponse(page);
-        await page.click('#save-profile-btn', { force: true });
+        await page.click('#save-profile-btn');
 
         const saveResponse = await saveResponsePromise;
         if (saveResponse) {
