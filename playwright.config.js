@@ -13,8 +13,8 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : 2,
+  /* Parallel workers — tests use unique tokens per worker for isolation */
+  workers: 3,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['html', {open:'never'}],
@@ -35,12 +35,10 @@ module.exports = defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
     },
-
     /* Test against mobile viewports. */
     {
       name: 'Mobile Chrome',
@@ -54,7 +52,7 @@ module.exports = defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI ? 'npm run dev:ci' : 'npm run dev',
     url: 'http://localhost:8787',
     reuseExistingServer: !process.env.CI,
   },

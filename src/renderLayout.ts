@@ -17,6 +17,8 @@ export interface PageConfig {
     mainClass?: string;
     /** Additional <script> tags to load before profile.js / main.js */
     scripts?: string[];
+    /** If true, skip profile.js / main.js (for public pages that don't require auth) */
+    publicPage?: boolean;
 }
 
 export function renderLayout(config: PageConfig): string {
@@ -101,8 +103,7 @@ ${extraStylesheets}
       
       <!-- Scripts -->
 ${extraScripts}
-      <script src="/js/profile.js"></script>
-      <script src="/js/main.js"></script>
+${config.publicPage ? '' : '      <script src="/js/profile.js"></script>\n      <script src="/js/main.js"></script>'}
       </body>
     </html>
 `;

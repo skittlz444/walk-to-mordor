@@ -10,10 +10,7 @@ async function closePopupRobust(page, closeButton) {
       await closeButton.click({ force: true });
   }
   
-  // Firefox may need more time for popup animations/transitions
-  await page.waitForTimeout(500);
-  
-  // Wait for popup to actually close - Firefox sometimes has timing issues
+  // Wait for popup to actually close
   await page.waitForFunction(() => {
     const popup = document.querySelector('.modal-overlay');
     return !popup || window.getComputedStyle(popup).display === 'none' || 
@@ -110,7 +107,7 @@ async function setFieldValueRobust(page, selector, value) {
  * UI Tests - Profile Modal Functionality
  */
 test.describe('User Profile Modal', () => {
-    test.setTimeout(60000); // 60 seconds
+    test.setTimeout(30000);
     const menuSelector = '.menu-icon';
     const profileDrawerSelector = '.drawer-profile';
 
@@ -236,23 +233,17 @@ test.describe('User Profile Modal', () => {
         await expect(page.locator('.modal-overlay')).toBeVisible();
         await waitForProfileFormReady(page);
 
-        let newEmail = '';
-        let saved = false;
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-            newEmail = uniqueEmail('newemail');
-            await setFieldValueRobust(page, '#profile-email', newEmail);
+        // Update email (keeping same username)
+        const newEmail = uniqueEmail('newemail');
+        await page.locator('#profile-email').fill(newEmail);
+        await expect(page.locator('#profile-email')).toHaveValue(newEmail);
 
-            const saveResponsePromise = waitForProfilePutResponse(page);
-            await page.click('#save-profile-btn');
-            const saveResponse = await saveResponsePromise;
-
-            if (saveResponse && saveResponse.status() === 200) {
-                saved = true;
-                break;
-            }
-        }
-
-        expect(saved).toBe(true);
+        // Listen for the PUT response BEFORE clicking save (inherits 30s test timeout)
+        const responsePromise = page.waitForResponse(
+            resp => resp.url().includes('/api/profile') && resp.request().method() === 'PUT');
+        await page.click('#save-profile-btn');
+        const response = await responsePromise;
+        expect(response.status()).toBe(200);
 
         await waitForProfileSave(page);
 
@@ -297,14 +288,11 @@ test.describe('User Profile Modal', () => {
         await expect(page.locator('.modal-overlay')).toBeVisible();
         await waitForProfileFormReady(page);
 
-        // Enter invalid email
-        await page.fill('#profile-email', 'invalid-email');
-        await expect(page.locator('#profile-email')).toHaveValue('invalid-email');
-        // Clear username to ensure we isolate email validation and avoid any pre-existing username issues
-        await page.fill('#profile-username', '');
+        // Enter invalid email using robust setter to ensure value sticks across browsers
+        await setFieldValueRobust(page, '#profile-email', 'invalid-email');
 
         const saveResponsePromise = waitForProfilePutResponse(page);
-        await page.click('#save-profile-btn', { force: true });
+        await page.click('#save-profile-btn');
 
         const saveResponse = await saveResponsePromise;
         if (saveResponse) {

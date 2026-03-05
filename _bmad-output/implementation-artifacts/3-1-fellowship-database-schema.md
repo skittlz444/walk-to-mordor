@@ -1,6 +1,6 @@
 # Story 3.1: Fellowship Database Schema
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,14 +21,14 @@ so that the Walk to Mordor app can support multiplayer features where users crea
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Database Migration (AC: 1, 2, 3, 4, 5)
-  - [ ] Write SQL for `parties` table with `distance_mode`, `leave_distance_behavior`, and `dissolved_at` columns and associated indexes
-  - [ ] Write SQL for `party_members` table with `status` (active/left/kicked), `last_viewed_distance`, `departed_at`, `distance_kept`, and `contribution_at_departure` columns and associated indexes (including `user_id` index for multi-party lookups)
-  - [ ] Write SQL for `party_progress_log` table with `date` column and associated indexes
-  - [ ] Save the file as `migrations/0119_create_fellowship_tables.sql` (Validate current max number)
-- [ ] Task 2: Document the Schema (AC: 6)
-  - [ ] Add the tables to the `docs/data-models.md` text breakdown
-  - [ ] Update the Mermaid ER Diagram in `docs/data-models.md` to reflect the new relationships
+- [x] Task 1: Create Database Migration (AC: 1, 2, 3, 4, 5)
+  - [x] Write SQL for `parties` table with `distance_mode`, `leave_distance_behavior`, and `dissolved_at` columns and associated indexes
+  - [x] Write SQL for `party_members` table with `status` (active/left/kicked), `last_viewed_distance`, `departed_at`, `distance_kept`, and `contribution_at_departure` columns and associated indexes (including `user_id` index for multi-party lookups)
+  - [x] Write SQL for `party_progress_log` table with `date` column and associated indexes
+  - [x] Save the file as `migrations/0119_create_fellowship_tables.sql` (Validate current max number)
+- [x] Task 2: Document the Schema (AC: 6)
+  - [x] Add the tables to the `docs/data-models.md` text breakdown
+  - [x] Update the Mermaid ER Diagram in `docs/data-models.md` to reflect the new relationships
 
 ## Dev Notes
 
@@ -76,10 +76,33 @@ Requirements expanded from original spec:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Sonnet 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- ✅ Created `migrations/0119_create_fellowship_tables.sql` with all three Fellowship tables and all required indexes.
+- ✅ `parties` table: id, name, leader_id (FK→users), created_at, invite_code (UNIQUE), distance_mode (default 'incremental'), leave_distance_behavior (default 'keep'), dissolved_at (NULL for active).
+- ✅ `party_members` table: all columns per AC2 including distance_at_join, role, status (active/left/kicked), last_viewed_distance, departed_at, distance_kept (nullable BOOLEAN/INTEGER), contribution_at_departure (nullable REAL). UNIQUE(party_id, user_id) enforces single-row-per-pair; no unique constraint on user_id alone for multi-party support.
+- ✅ `party_progress_log` table: party_id, logged_by_user_id, distance, date (DATE), logged_at — dual-purpose audit trail and activity feed.
+- ✅ Indexes created: parties (leader_id, invite_code), party_members (party_id, user_id, status), party_progress_log (party_id, logged_by_user_id, date).
+- ✅ `docs/data-models.md` updated with textual breakdown for all three new tables including field descriptions, index lists, and design rationale.
+- ✅ Mermaid ER Diagram updated to include parties, party_members, party_progress_log and all relationships to users.
+- ✅ All 6 Acceptance Criteria satisfied. No new dependencies required. No regression risk (pure additive schema migration).
+- ✅ **[AI-Review] CHECK constraints added** to `distance_mode`, `leave_distance_behavior`, `role`, and `status` columns to enforce enum values at the DB layer and prevent silent data corruption (M1).
+- ✅ **[AI-Review] Composite index added**: `idx_party_members_party_id_status ON party_members(party_id, status)` covers the dominant query pattern (active members of a party) as a single range scan (M2).
+- ✅ **[AI-Review] UNIQUE constraint added** to `party_progress_log(party_id, logged_by_user_id, date)` to prevent duplicate log entries on API retries, mirroring the `progress` table's own `UNIQUE(date, user_id)` guard (M3).
+- ✅ **[AI-Review] Redundant index removed**: `idx_parties_invite_code` dropped — `invite_code TEXT UNIQUE` already creates an implicit unique index in SQLite (L1).
+- ✅ **[AI-Review] Leader invariant documented** in `docs/data-models.md` under `party_members` — `role = 'leader'` must stay in sync with `parties.leader_id` via atomic transactions (L2).
+- ✅ **[AI-Review] Mermaid type labels corrected**: `float` → `real` in `party_members` and `party_progress_log` ER diagram entities to match SQLite's actual type system (L3).
+- ✅ **[AI-Review-2] CHECK constraint added** to `distance_kept` column: `CHECK(distance_kept IS NULL OR distance_kept IN (0, 1))` to enforce boolean semantics and prevent data corruption (M4).
+- ✅ **[AI-Review-2] Composite activity feed index**: Replaced `idx_party_progress_log_party_id` with `idx_party_progress_log_party_id_logged_at ON (party_id, logged_at)` for Story 3.8 activity feed queries (M5).
+- ✅ **[AI-Review-2] Redundant index removed**: `idx_party_members_party_id` dropped — composite `idx_party_members_party_id_status` already covers `party_id`-only lookups as leftmost column (L1).
+- ✅ **[AI-Review-2] Migration header format fixed**: Aligned with existing convention `-- Migration 0119_...` (L2).
+- ✅ **[AI-Review-2] Docs fixes**: `leader_id` NOT NULL documented; `idx_parties_invite_code` annotated as implicit; composite index `idx_party_members_party_id_status` documented; `UNIQUE(party_id, logged_by_user_id, date)` documented on `party_progress_log` (M1, M2, M3, L3).
+
 ### File List
+
+- migrations/0119_create_fellowship_tables.sql
+- docs/data-models.md

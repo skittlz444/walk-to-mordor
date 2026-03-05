@@ -77,6 +77,9 @@ function generateRandomTestDate() {
 }
 
 async function selectCalendarDate(page, dateInfo) {
+    // Wait for calendar to be ready on the page
+    await page.waitForSelector('.calendar-cell, [data-date], [data-timestamp]', { timeout: 10000 }).catch(() => {});
+    
     // Attempt to find cell by specific date attribute first if provided
     if (dateInfo && typeof dateInfo === 'object' && dateInfo.date) {
         const dateSelector = `[data-date="${dateInfo.date}"]`;
@@ -87,7 +90,9 @@ async function selectCalendarDate(page, dateInfo) {
 
     try {
       await page.click('#next-btn', { timeout: 2000 });
-      await page.waitForTimeout(300);
+      
+      // Wait for calendar to update after navigation
+      await page.waitForSelector('.calendar-cell', { timeout: 5000 });
       
       // If we have a specific date object, try finding it again after navigation
       if (dateInfo && typeof dateInfo === 'object' && dateInfo.date) {
@@ -114,7 +119,7 @@ async function selectCalendarDate(page, dateInfo) {
       const cellCount = await availableCells.count();
       if (cellCount > 0) {
         const randomCell = availableCells.nth(Math.floor(Math.random() * cellCount));
-        if (await randomCell.isVisible({ timeout: 2000 })) return randomCell;
+        if (await randomCell.isVisible({ timeout: 5000 })) return randomCell;
       }
       throw new Error(`Could not select any calendar date`);
     }
@@ -128,7 +133,7 @@ async function createTestEvent(page, distance, dateInfo) {
       const overlay = page.locator('.mbsc-popup-overlay');
       if (await overlay.isVisible({ timeout: 500 })) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
+        await overlay.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
       }
     } catch (error) {}
     

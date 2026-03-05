@@ -34,6 +34,32 @@ import {
   validateSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
+import { renderPartyListPage } from "./renderPartyListPage";
+import { renderPartyDetailPage } from "./renderPartyDetailPage";
+import { renderPartyManagePage } from "./renderPartyManagePage";
+import { renderPartyJoinPage } from "./renderPartyJoinPage";
+
+/**
+ * Match a URL pathname against a parameterized route pattern.
+ * Returns null if no match, or an object with extracted params.
+ * E.g., matchRoute('/api/party/join/AbCd1234', '/api/party/join/:inviteCode')
+ *   => { inviteCode: 'AbCd1234' }
+ */
+function matchRoute(pathname: string, pattern: string): Record<string, string> | null {
+  const pathParts = pathname.split('/');
+  const patternParts = pattern.split('/');
+  if (pathParts.length !== patternParts.length) return null;
+  const params: Record<string, string> = {};
+  for (let i = 0; i < patternParts.length; i++) {
+    if (patternParts[i].startsWith(':')) {
+      params[patternParts[i].slice(1)] = pathParts[i];
+    } else if (patternParts[i] !== pathParts[i]) {
+      return null;
+    }
+  }
+  return params;
+}
 
 export default {
   async fetch(request, env): Promise<Response> {
@@ -109,6 +135,131 @@ export default {
       }
       
       // Protected endpoints (authentication required)
+      // Party (Fellowship) endpoints
+      if (url.pathname === "/api/party" && method === "POST") {
+        return handleCreateParty(request, env, body);
+      }
+
+      // GET /api/user/parties — list user's party memberships (auth required)
+      if (url.pathname === "/api/user/parties" && method === "GET") {
+        return handleGetUserParties(request, env);
+      }
+
+      // Parameterized party routes
+      const joinParams = matchRoute(url.pathname, '/api/party/join/:inviteCode');
+      if (joinParams) {
+        if (method === "GET") {
+          return handlePreviewParty(request, env, joinParams.inviteCode);
+        } else if (method === "POST") {
+          return handleJoinParty(request, env, joinParams.inviteCode);
+        }
+      }
+
+      const inviteParams = matchRoute(url.pathname, '/api/party/:id/invite');
+      if (inviteParams && method === "POST") {
+        const partyId = Number.parseInt(inviteParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== inviteParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleRegenerateInvite(request, env, partyId);
+      }
+
+      // GET /api/party/:id/progress — party progress calculation
+      const progressParams = matchRoute(url.pathname, '/api/party/:id/progress');
+      if (progressParams && method === "GET") {
+        const partyId = Number.parseInt(progressParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== progressParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handlePartyProgress(request, env, partyId);
+      }
+
+      // GET /api/party/:id/activity — party activity feed
+      const activityParams = matchRoute(url.pathname, '/api/party/:id/activity');
+      if (activityParams && method === "GET") {
+        const partyId = Number.parseInt(activityParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== activityParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handlePartyActivity(request, env, partyId);
+      }
+
+      // POST /api/party/:id/leave — leave party
+      const leaveParams = matchRoute(url.pathname, '/api/party/:id/leave');
+      if (leaveParams && method === "POST") {
+        const partyId = Number.parseInt(leaveParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== leaveParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleLeaveParty(request, env, partyId);
+      }
+
+      // POST /api/party/:id/kick/:userId — kick member (leader only)
+      const kickParams = matchRoute(url.pathname, '/api/party/:id/kick/:userId');
+      if (kickParams && method === "POST") {
+        const partyId = Number.parseInt(kickParams.id, 10);
+        const targetUserId = Number.parseInt(kickParams.userId, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== kickParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        if (
+          !Number.isInteger(targetUserId) ||
+          targetUserId <= 0 ||
+          String(targetUserId) !== kickParams.userId
+        ) {
+          return createErrorResponse('Invalid user ID', 400);
+        }
+        return handleKickMember(request, env, partyId, targetUserId, body);
+      }
+
+      // PUT /api/party/:id/settings — update party settings (leader only)
+      const settingsParams = matchRoute(url.pathname, '/api/party/:id/settings');
+      if (settingsParams && method === "PUT") {
+        const partyId = Number.parseInt(settingsParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== settingsParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleUpdatePartySettings(request, env, partyId, body);
+      }
+
+      // POST /api/party/:id/transfer-leadership — transfer leadership (leader only)
+      const transferParams = matchRoute(url.pathname, '/api/party/:id/transfer-leadership');
+      if (transferParams && method === "POST") {
+        const partyId = Number.parseInt(transferParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== transferParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleTransferLeadership(request, env, partyId, body);
+      }
+
       // CRUD for calendar events
       if (url.pathname === "/api/calendar-progress" && method === "POST") {
         return handleProgressPost(request, env, body);
@@ -151,7 +302,7 @@ export default {
     }
 
     // Main page - serve auth page for /login
-    if (url.pathname === "/login" || url.pathname === "/wtm/login") {
+    if (url.pathname === "/login") {
       return new Response(renderAuthPage(), {
         headers: {
           "content-type": "text/html",
@@ -160,7 +311,7 @@ export default {
     }
     
     // Password reset request page
-    if (url.pathname === "/password-reset" || url.pathname === "/wtm/password-reset") {
+    if (url.pathname === "/password-reset") {
       return new Response(renderPasswordResetRequestPage(), {
         headers: {
           "content-type": "text/html",
@@ -169,7 +320,7 @@ export default {
     }
     
     // Password reset with token page
-    if (url.pathname === "/reset-password" || url.pathname === "/wtm/reset-password") {
+    if (url.pathname === "/reset-password") {
       return new Response(renderPasswordResetPage(), {
         headers: {
           "content-type": "text/html",
@@ -181,7 +332,36 @@ export default {
       return handleMapPage(request, env);
     }
 
-    if (url.pathname === "/" || url.pathname === "/wtm") {
+    // Party (Fellowship) pages
+    // Must check /party/join/:code before /party/:id to avoid matching "join" as an id
+    const partyJoinPageParams = matchRoute(url.pathname, '/party/join/:inviteCode');
+    if (partyJoinPageParams) {
+      return new Response(renderPartyJoinPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    const partyManagePageParams = matchRoute(url.pathname, '/party/:id/manage');
+    if (partyManagePageParams) {
+      return new Response(renderPartyManagePage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    const partyDetailPageParams = matchRoute(url.pathname, '/party/:id');
+    if (partyDetailPageParams) {
+      return new Response(renderPartyDetailPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    if (url.pathname === "/party") {
+      return new Response(renderPartyListPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    if (url.pathname === "/") {
       return new Response(renderHomePage(), {
         headers: {
           "content-type": "text/html",
@@ -191,7 +371,7 @@ export default {
       });
     }
 
-    if (url.pathname === "/journey" || url.pathname === "/wtm/journey") {
+    if (url.pathname === "/journey") {
       return new Response(renderHtml(), {
         headers: {
           "content-type": "text/html",
@@ -217,6 +397,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/total-distance":
     case "/api/session":
     case "/api/auth/confirm-email":
+    case "/api/user/parties":
       return ['GET'];
     case "/api/register":
     case "/api/login":
@@ -224,11 +405,37 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/password-reset-request":
     case "/api/password-reset":
     case "/api/auth/resend-confirmation":
+    case "/api/party":
       return ['POST'];
     case "/api/profile":
     case "/api/user/preferences":
       return ['PUT'];
     default:
+      // Parameterized routes
+      if (matchRoute(pathname, '/api/party/join/:inviteCode')) {
+        return ['GET', 'POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/invite')) {
+        return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/progress')) {
+        return ['GET'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/activity')) {
+        return ['GET'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/leave')) {
+        return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/kick/:userId')) {
+        return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/settings')) {
+        return ['PUT'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/transfer-leadership')) {
+        return ['POST'];
+      }
       return ['GET'];
   }
 }

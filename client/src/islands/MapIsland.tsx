@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'preact/hooks';
-import { useSignal } from '@preact/signals';
+import { useSignal, useComputed } from '@preact/signals';
 import Konva from 'konva';
 import {
   createJourneyPath,
@@ -38,6 +38,24 @@ import {
 } from '../data/waypoints';
 import { MapWalkIsland } from './MapWalkIsland';
 import { userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
+import {
+  createMemberPaths,
+  updateMemberPaths,
+  type MemberPathData,
+  type MemberPathNodes,
+} from '../components/map/MemberPaths';
+import { MapLegend } from '../components/map/MapLegend';
+import {
+  selectedView,
+  partyProgress,
+  isPartyView,
+  selectedParty,
+  userParties,
+  fetchUserParties,
+  selectView,
+  type PartySelection,
+  type PartyProgress as PartyProgressType,
+} from '../stores/partyStore';
 
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
@@ -238,6 +256,7 @@ export function MapIsland() {
   const allGoalsRef = useRef<Goal[]>([]);
   const isUserPanning = useRef(false);
   const panAnimRef = useRef<Konva.Animation | null>(null);
+  const memberPathsRef = useRef<MemberPathNodes | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -247,6 +266,8 @@ export function MapIsland() {
   const error = useSignal(false);
   // User's walked distance in miles, fetched from /api/progress on init.
   const userDistance = useSignal(0);
+  // Personal distance (miles) saved for restoring when switching from party view.
+  const personalDistanceRef = useRef(0);
 
   // Popup state signals
   const selectedWaypoint = useSignal<Waypoint | null>(null);
@@ -255,6 +276,9 @@ export function MapIsland() {
   const measuredPopupSize = useSignal<{ width: number; height: number } | null>(null);
   const isMobile = useSignal(false);
   const expandGoal = useSignal<Goal | null>(null);
+  const showPartyPanel = useSignal(false);
+
+  const partyViewActive = useComputed(() => isPartyView.value);
 
   /** Close the waypoint popup. */
   const closePopup = useCallback(() => {
@@ -488,6 +512,12 @@ export function MapIsland() {
     if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
       updateWaypointVisibility();
     }
+
+    // Update member path stroke widths on zoom
+    if (memberPathsRef.current) {
+      updateMemberPaths(memberPathsRef.current, currentScale.value);
+      pathLayerRef.current?.batchDraw();
+    }
   }, [updateTiles]);
 
   const handleDesktopPopupSizeChange = useCallback((size: { width: number; height: number } | null) => {
@@ -659,6 +689,7 @@ export function MapIsland() {
     const oldDistance = userDistance.value;
     if (newDistanceMiles === oldDistance) return;
 
+    personalDistanceRef.current = newDistanceMiles;
     userDistance.value = newDistanceMiles;
     const newPos = getUserPosition(fellowshipPath, newDistanceMiles);
 
@@ -686,6 +717,90 @@ export function MapIsland() {
     // Persist latest opened distance for next map visit animation baseline
     writeLastOpenedDistanceMiles(localStorage, newDistanceMiles);
   }, [centerOnPosition]);
+
+  /** Draw or clear member contribution paths on the map. */
+  const drawMemberPaths = useCallback((progress: PartyProgressType | null) => {
+    // Clear existing member paths
+    if (memberPathsRef.current) {
+      memberPathsRef.current.destroy();
+      memberPathsRef.current = null;
+    }
+
+    if (!progress || !pathLayerRef.current) {
+      pathLayerRef.current?.batchDraw();
+      return;
+    }
+
+    const memberData: MemberPathData[] = progress.members
+      .filter(m => m.contribution > 0)
+      .map(m => ({
+        userId: m.user_id,
+        displayName: m.display_name,
+        distanceMiles: m.contribution * KM_TO_MILES,
+        colorIndex: m.color,
+        // Treat any non-'active' status as departed (e.g., 'left', 'kicked')
+        isDeparted: m.status !== 'active',
+      }));
+
+    if (memberData.length > 0) {
+      memberPathsRef.current = createMemberPaths(
+        pathLayerRef.current,
+        memberData,
+        currentScale.value,
+      );
+    }
+
+    pathLayerRef.current.batchDraw();
+  }, []);
+
+  /** Handle party view changes from the toggle panel. */
+  const handlePartyViewChange = useCallback(async (selection: PartySelection) => {
+    const progress = await selectView(selection);
+
+    // Determine the effective selection after selectView resolves.
+    // selectView may fall back to 'personal' on 403/404, so re-read the store.
+    const effectiveSelection: PartySelection =
+      progress === null ? 'personal' : selectedView.value;
+
+    drawMemberPaths(effectiveSelection === 'personal' ? null : progress);
+
+    // Switch displayed distance: party total when viewing a fellowship,
+    // personal distance when switching back to "My Journey".
+    const newDistanceMiles = effectiveSelection === 'personal'
+      ? personalDistanceRef.current
+      : progress
+        ? progress.total_distance * KM_TO_MILES
+        : userDistance.value;
+
+    if (newDistanceMiles !== userDistance.value) {
+      userDistance.value = newDistanceMiles;
+      const newPos = getUserPosition(fellowshipPath, newDistanceMiles);
+
+      if (pathNodesRef.current) {
+        updateJourneyPath(pathNodesRef.current, newDistanceMiles, currentScale.value);
+        pathLayerRef.current?.batchDraw();
+      }
+
+      if (markerRef.current) {
+        markerRef.current.setDistance(newDistanceMiles);
+        markerRef.current.setPosition(newPos, true);
+        markerLayerRef.current?.batchDraw();
+      }
+
+      if (waypointMarkersRef.current) {
+        updateWaypointVisibility();
+      }
+
+      centerOnPosition(newPos, currentScale.value, true);
+    }
+
+    showPartyPanel.value = false;
+  }, [drawMemberPaths, centerOnPosition]);
+
+  // Fetch user parties on mount
+  useEffect(() => {
+    fetchUserParties();
+  }, []);
 
   // Initialize Konva stage and fetch metadata
   useEffect(() => {
@@ -864,6 +979,7 @@ export function MapIsland() {
           : distMiles;
 
         userDistance.value = initialDistance;
+        personalDistanceRef.current = distMiles;
 
         // Populate mapStore userProgress for MapWalkIsland to use
         userProgress.value = {
@@ -1154,6 +1270,10 @@ export function MapIsland() {
         markerRef.current.destroy();
         markerRef.current = null;
       }
+      if (memberPathsRef.current) {
+        memberPathsRef.current.destroy();
+        memberPathsRef.current = null;
+      }
       if (waypointMarkersRef.current) {
         waypointMarkersRef.current.destroy();
         waypointMarkersRef.current = null;
@@ -1211,7 +1331,45 @@ export function MapIsland() {
           >
             <i className="fas fa-crosshairs" aria-hidden="true"></i>
           </button>
+          <button
+            type="button"
+            className={`map-party-toggle${partyViewActive.value ? ' active' : ''}`}
+            aria-label="Toggle party view"
+            title="Party view"
+            onClick={() => { showPartyPanel.value = !showPartyPanel.value; }}
+          >
+            <i className="fas fa-users" aria-hidden="true"></i>
+          </button>
         </div>
+      )}
+      {/* Party selection panel (opens from party toggle button) */}
+      {showPartyPanel.value && !loading.value && (
+        <div className="map-party-panel">
+          <button
+            type="button"
+            className={`map-party-option${selectedView.value === 'personal' ? ' selected' : ''}`}
+            onClick={() => handlePartyViewChange('personal')}
+          >
+            My Journey
+          </button>
+          {userParties.value.map(party => (
+            <button
+              key={party.id}
+              type="button"
+              className={`map-party-option${selectedView.value === party.id ? ' selected' : ''}`}
+              onClick={() => handlePartyViewChange(party.id)}
+            >
+              {party.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Party legend (visible when party view is active) */}
+      {partyViewActive.value && partyProgress.value && selectedParty.value && (
+        <MapLegend
+          members={partyProgress.value.members}
+          partyName={selectedParty.value.name}
+        />
       )}
       {/* Waypoint detail popup (HTML overlay, outside Konva canvas) */}
       <WaypointPopupContainer

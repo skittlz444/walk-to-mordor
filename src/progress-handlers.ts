@@ -8,6 +8,58 @@ import {
 } from "./validators";
 import { validateSession } from "./auth-handlers";
 
+/** Row shape returned by active party membership query */
+interface ActiveMembershipRow {
+  party_id: number;
+}
+
+/**
+ * Sync a walk log entry to party_progress_log for all of the user's active party memberships.
+ * Graceful degradation: errors are logged but never propagated (walk is the primary operation).
+ */
+export async function syncPartyProgressLog(
+  env: { DB: D1Database },
+  userId: number,
+  date: string,
+  distance: number,
+  operation: 'insert' | 'update' | 'delete'
+): Promise<void> {
+  try {
+    const { results: memberships } = await env.DB.prepare(
+      'SELECT party_id FROM party_members WHERE user_id = ? AND status = ?'
+    ).bind(userId, 'active').all<ActiveMembershipRow>();
+
+    if (!memberships || memberships.length === 0) return;
+
+    const now = new Date().toISOString();
+
+    if (operation === 'insert') {
+      const stmts = memberships.map((m) =>
+        env.DB.prepare(
+          'INSERT OR REPLACE INTO party_progress_log (party_id, logged_by_user_id, distance, date, logged_at) VALUES (?, ?, ?, ?, ?)'
+        ).bind(m.party_id, userId, distance, date, now)
+      );
+      await env.DB.batch(stmts);
+    } else if (operation === 'update') {
+      const updateStmts = memberships.map((m) =>
+        env.DB.prepare(
+          'UPDATE party_progress_log SET distance = ? WHERE party_id = ? AND logged_by_user_id = ? AND date = ?'
+        ).bind(distance, m.party_id, userId, date)
+      );
+      await env.DB.batch(updateStmts);
+    } else if (operation === 'delete') {
+      const deleteStmts = memberships.map((m) =>
+        env.DB.prepare(
+          'DELETE FROM party_progress_log WHERE party_id = ? AND logged_by_user_id = ? AND date = ?'
+        ).bind(m.party_id, userId, date)
+      );
+      await env.DB.batch(deleteStmts);
+    }
+  } catch (error) {
+    console.error('Error syncing party_progress_log:', error);
+  }
+}
+
 export async function handleProgressPost(request: Request, env: any, body: any) {
   // Validate session
   const sessionValidation = await validateSession(request, env);
@@ -87,6 +139,10 @@ export async function handleProgressPost(request: Request, env: any, body: any) 
     )
       .bind(start, Number(title), userId)
       .run();
+
+    // Sync to party_progress_log for all active memberships (graceful degradation)
+    await syncPartyProgressLog(env, userId!, start, Number(title), 'insert');
+
     return new Response(JSON.stringify({ 
       message: "Created successfully",
       date: start,
@@ -183,6 +239,9 @@ export async function handleProgressPut(request: Request, env: any, body: any) {
         headers: { "content-type": "application/json" }
       });
     }
+
+    // Sync to party_progress_log for all active memberships (graceful degradation)
+    await syncPartyProgressLog(env, userId!, start, Number(title), 'update');
     
     return new Response(JSON.stringify({ 
       message: "Updated successfully",
@@ -246,6 +305,9 @@ export async function handleProgressDelete(request: Request, env: any, body: any
         headers: { "content-type": "application/json" }
       });
     }
+
+    // Sync to party_progress_log for all active memberships (graceful degradation)
+    await syncPartyProgressLog(env, userId!, start, 0, 'delete');
     
     return new Response(JSON.stringify({ 
       message: "Deleted successfully",

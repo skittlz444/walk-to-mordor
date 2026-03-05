@@ -33,9 +33,6 @@ jobs:
       - name: Build Client
         run: npm run build:client
         
-      - name: Install Wrangler
-        run: npm install -g wrangler
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
         
@@ -44,9 +41,14 @@ jobs:
           echo "Setting up local D1 database for testing..."
           npm run seedLocalD1
 
-      - name: Run E2E Tests
+      - name: Run E2E Tests (all browsers on main, chromium-only on other branches)
         id: e2e-tests
-        run: npm run test:ui
+        run: |
+          if [ "${{ github.base_ref }}" = "main" ]; then
+            npm run test:ui:all
+          else
+            npm run test:ui
+          fi
         continue-on-error: true
 
       - name: Run Unit Tests & Coverage

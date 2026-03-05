@@ -1,6 +1,6 @@
 # Story 3.7: Fellowship UI - Fellowships Pages
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -50,30 +50,39 @@ so that I can fully interact with the Fellowship features in a structured and in
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: SSR Shells & Routing (AC: 1, 4)
-  - [ ] Create `src/renderPartyListPage.ts` (List view).
-  - [ ] Create `src/renderPartyDetailPage.ts` (Detail view).
-  - [ ] Create `src/renderPartyManagePage.ts` (Manage view).
-  - [ ] Create `src/renderPartyJoinPage.ts` (Join landing view).
-  - [ ] Add routes to `src/index.ts` (`/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`).
-  - [ ] Update `DrawerIsland.tsx` to include the "Fellowships" link.
-- [ ] Task 2: Fellowships List Page Island (AC: 1)
-  - [ ] Create `PartyListIsland.tsx`.
-  - [ ] Implement list view, empty state, create form, and join form.
-  - [ ] Fetch data from `/api/user/parties`.
-- [ ] Task 3: Fellowship Detail Page Island (AC: 2)
-  - [ ] Create `PartyDetailIsland.tsx`.
-  - [ ] Fetch data from `/api/party/:id/progress`.
-  - [ ] Implement progress display, member list, and leave button.
-  - [ ] Leave a UI placeholder for the Activity Feed (to be implemented in Story 3.8).
-  - [ ] Implement invite link sharing UI.
-- [ ] Task 4: Fellowship Management Page Island (AC: 3)
-  - [ ] Create `PartyManageIsland.tsx`.
-  - [ ] Implement settings update form, kick member UI, transfer leadership UI, and regenerate invite code UI.
-- [ ] Task 5: Join Landing Page Island (AC: 4)
-  - [ ] Create `PartyJoinIsland.tsx`.
-  - [ ] Implement preview display and join/login buttons.
-  - [ ] Handle `returnTo` logic for unauthenticated users.
+- [x] Task 1: SSR Shells & Routing (AC: 1, 4)
+  - [x] Create `src/renderPartyListPage.ts` (List view).
+  - [x] Create `src/renderPartyDetailPage.ts` (Detail view).
+  - [x] Create `src/renderPartyManagePage.ts` (Manage view).
+  - [x] Create `src/renderPartyJoinPage.ts` (Join landing view).
+  - [x] Add routes to `src/index.ts` (`/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`).
+  - [x] Update `DrawerIsland.tsx` to include the "Fellowships" link.
+- [x] Task 2: Fellowships List Page Island (AC: 1)
+  - [x] Create `PartyListIsland.tsx`.
+  - [x] Implement list view, empty state, create form, and join form.
+  - [x] Fetch data from `/api/user/parties`.
+- [x] Task 3: Fellowship Detail Page Island (AC: 2)
+  - [x] Create `PartyDetailIsland.tsx`.
+  - [x] Fetch data from `/api/party/:id/progress`.
+  - [x] Implement progress display, member list, and leave button.
+  - [x] Leave a UI placeholder for the Activity Feed (to be implemented in Story 3.8).
+  - [x] Implement invite link sharing UI.
+- [x] Task 4: Fellowship Management Page Island (AC: 3)
+  - [x] Create `PartyManageIsland.tsx`.
+  - [x] Implement settings update form, kick member UI, transfer leadership UI, and regenerate invite code UI.
+- [x] Task 5: Join Landing Page Island (AC: 4)
+  - [x] Create `PartyJoinIsland.tsx`.
+  - [x] Implement preview display and join/login buttons.
+  - [x] Handle `returnTo` logic for unauthenticated users.
+
+### Review Follow-ups (AI)
+
+- [x] [AI-Review][HIGH] Add joined date to Fellowship detail member list and include `joined_at` in `/api/party/:id/progress` member payload (`src/party-handlers.ts`, `client/src/islands/PartyDetailIsland.tsx`).
+- [x] [AI-Review][HIGH] Implement next-milestone lock behavior based on the individual member preference instead of party total distance (`client/src/islands/PartyDetailIsland.tsx`, `client/src/islands/GoalModal.tsx` integration path).
+- [x] [AI-Review][MEDIUM] Display explicit "distance to next milestone" metric on the Fellowship detail page (`client/src/islands/PartyDetailIsland.tsx`).
+- [x] [AI-Review][MEDIUM] Always render a Share action in invite link UI with graceful fallback when Web Share API is unavailable (`client/src/islands/PartyDetailIsland.tsx`).
+- [x] [AI-Review][MEDIUM] Determine join-page auth state via validated session endpoint rather than localStorage token presence (`client/src/islands/PartyJoinIsland.tsx`).
+- [x] [AI-Review][MEDIUM] Restore service worker build timestamp placeholders and document all changed files in Dev Agent Record File List (`public/sw.js`, `public/js/update-cache-version.js`, story File List section).
 
 ## Dev Notes
 
@@ -107,10 +116,72 @@ Requirements expanded from original spec:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Created 4 SSR shell render functions following `renderLayout()` pattern. Added routes in index.ts with correct ordering (join > manage > detail > list). Added "Fellowships" link to DrawerIsland navigation. Created party.css with full responsive styling.
+- Task 2: Created PartyListIsland with active party list, empty state, create fellowship form (name/distance_mode/leave_behavior with helper text), join by invite code with preview step, and collapsed past fellowships section.
+- Task 3: Created PartyDetailIsland with breadcrumb, progress stats grid (total distance, last milestone, member count, mode), sorted member list with color dots, activity feed placeholder for Story 3.8, invite link sharing with Copy Link and Web Share API, leave button with confirmation dialog explaining leave_distance_behavior impact.
+- Task 4: Created PartyManageIsland with leader-only access (redirects non-leaders), settings update form, kick member with two-step confirmation and distance removal toggle, transfer leadership with confirmation, and regenerate invite code with confirmation.
+- Task 5: Created PartyJoinIsland with invite code extraction from URL, party preview display, authenticated join button (redirects to /party/:id on success), and unauthenticated login button with returnTo parameter.
+- API: Added invite_code and leader_id to GET /api/user/parties response to enable invite link sharing and leader identification on detail page.
+- Tests: 23 new tests across party-pages.test.ts (SSR shells) and index.test.ts (routing). All 431 tests pass with zero regressions.
+
 ### File List
+
+- src/renderPartyListPage.ts (new)
+- src/renderPartyDetailPage.ts (new)
+- src/renderPartyManagePage.ts (new)
+- src/renderPartyJoinPage.ts (new)
+- src/renderLayout.ts (modified - added publicPage option to skip auth scripts)
+- src/index.ts (modified - added party page routes and imports)
+- src/party-handlers.ts (modified - added invite_code and leader_id to user parties query; added joined_at and user_total_distance to progress API)
+- client/src/index.tsx (modified - registered 4 new islands)
+- client/src/islands/DrawerIsland.tsx (modified - added Fellowships nav link)
+- client/src/islands/PartyListIsland.tsx (new)
+- client/src/islands/PartyDetailIsland.tsx (new)
+- client/src/islands/PartyManageIsland.tsx (new)
+- client/src/islands/PartyJoinIsland.tsx (new)
+- public/css/party.css (new)
+- public/sw.js (modified - restored BUILD_TIMESTAMP placeholders)
+- tests/api/party-pages.test.ts (new)
+- tests/api/party-progress.test.ts (modified - added joined_at to member mocks/assertions, user_total_distance assertion)
+- tests/api/index.test.ts (modified - added party page routing tests)
+
+## Senior Developer Review (AI)
+
+### AC Validation
+
+| AC | Status | Evidence |
+| --- | --- | --- |
+| 1 | ✅ Implemented | `src/renderPartyListPage.ts`; `client/src/islands/PartyListIsland.tsx` |
+| 2 | ✅ Implemented | `client/src/islands/PartyDetailIsland.tsx`; `src/party-handlers.ts` — joined_at, user_total_distance, distance-to-next all wired |
+| 3 | ✅ Implemented | `client/src/islands/PartyManageIsland.tsx` |
+| 4 | ✅ Implemented | `src/renderPartyJoinPage.ts`; `client/src/islands/PartyJoinIsland.tsx` — session-validated auth |
+| 5 | ✅ Implemented | `client/src/islands/PartyDetailIsland.tsx`; `public/sw.js` — placeholders restored, Share always visible |
+
+### Findings
+
+1. **[HIGH][Fixed] AC2 missing joined date in member list.**  
+   Added `joined_at` to both active/departed member SQL queries in `src/party-handlers.ts` and rendered join date in `PartyDetailIsland.tsx` member list.
+2. **[HIGH][Fixed] AC2 next milestone lock is not based on individual preference.**  
+   Added `user_total_distance` to API response via `calculateTotalDistance(env, userId)`. `PartyDetailIsland.tsx` now passes user's personal distance to `GoalModal` via `modalDistance` state.
+3. **[MEDIUM][Fixed] AC2 does not display distance to next milestone.**  
+   Next milestone stat label now shows remaining distance (e.g., "1.50 km to go").
+4. **[MEDIUM][Fixed] Invite Share button is conditionally hidden.**  
+   Share button always renders; `handleShare` already falls back to `handleCopyLink` when Web Share API is unavailable.
+5. **[MEDIUM][Fixed] Join-page auth state is token-presence based, not session-validated.**  
+   `checkAuth()` now makes async `fetch('/api/session')` call to validate session server-side.
+6. **[MEDIUM][Fixed] Git/story documentation drift and cache version regression.**  
+   Restored `{{BUILD_TIMESTAMP}}` placeholders in `public/sw.js`. Added missing files to story File List.
+
+**Review Decision:** ✅ All findings addressed.
+
+## Change Log
+
+- 2026-03-01: Fixed all 6 AI review follow-ups: added joined_at to member API/UI, user_total_distance for milestone lock, distance-to-next display, Share button always visible, session-validated auth on join page, sw.js placeholders restored. 431 tests passing.
+- 2026-03-01: Senior Developer Review completed. Status set to `in-progress`, 6 findings logged (2 HIGH / 4 MEDIUM), and AI follow-up tasks added.
+- 2026-03-01: Story 3.7 implementation complete. Created 4 SSR page shells, 4 Preact islands, party.css, and routing. Added publicPage option to renderLayout for unauthenticated join page. Fixed distance_mode form value mismatch (average→incremental). 23 new tests, 431 total passing. Visual testing verified on mobile and desktop viewports.

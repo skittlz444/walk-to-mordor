@@ -26,13 +26,12 @@ async function deleteTestEvent(page, distance, authToken) {
     
     if (await eventLabel.isVisible({ timeout: 2000 })) {
       await eventLabel.click();
-      await page.waitForTimeout(500);
-      
-      // Look for delete button in the popup
+      // Wait for popup with delete option to appear
       const deleteButton = page.locator('text=Delete').first();
-      if (await deleteButton.isVisible({ timeout: 2000 })) {
+      await expect(deleteButton).toBeVisible({ timeout: 3000 }).catch(() => {});
+      if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
         return true;
       }
     }
@@ -49,7 +48,7 @@ async function deleteTestEvent(page, distance, authToken) {
           await confirmButton.click();
         }
         
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
         return true;
       }
     }
@@ -76,7 +75,7 @@ test.describe('Progress Tracking', () => {
     await createTestEvent(page, testDistance);
     
     // Wait for event to be processed
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify via API endpoint first (more reliable)
     let eventVerified = false;
@@ -117,7 +116,7 @@ test.describe('Progress Tracking', () => {
     await createTestEvent(page, initialDistance);
     
     // Wait for initial event to be processed
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify initial event exists using API first
     let initialEventVerified = false;
@@ -175,7 +174,6 @@ test.describe('Progress Tracking', () => {
             // Save changes
             const saveButton = page.locator('#saveEditBtn, button:has-text("Save"), button:has-text("Update")').first();
             await saveButton.click();
-            await page.waitForTimeout(2000);
             
             // Verify edit was successful
             await expect(page.locator(`text=${editedDistance}`).first()).toBeVisible({ timeout: 5000 });
@@ -206,7 +204,7 @@ test.describe('Progress Tracking', () => {
       const overlay = page.locator('.mbsc-popup-overlay');
       if (await overlay.isVisible({ timeout: 1000 })) {
         await overlay.click();
-        await page.waitForTimeout(500);
+        await expect(overlay).toBeHidden({ timeout: 3000 });
       }
     } catch (error) {
       // No overlay to close, continue
@@ -223,7 +221,7 @@ test.describe('Progress Tracking', () => {
           const popup = page.locator('.mbsc-popup, .modal');
           if (await popup.isVisible({ timeout: 500 })) {
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(300);
+            await expect(popup).toBeHidden({ timeout: 3000 });
           }
         } catch (e) {
           // No popup to close
@@ -233,14 +231,13 @@ test.describe('Progress Tracking', () => {
         if (i > 0) {
           await page.goto('http://localhost:8787/');
           await page.waitForLoadState('networkidle');
-          await page.waitForTimeout(1000);
         }
         
         const eventData = await createTestEvent(page);
         events.push(eventData);
         
-        // Add delay between events to ensure they're processed
-        await page.waitForTimeout(2000);
+        // Wait for event to be processed
+        await page.waitForLoadState('networkidle');
       } catch (error) {
         // For Mobile Firefox, accept partial success
         break;

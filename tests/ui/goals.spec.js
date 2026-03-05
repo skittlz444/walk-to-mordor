@@ -20,9 +20,6 @@ async function closePopupRobust(page, closeButton) {
     await closeButton.click({ force: true });
   }
   
-  // Firefox may need more time for popup animations/transitions
-  await page.waitForTimeout(1000);
-  
   // Wait for popup to actually close - Firefox sometimes has timing issues
   try {
     await page.waitForFunction(() => {
@@ -73,7 +70,7 @@ async function openFirstAvailableGoalPopup(page) {
 
 test.describe('Goals Functionality', () => {
   // Set longer timeout for tests that might have slow loading
-  test.setTimeout(60000);
+  test.setTimeout(30000);
 
   test.beforeEach(async ({ page, authToken }) => {
     await setupTest({ page, authToken });
@@ -103,7 +100,8 @@ test.describe('Goals Functionality', () => {
           // Check if element is visible and clickable
           if (await firstGoal.isVisible({ timeout: 2000 })) {
             await firstGoal.click({ timeout: 5000 });
-            await page.waitForTimeout(1000);
+            // Wait for popup to appear after clicking goal
+            await page.locator('.modal-overlay').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
             
             // Check if popup appeared using simpler selector
             const popup = page.locator('.modal-overlay');
@@ -121,7 +119,7 @@ test.describe('Goals Functionality', () => {
               const closeButton = page.locator('text=Close').last();
               if (await closeButton.isVisible({ timeout: 2000 })) {
                 await closeButton.click();
-                await page.waitForTimeout(500);
+                await page.locator('.modal-overlay').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
               }
               
               break;
@@ -151,7 +149,7 @@ test.describe('Goals Functionality', () => {
         } else {
           await page.click('body'); // Click outside to close
         }
-        await page.waitForTimeout(500);
+        await page.locator('.modal-overlay').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
       }
     } catch (error) {
       // No popup to close, continue
@@ -197,8 +195,8 @@ test.describe('Goals Functionality', () => {
     // Wait for the distance input popup to close
     await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
 
-    // Wait a moment for the congratulations popup to appear
-    await page.waitForTimeout(1000);
+    // Wait for the congratulations popup to appear
+    await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 10000 });
 
     // Check if the goal popup opened with congratulations text
     const goalPopup = page.locator('.modal-overlay');
@@ -212,9 +210,6 @@ test.describe('Goals Functionality', () => {
     const closeButton = page.locator('text=Close').last();
     await closeButton.click();
     await expect(goalPopup).toBeHidden({ timeout: 10000 });
-
-    // Ensure popup is fully closed before test ends
-    await page.waitForTimeout(500);
     
     // Always try to close any remaining popups
     try {
@@ -285,15 +280,11 @@ test.describe('Goals Functionality', () => {
     // Close the popup
     await closeButton.click();
     
-    // Wait for popup to close with longer timeout for Firefox - try multiple approaches
-    await page.waitForTimeout(1000); // Give more time
-    
     try {
       await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 15000 });
     } catch (error) {
       // If still visible, try clicking outside the popup to close it
       await page.click('body');
-      await page.waitForTimeout(1000);
       
       // Wait for popup to actually close
       await page.waitForFunction(() => {
@@ -318,7 +309,6 @@ test.describe('Goals Functionality', () => {
           // Force close by clicking outside or ESC key
           await page.keyboard.press('Escape');
         }
-        await page.waitForTimeout(1000);
         // Verify popup is closed
         await expect(existingPopup).toBeHidden({ timeout: 5000 });
       }
@@ -337,7 +327,7 @@ test.describe('Goals Functionality', () => {
     const addButton = page.locator('text=Add');
     if (await addButton.isVisible({ timeout: 5000 })) {
       await addButton.click();
-      await page.waitForTimeout(2000); // Wait for distance processing and potential congratulations
+      await page.waitForLoadState('networkidle');
     }
     
     // Wait for goals to load
@@ -351,7 +341,6 @@ test.describe('Goals Functionality', () => {
         if (congratsText && congratsText.includes('Congratulations')) {
           const closeButton = page.locator('text=Close').last();
           await closeButton.click();
-          await page.waitForTimeout(1000);
           await expect(congratsPopup).toBeHidden({ timeout: 5000 });
         }
       }
@@ -373,7 +362,6 @@ test.describe('Goals Functionality', () => {
       const blockingPopup = page.locator('.modal-overlay');
       if (await blockingPopup.isVisible({ timeout: 1000 })) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
         await expect(blockingPopup).toBeHidden({ timeout: 3000 });
       }
     } catch (error) {
@@ -431,7 +419,6 @@ test.describe('Goals Functionality', () => {
 
       await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
       await page.click('text=Add');
-      await page.waitForTimeout(100);
       
       // Click on header goal
       const newHeaderGoal = page.locator('.goal-header-main').first();
@@ -576,9 +563,6 @@ test.describe('Goals Functionality', () => {
     const thumbImage = popup.locator('#goal-thumb-image');
     await expect(thumbImage).toBeVisible();
     
-    // Since highres is blocked, blur should remain
-    await page.waitForTimeout(500); // Give time for any potential loading
-    
     // Check the filter is still blur (since highres won't load)
     const filterValue = await thumbImage.evaluate(el => getComputedStyle(el).filter);
     expect(filterValue).toContain('blur');
@@ -640,9 +624,6 @@ test.describe('Goals Functionality', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#goals-list')).toBeVisible();
     
-    // Wait a bit to ensure no premature image loading
-    await page.waitForTimeout(1000);
-    
     // Should have no image requests yet
     expect(imageRequestsMade.length).toBe(0);
     
@@ -662,7 +643,7 @@ test.describe('Goals Functionality', () => {
     await expect(page.locator('.modal-overlay')).toBeVisible();
     
     // Wait for images to start loading
-    await page.waitForTimeout(1000);
+    await expect.poll(() => imageRequestsMade.length, { timeout: 8000 }).toBeGreaterThan(0);
     
     // Should now have image requests
     expect(imageRequestsMade.length).toBeGreaterThan(0);
@@ -800,12 +781,12 @@ test.describe('Goals Functionality', () => {
     // Wait for the distance input popup to close
     await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
 
-    // Wait a moment for the congratulations popup to appear
-    await page.waitForTimeout(1000);
+    // Wait for the congratulations popup to appear
+    const goalPopup = page.locator('.modal-overlay');
+    await goalPopup.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
 
     // Check if the goal popup opened
-    const goalPopup = page.locator('.modal-overlay');
-    if (await goalPopup.isVisible({ timeout: 5000 })) {
+    if (await goalPopup.isVisible()) {
       // Check for congratulations text
       await expect(goalPopup).toContainText('Congratulations! You\'ve passed a new goal!');
       

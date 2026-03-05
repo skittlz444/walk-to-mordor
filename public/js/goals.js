@@ -410,3 +410,90 @@ window.addEventListener('preferenceChanged', function() {
     renderGoals(lastRenderedDistance);
   }
 });
+
+// ============================================================================
+// Party Selector Integration (Story 3.6)
+// ============================================================================
+
+/**
+ * Mount the PartySelector Preact island on the Journey page.
+ * Called after Preact islands are loaded.
+ */
+function mountPartySelector() {
+  const mountPoint = document.getElementById('party-selector-mount');
+  if (!mountPoint) return;
+
+  const preact = window.preact;
+  const islands = window.preactIslands;
+  if (!preact || !preact.render || !preact.h || !islands || !islands.PartySelector) {
+    return;
+  }
+
+  const { render, h } = preact;
+  const { PartySelector } = islands;
+
+  function handleViewChange(selection, progress) {
+    if (selection === 'personal') {
+      // Restore personal view
+      var pd = window._personalDistance;
+      var el = document.getElementById('total-distance-value');
+      if (el && pd !== undefined) {
+        el.textContent = pd + ' km';
+      }
+      if (pd !== undefined) {
+        renderGoals(pd);
+      }
+    } else if (progress) {
+      // Show party progress
+      var el = document.getElementById('total-distance-value');
+      if (el) {
+        el.textContent = progress.total_distance.toFixed(2) + ' km';
+      }
+      renderGoals(progress.total_distance);
+    }
+  }
+
+  function handleNewMilestones(milestones) {
+    if (milestones.length > 0) {
+      var latest = milestones[milestones.length - 1];
+      if (window.goalsModule && window.goalsModule.showGoalModal) {
+        var currentDist = window.partyStore && window.partyStore.partyProgress.value
+          ? window.partyStore.partyProgress.value.total_distance
+          : (window._personalDistance || 0);
+        setTimeout(function() {
+          window.goalsModule.showGoalModal(latest, currentDist, true);
+        }, 300);
+      }
+    }
+  }
+
+  render(
+    h(PartySelector, {
+      variant: 'journey',
+      onViewChange: handleViewChange,
+      onNewMilestones: handleNewMilestones
+    }),
+    mountPoint
+  );
+}
+
+// Mount party selector when islands are ready
+var partySelectorRetries = 0;
+var MAX_PARTY_SELECTOR_RETRIES = 25; // 5 seconds at 200ms intervals
+function tryMountPartySelector() {
+  if (window.preactIslands && window.preactIslands.PartySelector) {
+    mountPartySelector();
+  } else if (partySelectorRetries < MAX_PARTY_SELECTOR_RETRIES) {
+    partySelectorRetries++;
+    setTimeout(tryMountPartySelector, 200);
+  }
+}
+
+// Listen for DOMContentLoaded or run immediately
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(tryMountPartySelector, 100);
+  });
+} else {
+  setTimeout(tryMountPartySelector, 100);
+}

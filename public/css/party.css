@@ -1,0 +1,620 @@
+/* Fellowship (Party) Pages Styles */
+
+/* ============================================================================
+   Shared Layout
+   ============================================================================ */
+
+.party-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+  color: var(--text-primary);
+}
+
+.party-page h2 {
+  color: var(--accent-gold);
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+}
+
+.party-settings-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 0.2rem 0.6rem;
+  background: var(--bg-dark-alt);
+  border-radius: 4px;
+  margin-right: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.party-settings-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.party-page h3 {
+  color: var(--text-primary);
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+/* Breadcrumb */
+.party-breadcrumb {
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.party-breadcrumb a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+
+.party-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.party-breadcrumb .separator {
+  color: var(--text-muted);
+  margin: 0 0.4em;
+}
+
+.party-breadcrumb .current {
+  color: var(--text-secondary);
+}
+
+/* Loading & Error States */
+.party-loading,
+.party-error {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+}
+
+.party-error {
+  color: var(--status-error);
+}
+
+.party-loading i {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* Empty State */
+.party-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.party-empty i {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  display: block;
+  color: var(--accent-gold);
+}
+
+/* ============================================================================
+   Cards / Sections
+   ============================================================================ */
+
+.party-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.party-card--clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.party-card--clickable:hover,
+.party-card--clickable:focus-within {
+  border-color: var(--accent-gold);
+}
+
+/* ============================================================================
+   Party List
+   ============================================================================ */
+
+.party-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.party-list-item__name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.party-list-item__meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Collapsed section */
+.party-collapsed-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  width: 100%;
+}
+
+.party-collapsed-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.party-collapsed-toggle i {
+  transition: transform 0.2s ease;
+}
+
+.party-collapsed-toggle--open i {
+  transform: rotate(90deg);
+}
+
+/* ============================================================================
+   Forms
+   ============================================================================ */
+
+.party-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.party-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.party-form input[type="text"],
+.party-form select {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-gray);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.party-form input[type="text"]:focus,
+.party-form select:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.party-form .helper-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+/* ============================================================================
+   Buttons
+   ============================================================================ */
+
+.party-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.party-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.party-btn--primary {
+  background: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.party-btn--primary:hover:not(:disabled) {
+  background: var(--accent-blue-dark);
+}
+
+.party-btn--gold {
+  background: var(--accent-gold);
+  color: var(--text-black);
+}
+
+.party-btn--gold:hover:not(:disabled) {
+  background: #e6c200;
+}
+
+.party-btn--danger {
+  background: var(--status-error);
+  color: var(--text-primary);
+}
+
+.party-btn--danger:hover:not(:disabled) {
+  background: var(--status-error-hover);
+}
+
+.party-btn--secondary {
+  background: var(--bg-button-dark);
+  color: var(--text-primary);
+}
+
+.party-btn--secondary:hover:not(:disabled) {
+  background: var(--bg-button-medium);
+}
+
+.party-btn--small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+}
+
+.party-btn--full {
+  width: 100%;
+}
+
+/* ============================================================================
+   Detail Page
+   ============================================================================ */
+
+.party-progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.party-progress__stat {
+  background: var(--bg-dark-alt);
+  border-radius: 6px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.party-progress__stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+.party-progress__stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.party-progress__stat--clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.party-progress__stat--clickable:hover {
+  background: var(--bg-button-dark);
+}
+
+/* Member List */
+.party-member-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.party-member-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-gray);
+}
+
+.party-member-item:last-child {
+  border-bottom: none;
+}
+
+.party-member-item--self {
+  background: color-mix(in srgb, var(--accent-blue) 8%, transparent);
+  border-radius: 6px;
+  margin: 0 -0.5rem;
+  padding: 0.6rem 0.5rem;
+}
+
+.party-member-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.party-member-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.party-member-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.party-member-joined {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.party-member-detail {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.party-member-contribution {
+  font-weight: 600;
+  color: var(--accent-gold);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* Invite Section */
+.party-invite {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.party-invite__url {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-gray);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.party-invite__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Activity Feed Placeholder */
+.party-activity-placeholder {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-style: italic;
+  background: var(--bg-dark-alt);
+  border-radius: 6px;
+}
+
+/* Activity Feed */
+.party-activity-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.party-activity-feed--loading,
+.party-activity-feed--empty,
+.party-activity-feed--error {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  background: var(--bg-dark-alt);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.party-activity-feed--error .party-btn {
+  margin-top: 0.5rem;
+}
+
+.party-activity-item {
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-dark-alt);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  border-left: 3px solid transparent;
+}
+
+.party-activity-item--own {
+  border-left-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-dark-alt));
+}
+
+/* ============================================================================
+   Management Page
+   ============================================================================ */
+
+.party-manage-section {
+  margin-bottom: 1.5rem;
+}
+
+.party-manage-section h3 {
+  border-bottom: 1px solid var(--border-gray);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Kick member */
+.party-kick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-gray);
+}
+
+.party-kick-row:last-child {
+  border-bottom: none;
+}
+
+/* ============================================================================
+   Confirmation Dialog
+   ============================================================================ */
+
+.party-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-modal-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.party-confirm-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gray);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 100%;
+}
+
+.party-confirm-dialog h3 {
+  color: var(--accent-gold);
+  margin: 0 0 0.75rem;
+}
+
+.party-confirm-dialog p {
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.party-confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Toggle checkbox for kick override */
+.party-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.party-toggle input[type="checkbox"] {
+  accent-color: var(--accent-blue);
+  width: 18px;
+  height: 18px;
+}
+
+/* ============================================================================
+   Join Page
+   ============================================================================ */
+
+.party-join-preview {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.party-join-preview__name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-bottom: 0.5rem;
+}
+
+.party-join-preview__detail {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+/* ============================================================================
+   Toast / Status Messages
+   ============================================================================ */
+
+.party-toast {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.party-toast--success {
+  background: var(--light-bg-success);
+  color: var(--status-success);
+  border: 1px solid var(--status-success);
+}
+
+.party-toast--error {
+  background: var(--light-bg-error);
+  color: var(--status-error);
+  border: 1px solid var(--status-error);
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
+@media (max-width: 480px) {
+  .party-page {
+    padding: 0.75rem;
+  }
+
+  .party-progress {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .party-confirm-dialog {
+    margin: 0.5rem;
+  }
+
+  .party-invite__actions {
+    flex-direction: column;
+  }
+
+  .party-invite__actions .party-btn {
+    width: 100%;
+  }
+}

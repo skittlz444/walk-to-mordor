@@ -11,8 +11,6 @@ async function closePopupRobust(page, closeButton) {
     await closeButton.click({ force: true });
   }
 
-  await page.waitForTimeout(500);
-
   await page.waitForFunction(() => {
     const popup = document.querySelector('.modal-overlay');
     return !popup || window.getComputedStyle(popup).display === 'none' ||
@@ -37,7 +35,7 @@ async function openProfileFromDrawer(page) {
  * UI Tests - User Goal Visibility Preference (Story 2.10)
  */
 test.describe('User Goal Visibility Preference', () => {
-  test.setTimeout(60000);
+  test.setTimeout(30000);
 
   test.beforeEach(async ({ page, authToken }) => {
     await setupTest({ page, authToken });
@@ -401,9 +399,18 @@ test.describe('User Goal Visibility Preference', () => {
       // Root should apply default-map preference.
       await page.goto(BASE_URL + '/');
       await expect(page).toHaveURL(/\/map$/);
+      await page.waitForLoadState('networkidle');
 
       // Journey route should remain accessible explicitly.
-      await page.goto(BASE_URL + '/journey');
+      // Firefox may NS_BINDING_ABORTED if service worker is still active from /map; retry once.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          await page.goto(BASE_URL + '/journey');
+          break;
+        } catch (e) {
+          if (attempt === 1 || !String(e).includes('NS_BINDING_ABORTED')) throw e;
+        }
+      }
       await page.waitForSelector('header', { timeout: 10000 });
       await expect(page).toHaveURL(/\/journey$/);
 

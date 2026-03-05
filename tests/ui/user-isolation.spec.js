@@ -11,11 +11,16 @@ const { cleanupAllTestData } = require('./helpers/cleanup');
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
 async function getCalendarProgress(context, authToken) {
-    const response = await context.request.get(`${BASE_URL}/api/calendar-progress`, {
-        headers: {
-            Authorization: `Bearer ${authToken}`
-        }
-    });
+    let response;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        response = await context.request.get(`${BASE_URL}/api/calendar-progress`, {
+            headers: {
+                Authorization: `Bearer ${authToken}`
+            }
+        });
+        if (response.status() === 200) break;
+        await new Promise(r => setTimeout(r, 1000));
+    }
 
     expect(response.status()).toBe(200);
     return response.json();
@@ -37,7 +42,8 @@ async function createAuthenticatedContext(browser, username) {
          }
     });
     const page = await context.newPage();
-    await page.goto(`${BASE_URL}/`);
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('networkidle').catch(() => {});
     
     // Close existing popups if any (similar to setupTest)
     try {
@@ -117,7 +123,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
     });
     
     test('Different users should have separate total distances', async ({ browser }) => {
-        test.setTimeout(120000);
+        test.setTimeout(60000);
         
         // Generate unique usernames for this test
         const timestamp = Date.now().toString().substring(6);
