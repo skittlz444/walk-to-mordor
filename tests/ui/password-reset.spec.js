@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
  * UI Tests - Password Reset Functionality
  */
 test.describe('Password Reset', () => {
-    test.setTimeout(60000); // 60 seconds
+    test.setTimeout(30000);
 
     test('should display password reset request page', async ({ page }) => {
         await page.goto('/password-reset');
@@ -125,9 +125,6 @@ test.describe('Password Reset', () => {
         
         // Type a valid password
         await passwordInput.fill('TestPassword123!');
-        
-        // Wait a bit for the indicator to update
-        await page.waitForTimeout(500);
         
         // All should be valid (with ✓)
         await expect(page.locator('#strength-length')).toContainText('✓');

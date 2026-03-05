@@ -13,8 +13,8 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Single worker — wrangler dev server can't reliably handle concurrent requests */
-  workers: 1,
+  /* Parallel workers — tests use unique tokens per worker for isolation */
+  workers: 3,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['html', {open:'never'}],
@@ -35,12 +35,10 @@ module.exports = defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
     },
-
     /* Test against mobile viewports. */
     {
       name: 'Mobile Chrome',
