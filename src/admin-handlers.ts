@@ -177,6 +177,381 @@ export async function handleAdminGoalsList(request: Request, env: { DB: D1Databa
 }
 
 /**
+ * A single goal's full data for the admin goal edit API.
+ */
+export interface AdminGoalDetail {
+  id: number;
+  title: string;
+  distance: number;
+  description: string | null;
+  special: string | null;
+  image_id: string | null;
+}
+
+/**
+ * Handle GET /api/admin/goals/:id — returns a single goal's full details.
+ * Requires admin authentication (enforced by the route guard in index.ts).
+ */
+export async function handleAdminGoalGet(_request: Request, env: { DB: D1Database }, goalId: number): Promise<Response> {
+  try {
+    const goal = await env.DB.prepare(
+      'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
+    ).bind(goalId).first<AdminGoalDetail>();
+
+    if (!goal) {
+      return new Response(JSON.stringify({ error: 'Goal not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify(goal), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error: unknown) {
+    console.error('Error fetching goal:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+/** Slug validation regex: lowercase alphanumeric segments separated by single hyphens */
+const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/**
+ * Handle PUT /api/admin/goals/:id — update a goal's editable fields.
+ * Requires admin authentication (enforced by the route guard in index.ts).
+ * The adminUserId is needed for audit logging.
+ */
+export async function handleAdminGoalUpdate(
+  request: Request,
+  env: { DB: D1Database },
+  goalId: number,
+  body: unknown,
+  adminUserId: number,
+): Promise<Response> {
+  try {
+    // 1. Validate body shape and fields
+    const data = body as Record<string, unknown>;
+    const title = typeof data.title === 'string' ? data.title.trim() : '';
+    const distance = typeof data.distance === 'number' ? data.distance : NaN;
+    const description = typeof data.description === 'string' ? data.description.trim() : '';
+    const special = typeof data.special === 'string' && data.special.trim() !== '' ? data.special.trim() : null;
+    const imageId = typeof data.image_id === 'string' && data.image_id.trim() !== '' ? data.image_id.trim() : null;
+
+    if (!title) {
+      return new Response(JSON.stringify({ error: 'Title is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (isNaN(distance) || distance <= 0) {
+      return new Response(JSON.stringify({ error: 'Distance must be a positive number' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (!description) {
+      return new Response(JSON.stringify({ error: 'Description is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (imageId && !SLUG_REGEX.test(imageId)) {
+      return new Response(JSON.stringify({ error: 'Image ID must be a valid slug format' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 2. Fetch existing goal for 404 check and audit diff
+    const existing = await env.DB.prepare(
+      'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
+    ).bind(goalId).first<AdminGoalDetail>();
+
+    if (!existing) {
+      return new Response(JSON.stringify({ error: 'Goal not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 3. Update
+    await env.DB.prepare(
+      'UPDATE goals SET title=?, distance=?, description=?, special=?, image_id=? WHERE id = ?'
+    ).bind(title, distance, description, special, imageId, goalId).run();
+
+    // 4. Audit log — compute changed fields
+    const changes: Record<string, { old: unknown; new: unknown }> = {};
+    if (existing.title !== title) changes.title = { old: existing.title, new: title };
+    if (existing.distance !== distance) changes.distance = { old: existing.distance, new: distance };
+    if (existing.description !== description) changes.description = { old: '(truncated)', new: '(truncated)' };
+    if (existing.special !== special) changes.special = { old: existing.special, new: special };
+    if (existing.image_id !== imageId) changes.image_id = { old: existing.image_id, new: imageId };
+
+    await logAdminAction(env, {
+      adminUserId,
+      action: 'update_goal',
+      targetType: 'goal',
+      targetId: goalId,
+      details: JSON.stringify(changes),
+      ipAddress: request.headers.get('CF-Connecting-IP') || 'unknown',
+      success: true,
+    });
+
+    // 5. Return updated goal
+    const updated = await env.DB.prepare(
+      'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
+    ).bind(goalId).first<AdminGoalDetail>();
+
+    return new Response(JSON.stringify(updated), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error: unknown) {
+    console.error('Error updating goal:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+/**
+ * Request body for POST /api/admin/goals.
+ */
+export interface CreateGoalRequest {
+  title: string;
+  distance_miles: number;
+  description?: string;
+  special?: string;
+  image_id?: string;
+}
+
+/**
+ * Handle POST /api/admin/goals — create a new goal.
+ * Requires admin authentication (enforced by the route guard in index.ts).
+ * The adminUserId is needed for audit logging.
+ */
+export async function handleAdminGoalCreate(
+  request: Request,
+  env: { DB: D1Database },
+  body: unknown,
+  adminUserId: number,
+): Promise<Response> {
+  try {
+    // 1. Validate body shape and fields
+    if (!body || typeof body !== 'object') {
+      return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const data = body as Record<string, unknown>;
+    const title = typeof data.title === 'string' ? data.title.trim() : '';
+    const rawDistance = data.distance_miles;
+    const distanceMiles = typeof rawDistance === 'number' ? rawDistance : NaN;
+    const description = typeof data.description === 'string' ? data.description.trim() : '';
+    const special = typeof data.special === 'string' && data.special.trim() !== '' ? data.special.trim() : null;
+    const imageId = typeof data.image_id === 'string' && data.image_id.trim() !== '' ? data.image_id.trim() : null;
+
+    if (!title) {
+      return new Response(JSON.stringify({ error: 'Title is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (rawDistance === undefined || rawDistance === null) {
+      return new Response(JSON.stringify({ error: 'Distance must be a positive number' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (typeof rawDistance !== 'number' || isNaN(distanceMiles)) {
+      return new Response(JSON.stringify({ error: 'Invalid distance value' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (!isFinite(distanceMiles) || distanceMiles <= 0) {
+      return new Response(JSON.stringify({ error: 'Distance must be a positive number' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (imageId && !SLUG_REGEX.test(imageId)) {
+      return new Response(JSON.stringify({ error: 'Image ID must be a valid slug format' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // 2. Convert distance: miles → km
+    const distanceKm = distanceMiles * 1.60934;
+
+    // 3. Parameterized INSERT
+    const insertResult = await env.DB.prepare(
+      'INSERT INTO goals (distance, title, description, special, image_id) VALUES (?, ?, ?, ?, ?)'
+    ).bind(distanceKm, title, description || null, special, imageId).run();
+
+    // D1 returns last_row_id in meta
+    const newGoalId = (insertResult.meta as Record<string, unknown>).last_row_id as number;
+
+    // 4. Fetch created record
+    const createdGoal = await env.DB.prepare(
+      'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
+    ).bind(newGoalId).first<AdminGoalDetail>();
+
+    // 5. Audit log
+    await logAdminAction(env, {
+      adminUserId,
+      action: 'create_goal',
+      targetType: 'goal',
+      targetId: newGoalId,
+      details: JSON.stringify({ title, distance_miles: distanceMiles, distance_km: distanceKm }),
+      ipAddress: request.headers.get('CF-Connecting-IP') || 'unknown',
+      success: true,
+    });
+
+    // 6. Return 201 with created record
+    return new Response(JSON.stringify(createdGoal), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error: unknown) {
+    console.error('Error creating goal:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+/**
+ * Row shape for goals queried for image cross-referencing.
+ */
+export interface GoalImageRow {
+  id: number;
+  title: string;
+  image_id: string | null;
+}
+
+/**
+ * Shape of the build-time image manifest (public/img/image-manifest.json).
+ */
+export interface ImageManifest {
+  generated: string;
+  images: string[];
+  count: number;
+}
+
+/**
+ * Response shape for GET /api/admin/images.
+ */
+export interface ImageInventoryResponse {
+  images: Array<{ image_id: string; has_highres: boolean; has_thumb: boolean }>;
+  total: number;
+  orphaned: string[];
+  missing: Array<{ goal_id: number; title: string; image_id: string }>;
+}
+
+/**
+ * Handle GET /api/admin/images — returns image asset inventory.
+ * Cross-references the build-time image manifest against goal image_id assignments.
+ * Requires admin authentication (enforced by the route guard in index.ts).
+ */
+export async function handleAdminImageInventory(request: Request, env: { DB: D1Database; ASSETS: Fetcher }): Promise<Response> {
+  try {
+    // 1. Fetch the image manifest via Workers Assets binding
+    const manifestUrl = new URL('/img/image-manifest.json', request.url);
+    let manifestResponse: Response;
+    try {
+      manifestResponse = await env.ASSETS.fetch(new Request(manifestUrl.toString()));
+    } catch {
+      return new Response(JSON.stringify({ error: 'Image manifest not available — run npm run build:manifest' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!manifestResponse.ok) {
+      return new Response(JSON.stringify({ error: 'Image manifest not available — run npm run build:manifest' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    let manifest: ImageManifest;
+    try {
+      manifest = await manifestResponse.json() as ImageManifest;
+    } catch {
+      return new Response(JSON.stringify({ error: 'Image manifest is malformed — run npm run build:manifest to regenerate' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const manifestSlugs = new Set(manifest.images);
+
+    // 2. Query all goals with non-null image_id
+    const goalsResult = await env.DB.prepare(
+      'SELECT id, title, image_id FROM goals WHERE image_id IS NOT NULL AND image_id != \'\''
+    ).all();
+
+    const goalRows = (goalsResult.results ?? []) as Array<{ id: number; title: string; image_id: string | null }>;
+
+    // 3. Cross-reference: build sets for assigned slugs
+    const assignedSlugs = new Set<string>();
+    for (const row of goalRows) {
+      if (row.image_id) {
+        assignedSlugs.add(row.image_id);
+      }
+    }
+
+    // images: goal image_ids that exist in the manifest
+    const images: Array<{ image_id: string; has_highres: boolean; has_thumb: boolean }> = [];
+    for (const slug of assignedSlugs) {
+      if (manifestSlugs.has(slug)) {
+        images.push({ image_id: slug, has_highres: true, has_thumb: true });
+      }
+    }
+    images.sort((a, b) => a.image_id.localeCompare(b.image_id));
+
+    // orphaned: manifest slugs not referenced by any goal
+    const orphaned = manifest.images.filter(slug => !assignedSlugs.has(slug)).sort();
+
+    // missing: goals whose image_id is not in the manifest
+    const missing: Array<{ goal_id: number; title: string; image_id: string }> = [];
+    for (const row of goalRows) {
+      if (row.image_id && !manifestSlugs.has(row.image_id)) {
+        missing.push({ goal_id: row.id, title: row.title, image_id: row.image_id });
+      }
+    }
+    missing.sort((a, b) => a.goal_id - b.goal_id);
+
+    const response: ImageInventoryResponse = {
+      images,
+      total: manifest.count,
+      orphaned,
+      missing,
+    };
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error: unknown) {
+    console.error('Error fetching image inventory:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error while fetching image inventory' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+/**
  * Log an admin action to the admin_audit_log table.
  * This is append-only — entries are never deleted by the application.
  *

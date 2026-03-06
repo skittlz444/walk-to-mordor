@@ -1,10 +1,10 @@
-import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
+import { renderAdminGoalAddPage } from '../../src/renderAdminGoalAddPage';
 
-describe('renderAdminGoalsPage', () => {
+describe('renderAdminGoalAddPage', () => {
   let html: string;
 
   beforeAll(() => {
-    html = renderAdminGoalsPage();
+    html = renderAdminGoalAddPage();
   });
 
   describe('HTML structure', () => {
@@ -15,7 +15,7 @@ describe('renderAdminGoalsPage', () => {
     });
 
     it('should have correct page title', () => {
-      expect(html).toContain('<title>Walk to Mordor - Admin Goals</title>');
+      expect(html).toContain('<title>Walk to Mordor - Add New Goal</title>');
     });
 
     it('should include admin.css stylesheet', () => {
@@ -38,71 +38,32 @@ describe('renderAdminGoalsPage', () => {
     });
 
     it('should have Goals link marked as active with aria-current', () => {
-      // The Goals link should be active on this page
-      const goalsSection = html.substring(
-        html.indexOf('fa-flag-checkered'),
-        html.indexOf('fa-flag-checkered') + 200
-      );
       expect(html).toContain('admin-nav__link--active');
       expect(html).toContain('aria-current="page"');
     });
 
-    it('should have Goals nav item with active styling', () => {
-      // The active link should point to /admin/goals
-      expect(html).toContain('href="/admin/goals"');
-      // Find the Goals link and verify it has the active class on the same <a> element
-      const goalsLinkIdx = html.indexOf('href="/admin/goals"');
-      const goalsLinkStart = html.lastIndexOf('<a', goalsLinkIdx);
-      const goalsLinkEnd = html.indexOf('>', goalsLinkIdx) + 1;
-      const goalsLinkTag = html.substring(goalsLinkStart, goalsLinkEnd);
-      expect(goalsLinkTag).toContain('admin-nav__link--active');
-    });
-
     it('should have Dashboard link pointing to /admin (NOT active)', () => {
       expect(html).toContain('href="/admin"');
-      // Dashboard link should NOT be active (Goals is active)
       const dashboardLinkIdx = html.indexOf('href="/admin"');
       const dashboardLinkStart = html.lastIndexOf('<a', dashboardLinkIdx);
       const dashboardLinkSnippet = html.substring(dashboardLinkStart, dashboardLinkIdx + 50);
       expect(dashboardLinkSnippet).not.toContain('admin-nav__link--active');
     });
 
-    it('should have disabled Users nav item with "Soon" badge', () => {
+    it('should have disabled Users and Metrics nav items', () => {
       expect(html).toContain('admin-nav__link--disabled');
       expect(html).toContain('aria-disabled="true"');
-      expect(html).toContain('fa-users');
-      expect(html).toContain('Soon');
     });
 
-    it('should have disabled Metrics nav item with "Soon" badge', () => {
-      expect(html).toContain('fa-chart-bar');
-      const soonMatches = html.match(/admin-nav__badge/g);
-      expect(soonMatches).not.toBeNull();
-      expect(soonMatches!.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should have "Back to Site" link pointing to /journey', () => {
+    it('should have "Back to Site" link', () => {
       expect(html).toContain('href="/journey"');
       expect(html).toContain('Back to Site');
-      expect(html).toContain('fa-arrow-left');
-    });
-
-    it('should have correct nav link order: Dashboard, Goals, Users, Metrics', () => {
-      const dashIdx = html.indexOf('Dashboard</span>');
-      const goalsIdx = html.indexOf('Goals</span>');
-      const usersIdx = html.indexOf('Users</span>');
-      const metricsIdx = html.indexOf('Metrics</span>');
-
-      expect(dashIdx).toBeGreaterThan(-1);
-      expect(goalsIdx).toBeGreaterThan(dashIdx);
-      expect(usersIdx).toBeGreaterThan(goalsIdx);
-      expect(metricsIdx).toBeGreaterThan(usersIdx);
     });
   });
 
   describe('main content area', () => {
-    it('should have AdminGoalsListIsland mount point', () => {
-      expect(html).toContain('data-island="AdminGoalsListIsland"');
+    it('should have AdminGoalAddIsland mount point', () => {
+      expect(html).toContain('data-island="AdminGoalAddIsland"');
     });
 
     it('should have breadcrumb navigation', () => {
@@ -110,13 +71,14 @@ describe('renderAdminGoalsPage', () => {
       expect(html).toContain('admin-breadcrumb');
     });
 
-    it('should have correct breadcrumb trail: Admin > Goals', () => {
+    it('should have correct breadcrumb trail: Admin > Goals > Add New Goal', () => {
       expect(html).toContain('<a href="/admin">Admin</a>');
+      expect(html).toContain('<a href="/admin/goals">Goals</a>');
       const breadcrumbSection = html.substring(
         html.indexOf('admin-breadcrumb'),
         html.indexOf('</nav>', html.indexOf('admin-breadcrumb')) + 6
       );
-      expect(breadcrumbSection).toContain('Goals');
+      expect(breadcrumbSection).toContain('Add New Goal');
     });
 
     it('should have admin-layout container with nav and content areas', () => {
@@ -127,10 +89,6 @@ describe('renderAdminGoalsPage', () => {
   });
 
   describe('meta and scripts', () => {
-    it('should include meta description for admin goals', () => {
-      expect(html).toContain('content="Admin goal management for Walk to Mordor"');
-    });
-
     it('should include Preact islands script module', () => {
       expect(html).toContain('src="/js/client/islands.js"');
       expect(html).toContain('type="module"');
@@ -159,7 +117,7 @@ describe('renderAdminGoalsPage', () => {
 
     it('should have aria-disabled on disabled nav items', () => {
       const disabledMatches = html.match(/aria-disabled="true"/g) || [];
-      expect(disabledMatches.length).toBe(2); // Users and Metrics
+      expect(disabledMatches.length).toBe(2);
     });
   });
 });

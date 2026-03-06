@@ -30,6 +30,8 @@ jest.mock('../../src/renderPartyManagePage');
 jest.mock('../../src/renderPartyJoinPage');
 jest.mock('../../src/renderAdminPage');
 jest.mock('../../src/renderAdminGoalsPage');
+jest.mock('../../src/renderAdminGoalEditPage');
+jest.mock('../../src/renderAdminGoalAddPage');
 jest.mock('../../src/admin-handlers');
 
 // Import after mocking
@@ -42,7 +44,7 @@ import { renderPartyManagePage } from '../../src/renderPartyManagePage';
 import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
 import { renderAdminPage } from '../../src/renderAdminPage';
 import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
-import { handleAdminDashboard, handleAdminGoalsList } from '../../src/admin-handlers';
+import { handleAdminDashboard, handleAdminGoalsList, handleAdminGoalCreate } from '../../src/admin-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
@@ -77,6 +79,7 @@ const mockRenderAdminPage = jest.mocked(renderAdminPage);
 const mockRenderAdminGoalsPage = jest.mocked(renderAdminGoalsPage);
 const mockHandleAdminDashboard = jest.mocked(handleAdminDashboard);
 const mockHandleAdminGoalsList = jest.mocked(handleAdminGoalsList);
+const mockHandleAdminGoalCreate = jest.mocked(handleAdminGoalCreate);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -716,15 +719,15 @@ describe('Cloudflare Worker Index', () => {
     expect(response.status).toBe(403);
   });
 
-  it('should return 405 for POST /api/admin/goals (only GET supported)', async () => {
+  it('should route POST /api/admin/goals to handleAdminGoalCreate when admin (Story 4.6)', async () => {
     mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
+    mockSafeJsonParse.mockResolvedValue({ success: true, data: { title: 'Test', distance_miles: 100 } });
+    mockHandleAdminGoalCreate.mockResolvedValue(new Response(JSON.stringify({ id: 1 }), { status: 201 }));
     const request = createRequest('https://example.com/api/admin/goals', 'POST');
     const response = await worker.fetch(request, mockEnv);
 
-    expect(mockHandleAdminGoalsList).not.toHaveBeenCalled();
-    expect(response.status).toBe(405);
-    const body = await response.json();
-    expect(body.error).toContain('Method POST not allowed');
+    expect(mockHandleAdminGoalCreate).toHaveBeenCalled();
+    expect(response.status).toBe(201);
   });
 
   it('should validate method for API endpoints', async () => {

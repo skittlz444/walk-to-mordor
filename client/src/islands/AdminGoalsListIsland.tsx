@@ -191,6 +191,9 @@ export function AdminGoalsListIsland() {
             {total} goal{total !== 1 ? 's' : ''}
           </span>
         </div>
+        <a href="/admin/goals/new" className="admin-btn admin-btn-primary">
+          <i className="fas fa-plus" aria-hidden="true"></i> Add New Goal
+        </a>
       </div>
 
       {goals.length === 0 ? (

@@ -13,11 +13,15 @@ import { PartyManageIsland } from './islands/PartyManageIsland';
 import { PartyJoinIsland } from './islands/PartyJoinIsland';
 import { AdminDashboardIsland } from './islands/AdminDashboardIsland';
 import { AdminGoalsListIsland } from './islands/AdminGoalsListIsland';
+import { AdminGoalEditIsland } from './islands/AdminGoalEditIsland';
+import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
 import * as partyStore from './stores/partyStore';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
   AdminDashboardIsland,
+  AdminGoalAddIsland,
+  AdminGoalEditIsland,
   AdminGoalsListIsland,
   AuthForms,
   DrawerIsland,
@@ -31,6 +35,8 @@ const autoHydratedIslands = {
 // All islands including those rendered programmatically
 const allIslands = {
   AdminDashboardIsland,
+  AdminGoalAddIsland,
+  AdminGoalEditIsland,
   AdminGoalsListIsland,
   AuthForms,
   DistanceModal,

@@ -56,7 +56,11 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - Admin (requires `validateAdminSession` — 401 if unauthenticated, 403 if non-admin):
   - `GET|POST|PUT|DELETE /api/admin/*` — prefix guard; all admin API routes require admin auth
   - `GET /api/admin/dashboard` — returns live system statistics (total users, distance, parties, goals)
-  - Future: `GET /api/admin/goals`, `GET|PUT /api/admin/goals/:id`, etc.
+  - `GET /api/admin/goals` — paginated, searchable, sortable list of goals
+  - `POST /api/admin/goals` — create new goal (title, distance in miles, description, special, image_id) with audit logging
+  - `GET /api/admin/goals/:id` — single goal full details
+  - `PUT /api/admin/goals/:id` — update goal fields (title, distance, description, special, image_id) with audit logging
+  - `GET /api/admin/images` — image asset inventory cross-referencing manifest vs goal assignments
 
 ### Page Routes
 
@@ -66,6 +70,9 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `/login`, `/password-reset`, `/reset-password`
 - `/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`
 - `/admin` admin dashboard shell (`src/renderAdminPage.ts`) — requires admin auth; includes `AdminDashboardIsland` for stats
+- `/admin/goals` admin goals list (`src/renderAdminGoalsPage.ts`) — requires admin auth; includes `AdminGoalsListIsland`
+- `/admin/goals/new` admin add goal (`src/renderAdminGoalAddPage.ts`) — requires admin auth; includes `AdminGoalAddIsland` with form, distance preview, duplicate check
+- `/admin/goals/:id` admin goal edit (`src/renderAdminGoalEditPage.ts`) — requires admin auth; includes `AdminGoalEditIsland` with form, markdown preview, save
 
 ## Frontend Architecture
 

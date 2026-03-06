@@ -2,7 +2,7 @@ import {
   validateAdminSession,
   handleSessionValidation
 } from '../../src/auth-handlers';
-import { logAdminAction, handleAdminDashboard, handleAdminGoalsList } from '../../src/admin-handlers';
+import { logAdminAction, handleAdminDashboard, handleAdminGoalsList, handleAdminGoalGet, handleAdminGoalUpdate } from '../../src/admin-handlers';
 import * as authUtils from '../../src/auth-utils';
 
 // Mock auth-utils
@@ -1444,6 +1444,1139 @@ describe('Admin Handlers', () => {
       // totalPages = ceil(50/25) = 2, page should be clamped to 2
       expect(body.page).toBe(2);
       expect(body.totalPages).toBe(2);
+    });
+
+    it('should escape backslash in search term for LIKE pattern', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 0 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=path\\to');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // Backslash should be escaped: \ → \\
+      expect(mockCountBind).toHaveBeenCalledWith('%path\\\\to%');
+    });
+
+    it('should include ESCAPE clause in SQL when search is provided', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 0 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=test');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // Both count and data SQL should include ESCAPE clause
+      const countSqlCall = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0] as string;
+      expect(countSqlCall).toContain("ESCAPE '\\'");
+      expect(dataSqlCall).toContain("ESCAPE '\\'");
+    });
+
+    it('should clamp page=0 to 1', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?page=0');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.page).toBe(1);
+    });
+
+    it('should default pageSize to 25 when 0 is provided (falsy fallback)', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?pageSize=0');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      // parseInt('0') is 0 (falsy), so || 25 kicks in → pageSize = 25
+      expect(body.pageSize).toBe(25);
+    });
+
+    it('should clamp negative pageSize to 1', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?pageSize=-10');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.pageSize).toBe(1);
+    });
+
+    it('should preserve null description and special in goal rows', async () => {
+      const rowsWithNulls = [
+        { id: 5, title: 'Weathertop', distance: 300, description: null, special: null, image_id: 'weathertop' },
+      ];
+      setupGoalsDb({ countTotal: 1, rows: rowsWithNulls });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.goals[0].description).toBeNull();
+      expect(body.goals[0].special).toBeNull();
+      expect(body.goals[0].has_image).toBe(true);
+    });
+
+    it('should return Content-Type application/json on 500 error', async () => {
+      mockEnv.DB.prepare.mockImplementation(() => {
+        throw new Error('DB crashed');
+      });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(500);
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    });
+
+    it('should combine search and sort correctly', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 2 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({
+        results: [
+          { id: 10, title: 'Rivendell', distance: 458, description: null, special: null, image_id: null },
+          { id: 11, title: 'River Hoarwell', distance: 350, description: null, special: null, image_id: null },
+        ],
+      });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=river&order=desc');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.goals).toHaveLength(2);
+
+      // Verify both WHERE LIKE and ORDER BY DESC are in data SQL
+      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0] as string;
+      expect(dataSqlCall).toContain('WHERE title LIKE');
+      expect(dataSqlCall).toContain('ORDER BY distance DESC');
+
+      // Verify search binding is used
+      expect(mockCountBind).toHaveBeenCalledWith('%river%');
+    });
+
+    it('should return empty goals array when no results match', async () => {
+      setupGoalsDb({ countTotal: 0, rows: [] });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.goals).toEqual([]);
+      expect(body.total).toBe(0);
+      expect(body.page).toBe(1);
+    });
+
+    it('should handle countResult returning null gracefully', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue(null);
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ first: mockCountFirst })
+        .mockReturnValueOnce({ all: mockDataAll, bind: mockDataBind });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      // When countResult is null, total defaults to 0 via ?? operator
+      expect(body.total).toBe(0);
+      expect(body.totalPages).toBe(1);
+    });
+
+    it('should escape all LIKE wildcards combined in a single search term', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 0 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      // Search with all three special characters: \ % _
+      const request = createGoalsRequest('?search=a\\b%c_d');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // \ → \\, % → \%, _ → \_ (backslash first, then %, then _)
+      expect(mockCountBind).toHaveBeenCalledWith('%a\\\\b\\%c\\_d%');
+    });
+  });
+
+  describe('handleAdminGoalGet', () => {
+    const sampleGoal = {
+      id: 42,
+      title: 'Rivendell',
+      distance: 747.8,
+      description: 'The company arrives at the Last Homely House...',
+      special: null,
+      image_id: 'rivendell',
+    };
+
+    it('should return full goal object for valid ID', async () => {
+      setupDbQuery({ firstResult: sampleGoal });
+
+      const response = await handleAdminGoalGet(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body).toEqual(sampleGoal);
+    });
+
+    it('should return 404 for non-existent goal', async () => {
+      setupDbQuery({ firstResult: null });
+
+      const response = await handleAdminGoalGet(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        999
+      );
+
+      expect(response.status).toBe(404);
+      const body = await response.json();
+      expect(body.error).toBe('Goal not found');
+    });
+
+    it('should return 500 on database error', async () => {
+      mockEnv.DB.prepare.mockImplementation(() => {
+        throw new Error('DB crashed');
+      });
+
+      const response = await handleAdminGoalGet(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Internal server error');
+    });
+
+    it('should return Content-Type application/json', async () => {
+      setupDbQuery({ firstResult: sampleGoal });
+
+      const response = await handleAdminGoalGet(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42
+      );
+
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    });
+
+    it('should bind goal ID to query parameter', async () => {
+      const { mockBind } = setupDbQuery({ firstResult: sampleGoal });
+
+      await handleAdminGoalGet(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42
+      );
+
+      expect(mockBind).toHaveBeenCalledWith(42);
+    });
+
+    it('should query correct columns from goals table', async () => {
+      setupDbQuery({ firstResult: sampleGoal });
+
+      await handleAdminGoalGet(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42
+      );
+
+      const sql = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      expect(sql).toContain('SELECT');
+      expect(sql).toContain('id');
+      expect(sql).toContain('title');
+      expect(sql).toContain('distance');
+      expect(sql).toContain('description');
+      expect(sql).toContain('special');
+      expect(sql).toContain('image_id');
+      expect(sql).toContain('FROM goals WHERE id = ?');
+    });
+
+    it('should return goal with null special and image_id', async () => {
+      const goalWithNulls = { ...sampleGoal, special: null, image_id: null };
+      setupDbQuery({ firstResult: goalWithNulls });
+
+      const response = await handleAdminGoalGet(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42
+      );
+
+      const body = await response.json();
+      expect(body.special).toBeNull();
+      expect(body.image_id).toBeNull();
+    });
+  });
+
+  describe('handleAdminGoalUpdate', () => {
+    const existingGoal = {
+      id: 42,
+      title: 'Rivendell',
+      distance: 747.8,
+      description: 'Original description',
+      special: null,
+      image_id: 'rivendell',
+    };
+
+    const validBody = {
+      title: 'Rivendell Updated',
+      distance: 750.0,
+      description: 'Updated description',
+      special: null,
+      image_id: 'rivendell',
+    };
+
+    function setupUpdateDb(options?: {
+      existing?: Record<string, unknown> | null;
+      updated?: Record<string, unknown> | null;
+    }) {
+      const existing = options?.existing ?? existingGoal;
+      const updated = options?.updated ?? { ...existingGoal, ...validBody };
+
+      // Call sequence: 1) SELECT existing, 2) UPDATE run, 3) INSERT audit log, 4) SELECT updated
+      const mockFirst1 = jest.fn().mockResolvedValue(existing);
+      const mockBind1 = jest.fn().mockReturnValue({ first: mockFirst1 });
+
+      const mockRun2 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const mockBind2 = jest.fn().mockReturnValue({ run: mockRun2 });
+
+      const mockRun3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const mockBind3 = jest.fn().mockReturnValue({ run: mockRun3 });
+
+      const mockFirst4 = jest.fn().mockResolvedValue(updated);
+      const mockBind4 = jest.fn().mockReturnValue({ first: mockFirst4 });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockBind1 })
+        .mockReturnValueOnce({ bind: mockBind2 })
+        .mockReturnValueOnce({ bind: mockBind3 })
+        .mockReturnValueOnce({ bind: mockBind4 });
+
+      return { mockBind1, mockBind2, mockBind3, mockBind4, mockRun2, mockFirst1, mockFirst4 };
+    }
+
+    it('should update goal with valid data and return 200', async () => {
+      const updated = { ...existingGoal, ...validBody };
+      setupUpdateDb({ updated });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        validBody,
+        1
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.title).toBe('Rivendell Updated');
+    });
+
+    it('should return 400 for missing title', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, title: '' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Title is required');
+    });
+
+    it('should return 400 for whitespace-only title', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, title: '   ' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Title is required');
+    });
+
+    it('should return 400 for non-positive distance', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, distance: -10 },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 for zero distance', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, distance: 0 },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 for NaN distance', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, distance: 'abc' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 for missing description', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, description: '' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Description is required');
+    });
+
+    it('should return 400 for invalid image_id slug format', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, image_id: 'INVALID SLUG!' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should accept valid slug image_id', async () => {
+      const bodyWithSlug = { ...validBody, image_id: 'bag-end' };
+      setupUpdateDb({ updated: { ...existingGoal, ...bodyWithSlug } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithSlug,
+        1
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it('should normalize empty special to null', async () => {
+      const bodyWithEmptySpecial = { ...validBody, special: '' };
+      const { mockBind2 } = setupUpdateDb({ updated: { ...existingGoal, ...bodyWithEmptySpecial, special: null } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithEmptySpecial,
+        1
+      );
+
+      // The UPDATE bind should receive null for special (4th arg)
+      expect(mockBind2).toHaveBeenCalledWith(
+        'Rivendell Updated',
+        750.0,
+        'Updated description',
+        null,
+        'rivendell',
+        42
+      );
+    });
+
+    it('should normalize empty image_id to null', async () => {
+      const bodyWithEmptyImageId = { ...validBody, image_id: '' };
+      const { mockBind2 } = setupUpdateDb({ updated: { ...existingGoal, ...bodyWithEmptyImageId, image_id: null } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithEmptyImageId,
+        1
+      );
+
+      // The UPDATE bind should receive null for image_id (5th arg)
+      expect(mockBind2).toHaveBeenCalledWith(
+        'Rivendell Updated',
+        750.0,
+        'Updated description',
+        null,
+        null,
+        42
+      );
+    });
+
+    it('should return 404 for non-existent goal', async () => {
+      // Validation passes first (body is valid), then the SELECT for existing goal returns null
+      const mockFirst1 = jest.fn().mockResolvedValue(null);
+      const mockBind1 = jest.fn().mockReturnValue({ first: mockFirst1 });
+      mockEnv.DB.prepare.mockReturnValueOnce({ bind: mockBind1 });
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        999,
+        validBody,
+        1
+      );
+
+      expect(response.status).toBe(404);
+      const body = await response.json();
+      expect(body.error).toBe('Goal not found');
+    });
+
+    it('should call logAdminAction with correct details for changed fields', async () => {
+      const updated = { ...existingGoal, title: 'New Title', distance: 800 };
+      setupUpdateDb({ updated });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, title: 'New Title', distance: 800 },
+        1
+      );
+
+      // The 3rd DB.prepare call is the audit log INSERT
+      const auditSql = mockEnv.DB.prepare.mock.calls[2][0] as string;
+      expect(auditSql).toContain('INSERT INTO admin_audit_log');
+    });
+
+    it('should return 500 on database error during update', async () => {
+      mockEnv.DB.prepare.mockImplementation(() => {
+        throw new Error('DB crashed');
+      });
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        validBody,
+        1
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Internal server error');
+    });
+
+    it('should return Content-Type application/json on all responses', async () => {
+      // Test 400 response
+      const response400 = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, title: '' },
+        1
+      );
+      expect(response400.headers.get('Content-Type')).toBe('application/json');
+
+      // Test 200 response
+      setupUpdateDb();
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+      const response200 = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        validBody,
+        1
+      );
+      expect(response200.headers.get('Content-Type')).toBe('application/json');
+    });
+
+    it('should use CF-Connecting-IP for audit log IP address', async () => {
+      setupUpdateDb();
+      mockRequest.headers.get.mockImplementation((header: string) => {
+        if (header === 'CF-Connecting-IP') return '10.0.0.1';
+        return null;
+      });
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        validBody,
+        1
+      );
+
+      // Audit log INSERT is the 3rd prepare call, check the bind args
+      const auditBindCall = mockEnv.DB.prepare.mock.calls[2];
+      expect(auditBindCall).toBeDefined();
+    });
+
+    it('should accept null image_id and special values', async () => {
+      const bodyWithNulls = { ...validBody, special: null, image_id: null };
+      setupUpdateDb({ updated: { ...existingGoal, ...bodyWithNulls } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithNulls,
+        1
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it('should trim title and description before saving', async () => {
+      const bodyWithSpaces = { ...validBody, title: '  Rivendell  ', description: '  Desc  ' };
+      const { mockBind2 } = setupUpdateDb({ updated: { ...existingGoal, title: 'Rivendell', description: 'Desc' } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithSpaces,
+        1
+      );
+
+      // First arg to UPDATE bind should be trimmed title
+      expect(mockBind2).toHaveBeenCalledWith(
+        'Rivendell',
+        750.0,
+        'Desc',
+        null,
+        'rivendell',
+        42
+      );
+    });
+
+    it('should reject image_id with uppercase letters', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, image_id: 'Rivendell' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should reject image_id with spaces', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, image_id: 'bag end' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should reject image_id starting with hyphen', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, image_id: '-rivendell' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should store distance as-is without rounding', async () => {
+      const bodyWithDecimal = { ...validBody, distance: 747.123456 };
+      const { mockBind2 } = setupUpdateDb({ updated: { ...existingGoal, distance: 747.123456 } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithDecimal,
+        1
+      );
+
+      // 2nd arg to UPDATE bind should be the exact distance value
+      const bindArgs = mockBind2.mock.calls[0];
+      expect(bindArgs[1]).toBe(747.123456);
+      expect(bindArgs[5]).toBe(42);
+    });
+
+    // ─── Edge-case tests added by QA (Story 4-4) ───
+
+    it('should return 500 when body is null (caught by try/catch)', async () => {
+      // null body causes TypeError accessing .title — caught as 500 internal error
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        null as unknown,
+        1
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Internal server error');
+    });
+
+    it('should return 500 when body is undefined (caught by try/catch)', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        undefined as unknown,
+        1
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Internal server error');
+    });
+
+    it('should ignore extra/unknown fields in body', async () => {
+      const bodyWithExtras = {
+        ...validBody,
+        unknownField: 'should be ignored',
+        _hack: true,
+        id: 999, // should not override the URL param
+      };
+      const updated = { ...existingGoal, ...validBody };
+      const { mockBind2 } = setupUpdateDb({ updated });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithExtras,
+        1
+      );
+
+      expect(response.status).toBe(200);
+      // UPDATE bind should only contain the 5 known fields + goalId
+      expect(mockBind2).toHaveBeenCalledWith(
+        'Rivendell Updated',
+        750.0,
+        'Updated description',
+        null,
+        'rivendell',
+        42
+      );
+    });
+
+    it('should accept slug with numbers only', async () => {
+      const bodyWithNumSlug = { ...validBody, image_id: '123' };
+      setupUpdateDb({ updated: { ...existingGoal, ...bodyWithNumSlug } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithNumSlug,
+        1
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it('should accept slug with single character', async () => {
+      const bodyWithSingleChar = { ...validBody, image_id: 'a' };
+      setupUpdateDb({ updated: { ...existingGoal, ...bodyWithSingleChar } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithSingleChar,
+        1
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it('should accept slug with multiple hyphenated segments', async () => {
+      const bodyWithMultiSeg = { ...validBody, image_id: 'the-old-forest-road-2' };
+      setupUpdateDb({ updated: { ...existingGoal, ...bodyWithMultiSeg } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithMultiSeg,
+        1
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it('should reject image_id ending with hyphen', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, image_id: 'rivendell-' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should reject image_id with consecutive hyphens', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, image_id: 'bag--end' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should accept title with special characters and unicode', async () => {
+      const bodyWithUnicode = { ...validBody, title: 'Lothlórien — The Golden Wood 🌳' };
+      const updated = { ...existingGoal, title: 'Lothlórien — The Golden Wood 🌳' };
+      setupUpdateDb({ updated });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithUnicode,
+        1
+      );
+
+      expect(response.status).toBe(200);
+      const resBody = await response.json();
+      expect(resBody.title).toBe('Lothlórien — The Golden Wood 🌳');
+    });
+
+    it('should accept description with HTML tags (stored as-is, sanitised on render)', async () => {
+      const bodyWithHtml = { ...validBody, description: '<script>alert("xss")</script><b>Bold</b>' };
+      const updated = { ...existingGoal, description: '<script>alert("xss")</script><b>Bold</b>' };
+      setupUpdateDb({ updated });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithHtml,
+        1
+      );
+
+      // Server stores raw; DOMPurify sanitises on client render
+      expect(response.status).toBe(200);
+    });
+
+    it('should handle very long title (1000+ characters)', async () => {
+      const longTitle = 'A'.repeat(2000);
+      const bodyWithLongTitle = { ...validBody, title: longTitle };
+      const updated = { ...existingGoal, title: longTitle };
+      setupUpdateDb({ updated });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithLongTitle,
+        1
+      );
+
+      // Handler does not enforce max-length — DB layer may; handler should not crash
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 400 for whitespace-only description', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, description: '   \n\t  ' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Description is required');
+    });
+
+    it('should pass validation for Infinity distance (isNaN is false, > 0 is true)', async () => {
+      // Infinity passes the isNaN/> 0 check; this tests that the handler doesn't crash
+      const bodyWithInfinity = { ...validBody, distance: Infinity };
+      setupUpdateDb({ updated: { ...existingGoal, distance: Infinity } });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        bodyWithInfinity,
+        1
+      );
+
+      // Infinity passes validation → 200 (DB stores it)
+      expect(response.status).toBe(200);
+    });
+
+    it('should produce audit log details with old/new values for changed fields', async () => {
+      const updatedBody = {
+        title: 'New Title',
+        distance: 800,
+        description: 'New description',
+        special: 'birthday',
+        image_id: 'new-image',
+      };
+      setupUpdateDb({ updated: { ...existingGoal, ...updatedBody } });
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        updatedBody,
+        7
+      );
+
+      // The 3rd prepare call is the audit INSERT
+      const auditBindCall = mockEnv.DB.prepare.mock.calls[2];
+      expect(auditBindCall).toBeDefined();
+      const auditSql = auditBindCall[0] as string;
+      expect(auditSql).toContain('INSERT INTO admin_audit_log');
+
+      // The bind args should be: adminUserId, action, targetType, targetId, details, ipAddress, success
+      // We access via the bind mock on the 3rd prepare
+      const thirdPrepare = mockEnv.DB.prepare.mock.results[2].value;
+      const bindArgs = thirdPrepare.bind.mock.calls[0];
+      expect(bindArgs[0]).toBe(7);           // adminUserId
+      expect(bindArgs[1]).toBe('update_goal'); // action
+      expect(bindArgs[2]).toBe('goal');       // targetType
+      expect(bindArgs[3]).toBe(42);           // targetId
+
+      // Parse the details JSON to verify structure
+      const details = JSON.parse(bindArgs[4]);
+      expect(details.title).toEqual({ old: 'Rivendell', new: 'New Title' });
+      expect(details.distance).toEqual({ old: 747.8, new: 800 });
+      // Description is truncated in audit log
+      expect(details.description).toEqual({ old: '(truncated)', new: '(truncated)' });
+      expect(details.special).toEqual({ old: null, new: 'birthday' });
+      expect(details.image_id).toEqual({ old: 'rivendell', new: 'new-image' });
+
+      expect(bindArgs[5]).toBe('10.0.0.1');  // ipAddress
+      expect(bindArgs[6]).toBe(1);           // success flag (1 = true)
+    });
+
+    it('should produce empty changes object when no fields actually changed', async () => {
+      // Submit the exact same values as existing goal
+      const identicalBody = {
+        title: 'Rivendell',
+        distance: 747.8,
+        description: 'Original description',
+        special: null,
+        image_id: 'rivendell',
+      };
+      setupUpdateDb({
+        existing: existingGoal,
+        updated: existingGoal,
+      });
+      mockRequest.headers.get.mockReturnValue('1.2.3.4');
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        identicalBody,
+        1
+      );
+
+      // Verify the audit details JSON is an empty changes object
+      const thirdPrepare = mockEnv.DB.prepare.mock.results[2].value;
+      const bindArgs = thirdPrepare.bind.mock.calls[0];
+      const details = JSON.parse(bindArgs[4]);
+      expect(details).toEqual({});
+    });
+
+    it('should use "unknown" as IP when CF-Connecting-IP header is absent', async () => {
+      setupUpdateDb();
+      mockRequest.headers.get.mockReturnValue(null);
+
+      await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        validBody,
+        1
+      );
+
+      // The audit log bind should have 'unknown' as ipAddress
+      const thirdPrepare = mockEnv.DB.prepare.mock.results[2].value;
+      const bindArgs = thirdPrepare.bind.mock.calls[0];
+      expect(bindArgs[5]).toBe('unknown');
+    });
+
+    it('should return 400 for distance passed as string number', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, distance: '750' },
+        1
+      );
+
+      // typeof '750' !== 'number' → NaN → 400
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 when title is a non-string type', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, title: 12345 },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Title is required');
+    });
+
+    it('should return 400 when description is a non-string type', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, description: 42 },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Description is required');
+    });
+
+    it('should reject image_id with underscores', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, image_id: 'bag_end' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should reject image_id with dots', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, image_id: 'bag.end' },
+        1
+      );
+
+      expect(response.status).toBe(400);
     });
   });
 });

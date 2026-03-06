@@ -78,3 +78,21 @@ Do not remove these without migrating all dependent legacy code paths.
 ## Admin Dashboard Island
 
 The `AdminDashboardIsland` component (`client/src/islands/AdminDashboardIsland.tsx`) renders the admin stats dashboard. It fetches `GET /api/admin/dashboard` with a Bearer token and displays four stat cards: Total Users, Total Distance, Active Fellowships, and Total Goals. Supports loading skeleton, error retry, and auto-redirects on 401/403.
+
+## Admin Goals List Island
+
+The `AdminGoalsListIsland` component (`client/src/islands/AdminGoalsListIsland.tsx`) renders the paginated, searchable, sortable goals list table. It fetches `GET /api/admin/goals` with Bearer token. Supports search with debounce, sort-by-distance toggle, pagination, loading skeleton, error retry, and row-click navigation to `/admin/goals/:id`.
+
+## Admin Goal Edit Island
+
+The `AdminGoalEditIsland` component (`client/src/islands/AdminGoalEditIsland.tsx`) renders the goal edit form at `/admin/goals/:id`. It extracts the goal ID from `window.location.pathname`, fetches `GET /api/admin/goals/:id`, and displays an edit form with:
+
+- **Title** (text, required), **Distance** (number, required), **Description** (textarea, required)
+- **Special** (text, optional), **Image ID** (text, optional, slug-validated)
+- Read-only **ID** and **Has Image** indicator
+- **Markdown preview** toggle for description using the `marked` library
+- **Image thumbnail** preview when `image_id` is set
+- Client-side validation with inline error messages
+- **Save** button sends `PUT /api/admin/goals/:id`; success toast auto-dismisses after 3s
+- **Back to Goals** link navigates to `/admin/goals`
+- Loading, 404, and error states with retry
