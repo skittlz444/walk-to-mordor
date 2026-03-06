@@ -31,7 +31,8 @@ import {
   handlePasswordReset,
   handleConfirmEmail,
   handleResendConfirmation,
-  validateSession
+  validateSession,
+  validateAdminSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
@@ -39,6 +40,11 @@ import { renderPartyListPage } from "./renderPartyListPage";
 import { renderPartyDetailPage } from "./renderPartyDetailPage";
 import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
+import { renderAdminPage } from "./renderAdminPage";
+import { renderAdminGoalsPage } from "./renderAdminGoalsPage";
+import { handleAdminDashboard, handleAdminGoalsList, handleAdminGoalGet, handleAdminGoalUpdate, handleAdminImageInventory, handleAdminGoalCreate } from "./admin-handlers";
+import { renderAdminGoalEditPage } from "./renderAdminGoalEditPage";
+import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -135,6 +141,46 @@ export default {
       }
       
       // Protected endpoints (authentication required)
+      // Admin API endpoints (admin authentication required)
+      if (url.pathname.startsWith("/api/admin/")) {
+        const adminValidation = await validateAdminSession(request, env);
+        if (!adminValidation.valid) return adminValidation.error;
+
+        // Admin API endpoints (Story 4.2+)
+        if (url.pathname === "/api/admin/dashboard" && method === "GET") {
+          return handleAdminDashboard(request, env);
+        }
+
+        // Admin Goals List (Story 4.3) / Create (Story 4.6)
+        if (url.pathname === "/api/admin/goals" && method === "GET") {
+          return handleAdminGoalsList(request, env);
+        }
+        if (url.pathname === "/api/admin/goals" && method === "POST") {
+          return handleAdminGoalCreate(request, env, body, adminValidation.userId);
+        }
+
+        // Admin Image Inventory (Story 4.5)
+        if (url.pathname === "/api/admin/images" && method === "GET") {
+          return handleAdminImageInventory(request, env);
+        }
+
+        // Admin Goal Detail / Update (Story 4.4)
+        const adminGoalParams = matchRoute(url.pathname, '/api/admin/goals/:id');
+        if (adminGoalParams) {
+          const goalId = Number.parseInt(adminGoalParams.id, 10);
+          if (!Number.isInteger(goalId) || goalId <= 0 || String(goalId) !== adminGoalParams.id) {
+            return createErrorResponse('Invalid goal ID', 400);
+          }
+          if (method === 'GET') return handleAdminGoalGet(request, env, goalId);
+          if (method === 'PUT') return handleAdminGoalUpdate(request, env, goalId, body, adminValidation.userId);
+        }
+
+        return new Response(JSON.stringify({ error: 'Admin API endpoint not found' }), {
+          status: 404,
+          headers: { "content-type": "application/json" }
+        });
+      }
+
       // Party (Fellowship) endpoints
       if (url.pathname === "/api/party" && method === "POST") {
         return handleCreateParty(request, env, body);
@@ -332,6 +378,48 @@ export default {
       return handleMapPage(request, env);
     }
 
+    // Admin page (admin authentication required)
+    if (url.pathname === "/admin") {
+      const adminValidation = await validateAdminSession(request, env);
+      if (!adminValidation.valid) return adminValidation.error;
+      return new Response(renderAdminPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
+    // Admin Goals list page (admin authentication required) — Story 4.3
+    if (url.pathname === "/admin/goals") {
+      const adminValidation = await validateAdminSession(request, env);
+      if (!adminValidation.valid) return adminValidation.error;
+      return new Response(renderAdminGoalsPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
+    // Admin Goal Add page (admin authentication required) — Story 4.6
+    // MUST be matched BEFORE /admin/goals/:id to prevent "new" being parsed as an id
+    if (url.pathname === "/admin/goals/new") {
+      const adminValidation = await validateAdminSession(request, env);
+      if (!adminValidation.valid) return adminValidation.error;
+      return new Response(renderAdminGoalAddPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
+    // Admin Goal Edit page (admin authentication required) — Story 4.4
+    const adminGoalEditParams = matchRoute(url.pathname, '/admin/goals/:id');
+    if (adminGoalEditParams) {
+      const adminValidation = await validateAdminSession(request, env);
+      if (!adminValidation.valid) return adminValidation.error;
+      const goalId = Number.parseInt(adminGoalEditParams.id, 10);
+      if (!Number.isInteger(goalId) || goalId <= 0 || String(goalId) !== adminGoalEditParams.id) {
+        return new Response('Not Found', { status: 404 });
+      }
+      return new Response(renderAdminGoalEditPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
     // Party (Fellowship) pages
     // Must check /party/join/:code before /party/:id to avoid matching "join" as an id
     const partyJoinPageParams = matchRoute(url.pathname, '/party/join/:inviteCode');
@@ -398,7 +486,11 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/session":
     case "/api/auth/confirm-email":
     case "/api/user/parties":
+    case "/api/admin/dashboard":
+    case "/api/admin/images":
       return ['GET'];
+    case "/api/admin/goals":
+      return ['GET', 'POST'];
     case "/api/register":
     case "/api/login":
     case "/api/logout":
@@ -411,6 +503,12 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/user/preferences":
       return ['PUT'];
     default:
+      // Admin API routes
+      if (pathname.startsWith('/api/admin/')) {
+        if (matchRoute(pathname, '/api/admin/goals/:id')) return ['GET', 'PUT'];
+        // Unknown admin routes — restrict to safe default; the handler will return 404
+        return ['GET'];
+      }
       // Parameterized routes
       if (matchRoute(pathname, '/api/party/join/:inviteCode')) {
         return ['GET', 'POST'];

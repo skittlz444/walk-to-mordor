@@ -38,12 +38,25 @@ Rendered by:
 - `src/renderPartyManagePage.ts` -> `PartyManageIsland`
 - `src/renderPartyJoinPage.ts` -> `PartyJoinIsland`
 
+### Admin Pages
+
+Rendered by:
+
+- `src/renderAdminPage.ts` -> `AdminDashboardIsland` (dashboard shell with sidebar nav, breadcrumbs, stat cards)
+- `src/renderAdminGoalsPage.ts` -> `AdminGoalsListIsland` (paginated goals table with search, sort, row-click navigation)
+- `src/renderAdminGoalEditPage.ts` -> `AdminGoalEditIsland` (goal edit form with markdown preview, validation, save/back actions)
+
+Admin pages use `/css/admin.css` for layout and card styles. Admin nav includes links to Dashboard, Goals (active on goals pages), Users (disabled), Metrics (disabled), and a "Back to Site" link to `/journey`.
+
 ## Island Inventory
 
 Registered in `client/src/index.tsx`.
 
 Auto-hydrated islands:
 
+- `AdminDashboardIsland`
+- `AdminGoalEditIsland`
+- `AdminGoalsListIsland`
 - `AuthForms`
 - `DrawerIsland`
 - `MapIsland`

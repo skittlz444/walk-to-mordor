@@ -170,11 +170,12 @@ interface Goal {
 - **Naming**: Use lowercase, hyphens for spaces (e.g., `my-milestone-name.jpg`)
 - **Organization**: Keep source files organized; subdirectories in `raw_assets/` are supported
 
-### Workflow Tips
+## Workflow Tips
 1. **Batch processing**: Add multiple images to `raw_assets/` and run the script once
 2. **Filename consistency**: Output WebP files use the same base filename as source
 3. **Manual cleanup**: After optimization, you can optionally delete or archive source files from `raw_assets/`
 4. **Version control**: Only the optimized WebP files in `public/img/` are committed to git
+5. **Image manifest**: After optimizing, run `npm run build:manifest` (or `npm run build` which includes it) to update the image manifest used by the admin UI
 
 ### File Size Monitoring
 - If thumbnails consistently exceed 20KB, consider:
@@ -206,6 +207,7 @@ mkdir raw_assets
 
 ## Related Documentation
 
+- [Admin Image Workflow](./admin-image-workflow.md) — Managing images through the admin UI
 - [Story 1.5: Missing Milestone Images](../_bmad-output/implementation-artifacts/1-5-missing-milestone-images.md) - Related work on milestone images
 - [Story 1.6: Image Optimization Script](../_bmad-output/implementation-artifacts/1-6-image-optimization-script.md) - This story's definition
 - [Sharp Documentation](https://sharp.pixelplumbing.com/) - Image processing library

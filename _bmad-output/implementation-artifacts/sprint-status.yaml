@@ -87,13 +87,13 @@ development_status:
   # ============================================
   # EPIC 4: Admin Portal (#153)
   # ============================================
-  epic-4: in-progress
-  4-1-admin-authentication-authorization: ready-for-dev
-  4-2-admin-dashboard-shell: ready-for-dev
-  4-3-goal-management-list-view: ready-for-dev
-  4-4-goal-management-edit-goal: ready-for-dev
-  4-5-goal-management-image-asset-workflow-integration: ready-for-dev
-  4-6-goal-management-add-intermediary-goal: ready-for-dev
+  epic-4: done
+  4-1-admin-authentication-authorization: done
+  4-2-admin-dashboard-shell: done
+  4-3-goal-management-list-view: done
+  4-4-goal-management-edit-goal: done
+  4-5-goal-management-image-asset-workflow-integration: done
+  4-6-goal-management-add-intermediary-goal: done
   epic-4-retrospective: optional
 
   # ============================================

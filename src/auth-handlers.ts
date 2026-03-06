@@ -248,7 +248,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       
       // Check if user exists
       let { results } = await env.DB.prepare(
-        'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map FROM users WHERE username = ?'
+        'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin FROM users WHERE username = ?'
       ).bind(username).all();
 
       let user;
@@ -263,7 +263,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         
         // Fetch the user (created here or by a concurrent request)
         const createdUser = await env.DB.prepare(
-          'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map FROM users WHERE username = ?'
+          'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin FROM users WHERE username = ?'
         ).bind(username).first();
         
         if (!createdUser) {
@@ -280,6 +280,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         email: user.email,
         showFutureGoalsUnlocked: user.show_future_goals_unlocked === 1,
         defaultViewMap: user.default_view_map === 1,
+        isAdmin: user.is_admin === 1,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       }, 200);
     } catch (error: any) {
@@ -290,7 +291,7 @@ export async function handleSessionValidation(request: Request, env: any) {
 
   try {
     const { results } = await env.DB.prepare(
-      'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved, u.show_future_goals_unlocked, u.default_view_map FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
+      'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved, u.show_future_goals_unlocked, u.default_view_map, u.is_admin FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
     ).bind(sessionId).all();
 
     if (results.length === 0) {
@@ -317,6 +318,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       email: session.email,
       showFutureGoalsUnlocked: session.show_future_goals_unlocked === 1,
       defaultViewMap: session.default_view_map === 1,
+      isAdmin: session.is_admin === 1,
       expiresAt: session.expires_at
     }, 200);
   } catch (error: any) {
@@ -431,6 +433,43 @@ export async function validateSession(request: Request, env: any): Promise<
     return { 
       valid: false, 
       error: createErrorResponse('Internal server error during session validation', 500) 
+    };
+  }
+}
+
+/**
+ * Middleware to extract, validate session, and verify admin status from request.
+ * Returns 401 for unauthenticated, 403 for non-admin.
+ */
+export async function validateAdminSession(request: Request, env: any): Promise<
+  | { valid: true; userId: number; isAdmin: true }
+  | { valid: false; error: Response }
+> {
+  // First validate the session using existing logic
+  const sessionResult = await validateSession(request, env);
+  if (!sessionResult.valid) {
+    return sessionResult;
+  }
+
+  try {
+    // Check admin status for the authenticated user
+    const user = await env.DB.prepare(
+      'SELECT is_admin FROM users WHERE id = ?'
+    ).bind(sessionResult.userId).first();
+
+    if (!user || user.is_admin !== 1) {
+      return {
+        valid: false,
+        error: createErrorResponse('Admin access required', 403)
+      };
+    }
+
+    return { valid: true, userId: sessionResult.userId, isAdmin: true };
+  } catch (error: unknown) {
+    console.error('Database error during admin validation:', error);
+    return {
+      valid: false,
+      error: createErrorResponse('Internal server error during admin validation', 500)
     };
   }
 }
