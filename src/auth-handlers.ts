@@ -253,15 +253,15 @@ export async function handleSessionValidation(request: Request, env: any) {
 
       let user;
       if (results.length === 0) {
-        // Create test user
+        // Create test user (INSERT OR IGNORE to handle concurrent requests)
         const salt = 'test_salt';
         const passwordHash = 'dummy_hash_for_testing'; // Optimized for tests
         
-        const result = await env.DB.prepare(
-          'INSERT INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
+        await env.DB.prepare(
+          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
         ).bind(username, `${username}@example.com`, passwordHash, salt).run();
         
-        // Fetch the created user to ensure we have the correct ID
+        // Fetch the user (created here or by a concurrent request)
         const createdUser = await env.DB.prepare(
           'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map FROM users WHERE username = ?'
         ).bind(username).first();
@@ -360,15 +360,15 @@ export async function validateSession(request: Request, env: any): Promise<
 
       let user;
       if (results.length === 0) {
-        // Create test user
+        // Create test user (INSERT OR IGNORE to handle concurrent requests)
         const salt = 'test_salt';
         const passwordHash = 'dummy_hash_for_testing'; // Optimized for tests
         
-        const result = await env.DB.prepare(
-          'INSERT INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
+        await env.DB.prepare(
+          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
         ).bind(username, `${username}@example.com`, passwordHash, salt).run();
         
-        // Fetch the created user to ensure we have the correct ID
+        // Fetch the user (created here or by a concurrent request)
         const createdUser = await env.DB.prepare(
           'SELECT id, username, email, approved FROM users WHERE username = ?'
         ).bind(username).first();
