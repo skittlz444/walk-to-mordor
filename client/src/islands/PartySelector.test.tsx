@@ -66,7 +66,7 @@ describe('PartySelector', () => {
     expect(options[1].textContent).toBe('Fellowship');
   });
 
-  it('shows banner when party is selected', async () => {
+  it('does not render banner (removed for cleaner UI)', async () => {
     userParties.value = [
       { id: 1, name: 'The Shire Walkers', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 4 },
     ];
@@ -84,13 +84,10 @@ describe('PartySelector', () => {
     const { container } = render(<PartySelector />);
 
     const banner = container.querySelector('.party-selector__banner');
-    expect(banner).toBeTruthy();
-    expect(banner?.textContent).toContain('The Shire Walkers');
-    expect(banner?.textContent).toContain('42.50 km');
-    expect(banner?.textContent).toContain('4 members');
+    expect(banner).toBeNull();
   });
 
-  it('hides banner in personal view', () => {
+  it('does not render banner in personal view (banner removed)', () => {
     userParties.value = [
       { id: 1, name: 'Fellowship', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 2 },
     ];
@@ -98,6 +95,7 @@ describe('PartySelector', () => {
 
     const { container } = render(<PartySelector />);
 
+    // Banner should not exist regardless of view (removed for cleaner UI)
     expect(container.querySelector('.party-selector__banner')).toBeNull();
   });
 
@@ -132,7 +130,7 @@ describe('PartySelector', () => {
     expect(container.querySelector('.party-selector__loading')).toBeTruthy();
   });
 
-  it('shows singular member text for 1 member', () => {
+  it('does not render member text in banner (banner removed)', () => {
     userParties.value = [
       { id: 1, name: 'Solo', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1 },
     ];
@@ -149,6 +147,6 @@ describe('PartySelector', () => {
 
     const { container } = render(<PartySelector />);
 
-    expect(container.querySelector('.party-selector__banner-members')?.textContent).toContain('1 member');
+    expect(container.querySelector('.party-selector__banner')).toBeNull();
   });
 });

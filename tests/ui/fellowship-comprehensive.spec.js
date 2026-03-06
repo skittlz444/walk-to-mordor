@@ -786,7 +786,7 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     }
   });
 
-  test('Selecting a party shows viewing banner', async ({ page, request, leader1Token }) => {
+  test('Selecting a party does not show viewing banner (removed for cleaner UI)', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Banner Test Party');
     await logDistance(request, leader1Token, '2026-02-25', 5);
 
@@ -807,11 +807,9 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       expect(targetValue).not.toBeNull();
       await dropdown.selectOption(targetValue);
 
-      // Banner should appear
+      // Banner should not appear (removed for cleaner UI)
       const banner = page.locator('.party-selector__banner');
-      await expect(banner).toBeVisible({ timeout: 8000 });
-      const bannerText = await banner.textContent();
-      expect(bannerText).toContain('Viewing');
+      await expect(banner).not.toBeVisible({ timeout: 3000 });
     }
   });
 

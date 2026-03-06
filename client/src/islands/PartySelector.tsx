@@ -3,7 +3,7 @@
  *
  * Fetches user's active parties on mount.
  * Hidden if user has no parties.
- * Shows dropdown + visual banner when party is selected.
+ * Shows dropdown when party is selected.
  * Persists selection to localStorage.
  * Handles 403/404 fallback to personal view.
  *
@@ -14,12 +14,9 @@ import { useEffect, useCallback } from 'preact/hooks';
 import {
   userParties,
   selectedView,
-  partyProgress,
   partiesLoading,
   progressLoading,
   hasParties,
-  isPartyView,
-  selectedParty,
   fetchUserParties,
   selectView,
   hasTriggeredMilestones,
@@ -127,23 +124,6 @@ export function PartySelector({ variant = 'journey', onViewChange, onNewMileston
           </span>
         )}
       </div>
-
-      {isPartyView.value && selectedParty.value && (
-        <div className="party-selector__banner">
-          <span className="party-selector__banner-icon">👥</span>
-          <span className="party-selector__banner-text">
-            Viewing: <strong>{selectedParty.value.name}</strong>
-          </span>
-          {partyProgress.value && (
-            <span className="party-selector__banner-distance">
-              {partyProgress.value.total_distance.toFixed(2)} km
-              <span className="party-selector__banner-members">
-                ({partyProgress.value.member_count} {partyProgress.value.member_count === 1 ? 'member' : 'members'})
-              </span>
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }
