@@ -1,96 +1,227 @@
 # API Reference
 
-The API is served from the same domain as the application. All dates use ISO 8601 formatting or `YYYY-MM-DD`.
+Last updated: 2026-03-06
 
-## Authentication
+Base URL is the same Worker origin as the web app.
+
+## Authentication Contract
+
+Protected endpoints require:
+
+- Header: `Authorization: Bearer <sessionToken>`
+
+Behavior:
+
+- Missing/invalid bearer header returns `401`.
+- Session ownership and active membership checks return `403` where applicable.
+- Unknown API paths return `404`.
+- Method mismatch returns `405` and an `Allow` header.
+
+Test-only auth mode:
+
+- When Worker var `ALLOW_TEST_AUTH=true`, tokens prefixed with `TEST_MOCK_TOKEN_` are accepted in tests.
+
+## Auth and Profile Endpoints
 
 ### `POST /api/register`
-Register a new user. Sends a confirmation email to activate the account.
-- **Body**: `{ username, email, password }`
-- **Response**: Success message prompting user to check email. Account is inactive until confirmed.
-- **Note**: Each successful registration sends one confirmation email. Rate limiting is only applied on the resend confirmation endpoint.
+
+Creates a user and triggers confirmation email flow.
+
+Body:
+
+```json
+{ "username": "samwise", "email": "sam@example.com", "password": "..." }
+```
 
 ### `POST /api/login`
-Log in an existing user.
-- **Body**: `{ username, password }`
-- **Response**: Sets session cookie.
-- **Note**: Returns error if email is not yet verified.
+
+Authenticates a user and returns session token payload consumed by the client.
 
 ### `POST /api/logout`
-Log out the current user.
-- **Response**: Clears session.
+
+Invalidates current session.
 
 ### `GET /api/session`
-Validate current session.
-- **Headers**: Requires Session Cookie.
-- **Response**: `{ userId, username, email, showFutureGoalsUnlocked, expiresAt }`
-- **Note**: `showFutureGoalsUnlocked` is a boolean indicating the user's goal visibility preference (default: `true`).
 
-### `POST /api/password-reset-request`
-Request a password reset email.
-- **Body**: `{ email }`
-- **Rate Limit**: 3 reset emails per hour.
+Returns current session user context.
 
-### `POST /api/password-reset`
-Complete password reset with token.
-- **Body**: `{ token, newPassword }`
+Typical response fields:
 
-### `GET /api/auth/confirm-email`
-Confirm a user's email address via token (sent in confirmation email link).
-- **Query**: `?token=<confirmation_token>`
-- **Response**: Activates the account (sets `email_verified = 1`) and redirects to login.
-- **Errors**: Returns error for expired or invalid tokens.
-
-### `POST /api/auth/resend-confirmation`
-Resend the email confirmation link.
-- **Body**: `{ email }`
-- **Rate Limit**: 3 resend attempts per hour per user.
-
-## User Profile
+```json
+{
+  "userId": 1,
+  "username": "samwise",
+  "email": "sam@example.com",
+  "showFutureGoalsUnlocked": true,
+  "defaultViewMap": false,
+  "expiresAt": "2026-03-07T..."
+}
+```
 
 ### `PUT /api/profile`
-Update user profile details.
-- **Headers**: Requires Auth.
-- **Body**: Profile fields.
 
-## User Preferences
+Updates profile properties (username/email/password fields as supported by handler validation).
 
 ### `PUT /api/user/preferences`
-Update user preferences.
-- **Headers**: Requires Auth.
-- **Body**: `{ showFutureGoalsUnlocked: boolean }`
-- **Response**: `{ showFutureGoalsUnlocked: boolean }`
-- **Errors**: 400 if `showFutureGoalsUnlocked` is not a boolean, 401 if not authenticated.
 
-## Progress Tracking
+Updates user preferences.
+
+Body:
+
+```json
+{ "showFutureGoalsUnlocked": true, "defaultViewMap": false }
+```
+
+### `POST /api/password-reset-request`
+
+Requests password reset email.
+
+### `POST /api/password-reset`
+
+Completes reset using token.
+
+### `GET /api/auth/confirm-email`
+
+Confirms email with query token.
+
+### `POST /api/auth/resend-confirmation`
+
+Resends confirmation email.
+
+## Progress and Goal Endpoints
 
 ### `GET /api/calendar-progress`
-Get walking history.
-- **Headers**: Requires Auth.
-- **Response**: Array of progress entries.
+
+Returns current user's logged distance entries.
 
 ### `POST /api/calendar-progress`
-Log a new walking entry.
-- **Headers**: Requires Auth.
-- **Body**: `{ date, distance }`
+
+Creates a progress entry.
+
+Body:
+
+```json
+{ "date": "2026-03-06", "distance": 7.5 }
+```
 
 ### `PUT /api/calendar-progress`
-Update an existing entry.
-- **Headers**: Requires Auth.
-- **Body**: `{ id, date, distance }`
+
+Updates an existing progress entry.
+
+Body:
+
+```json
+{ "id": 42, "date": "2026-03-06", "distance": 8.0 }
+```
 
 ### `DELETE /api/calendar-progress`
-Remove an entry.
-- **Headers**: Requires Auth.
-- **Body**: `{ id }`
+
+Deletes an entry.
+
+Body:
+
+```json
+{ "id": 42 }
+```
 
 ### `GET /api/total-distance`
-Get the user's total calculated distance.
-- **Headers**: Requires Auth.
-- **Response**: `{ totalDistance: number }`
 
-## Goals
+Returns calculated cumulative distance.
+
+```json
+{ "totalDistance": 123.45 }
+```
 
 ### `GET /api/goals`
-Retrieve the list of journey goals (milestones).
-- **Response**: Array of goals with `id`, `distance`, `title`, `description`, `special`, `image_id`.
+
+Returns milestone goals, including optional imagery metadata (`image_id`).
+
+## Fellowship (Party) Endpoints
+
+### `POST /api/party`
+
+Creates a new party.
+
+Body:
+
+```json
+{
+  "name": "The Nine Walkers",
+  "distance_mode": "incremental",
+  "leave_distance_behavior": "keep"
+}
+```
+
+Returns `201` with party metadata and `invite_code`.
+
+### `GET /api/user/parties`
+
+Returns current active party memberships.
+
+Optional query:
+
+- `include_dissolved=true`
+
+### `GET /api/party/join/:inviteCode`
+
+Public preview of an invite target (no auth required).
+
+Returns party summary, including `member_count`, `distance_mode`, `leave_distance_behavior`.
+
+### `POST /api/party/join/:inviteCode`
+
+Joins or rejoins a party.
+
+### `POST /api/party/:id/invite`
+
+Leader-only invite code regeneration.
+
+### `GET /api/party/:id/progress`
+
+Returns aggregated party progress including:
+
+- `total_distance`
+- `user_total_distance`
+- `calculated_position`
+- `next_position`
+- `members[]` contributions and status
+- `newly_passed_milestones[]`
+
+### `GET /api/party/:id/activity`
+
+Returns recent party activity feed (up to last 10 entries).
+
+### `POST /api/party/:id/leave`
+
+Marks member as left and applies leave-distance policy.
+
+### `POST /api/party/:id/kick/:userId`
+
+Leader-only member removal.
+
+Optional body override:
+
+```json
+{ "removeDistance": true }
+```
+
+### `PUT /api/party/:id/settings`
+
+Leader-only updates for mutable party settings.
+
+Body fields:
+
+- `name`
+- `leave_distance_behavior`
+
+`distance_mode` is immutable and rejected if provided.
+
+### `POST /api/party/:id/transfer-leadership`
+
+Leader-only transfer.
+
+Body:
+
+```json
+{ "new_leader_id": 123 }
+```

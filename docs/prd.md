@@ -149,6 +149,7 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 ### 4. Project & Content Management (Admin)
 *   **FR_ADM_01:** Administrators can update Milestone descriptions (typos, lore corrections) via the database/codebase deployment updates.
 *   **FR_ADM_02:** The System allows for the insertion of new "Intermediary" Milestones without breaking existing user progress logic.
+*   **Admin Asset Strategy (Alignment Note, 2026-03-06):** Milestone images remain repository-backed static assets (`public/img/highres/`, `public/img/thumbs/`) referenced by `goals.image_id`. R2 is out of scope for the current Admin Portal plan.
 
 ### 5. Visual Immersion (The Atlas - Phase 2)
 *   **FR_MAP_01:** Users can view their current calculated position projected onto a stylized map of Middle-earth.
@@ -204,6 +205,7 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 
 ### Platform Limits (Cloudflare Workers & Assets)
 *   **Architecture:** Edge-native, D1 (SQLite) backend.
+*   **Asset Hosting Strategy:** Use Workers Assets binding for static images and optimized WebP files committed to the repository.
 *   **Asset Limits:**
     *   **Max individual file size:** 25 MB (Hard limit).
     *   **File Count:** 20,000 (Free) / 100,000 (Paid).
