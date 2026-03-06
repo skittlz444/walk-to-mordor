@@ -45,28 +45,6 @@ async function ensureUserExists(request, token) {
 }
 
 test.describe('Admin Routes - Access Control', () => {
-  test('non-admin user gets 403 when accessing /admin page', async ({ page, request, regularToken }) => {
-    // Ensure user exists (non-admin by default)
-    await ensureUserExists(request, regularToken);
-
-    // Set auth token
-    await page.goto(`${BASE_URL}/login`);
-    await page.evaluate((t) => localStorage.setItem('sessionToken', t), regularToken);
-
-    // Try to access admin page
-    const response = await request.get(`${BASE_URL}/admin`, {
-      headers: { Authorization: `Bearer ${regularToken}` },
-    });
-
-    expect(response.status()).toBe(403);
-  });
-
-  test('unauthenticated user gets 401 when accessing /admin page', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/admin`);
-
-    expect(response.status()).toBe(401);
-  });
-
   test('non-admin user gets 403 for /api/admin/* endpoints', async ({ request, regularToken }) => {
     // Ensure user exists
     await ensureUserExists(request, regularToken);
@@ -86,6 +64,16 @@ test.describe('Admin Routes - Access Control', () => {
     expect(response.status()).toBe(401);
   });
 
+  test('admin page returns HTML shell for unauthenticated browser navigation', async ({ request }) => {
+    // Browser navigation to /admin (no Authorization header) should return HTML shell
+    // Auth is handled client-side by Preact islands which redirect to /login on 401
+    const response = await request.get(`${BASE_URL}/admin`);
+
+    expect(response.status()).toBe(200);
+    const contentType = response.headers()['content-type'] || '';
+    expect(contentType).toContain('text/html');
+  });
+
   test('/api/session includes isAdmin field for non-admin user', async ({ request, regularToken }) => {
     const sessionData = await ensureUserExists(request, regularToken);
 
@@ -98,55 +86,13 @@ test.describe('Admin Routes - Access Control', () => {
     await ensureUserExists(request, adminToken);
 
     // Even with an "admin"-named token, the user has is_admin=0 by default
-    const response = await request.get(`${BASE_URL}/admin`, {
+    // The API endpoint still enforces admin auth
+    const response = await request.get(`${BASE_URL}/api/admin/dashboard`, {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
 
     // Confirms mock auth creates non-admin users and admin guard rejects them
     expect(response.status()).toBe(403);
-  });
-
-  test('no admin content leaked in 403 response for /admin page', async ({ request, regularToken }) => {
-    await ensureUserExists(request, regularToken);
-
-    const response = await request.get(`${BASE_URL}/admin`, {
-      headers: { Authorization: `Bearer ${regularToken}` },
-    });
-
-    expect(response.status()).toBe(403);
-    const body = await response.text();
-    // Ensure no admin-specific HTML/content is leaked
-    expect(body).not.toContain('Admin Dashboard');
-    expect(body).not.toContain('Dashboard coming soon');
-  });
-
-  test('no admin content leaked in 401 response for /admin page', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/admin`);
-
-    expect(response.status()).toBe(401);
-    const body = await response.text();
-    expect(body).not.toContain('Admin Dashboard');
-    expect(body).not.toContain('Dashboard coming soon');
-  });
-
-  test('401 response for /admin page has JSON content-type', async ({ request }) => {
-    const response = await request.get(`${BASE_URL}/admin`);
-
-    expect(response.status()).toBe(401);
-    const contentType = response.headers()['content-type'] || '';
-    expect(contentType).toContain('application/json');
-  });
-
-  test('403 response for /admin page has JSON content-type', async ({ request, regularToken }) => {
-    await ensureUserExists(request, regularToken);
-
-    const response = await request.get(`${BASE_URL}/admin`, {
-      headers: { Authorization: `Bearer ${regularToken}` },
-    });
-
-    expect(response.status()).toBe(403);
-    const contentType = response.headers()['content-type'] || '';
-    expect(contentType).toContain('application/json');
   });
 
   test('403 response for /api/admin/* has JSON content-type', async ({ request, regularToken }) => {
@@ -174,12 +120,14 @@ test.describe('Admin Routes - Access Control', () => {
     }
   });
 
-  test('admin page returns 401 without auth and dashboard returns 403 for non-admin', async ({ request, regularToken }) => {
+  test('admin page HTML shell and API dashboard enforce auth separately', async ({ request, regularToken }) => {
     await ensureUserExists(request, regularToken);
 
-    // /admin page with no auth - should return 401
+    // /admin page with no auth - returns HTML shell (auth handled client-side)
     const r1 = await request.get(`${BASE_URL}/admin`);
-    expect(r1.status()).toBe(401);
+    expect(r1.status()).toBe(200);
+    const contentType = r1.headers()['content-type'] || '';
+    expect(contentType).toContain('text/html');
 
     // /api/admin/dashboard with non-admin - should return 403
     const r2 = await request.get(`${BASE_URL}/api/admin/dashboard`, {

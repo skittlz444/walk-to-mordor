@@ -378,39 +378,31 @@ export default {
       return handleMapPage(request, env);
     }
 
-    // Admin page (admin authentication required)
+    // Admin page — auth handled client-side by Preact islands
     if (url.pathname === "/admin") {
-      const adminValidation = await validateAdminSession(request, env);
-      if (!adminValidation.valid) return adminValidation.error;
       return new Response(renderAdminPage(), {
         headers: { "content-type": "text/html" },
       });
     }
 
-    // Admin Goals list page (admin authentication required) — Story 4.3
+    // Admin Goals list page — auth handled client-side by Preact islands
     if (url.pathname === "/admin/goals") {
-      const adminValidation = await validateAdminSession(request, env);
-      if (!adminValidation.valid) return adminValidation.error;
       return new Response(renderAdminGoalsPage(), {
         headers: { "content-type": "text/html" },
       });
     }
 
-    // Admin Goal Add page (admin authentication required) — Story 4.6
+    // Admin Goal Add page — auth handled client-side by Preact islands
     // MUST be matched BEFORE /admin/goals/:id to prevent "new" being parsed as an id
     if (url.pathname === "/admin/goals/new") {
-      const adminValidation = await validateAdminSession(request, env);
-      if (!adminValidation.valid) return adminValidation.error;
       return new Response(renderAdminGoalAddPage(), {
         headers: { "content-type": "text/html" },
       });
     }
 
-    // Admin Goal Edit page (admin authentication required) — Story 4.4
+    // Admin Goal Edit page — auth handled client-side by Preact islands
     const adminGoalEditParams = matchRoute(url.pathname, '/admin/goals/:id');
     if (adminGoalEditParams) {
-      const adminValidation = await validateAdminSession(request, env);
-      if (!adminValidation.valid) return adminValidation.error;
       const goalId = Number.parseInt(adminGoalEditParams.id, 10);
       if (!Number.isInteger(goalId) || goalId <= 0 || String(goalId) !== adminGoalEditParams.id) {
         return new Response('Not Found', { status: 404 });
