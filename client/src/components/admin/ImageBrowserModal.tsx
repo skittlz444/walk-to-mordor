@@ -130,8 +130,9 @@ export function ImageBrowserModal({ isOpen, onClose, onSelect, currentImageId }:
 
   if (!isOpen) return null;
 
+  const lowerFilter = filter.toLowerCase();
   const filteredSlugs = filter
-    ? slugs.filter(s => s.includes(filter.toLowerCase()))
+    ? slugs.filter(s => s.toLowerCase().includes(lowerFilter))
     : slugs;
 
   return (

@@ -251,6 +251,46 @@ describe('ImageBrowserModal', () => {
     });
   });
 
+  it('filters images case-insensitively (mixed-case input matches lowercase slugs)', async () => {
+    const mixedCaseManifest = { images: ['Bag-End', 'RIVENDELL', 'WeatherTop'] };
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('image-manifest.json')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mixedCaseManifest),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockGoalsResponse),
+      });
+    });
+
+    const { container, getByText, queryByText } = render(
+      <ImageBrowserModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        currentImageId=""
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByText('Bag-End')).toBeTruthy();
+    });
+
+    // Type uppercase filter — should still match lowercase slugs
+    const searchInput = container.querySelector('.admin-image-browser__search-input') as HTMLInputElement;
+    searchInput.value = 'RIVEN';
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    await waitFor(() => {
+      expect(getByText('RIVENDELL')).toBeTruthy();
+      expect(queryByText('Bag-End')).toBeNull();
+      expect(queryByText('WeatherTop')).toBeNull();
+    });
+  });
+
   it('shows count of filtered images vs total images', async () => {
     const { container } = render(
       <ImageBrowserModal

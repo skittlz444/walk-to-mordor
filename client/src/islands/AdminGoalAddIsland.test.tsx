@@ -243,6 +243,37 @@ describe('AdminGoalAddIsland', () => {
     });
   });
 
+  it('does not clear distance error when value is Infinity', async () => {
+    const { getByText, container } = render(<AdminGoalAddIsland />);
+    await waitForGoalsLoaded(container);
+
+    const titleInput = container.querySelector('#goal-title') as HTMLInputElement;
+    const distInput = container.querySelector('#goal-distance') as HTMLInputElement;
+
+    // Provide title but submit with no distance to trigger the distance error
+    fireEvent.input(titleInput, { target: { value: 'My Goal' } });
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(getByText('Distance must be a positive number')).toBeTruthy();
+    });
+
+    // Enter "Infinity" — isNaN('Infinity') is false but isFinite('Infinity') is false
+    // The live-validation guard should NOT clear the error for this value
+    fireEvent.input(distInput, { target: { value: 'Infinity' } });
+
+    await waitFor(() => {
+      expect(getByText('Distance must be a positive number')).toBeTruthy();
+    });
+
+    // Entering a real positive value should clear the error
+    fireEvent.input(distInput, { target: { value: '50' } });
+
+    await waitFor(() => {
+      expect(container.querySelector('#distance-error')).toBeNull();
+    });
+  });
+
   it('shows the distance in km hint when a valid distance is entered', async () => {
     const { container } = render(<AdminGoalAddIsland />);
     await waitForGoalsLoaded(container);
