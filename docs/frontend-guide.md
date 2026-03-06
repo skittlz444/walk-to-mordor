@@ -74,3 +74,7 @@ UI testing conventions used in this repo:
 - `window.partyStore`
 
 Do not remove these without migrating all dependent legacy code paths.
+
+## Admin Dashboard Island
+
+The `AdminDashboardIsland` component (`client/src/islands/AdminDashboardIsland.tsx`) renders the admin stats dashboard. It fetches `GET /api/admin/dashboard` with a Bearer token and displays four stat cards: Total Users, Total Distance, Active Fellowships, and Total Goals. Supports loading skeleton, error retry, and auto-redirects on 401/403.

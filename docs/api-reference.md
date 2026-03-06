@@ -235,3 +235,35 @@ Body:
 ```json
 { "new_leader_id": 123 }
 ```
+
+## Admin Endpoints
+
+All admin endpoints require `Authorization: Bearer <token>` from an admin user (`is_admin = 1`). Returns `401` for unauthenticated requests and `403` for non-admin users.
+
+### `GET /api/admin/dashboard`
+
+Returns live system statistics. No caching — always queries D1 directly.
+
+Response:
+
+```json
+{
+  "totalUsers": 42,
+  "totalDistanceKm": 12345.6,
+  "activeParties": 5,
+  "totalGoals": 171
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `totalUsers` | number | Count of users with `email_verified = 1` |
+| `totalDistanceKm` | number | Sum of all progress entries (km), rounded to 1 decimal |
+| `activeParties` | number | Parties with at least one active member |
+| `totalGoals` | number | Total goal/milestone count |
+
+Error responses:
+
+- `401` — Missing or invalid bearer token
+- `403` — `{"error": "Admin access required"}`
+- `500` — Database error

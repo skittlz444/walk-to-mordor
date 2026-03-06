@@ -29,6 +29,7 @@ jest.mock('../../src/renderPartyDetailPage');
 jest.mock('../../src/renderPartyManagePage');
 jest.mock('../../src/renderPartyJoinPage');
 jest.mock('../../src/renderAdminPage');
+jest.mock('../../src/admin-handlers');
 
 // Import after mocking
 import worker from '../../src/index';
@@ -39,6 +40,7 @@ import { renderPartyDetailPage } from '../../src/renderPartyDetailPage';
 import { renderPartyManagePage } from '../../src/renderPartyManagePage';
 import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
 import { renderAdminPage } from '../../src/renderAdminPage';
+import { handleAdminDashboard } from '../../src/admin-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
@@ -70,6 +72,7 @@ const mockRenderPartyDetailPage = jest.mocked(renderPartyDetailPage);
 const mockRenderPartyManagePage = jest.mocked(renderPartyManagePage);
 const mockRenderPartyJoinPage = jest.mocked(renderPartyJoinPage);
 const mockRenderAdminPage = jest.mocked(renderAdminPage);
+const mockHandleAdminDashboard = jest.mocked(handleAdminDashboard);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -154,6 +157,9 @@ describe('Cloudflare Worker Index', () => {
     mockRenderPartyManagePage.mockReturnValue('<html>Party Manage</html>');
     mockRenderPartyJoinPage.mockReturnValue('<html>Party Join</html>');
     mockRenderAdminPage.mockReturnValue('<html>Admin Dashboard</html>');
+    mockHandleAdminDashboard.mockResolvedValue(new Response(JSON.stringify({
+      totalUsers: 42, totalDistanceKm: 12345.6, activeParties: 5, totalGoals: 171
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
 
     // Create simple mock environment
     mockEnv = {
@@ -602,6 +608,18 @@ describe('Cloudflare Worker Index', () => {
     expect(response.status).toBe(404);
     const body = await response.json();
     expect(body.error).toBe('Admin API endpoint not found');
+  });
+
+  it('should route GET /api/admin/dashboard to handleAdminDashboard when admin', async () => {
+    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
+    const request = createRequest('https://example.com/api/admin/dashboard');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockValidateAdminSession).toHaveBeenCalled();
+    expect(mockHandleAdminDashboard).toHaveBeenCalledWith(request, mockEnv);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.totalUsers).toBe(42);
   });
 
   it('should validate method for API endpoints', async () => {

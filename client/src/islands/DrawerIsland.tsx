@@ -1,12 +1,38 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 
+interface SessionData {
+  isAdmin?: boolean;
+}
+
 export function DrawerIsland() {
   const [isOpen, setIsOpen] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const drawerRef = useRef<HTMLElement | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const prevIsOpenRef = useRef(false);
+
+  useEffect(() => {
+    // Fetch admin status from session API
+    const token = localStorage.getItem('sessionToken');
+    if (!token) return;
+    fetch('/api/session', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (res.ok) return res.json() as Promise<SessionData>;
+        return null;
+      })
+      .then((data: SessionData | null) => {
+        if (data && data.isAdmin === true) {
+          setIsAdmin(true);
+        }
+      })
+      .catch(() => {
+        // Silently ignore — non-critical for drawer rendering
+      });
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle('drawer-open', isOpen);
@@ -132,6 +158,7 @@ export function DrawerIsland() {
           <a className="drawer-link" href="/journey" onClick={closeDrawer}>Journey</a>
           <a className="drawer-link" href="/map" onClick={closeDrawer}>Map</a>
           <a className="drawer-link" href="/party" onClick={closeDrawer}>Fellowships</a>
+          {isAdmin && <a className="drawer-link" href="/admin" onClick={closeDrawer}>Admin</a>}
           <button className="drawer-link drawer-profile" type="button" onClick={handleProfileClick}>Profile</button>
         </nav>
         <div className="drawer-footer">

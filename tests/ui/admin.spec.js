@@ -128,4 +128,94 @@ test.describe('Admin Routes - Access Control', () => {
     expect(body).not.toContain('Admin Dashboard');
     expect(body).not.toContain('Dashboard coming soon');
   });
+
+  test('401 response for /admin page has JSON content-type', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/admin`);
+
+    expect(response.status()).toBe(401);
+    const contentType = response.headers()['content-type'] || '';
+    expect(contentType).toContain('application/json');
+  });
+
+  test('403 response for /admin page has JSON content-type', async ({ request, regularToken }) => {
+    await ensureUserExists(request, regularToken);
+
+    const response = await request.get(`${BASE_URL}/admin`, {
+      headers: { Authorization: `Bearer ${regularToken}` },
+    });
+
+    expect(response.status()).toBe(403);
+    const contentType = response.headers()['content-type'] || '';
+    expect(contentType).toContain('application/json');
+  });
+
+  test('403 response for /api/admin/* has JSON content-type', async ({ request, regularToken }) => {
+    await ensureUserExists(request, regularToken);
+
+    const response = await request.get(`${BASE_URL}/api/admin/dashboard`, {
+      headers: { Authorization: `Bearer ${regularToken}` },
+    });
+
+    expect(response.status()).toBe(403);
+    const contentType = response.headers()['content-type'] || '';
+    expect(contentType).toContain('application/json');
+  });
+
+  test('admin guard works for multiple /api/admin/* sub-paths', async ({ request, regularToken }) => {
+    await ensureUserExists(request, regularToken);
+
+    // Test several sub-paths under /api/admin/
+    const paths = ['/api/admin/users', '/api/admin/goals', '/api/admin/audit-log'];
+    for (const path of paths) {
+      const response = await request.get(`${BASE_URL}${path}`, {
+        headers: { Authorization: `Bearer ${regularToken}` },
+      });
+      expect(response.status()).toBe(403);
+    }
+  });
+
+  test('admin page and API respond within reasonable time', async ({ request, regularToken }) => {
+    await ensureUserExists(request, regularToken);
+
+    // /admin page with no auth - should return 401 quickly
+    const start1 = Date.now();
+    const r1 = await request.get(`${BASE_URL}/admin`);
+    const elapsed1 = Date.now() - start1;
+    expect(r1.status()).toBe(401);
+    expect(elapsed1).toBeLessThan(3000); // Under 3 seconds
+
+    // /api/admin/dashboard with non-admin - should return 403 quickly
+    const start2 = Date.now();
+    const r2 = await request.get(`${BASE_URL}/api/admin/dashboard`, {
+      headers: { Authorization: `Bearer ${regularToken}` },
+    });
+    const elapsed2 = Date.now() - start2;
+    expect(r2.status()).toBe(403);
+    expect(elapsed2).toBeLessThan(3000);
+  });
+});
+
+test.describe('Admin Routes - No Admin Leaks in Non-Admin Pages', () => {
+  test('login page does not contain admin-related content', async ({ request }) => {
+    const response = await request.get(`${BASE_URL}/login`);
+    expect(response.ok()).toBeTruthy();
+
+    const body = await response.text();
+    // Should not reference admin dashboard or admin-only features
+    expect(body).not.toContain('/admin');
+    expect(body).not.toContain('Admin Dashboard');
+    expect(body).not.toContain('admin-placeholder');
+  });
+
+  test('home page does not contain admin-related content', async ({ request, regularToken }) => {
+    await ensureUserExists(request, regularToken);
+
+    const response = await request.get(`${BASE_URL}/`, {
+      headers: { Authorization: `Bearer ${regularToken}` },
+    });
+
+    const body = await response.text();
+    expect(body).not.toContain('admin-placeholder');
+    expect(body).not.toContain('Dashboard coming soon');
+  });
 });

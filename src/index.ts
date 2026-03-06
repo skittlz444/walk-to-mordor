@@ -41,6 +41,7 @@ import { renderPartyDetailPage } from "./renderPartyDetailPage";
 import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
 import { renderAdminPage } from "./renderAdminPage";
+import { handleAdminDashboard } from "./admin-handlers";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -142,8 +143,10 @@ export default {
         const adminValidation = await validateAdminSession(request, env);
         if (!adminValidation.valid) return adminValidation.error;
 
-        // Placeholder for future admin API routes (Stories 4.2–4.6)
-        // Individual admin endpoints will be added here
+        // Admin API endpoints (Story 4.2+)
+        if (url.pathname === "/api/admin/dashboard" && method === "GET") {
+          return handleAdminDashboard(request, env);
+        }
 
         return new Response(JSON.stringify({ error: 'Admin API endpoint not found' }), {
           status: 404,
@@ -423,6 +426,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/session":
     case "/api/auth/confirm-email":
     case "/api/user/parties":
+    case "/api/admin/dashboard":
       return ['GET'];
     case "/api/register":
     case "/api/login":

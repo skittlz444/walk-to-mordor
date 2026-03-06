@@ -1,6 +1,16 @@
 // Admin API handlers
 
 /**
+ * Dashboard statistics returned by the admin dashboard API.
+ */
+export interface DashboardStats {
+  totalUsers: number;
+  totalDistanceKm: number;
+  activeParties: number;
+  totalGoals: number;
+}
+
+/**
  * Parameters for logging an admin action to the audit log.
  */
 export interface AdminActionParams {
@@ -11,6 +21,45 @@ export interface AdminActionParams {
   details?: string;
   ipAddress?: string;
   success: boolean;
+}
+
+/**
+ * Handle GET /api/admin/dashboard — returns live system statistics.
+ * Requires admin authentication (enforced by the route guard in index.ts).
+ */
+export async function handleAdminDashboard(_request: Request, env: { DB: D1Database }): Promise<Response> {
+  try {
+    // Run all four stat queries in parallel for best performance
+    const [usersResult, distanceResult, partiesResult, goalsResult] = await Promise.all([
+      env.DB.prepare('SELECT COUNT(*) as count FROM users WHERE email_verified = 1').first<{ count: number }>(),
+      env.DB.prepare('SELECT COALESCE(SUM(distance), 0) as total FROM progress').first<{ total: number }>(),
+      env.DB.prepare(
+        `SELECT COUNT(DISTINCT p.id) as count
+         FROM parties p
+         INNER JOIN party_members pm ON pm.party_id = p.id
+         WHERE pm.is_active = 1`
+      ).first<{ count: number }>(),
+      env.DB.prepare('SELECT COUNT(*) as count FROM goals').first<{ count: number }>(),
+    ]);
+
+    const stats: DashboardStats = {
+      totalUsers: usersResult?.count ?? 0,
+      totalDistanceKm: Number((distanceResult?.total ?? 0).toFixed(1)),
+      activeParties: partiesResult?.count ?? 0,
+      totalGoals: goalsResult?.count ?? 0,
+    };
+
+    return new Response(JSON.stringify(stats), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error: unknown) {
+    console.error('Database error fetching admin dashboard stats:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error while fetching dashboard stats' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 /**

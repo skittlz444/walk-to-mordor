@@ -55,7 +55,8 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 
 - Admin (requires `validateAdminSession` — 401 if unauthenticated, 403 if non-admin):
   - `GET|POST|PUT|DELETE /api/admin/*` — prefix guard; all admin API routes require admin auth
-  - Future: `GET /api/admin/dashboard`, `GET /api/admin/goals`, `GET|PUT /api/admin/goals/:id`, etc.
+  - `GET /api/admin/dashboard` — returns live system statistics (total users, distance, parties, goals)
+  - Future: `GET /api/admin/goals`, `GET|PUT /api/admin/goals/:id`, etc.
 
 ### Page Routes
 
@@ -64,7 +65,7 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `/map` map UI (`src/map-handlers.ts`)
 - `/login`, `/password-reset`, `/reset-password`
 - `/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`
-- `/admin` admin dashboard shell (`src/renderAdminPage.ts`) — requires admin auth
+- `/admin` admin dashboard shell (`src/renderAdminPage.ts`) — requires admin auth; includes `AdminDashboardIsland` for stats
 
 ## Frontend Architecture
 
