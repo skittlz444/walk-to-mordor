@@ -29,6 +29,7 @@ jest.mock('../../src/renderPartyDetailPage');
 jest.mock('../../src/renderPartyManagePage');
 jest.mock('../../src/renderPartyJoinPage');
 jest.mock('../../src/renderAdminPage');
+jest.mock('../../src/renderAdminGoalsPage');
 jest.mock('../../src/admin-handlers');
 
 // Import after mocking
@@ -40,7 +41,8 @@ import { renderPartyDetailPage } from '../../src/renderPartyDetailPage';
 import { renderPartyManagePage } from '../../src/renderPartyManagePage';
 import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
 import { renderAdminPage } from '../../src/renderAdminPage';
-import { handleAdminDashboard } from '../../src/admin-handlers';
+import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
+import { handleAdminDashboard, handleAdminGoalsList } from '../../src/admin-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
@@ -72,7 +74,9 @@ const mockRenderPartyDetailPage = jest.mocked(renderPartyDetailPage);
 const mockRenderPartyManagePage = jest.mocked(renderPartyManagePage);
 const mockRenderPartyJoinPage = jest.mocked(renderPartyJoinPage);
 const mockRenderAdminPage = jest.mocked(renderAdminPage);
+const mockRenderAdminGoalsPage = jest.mocked(renderAdminGoalsPage);
 const mockHandleAdminDashboard = jest.mocked(handleAdminDashboard);
+const mockHandleAdminGoalsList = jest.mocked(handleAdminGoalsList);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -157,8 +161,12 @@ describe('Cloudflare Worker Index', () => {
     mockRenderPartyManagePage.mockReturnValue('<html>Party Manage</html>');
     mockRenderPartyJoinPage.mockReturnValue('<html>Party Join</html>');
     mockRenderAdminPage.mockReturnValue('<html>Admin Dashboard</html>');
+    mockRenderAdminGoalsPage.mockReturnValue('<html>Admin Goals</html>');
     mockHandleAdminDashboard.mockResolvedValue(new Response(JSON.stringify({
       totalUsers: 42, totalDistanceKm: 12345.6, activeParties: 5, totalGoals: 171
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleAdminGoalsList.mockResolvedValue(new Response(JSON.stringify({
+      goals: [], total: 0, page: 1, pageSize: 25, totalPages: 1
     }), { status: 200, headers: { 'content-type': 'application/json' } }));
 
     // Create simple mock environment
@@ -620,6 +628,103 @@ describe('Cloudflare Worker Index', () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.totalUsers).toBe(42);
+  });
+
+  it('should return 405 for POST /api/admin/dashboard (only GET supported)', async () => {
+    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
+    const request = createRequest('https://example.com/api/admin/dashboard', 'POST');
+    const response = await worker.fetch(request, mockEnv);
+
+    // POST to dashboard should be rejected by method validation (GET-only)
+    expect(mockHandleAdminDashboard).not.toHaveBeenCalled();
+    expect(response.status).toBe(405);
+    const body = await response.json();
+    expect(body.error).toContain('Method POST not allowed');
+  });
+
+  // Admin Goals List route tests (Story 4.3)
+  it('should render admin goals page for /admin/goals route when admin', async () => {
+    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
+    const request = createRequest('https://example.com/admin/goals');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockValidateAdminSession).toHaveBeenCalled();
+    expect(mockRenderAdminGoalsPage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  it('should return 403 for /admin/goals route when not admin', async () => {
+    mockValidateAdminSession.mockResolvedValue({
+      valid: false,
+      error: new Response(JSON.stringify({ error: 'Admin access required' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' }
+      })
+    });
+    const request = createRequest('https://example.com/admin/goals');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockValidateAdminSession).toHaveBeenCalled();
+    expect(mockRenderAdminGoalsPage).not.toHaveBeenCalled();
+    expect(response.status).toBe(403);
+  });
+
+  it('should return 401 for /admin/goals route when unauthenticated', async () => {
+    mockValidateAdminSession.mockResolvedValue({
+      valid: false,
+      error: new Response(JSON.stringify({ error: 'Missing or invalid authorization header' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' }
+      })
+    });
+    const request = createRequest('https://example.com/admin/goals');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(response.status).toBe(401);
+  });
+
+  it('should route GET /api/admin/goals to handleAdminGoalsList when admin', async () => {
+    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
+    const request = createRequest('https://example.com/api/admin/goals');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockValidateAdminSession).toHaveBeenCalled();
+    expect(mockHandleAdminGoalsList).toHaveBeenCalledWith(request, mockEnv);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toHaveProperty('goals');
+    expect(body).toHaveProperty('total');
+    expect(body).toHaveProperty('page');
+    expect(body).toHaveProperty('pageSize');
+    expect(body).toHaveProperty('totalPages');
+  });
+
+  it('should return 403 for /api/admin/goals when not admin', async () => {
+    mockValidateAdminSession.mockResolvedValue({
+      valid: false,
+      error: new Response(JSON.stringify({ error: 'Admin access required' }), {
+        status: 403,
+        headers: { 'content-type': 'application/json' }
+      })
+    });
+    const request = createRequest('https://example.com/api/admin/goals');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockValidateAdminSession).toHaveBeenCalled();
+    expect(mockHandleAdminGoalsList).not.toHaveBeenCalled();
+    expect(response.status).toBe(403);
+  });
+
+  it('should return 405 for POST /api/admin/goals (only GET supported)', async () => {
+    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
+    const request = createRequest('https://example.com/api/admin/goals', 'POST');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockHandleAdminGoalsList).not.toHaveBeenCalled();
+    expect(response.status).toBe(405);
+    const body = await response.json();
+    expect(body.error).toContain('Method POST not allowed');
   });
 
   it('should validate method for API endpoints', async () => {

@@ -344,3 +344,286 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Goals List (Story 4.3) ===== */
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.admin-goals h2 {
+  color: var(--text-primary);
+  font-size: 1.3rem;
+  margin: 0 0 1.25rem 0;
+}
+
+.admin-goals-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-goals-search {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.admin-goals-search i {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+.admin-goals-search__input {
+  width: 100%;
+  padding: 0.6rem 0.75rem 0.6rem 2.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gray);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+  min-height: 44px;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.admin-goals-search__input::placeholder {
+  color: var(--text-muted);
+}
+
+.admin-goals-search__input:focus {
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 0 2px rgba(22, 199, 154, 0.2);
+}
+
+.admin-goals-info__count {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Table */
+
+.admin-goals-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.admin-goals-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.admin-goals-table thead th {
+  background: var(--bg-dark-alt);
+  color: var(--accent-gold);
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border-gray);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.admin-goals-table__col-id { width: 60px; }
+.admin-goals-table__col-title { /* flex */ }
+.admin-goals-table__col-distance { width: 120px; }
+.admin-goals-table__col-image { width: 100px; text-align: center; }
+
+.admin-goals-sort {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.admin-goals-sort:hover {
+  color: var(--text-primary);
+}
+
+.admin-goals-sort-indicator {
+  font-size: 0.7rem;
+}
+
+/* Rows */
+
+.admin-goals-row {
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid var(--border-gray);
+}
+
+.admin-goals-row:hover {
+  background: var(--hover-overlay);
+}
+
+.admin-goals-row:focus {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: -2px;
+}
+
+.admin-goals-row td {
+  padding: 0.6rem 0.75rem;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.admin-goals-cell--id {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.admin-goals-cell--title {
+  font-weight: 500;
+}
+
+.admin-goals-cell--distance {
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-goals-cell--image {
+  text-align: center;
+}
+
+.admin-goals-has-image--yes {
+  color: var(--status-success-light, #4caf50);
+}
+
+.admin-goals-has-image--no {
+  color: var(--text-muted);
+}
+
+/* Skeleton rows */
+
+.admin-goals-row--skeleton td {
+  color: transparent;
+}
+
+.skeleton-text {
+  display: inline-block;
+  background: var(--border-gray);
+  border-radius: 3px;
+  color: transparent;
+  animation: admin-pulse 1.5s ease-in-out infinite;
+  min-width: 30px;
+}
+
+.skeleton-text--wide {
+  min-width: 140px;
+}
+
+/* Pagination */
+
+.admin-goals-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+}
+
+.admin-goals-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-gray);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.admin-goals-pagination__btn:hover:not(:disabled) {
+  background: var(--hover-overlay);
+  border-color: var(--border-medium);
+}
+
+.admin-goals-pagination__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.admin-goals-pagination__info {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Empty state */
+
+.admin-goals-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+}
+
+.admin-goals-empty i {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.admin-goals-empty p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Loading overlay for subsequent fetches */
+
+.admin-goals-loading-overlay {
+  text-align: center;
+  padding: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* ===== Responsive: Goals table mobile ===== */
+
+@media (max-width: 768px) {
+  .admin-goals-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-goals-search {
+    max-width: 100%;
+  }
+
+  .admin-goals-table {
+    font-size: 0.8rem;
+  }
+
+  .admin-goals-table thead th,
+  .admin-goals-row td {
+    padding: 0.5rem;
+  }
+
+  .admin-goals-table__col-id { width: 45px; }
+  .admin-goals-table__col-distance { width: 90px; }
+  .admin-goals-table__col-image { width: 70px; }
+}

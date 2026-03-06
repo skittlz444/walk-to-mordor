@@ -2,7 +2,7 @@ import {
   validateAdminSession,
   handleSessionValidation
 } from '../../src/auth-handlers';
-import { logAdminAction, handleAdminDashboard } from '../../src/admin-handlers';
+import { logAdminAction, handleAdminDashboard, handleAdminGoalsList } from '../../src/admin-handlers';
 import * as authUtils from '../../src/auth-utils';
 
 // Mock auth-utils
@@ -819,6 +819,94 @@ describe('Admin Handlers', () => {
         expect.stringContaining('FROM goals')
       );
     });
+
+    it('should handle partial null results (some queries return data, some null)', async () => {
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 10 }) })   // users: 10
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue(null) })              // distance: null
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 3 }) })     // parties: 3
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue(null) });             // goals: null
+
+      const response = await handleAdminDashboard(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.totalUsers).toBe(10);
+      expect(body.totalDistanceKm).toBe(0);
+      expect(body.activeParties).toBe(3);
+      expect(body.totalGoals).toBe(0);
+    });
+
+    it('should return 500 when one query rejects inside Promise.all', async () => {
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 5 }) })
+        .mockReturnValueOnce({ first: jest.fn().mockRejectedValue(new Error('Query timeout')) })
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 2 }) })
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 100 }) });
+
+      const response = await handleAdminDashboard(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toContain('Internal server error');
+    });
+
+    it('should return all four expected keys and no extras', async () => {
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) })
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 5.5 }) })
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) })
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) });
+
+      const response = await handleAdminDashboard(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      const keys = Object.keys(body).sort();
+      expect(keys).toEqual(['activeParties', 'totalDistanceKm', 'totalGoals', 'totalUsers']);
+    });
+
+    it('should handle very large distance values without overflow', async () => {
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 999999 }) })
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 9999999.999 }) })
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 50000 }) })
+        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 10000 }) });
+
+      const response = await handleAdminDashboard(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.totalUsers).toBe(999999);
+      expect(body.totalDistanceKm).toBe(10000000);
+      expect(body.activeParties).toBe(50000);
+      expect(body.totalGoals).toBe(10000);
+    });
+
+    it('should return 500 with JSON content-type on database error', async () => {
+      mockEnv.DB.prepare.mockImplementation(() => {
+        throw new Error('DB unavailable');
+      });
+
+      const response = await handleAdminDashboard(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(500);
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    });
   });
 
   describe('logAdminAction', () => {
@@ -931,6 +1019,431 @@ describe('Admin Handlers', () => {
 
       expect(mockBind).toHaveBeenCalledWith(1, 'bulk_update', null, null, largeDetails, null, 1);
       expect(mockRun).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleAdminGoalsList', () => {
+    const sampleGoals = [
+      { id: 1, title: 'Bag End', distance: 0, description: 'Starting point', special: null, image_id: 'bag-end' },
+      { id: 2, title: 'Woody End', distance: 40.2, description: 'Forest area', special: null, image_id: 'woody-end' },
+      { id: 3, title: 'Bucklebury Ferry', distance: 60.4, description: 'River crossing', special: null, image_id: null },
+    ];
+
+    function createGoalsRequest(queryParams: string = ''): Request {
+      return {
+        url: `https://wtm.haydencarson.com/api/admin/goals${queryParams}`,
+        headers: { get: jest.fn() },
+      } as unknown as Request;
+    }
+
+    function setupGoalsDb(options: {
+      countTotal: number;
+      rows: typeof sampleGoals;
+    }) {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: options.countTotal });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: options.rows });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      // Queries are sequential: count first (prepare call 1), then data (prepare call 2)
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ first: mockCountFirst, bind: mockCountBind })
+        .mockReturnValueOnce({ all: mockDataAll, bind: mockDataBind });
+
+      return { mockCountFirst, mockCountBind, mockDataAll, mockDataBind };
+    }
+
+    it('should return paginated goals with correct structure', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.goals).toHaveLength(3);
+      expect(body.total).toBe(3);
+      expect(body.page).toBe(1);
+      expect(body.pageSize).toBe(25);
+      expect(body.totalPages).toBe(1);
+    });
+
+    it('should compute has_image correctly from image_id', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      // Bag End has image_id 'bag-end' -> has_image: true
+      expect(body.goals[0].has_image).toBe(true);
+      expect(body.goals[0].image_id).toBe('bag-end');
+      // Woody End has image_id 'woody-end' -> has_image: true
+      expect(body.goals[1].has_image).toBe(true);
+      // Bucklebury Ferry has image_id null -> has_image: false
+      expect(body.goals[2].has_image).toBe(false);
+    });
+
+    it('should compute has_image as false for empty string image_id', async () => {
+      const rowsWithEmpty = [
+        { id: 4, title: 'Empty Image', distance: 100, description: null, special: null, image_id: '' },
+      ];
+      setupGoalsDb({ countTotal: 1, rows: rowsWithEmpty });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.goals[0].has_image).toBe(false);
+    });
+
+    it('should return correct pagination for page=2', async () => {
+      setupGoalsDb({ countTotal: 50, rows: sampleGoals });
+
+      const request = createGoalsRequest('?page=2&pageSize=25');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.page).toBe(2);
+      expect(body.pageSize).toBe(25);
+      expect(body.totalPages).toBe(2);
+      expect(body.total).toBe(50);
+    });
+
+    it('should clamp pageSize to max 100', async () => {
+      setupGoalsDb({ countTotal: 200, rows: [] });
+
+      const request = createGoalsRequest('?pageSize=999');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.pageSize).toBe(100);
+    });
+
+    it('should default pageSize to 25 when not provided', async () => {
+      setupGoalsDb({ countTotal: 50, rows: sampleGoals });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.pageSize).toBe(25);
+    });
+
+    it('should default page to 1 when not provided', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.page).toBe(1);
+    });
+
+    it('should clamp page to minimum 1 for negative or zero values', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?page=-5');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.page).toBe(1);
+    });
+
+    it('should filter by search term using parameterized LIKE', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 1 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({
+        results: [{ id: 10, title: 'Rivendell', distance: 458, description: 'Elven haven', special: null, image_id: 'rivendell' }],
+      });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=rivendell');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.goals).toHaveLength(1);
+      expect(body.goals[0].title).toBe('Rivendell');
+      expect(body.total).toBe(1);
+
+      // Verify parameterized binding was used (not string concatenation)
+      expect(mockCountBind).toHaveBeenCalledWith('%rivendell%');
+      expect(mockDataBind).toHaveBeenCalledWith('%rivendell%', 25, 0);
+    });
+
+    it('should include WHERE LIKE clause in SQL when search is provided', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 0 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=moria');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // Verify SQL includes WHERE title LIKE
+      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE title LIKE')
+      );
+    });
+
+    it('should not include WHERE clause when search is empty', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?search=');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // Both calls should NOT contain WHERE
+      const calls = mockEnv.DB.prepare.mock.calls;
+      expect(calls[0][0]).not.toContain('WHERE');
+      expect(calls[1][0]).not.toContain('WHERE');
+    });
+
+    it('should sort by distance DESC when order=desc', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?order=desc');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // Verify data SQL includes ORDER BY distance DESC
+      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0];
+      expect(dataSqlCall).toContain('ORDER BY distance DESC');
+    });
+
+    it('should default to distance ASC when order not specified', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest();
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0];
+      expect(dataSqlCall).toContain('ORDER BY distance ASC');
+    });
+
+    it('should default to ASC for invalid order parameter', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?order=invalid');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0];
+      expect(dataSqlCall).toContain('ORDER BY distance ASC');
+    });
+
+    it('should return 500 on database error', async () => {
+      mockEnv.DB.prepare.mockImplementation(() => {
+        throw new Error('DB connection failed');
+      });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toContain('Internal server error');
+    });
+
+    it('should return Content-Type application/json', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    });
+
+    it('should return all expected keys in response', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(Object.keys(body).sort()).toEqual(['goals', 'page', 'pageSize', 'total', 'totalPages']);
+    });
+
+    it('should return all expected keys in each goal row', async () => {
+      setupGoalsDb({ countTotal: 1, rows: [sampleGoals[0]] });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(Object.keys(body.goals[0]).sort()).toEqual([
+        'description', 'distance', 'has_image', 'id', 'image_id', 'special', 'title'
+      ]);
+    });
+
+    it('should calculate totalPages correctly', async () => {
+      setupGoalsDb({ countTotal: 171, rows: sampleGoals });
+
+      const request = createGoalsRequest('?pageSize=25');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.totalPages).toBe(7); // ceil(171/25) = 7
+    });
+
+    it('should return totalPages as 1 when total is 0', async () => {
+      setupGoalsDb({ countTotal: 0, rows: [] });
+
+      const request = createGoalsRequest();
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      expect(body.totalPages).toBe(1);
+    });
+
+    it('should trim whitespace from search parameter', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 0 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=%20rivendell%20');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // Should trim to 'rivendell'
+      expect(mockCountBind).toHaveBeenCalledWith('%rivendell%');
+    });
+
+    it('should treat whitespace-only search as empty (no WHERE clause)', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?search=%20%20%20');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // No WHERE clause expected for whitespace-only search
+      const calls = mockEnv.DB.prepare.mock.calls;
+      expect(calls[0][0]).not.toContain('WHERE');
+    });
+
+    it('should handle non-numeric page and pageSize gracefully', async () => {
+      setupGoalsDb({ countTotal: 3, rows: sampleGoals });
+
+      const request = createGoalsRequest('?page=abc&pageSize=xyz');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      // Should default to page=1 and pageSize=25 when non-numeric
+      expect(body.page).toBe(1);
+      expect(body.pageSize).toBe(25);
+    });
+
+    it('should escape LIKE wildcard characters in search term', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 0 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=100%25_done');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // % and _ should be escaped with backslash
+      expect(mockCountBind).toHaveBeenCalledWith('%100\\%\\_done%');
+    });
+
+    it('should clamp page to totalPages when requested page exceeds total', async () => {
+      setupGoalsDb({ countTotal: 50, rows: [] });
+
+      const request = createGoalsRequest('?page=999&pageSize=25');
+      const response = await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      const body = await response.json();
+      // totalPages = ceil(50/25) = 2, page should be clamped to 2
+      expect(body.page).toBe(2);
+      expect(body.totalPages).toBe(2);
     });
   });
 });

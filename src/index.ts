@@ -41,7 +41,8 @@ import { renderPartyDetailPage } from "./renderPartyDetailPage";
 import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
 import { renderAdminPage } from "./renderAdminPage";
-import { handleAdminDashboard } from "./admin-handlers";
+import { renderAdminGoalsPage } from "./renderAdminGoalsPage";
+import { handleAdminDashboard, handleAdminGoalsList } from "./admin-handlers";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -146,6 +147,11 @@ export default {
         // Admin API endpoints (Story 4.2+)
         if (url.pathname === "/api/admin/dashboard" && method === "GET") {
           return handleAdminDashboard(request, env);
+        }
+
+        // Admin Goals List (Story 4.3)
+        if (url.pathname === "/api/admin/goals" && method === "GET") {
+          return handleAdminGoalsList(request, env);
         }
 
         return new Response(JSON.stringify({ error: 'Admin API endpoint not found' }), {
@@ -360,6 +366,15 @@ export default {
       });
     }
 
+    // Admin Goals list page (admin authentication required) — Story 4.3
+    if (url.pathname === "/admin/goals") {
+      const adminValidation = await validateAdminSession(request, env);
+      if (!adminValidation.valid) return adminValidation.error;
+      return new Response(renderAdminGoalsPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
     // Party (Fellowship) pages
     // Must check /party/join/:code before /party/:id to avoid matching "join" as an id
     const partyJoinPageParams = matchRoute(url.pathname, '/party/join/:inviteCode');
@@ -427,6 +442,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/auth/confirm-email":
     case "/api/user/parties":
     case "/api/admin/dashboard":
+    case "/api/admin/goals":
       return ['GET'];
     case "/api/register":
     case "/api/login":
