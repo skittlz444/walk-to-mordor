@@ -786,7 +786,7 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     }
   });
 
-  test('Selecting a party shows viewing banner', async ({ page, request, leader1Token }) => {
+  test('Selecting a party shows member count', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Banner Test Party');
     await logDistance(request, leader1Token, '2026-02-25', 5);
 
@@ -807,15 +807,15 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       expect(targetValue).not.toBeNull();
       await dropdown.selectOption(targetValue);
 
-      // Banner should appear
-      const banner = page.locator('.party-selector__banner');
-      await expect(banner).toBeVisible({ timeout: 8000 });
-      const bannerText = await banner.textContent();
-      expect(bannerText).toContain('Viewing');
+      // Member count should appear inline
+      const members = page.locator('.party-selector__banner-members');
+      await expect(members).toBeVisible({ timeout: 8000 });
+      const membersText = await members.textContent();
+      expect(membersText).toContain('member');
     }
   });
 
-  test('Switching back to Personal hides banner', async ({ page, request, leader1Token }) => {
+  test('Switching back to Personal hides member count', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Personal Switch Party');
     await logDistance(request, leader1Token, '2026-02-24', 5);
 
@@ -835,11 +835,11 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       }
       expect(targetValue).not.toBeNull();
       await dropdown.selectOption(targetValue);
-      await expect(page.locator('.party-selector__banner')).toBeVisible({ timeout: 8000 });
+      await expect(page.locator('.party-selector__banner-members')).toBeVisible({ timeout: 8000 });
 
       // Switch back to Personal
       await dropdown.selectOption('personal');
-      await expect(page.locator('.party-selector__banner')).toBeHidden({ timeout: 8000 });
+      await expect(page.locator('.party-selector__banner-members')).toBeHidden({ timeout: 8000 });
     }
   });
 
@@ -873,12 +873,12 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       await page.reload();
 
       // Should still be in party view
-      const banner = page.locator('.party-selector__banner');
-      const bannerVisible = await banner.isVisible({ timeout: 8000 }).catch(() => false);
-      // If banner visible, persistence worked
-      if (bannerVisible) {
-        const bannerText = await banner.textContent();
-        expect(bannerText).toContain('Comp Persist View Party');
+      const members = page.locator('.party-selector__banner-members');
+      const membersVisible = await members.isVisible({ timeout: 8000 }).catch(() => false);
+      // If member count visible, persistence worked
+      if (membersVisible) {
+        const membersText = await members.textContent();
+        expect(membersText).toContain('member');
       }
     }
   });
@@ -892,10 +892,10 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     await page.evaluate(() => localStorage.setItem('wtm_party_view', '99999'));
     await page.reload();
 
-    // Should fall back to Personal (no banner)
-    const banner = page.locator('.party-selector__banner');
-    const bannerVisible = await banner.isVisible({ timeout: 8000 }).catch(() => false);
-    expect(bannerVisible).toBeFalsy();
+    // Should fall back to Personal (no member count shown)
+    const members = page.locator('.party-selector__banner-members');
+    const membersVisible = await members.isVisible({ timeout: 8000 }).catch(() => false);
+    expect(membersVisible).toBeFalsy();
   });
 });
 
