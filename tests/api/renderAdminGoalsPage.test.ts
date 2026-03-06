@@ -38,11 +38,6 @@ describe('renderAdminGoalsPage', () => {
     });
 
     it('should have Goals link marked as active with aria-current', () => {
-      // The Goals link should be active on this page
-      const goalsSection = html.substring(
-        html.indexOf('fa-flag-checkered'),
-        html.indexOf('fa-flag-checkered') + 200
-      );
       expect(html).toContain('admin-nav__link--active');
       expect(html).toContain('aria-current="page"');
     });
