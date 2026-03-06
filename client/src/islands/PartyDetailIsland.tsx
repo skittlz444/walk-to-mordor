@@ -194,15 +194,17 @@ export function PartyDetailIsland() {
 
       <h2>{partyInfo.name}</h2>
 
-      {/* Fellowship Settings Badges */}
-      <div className="party-settings-badges">
-        <span className="party-settings-badge">
-          📊 {partyInfo.distance_mode === 'cumulative' ? 'Cumulative' : 'Incremental (since join)'} mode
-        </span>
-        <span className="party-settings-badge">
-          🚪 {partyInfo.leave_distance_behavior === 'keep' ? 'Distance kept on departure' : 'Distance removed on departure'}
-        </span>
-      </div>
+      {/* Fellowship Settings Badges (leader only) */}
+      {isLeader && (
+        <div className="party-settings-badges">
+          <span className="party-settings-badge">
+            📊 {partyInfo.distance_mode === 'cumulative' ? 'Cumulative' : 'Incremental (since join)'} mode
+          </span>
+          <span className="party-settings-badge">
+            🚪 {partyInfo.leave_distance_behavior === 'keep' ? 'Distance kept on departure' : 'Distance removed on departure'}
+          </span>
+        </div>
+      )}
 
       {/* Progress Stats */}
       <div className="party-progress">

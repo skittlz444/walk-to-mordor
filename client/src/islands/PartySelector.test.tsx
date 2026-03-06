@@ -66,7 +66,7 @@ describe('PartySelector', () => {
     expect(options[1].textContent).toBe('Fellowship');
   });
 
-  it('shows banner when party is selected', async () => {
+  it('shows member count inline when party is selected', async () => {
     userParties.value = [
       { id: 1, name: 'The Shire Walkers', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 4 },
     ];
@@ -83,14 +83,12 @@ describe('PartySelector', () => {
 
     const { container } = render(<PartySelector />);
 
-    const banner = container.querySelector('.party-selector__banner');
-    expect(banner).toBeTruthy();
-    expect(banner?.textContent).toContain('The Shire Walkers');
-    expect(banner?.textContent).toContain('42.50 km');
-    expect(banner?.textContent).toContain('4 members');
+    const members = container.querySelector('.party-selector__members');
+    expect(members).toBeTruthy();
+    expect(members?.textContent).toContain('4 members');
   });
 
-  it('hides banner in personal view', () => {
+  it('hides member count in personal view', () => {
     userParties.value = [
       { id: 1, name: 'Fellowship', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 2 },
     ];
@@ -98,7 +96,7 @@ describe('PartySelector', () => {
 
     const { container } = render(<PartySelector />);
 
-    expect(container.querySelector('.party-selector__banner')).toBeNull();
+    expect(container.querySelector('.party-selector__members')).toBeNull();
   });
 
   it('applies journey variant class', () => {
@@ -149,6 +147,6 @@ describe('PartySelector', () => {
 
     const { container } = render(<PartySelector />);
 
-    expect(container.querySelector('.party-selector__banner-members')?.textContent).toContain('1 member');
+    expect(container.querySelector('.party-selector__members')?.textContent).toContain('1 member');
   });
 });

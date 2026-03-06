@@ -32,7 +32,7 @@ export function PartyListIsland() {
 
   // Create form state
   const [createName, setCreateName] = useState('');
-  const [distanceMode, setDistanceMode] = useState('cumulative');
+  const [distanceMode, setDistanceMode] = useState('incremental');
   const [leaveBehavior, setLeaveBehavior] = useState('keep');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -233,8 +233,8 @@ export function PartyListIsland() {
             <label>
               Distance Mode
               <select value={distanceMode} onChange={(e) => setDistanceMode((e.target as HTMLSelectElement).value)}>
-                <option value="cumulative">Cumulative — Everyone's walking adds together</option>
                 <option value="incremental">Since Join — Only distance walked after joining counts</option>
+                <option value="cumulative">Cumulative — Everyone's walking adds together</option>
               </select>
               <span className="helper-text">
                 {distanceMode === 'cumulative'

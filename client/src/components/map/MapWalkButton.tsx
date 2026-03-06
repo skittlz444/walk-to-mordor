@@ -24,7 +24,7 @@ export interface MapWalkButtonProps {
   className?: string;
 }
 
-/** Walking person SVG icon */
+/** Walking person SVG icon (Material Design style) */
 const WalkIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -34,10 +34,8 @@ const WalkIcon = () => (
     height="24"
     aria-hidden="true"
   >
-    <circle cx="12" cy="4" r="2" />
-    <path d="M14 7h-4l-1 5l3 3l-1 5h2l1-5l-2-2l1-3h1l1-3z" />
-    <path d="M10.5 12L9 22h2l1-6l-1.5-4z" />
-    <path d="M13.5 12l1.5 4l1 6h2l-2-10h-2.5z" />
+    <circle cx="13.5" cy="3.5" r="2" />
+    <path d="M9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
   </svg>
 );
 
