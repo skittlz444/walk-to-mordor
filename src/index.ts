@@ -31,7 +31,8 @@ import {
   handlePasswordReset,
   handleConfirmEmail,
   handleResendConfirmation,
-  validateSession
+  validateSession,
+  validateAdminSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
@@ -39,6 +40,7 @@ import { renderPartyListPage } from "./renderPartyListPage";
 import { renderPartyDetailPage } from "./renderPartyDetailPage";
 import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
+import { renderAdminPage } from "./renderAdminPage";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -135,6 +137,20 @@ export default {
       }
       
       // Protected endpoints (authentication required)
+      // Admin API endpoints (admin authentication required)
+      if (url.pathname.startsWith("/api/admin/")) {
+        const adminValidation = await validateAdminSession(request, env);
+        if (!adminValidation.valid) return adminValidation.error;
+
+        // Placeholder for future admin API routes (Stories 4.2–4.6)
+        // Individual admin endpoints will be added here
+
+        return new Response(JSON.stringify({ error: 'Admin API endpoint not found' }), {
+          status: 404,
+          headers: { "content-type": "application/json" }
+        });
+      }
+
       // Party (Fellowship) endpoints
       if (url.pathname === "/api/party" && method === "POST") {
         return handleCreateParty(request, env, body);
@@ -332,6 +348,15 @@ export default {
       return handleMapPage(request, env);
     }
 
+    // Admin page (admin authentication required)
+    if (url.pathname === "/admin") {
+      const adminValidation = await validateAdminSession(request, env);
+      if (!adminValidation.valid) return adminValidation.error;
+      return new Response(renderAdminPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
     // Party (Fellowship) pages
     // Must check /party/join/:code before /party/:id to avoid matching "join" as an id
     const partyJoinPageParams = matchRoute(url.pathname, '/party/join/:inviteCode');
@@ -411,6 +436,10 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/user/preferences":
       return ['PUT'];
     default:
+      // Admin API routes
+      if (pathname.startsWith('/api/admin/')) {
+        return ['GET', 'POST', 'PUT', 'DELETE'];
+      }
       // Parameterized routes
       if (matchRoute(pathname, '/api/party/join/:inviteCode')) {
         return ['GET', 'POST'];

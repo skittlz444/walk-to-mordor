@@ -15,6 +15,7 @@ Stores user credentials and profile status.
 - `email_verified`: INTEGER (0 or 1, default 0 — account inactive until verified via confirmation email)
 - `show_future_goals_unlocked`: INTEGER (0 or 1, default 1 — controls whether future goals display as unlocked/visible or locked/hidden)
 - `default_view_map`: INTEGER (0 or 1, default 0 — user landing preference: journey or map)
+- `is_admin`: INTEGER (0 or 1, default 0 — admin role flag; can only be set via direct D1 database access, e.g. `UPDATE users SET is_admin = 1 WHERE username = '<admin_username>';`)
 - `created_at`: DATETIME
 - `updated_at`: DATETIME
 
@@ -116,6 +117,22 @@ Audit trail and activity feed for party walks. An entry is created for each acti
 - `idx_party_progress_log_user_id` on `logged_by_user_id`
 - `idx_party_progress_log_date` on `date`
 
+### `admin_audit_log`
+Append-only log of admin actions for accountability. Entries are never deleted by the application.
+- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
+- `admin_user_id`: INTEGER NOT NULL (FK -> users.id)
+- `action`: TEXT NOT NULL (e.g., 'update_goal', 'delete_goal', 'view_dashboard')
+- `target_type`: TEXT (optional, e.g., 'goal', 'user')
+- `target_id`: INTEGER (optional, FK to relevant entity)
+- `details`: TEXT (optional, JSON string with action-specific data, e.g., `{"field":"title","old":"X","new":"Y"}`)
+- `ip_address`: TEXT (optional, from `CF-Connecting-IP` header)
+- `success`: INTEGER NOT NULL DEFAULT 1 (1 = success, 0 = failure)
+- `created_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
+
+**Indexes:**
+- `idx_admin_audit_admin_user` on `admin_user_id`
+- `idx_admin_audit_created` on `created_at`
+
 ## Entity Relationship Diagram (Mermaid)
 
 ```mermaid
@@ -127,6 +144,7 @@ erDiagram
     users ||--o{ parties : "leads"
     users ||--o{ party_members : "joins"
     users ||--o{ party_progress_log : "logs"
+    users ||--o{ admin_audit_log : "audits"
     parties ||--o{ party_members : "has"
     parties ||--o{ party_progress_log : "receives"
 
@@ -138,6 +156,7 @@ erDiagram
         string salt
         int email_verified
         int show_future_goals_unlocked
+        int is_admin
     }
     
     sessions {
@@ -208,5 +227,17 @@ erDiagram
         real distance
         date date
         datetime logged_at
+    }
+
+    admin_audit_log {
+        int id PK
+        int admin_user_id FK
+        string action
+        string target_type
+        int target_id
+        string details
+        string ip_address
+        int success
+        datetime created_at
     }
 ```

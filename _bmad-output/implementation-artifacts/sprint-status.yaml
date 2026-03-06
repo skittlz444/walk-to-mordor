@@ -88,7 +88,7 @@ development_status:
   # EPIC 4: Admin Portal (#153)
   # ============================================
   epic-4: in-progress
-  4-1-admin-authentication-authorization: ready-for-dev
+  4-1-admin-authentication-authorization: done
   4-2-admin-dashboard-shell: ready-for-dev
   4-3-goal-management-list-view: ready-for-dev
   4-4-goal-management-edit-goal: ready-for-dev
