@@ -44,6 +44,8 @@ import { renderPartyManagePage } from '../../src/renderPartyManagePage';
 import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
 import { renderAdminPage } from '../../src/renderAdminPage';
 import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
+import { renderAdminGoalAddPage } from '../../src/renderAdminGoalAddPage';
+import { renderAdminGoalEditPage } from '../../src/renderAdminGoalEditPage';
 import { handleAdminDashboard, handleAdminGoalsList, handleAdminGoalCreate } from '../../src/admin-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
@@ -77,6 +79,8 @@ const mockRenderPartyManagePage = jest.mocked(renderPartyManagePage);
 const mockRenderPartyJoinPage = jest.mocked(renderPartyJoinPage);
 const mockRenderAdminPage = jest.mocked(renderAdminPage);
 const mockRenderAdminGoalsPage = jest.mocked(renderAdminGoalsPage);
+const mockRenderAdminGoalAddPage = jest.mocked(renderAdminGoalAddPage);
+const mockRenderAdminGoalEditPage = jest.mocked(renderAdminGoalEditPage);
 const mockHandleAdminDashboard = jest.mocked(handleAdminDashboard);
 const mockHandleAdminGoalsList = jest.mocked(handleAdminGoalsList);
 const mockHandleAdminGoalCreate = jest.mocked(handleAdminGoalCreate);
@@ -165,6 +169,8 @@ describe('Cloudflare Worker Index', () => {
     mockRenderPartyJoinPage.mockReturnValue('<html>Party Join</html>');
     mockRenderAdminPage.mockReturnValue('<html>Admin Dashboard</html>');
     mockRenderAdminGoalsPage.mockReturnValue('<html>Admin Goals</html>');
+    mockRenderAdminGoalAddPage.mockReturnValue('<html>Admin Goal Add</html>');
+    mockRenderAdminGoalEditPage.mockReturnValue('<html>Admin Goal Edit</html>');
     mockHandleAdminDashboard.mockResolvedValue(new Response(JSON.stringify({
       totalUsers: 42, totalDistanceKm: 12345.6, activeParties: 5, totalGoals: 171
     }), { status: 200, headers: { 'content-type': 'application/json' } }));
@@ -555,45 +561,14 @@ describe('Cloudflare Worker Index', () => {
   });
 
   // Admin route tests
-  it('should render admin page for /admin route when admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
+  it('should render admin page for /admin route without server-side auth', async () => {
     const request = createRequest('https://example.com/admin');
     const response = await worker.fetch(request, mockEnv);
     
-    expect(mockValidateAdminSession).toHaveBeenCalled();
+    expect(mockValidateAdminSession).not.toHaveBeenCalled();
     expect(mockRenderAdminPage).toHaveBeenCalled();
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  it('should return 403 for /admin route when not admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({
-      valid: false,
-      error: new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' }
-      })
-    });
-    const request = createRequest('https://example.com/admin');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockValidateAdminSession).toHaveBeenCalled();
-    expect(mockRenderAdminPage).not.toHaveBeenCalled();
-    expect(response.status).toBe(403);
-  });
-
-  it('should return 401 for /admin route when unauthenticated', async () => {
-    mockValidateAdminSession.mockResolvedValue({
-      valid: false,
-      error: new Response(JSON.stringify({ error: 'Missing or invalid authorization header' }), {
-        status: 401,
-        headers: { 'content-type': 'application/json' }
-      })
-    });
-    const request = createRequest('https://example.com/admin');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(response.status).toBe(401);
   });
 
   it('should return 403 for /api/admin/* routes when not admin', async () => {
@@ -646,45 +621,52 @@ describe('Cloudflare Worker Index', () => {
   });
 
   // Admin Goals List route tests (Story 4.3)
-  it('should render admin goals page for /admin/goals route when admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
+  it('should render admin goals page for /admin/goals route without server-side auth', async () => {
     const request = createRequest('https://example.com/admin/goals');
     const response = await worker.fetch(request, mockEnv);
 
-    expect(mockValidateAdminSession).toHaveBeenCalled();
+    expect(mockValidateAdminSession).not.toHaveBeenCalled();
     expect(mockRenderAdminGoalsPage).toHaveBeenCalled();
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('text/html');
   });
 
-  it('should return 403 for /admin/goals route when not admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({
-      valid: false,
-      error: new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' }
-      })
-    });
-    const request = createRequest('https://example.com/admin/goals');
+  // Admin Goal Add page route tests (Story 4.6)
+  it('should render admin goal add page for /admin/goals/new route without server-side auth', async () => {
+    const request = createRequest('https://example.com/admin/goals/new');
     const response = await worker.fetch(request, mockEnv);
 
-    expect(mockValidateAdminSession).toHaveBeenCalled();
-    expect(mockRenderAdminGoalsPage).not.toHaveBeenCalled();
-    expect(response.status).toBe(403);
+    expect(mockValidateAdminSession).not.toHaveBeenCalled();
+    expect(mockRenderAdminGoalAddPage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
   });
 
-  it('should return 401 for /admin/goals route when unauthenticated', async () => {
-    mockValidateAdminSession.mockResolvedValue({
-      valid: false,
-      error: new Response(JSON.stringify({ error: 'Missing or invalid authorization header' }), {
-        status: 401,
-        headers: { 'content-type': 'application/json' }
-      })
-    });
-    const request = createRequest('https://example.com/admin/goals');
+  // Admin Goal Edit page route tests (Story 4.4)
+  it('should render admin goal edit page for /admin/goals/:id with valid id without server-side auth', async () => {
+    const request = createRequest('https://example.com/admin/goals/42');
     const response = await worker.fetch(request, mockEnv);
 
-    expect(response.status).toBe(401);
+    expect(mockValidateAdminSession).not.toHaveBeenCalled();
+    expect(mockRenderAdminGoalEditPage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  it('should return 404 for /admin/goals/:id with non-numeric id', async () => {
+    const request = createRequest('https://example.com/admin/goals/abc');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockRenderAdminGoalEditPage).not.toHaveBeenCalled();
+    expect(response.status).toBe(404);
+  });
+
+  it('should return 404 for /admin/goals/:id with zero id', async () => {
+    const request = createRequest('https://example.com/admin/goals/0');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockRenderAdminGoalEditPage).not.toHaveBeenCalled();
+    expect(response.status).toBe(404);
   });
 
   it('should route GET /api/admin/goals to handleAdminGoalsList when admin', async () => {
