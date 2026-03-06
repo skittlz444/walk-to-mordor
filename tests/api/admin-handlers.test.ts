@@ -2,7 +2,7 @@ import {
   validateAdminSession,
   handleSessionValidation
 } from '../../src/auth-handlers';
-import { logAdminAction, handleAdminDashboard, handleAdminGoalsList, handleAdminGoalGet, handleAdminGoalUpdate } from '../../src/admin-handlers';
+import { logAdminAction, handleAdminDashboard, handleAdminGoalsList, handleAdminGoalGet, handleAdminGoalUpdate, handleAdminGoalCreate } from '../../src/admin-handlers';
 import * as authUtils from '../../src/auth-utils';
 
 // Mock auth-utils
@@ -2577,6 +2577,806 @@ describe('Admin Handlers', () => {
       );
 
       expect(response.status).toBe(400);
+    });
+  });
+
+  describe('handleAdminGoalCreate', () => {
+    const validCreateBody = {
+      title: 'Weathertop',
+      distance_miles: 200,
+      description: 'The ancient watchtower of Amon Sûl',
+      special: null as string | null,
+      image_id: null as string | null,
+    };
+
+    const createdGoalRow = {
+      id: 99,
+      title: 'Weathertop',
+      distance: 321.868, // 200 * 1.60934
+      description: 'The ancient watchtower of Amon Sûl',
+      special: null,
+      image_id: null,
+    };
+
+    /**
+     * Sets up mock DB for the create handler call sequence:
+     * 1) INSERT goals → .run()
+     * 2) SELECT created goal → .first()
+     * 3) INSERT audit_log → .run() (via logAdminAction)
+     */
+    function setupCreateDb(options?: {
+      insertMeta?: { last_row_id: number };
+      createdRow?: Record<string, unknown> | null;
+    }) {
+      const meta = options?.insertMeta ?? { last_row_id: 99 };
+      const row = options?.createdRow ?? createdGoalRow;
+
+      // 1) INSERT INTO goals
+      const mockRun1 = jest.fn().mockResolvedValue({ meta });
+      const mockBind1 = jest.fn().mockReturnValue({ run: mockRun1 });
+
+      // 2) SELECT created goal
+      const mockFirst2 = jest.fn().mockResolvedValue(row);
+      const mockBind2 = jest.fn().mockReturnValue({ first: mockFirst2 });
+
+      // 3) INSERT audit_log
+      const mockRun3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const mockBind3 = jest.fn().mockReturnValue({ run: mockRun3 });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockBind1 })
+        .mockReturnValueOnce({ bind: mockBind2 })
+        .mockReturnValueOnce({ bind: mockBind3 });
+
+      return { mockBind1, mockRun1, mockBind2, mockFirst2, mockBind3, mockRun3 };
+    }
+
+    // ── Happy path ──────────────────────────────────────────────────────
+
+    it('should create a goal with valid data and return 201', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        1
+      );
+
+      expect(response.status).toBe(201);
+      const body = await response.json();
+      expect(body).toEqual(createdGoalRow);
+    });
+
+    it('should return Content-Type application/json on 201', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        1
+      );
+
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    });
+
+    it('should convert distance from miles to km in the INSERT', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        1
+      );
+
+      // distanceKm = 200 * 1.60934 = 321.868
+      const distanceArg = mockBind1.mock.calls[0][0] as number;
+      expect(distanceArg).toBeCloseTo(321.868, 3);
+    });
+
+    it('should pass title, description, special, and image_id to INSERT bind', async () => {
+      const body = { ...validCreateBody, special: 'milestone', image_id: 'weathertop' };
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        body,
+        1
+      );
+
+      expect(mockBind1).toHaveBeenCalledWith(
+        expect.closeTo(321.868, 3),
+        'Weathertop',
+        'The ancient watchtower of Amon Sûl',
+        'milestone',
+        'weathertop'
+      );
+    });
+
+    it('should accept decimal distance_miles values', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: 99.5 },
+        1
+      );
+
+      expect(response.status).toBe(201);
+    });
+
+    it('should accept very large distance_miles values', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: 999999 },
+        1
+      );
+
+      expect(response.status).toBe(201);
+    });
+
+    it('should store empty description as null via description-or-null fallback', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, description: '' },
+        1
+      );
+
+      // description || null → null for empty string
+      expect(mockBind1.mock.calls[0][2]).toBeNull();
+    });
+
+    it('should store whitespace-only description as null', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, description: '   ' },
+        1
+      );
+
+      // trimmed → '' → description || null → null
+      expect(mockBind1.mock.calls[0][2]).toBeNull();
+    });
+
+    it('should ignore extra/unknown fields in body', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, foo: 'bar', extraField: 123 },
+        1
+      );
+
+      expect(response.status).toBe(201);
+    });
+
+    // ── Body shape validation ───────────────────────────────────────────
+
+    it('should return 400 for null body', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        null,
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Invalid request body');
+    });
+
+    it('should return 400 for undefined body', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        undefined,
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Invalid request body');
+    });
+
+    it('should return 400 for string body', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        'not-an-object',
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Invalid request body');
+    });
+
+    it('should return 400 for numeric body', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Invalid request body');
+    });
+
+    // ── Title validation ────────────────────────────────────────────────
+
+    it('should return 400 for missing title field', async () => {
+      const { title, ...noTitle } = validCreateBody;
+      void title;
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        noTitle,
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Title is required');
+    });
+
+    it('should return 400 for empty string title', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, title: '' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Title is required');
+    });
+
+    it('should return 400 for whitespace-only title', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, title: '   ' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Title is required');
+    });
+
+    it('should return 400 when title is a number instead of string', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, title: 12345 },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Title is required');
+    });
+
+    it('should trim title whitespace before saving', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, title: '  Weathertop  ' },
+        1
+      );
+
+      // Second arg to INSERT bind is the title
+      expect(mockBind1.mock.calls[0][1]).toBe('Weathertop');
+    });
+
+    // ── Distance validation ─────────────────────────────────────────────
+
+    it('should return 400 when distance_miles is missing (undefined)', async () => {
+      const { distance_miles, ...noDistance } = validCreateBody;
+      void distance_miles;
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        noDistance,
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 when distance_miles is explicitly null', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: null },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 when distance_miles is a string', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: '200' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Invalid distance value');
+    });
+
+    it('should return 400 when distance_miles is zero', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: 0 },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 when distance_miles is negative', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: -50 },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 when distance_miles is Infinity', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: Infinity },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 when distance_miles is negative Infinity', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: -Infinity },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 when distance_miles is NaN', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: NaN },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Invalid distance value');
+    });
+
+    it('should return 400 when distance_miles is a boolean', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, distance_miles: true },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Invalid distance value');
+    });
+
+    // ── Image ID validation ─────────────────────────────────────────────
+
+    it('should return 400 for image_id with spaces', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: 'bag end' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should return 400 for image_id with uppercase letters', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: 'BagEnd' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should return 400 for image_id with underscores', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: 'bag_end' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should return 400 for image_id with leading hyphen', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: '-bag-end' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should return 400 for image_id with trailing hyphen', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: 'bag-end-' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should return 400 for image_id with consecutive hyphens', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: 'bag--end' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Image ID must be a valid slug format');
+    });
+
+    it('should accept valid slug image_id with hyphens', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: 'weather-top-hill' },
+        1
+      );
+
+      expect(response.status).toBe(201);
+    });
+
+    it('should accept single-word slug image_id', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: 'weathertop' },
+        1
+      );
+
+      expect(response.status).toBe(201);
+    });
+
+    it('should treat null image_id as no image and skip slug validation', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: null },
+        1
+      );
+
+      expect(response.status).toBe(201);
+    });
+
+    it('should normalize empty string image_id to null in INSERT bind', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, image_id: '' },
+        1
+      );
+
+      // image_id is 5th arg (index 4) to INSERT bind
+      expect(mockBind1.mock.calls[0][4]).toBeNull();
+    });
+
+    // ── Special field handling ──────────────────────────────────────────
+
+    it('should store non-empty special string', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, special: 'milestone' },
+        1
+      );
+
+      // special is 4th arg (index 3) to INSERT bind
+      expect(mockBind1.mock.calls[0][3]).toBe('milestone');
+    });
+
+    it('should normalize empty string special to null', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, special: '' },
+        1
+      );
+
+      expect(mockBind1.mock.calls[0][3]).toBeNull();
+    });
+
+    it('should normalize whitespace-only special to null', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, special: '   ' },
+        1
+      );
+
+      expect(mockBind1.mock.calls[0][3]).toBeNull();
+    });
+
+    it('should trim special field whitespace before storing', async () => {
+      const { mockBind1 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, special: '  milestone  ' },
+        1
+      );
+
+      expect(mockBind1.mock.calls[0][3]).toBe('milestone');
+    });
+
+    // ── Audit logging ───────────────────────────────────────────────────
+
+    it('should log create_goal audit entry with correct details', async () => {
+      const { mockBind3 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        7
+      );
+
+      // logAdminAction bind args: adminUserId, action, targetType, targetId, details, ipAddress, success
+      const auditArgs = mockBind3.mock.calls[0];
+      expect(auditArgs[0]).toBe(7); // adminUserId
+      expect(auditArgs[1]).toBe('create_goal'); // action
+      expect(auditArgs[2]).toBe('goal'); // targetType
+      expect(auditArgs[3]).toBe(99); // targetId (last_row_id)
+      const details = JSON.parse(auditArgs[4] as string);
+      expect(details.title).toBe('Weathertop');
+      expect(details.distance_miles).toBe(200);
+      expect(details.distance_km).toBeCloseTo(321.868, 3);
+      expect(auditArgs[5]).toBe('10.0.0.1'); // ipAddress
+      expect(auditArgs[6]).toBe(1); // success
+    });
+
+    it('should use "unknown" for IP when CF-Connecting-IP header is absent', async () => {
+      const { mockBind3 } = setupCreateDb();
+      mockRequest.headers.get.mockReturnValue(null);
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        1
+      );
+
+      const ipArg = mockBind3.mock.calls[0][5];
+      expect(ipArg).toBe('unknown');
+    });
+
+    // ── SQL structure ───────────────────────────────────────────────────
+
+    it('should execute INSERT with correct SQL columns', async () => {
+      setupCreateDb();
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        1
+      );
+
+      const firstSql = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      expect(firstSql).toContain('INSERT INTO goals');
+      expect(firstSql).toContain('distance, title, description, special, image_id');
+    });
+
+    it('should SELECT the created goal by last_row_id after INSERT', async () => {
+      const { mockBind2 } = setupCreateDb({ insertMeta: { last_row_id: 42 } });
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        1
+      );
+
+      expect(mockBind2).toHaveBeenCalledWith(42);
+    });
+
+    // ── Error handling ──────────────────────────────────────────────────
+
+    it('should return 500 on database error during INSERT', async () => {
+      const mockBind = jest.fn().mockReturnValue({
+        run: jest.fn().mockRejectedValue(new Error('DB write error')),
+      });
+      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        1
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Internal server error');
+    });
+
+    it('should return 500 with JSON Content-Type on database error', async () => {
+      const mockBind = jest.fn().mockReturnValue({
+        run: jest.fn().mockRejectedValue(new Error('DB error')),
+      });
+      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockRequest.headers.get.mockReturnValue('10.0.0.1');
+
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        validCreateBody,
+        1
+      );
+
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    });
+
+    it('should return 400 with JSON Content-Type for validation errors', async () => {
+      const response = await handleAdminGoalCreate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        { ...validCreateBody, title: '' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.headers.get('Content-Type')).toBe('application/json');
+    });
+  });
+
+  describe('renderAdminGoalAddPage', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { renderAdminGoalAddPage } = require('../../src/renderAdminGoalAddPage');
+
+    it('should return HTML containing the AdminGoalAddIsland mount point', () => {
+      const html: string = renderAdminGoalAddPage();
+      expect(html).toContain('data-island="AdminGoalAddIsland"');
+    });
+
+    it('should include the page title Add New Goal', () => {
+      const html: string = renderAdminGoalAddPage();
+      expect(html).toContain('Add New Goal');
+    });
+
+    it('should include admin navigation with Goals link marked active', () => {
+      const html: string = renderAdminGoalAddPage();
+      expect(html).toContain('admin-nav__link--active');
+      expect(html).toContain('Goals');
+    });
+
+    it('should include breadcrumb with Admin and Goals links', () => {
+      const html: string = renderAdminGoalAddPage();
+      expect(html).toContain('admin-breadcrumb');
+      expect(html).toContain('<a href="/admin">Admin</a>');
+      expect(html).toContain('<a href="/admin/goals">Goals</a>');
+    });
+
+    it('should include admin.css stylesheet reference', () => {
+      const html: string = renderAdminGoalAddPage();
+      expect(html).toContain('/css/admin.css');
+    });
+
+    it('should include back-to-site link pointing to /journey', () => {
+      const html: string = renderAdminGoalAddPage();
+      expect(html).toContain('href="/journey"');
+      expect(html).toContain('Back to Site');
     });
   });
 });
