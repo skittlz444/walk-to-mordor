@@ -189,7 +189,7 @@ export function AdminGoalAddIsland() {
       if (prev.title && title.trim()) delete next.title;
       if (prev.distance) {
         const d = parseFloat(distanceMiles);
-        if (distanceMiles.trim() && !isNaN(d) && d > 0) delete next.distance;
+        if (distanceMiles.trim() && !isNaN(d) && isFinite(d) && d > 0) delete next.distance;
       }
       if (prev.image_id) {
         const tid = imageId.trim();
@@ -331,7 +331,7 @@ export function AdminGoalAddIsland() {
             id="goal-distance"
             type="number"
             step="0.1"
-            min="0"
+            min="0.1"
             value={distanceMiles}
             onInput={(e) => setDistanceMiles((e.target as HTMLInputElement).value)}
             required
