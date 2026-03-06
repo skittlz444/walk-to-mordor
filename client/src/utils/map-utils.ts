@@ -339,7 +339,9 @@ export function markerScale(
 
 /**
  * Slice a flat [x,y,...] polyline by cumulative geometric (pixel) distance.
- * Returns the sub-path between startPx and endPx (inclusive interpolated endpoints).
+ * Returns the sub-path between startPx and endPx with interpolated endpoints.
+ * Returns an empty array when the path has fewer than 2 points or endPx <= startPx
+ * (zero-length slices are not produced).
  *
  * Used to split a completed path into proportional member segments so that
  * each member's visual segment length matches their contribution ratio,
@@ -348,7 +350,7 @@ export function markerScale(
  * @param points   Flat [x, y, …] array of the polyline.
  * @param startPx  Start pixel distance from the polyline's first point.
  * @param endPx    End pixel distance from the polyline's first point.
- * @returns Flat [x, y, …] sub-path between startPx and endPx.
+ * @returns Flat [x, y, …] sub-path between startPx and endPx, or [] if the range is empty.
  */
 export function slicePathByPixelDistance(
   points: number[],

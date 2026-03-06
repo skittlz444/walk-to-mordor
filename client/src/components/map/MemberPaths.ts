@@ -76,18 +76,24 @@ export function createMemberPaths(
 
   // Split the completed path proportionally by pixel distance
   let cumPixels = 0;
+  const contributingMembers = members.filter(m => m.distanceMiles > 0);
 
-  for (const member of members) {
-    if (member.distanceMiles <= 0) continue;
+  for (let idx = 0; idx < contributingMembers.length; idx++) {
+    const member = contributingMembers[idx];
 
     const startPx = cumPixels;
     const pixelShare = (member.distanceMiles / totalMiles) * totalPixelLength;
     cumPixels += pixelShare;
 
+    // Clamp final segment to exactly totalPixelLength to avoid floating-point gaps
+    const endPx = idx === contributingMembers.length - 1
+      ? totalPixelLength
+      : cumPixels;
+
     const segmentPoints = slicePathByPixelDistance(
       completedPoints,
       startPx,
-      cumPixels,
+      endPx,
     );
 
     if (segmentPoints.length === 0) continue;
