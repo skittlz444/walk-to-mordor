@@ -72,7 +72,7 @@ development_status:
   # ============================================
   # EPIC 3: Fellowship Features (#152)
   # ============================================
-  epic-3: in-progress
+  epic-3: done
   3-1-fellowship-database-schema: done
   3-2-create-fellowship-api: done
   3-3-invite-join-fellowship-api: done
@@ -82,18 +82,18 @@ development_status:
   3-7-fellowship-ui-fellowships-pages: done
   3-8-fellowship-progress-activity-feed: done
   3-9-fellowship-notifications-party-milestones: cancelled
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # ============================================
   # EPIC 4: Admin Portal (#153)
   # ============================================
-  epic-4: backlog
-  4-1-admin-authentication-authorization: backlog
-  4-2-admin-dashboard-shell: backlog
-  4-3-goal-management-list-view: backlog
-  4-4-goal-management-edit-goal: backlog
-  4-5-goal-management-image-upload-to-r2: backlog
-  4-6-goal-management-add-intermediary-goal: backlog
+  epic-4: in-progress
+  4-1-admin-authentication-authorization: ready-for-dev
+  4-2-admin-dashboard-shell: ready-for-dev
+  4-3-goal-management-list-view: ready-for-dev
+  4-4-goal-management-edit-goal: ready-for-dev
+  4-5-goal-management-image-asset-workflow-integration: ready-for-dev
+  4-6-goal-management-add-intermediary-goal: ready-for-dev
   epic-4-retrospective: optional
 
   # ============================================

@@ -1,42 +1,89 @@
 # UI Overview
 
-The Frontend is built using a "Server-Side Rendered Shell + Client-Side Hydration" pattern. Interactive components use **Preact islands** that hydrate into server-rendered HTML containers.
+Last updated: 2026-03-06
 
-## Server-Side Rendering (SSR)
-Files: `src/renderHtml.ts`, `src/renderAuthPage.ts`, `src/renderPasswordResetPage.ts`
+## Rendering Pattern
 
-The Cloudflare Worker generates the full HTML document string. This includes:
-- `<head>` with meta tags, PWA manifest, and styles.
-- `<body>` with the container elements (`<main>`, `<div id="eventcalendar">`).
-- Script tags pointing to `public/js/` modules and the compiled Preact islands bundle.
+The UI uses SSR shells from the Worker plus client hydration.
 
-## Client-Side Logic
-Located in `public/js/`.
+- SSR page composition: `src/renderLayout.ts` and page renderers in `src/render*.ts`
+- Shared island bundle: `/js/client/islands.js`
+- Shared legacy runtime scripts (on non-public pages): `/js/profile.js`, `/js/main.js`
 
-- **`main.js`**: Core orchestration. Checks auth status on load, fetches initial data, and initializes other modules.
-- **`validators.js`**: Shared validation logic (mirrors server-side validators).
-- **`calendar.js`**: Renders the interactive calendar component using Vanilla JS DOM manipulation. Handles date selection.
-- **`progress.js`**: Handles API calls related to fetching and saving progress.
-- **`goals.js`**: Fetches goals and calculates which ones have been achieved based on total distance. Renders the next goal as a `NextGoalCard` Preact island, upcoming goals as `UpcomingGoalCard` islands, and opens `GoalModal` for detail views.
-- **`profile.js`**: Manages the profile modal and user settings updates.
+This is intentionally not an SPA. Route handling remains server-driven.
 
-## Preact Islands
-Entry point: `client/src/index.tsx` — registers and hydrates islands.
+## Page Shells
 
-| Island | Mount Method | Purpose |
-|--------|-------------|---------|
-| `AuthForms` | Auto-hydrated via `data-island="AuthForms"` | Login/registration forms on auth page |
-| `GoalModal` | Programmatic via `goals.js` | Goal detail modal with image, description, achievement animation |
-| `NextGoalCard` | Programmatic via `goals.js` | Highlighted next milestone card with segment progress |
-| `UpcomingGoalCard` | Programmatic via `goals.js` | Upcoming milestone cards |
+### Main Journey Page (`/journey`)
 
-Islands are built with Vite and output to `public/js/client/islands.js`.
+Rendered by `src/renderHtml.ts`.
+
+- Mount points for goals and calendar containers
+- Vanilla modules loaded: `validators.js`, `calendar.js`, `progress.js`, `goals.js`
+- Programmatic islands used by vanilla modules for specific UI regions
+
+### Map Page (`/map`)
+
+Rendered by `src/map-handlers.ts`.
+
+- Auto-hydrated island mount: `MapIsland`
+- Adds map-specific styles and scripts
+
+### Fellowship Pages
+
+Rendered by:
+
+- `src/renderPartyListPage.ts` -> `PartyListIsland`
+- `src/renderPartyDetailPage.ts` -> `PartyDetailIsland`
+- `src/renderPartyManagePage.ts` -> `PartyManageIsland`
+- `src/renderPartyJoinPage.ts` -> `PartyJoinIsland`
+
+## Island Inventory
+
+Registered in `client/src/index.tsx`.
+
+Auto-hydrated islands:
+
+- `AuthForms`
+- `DrawerIsland`
+- `MapIsland`
+- `PartyListIsland`
+- `PartyDetailIsland`
+- `PartyManageIsland`
+- `PartyJoinIsland`
+
+Programmatic islands used by legacy scripts or targeted mounts:
+
+- `DistanceModal`
+- `GoalModal`
+- `NextGoalCard`
+- `UpcomingGoalCard`
+- `PartySelector`
+
+## Legacy JS Modules
+
+Primary modules in `public/js/`:
+
+- `main.js`: app bootstrap and shared state wiring
+- `profile.js`: profile and preference modal behavior
+- `calendar.js`/`progress.js`: progress CRUD workflows
+- `goals.js`: goal list and modal orchestration
+- `validators.js`: shared frontend validation helpers
+
+## State Management
+
+- New island/map/fellowship state uses Preact Signals stores in `client/src/stores/`.
+- Legacy UI state remains in vanilla module state and browser storage.
+- Bridge globals exposed from islands entry allow gradual interoperability.
 
 ## Styling
-- **`public/css/main.css`**: Main stylesheet.
-- Uses standard CSS variables for theming (see [CSS Theming](css-theming.md)).
-- Responsive design for mobile support (PWA capable).
 
-## PWA Features
-- **Manifest**: `public/manifest.json`
-- **Service Worker**: `public/sw.js` for caching and offline support.
+- Global styles: `public/css/main.css`
+- Drawer: `public/css/drawer.css`
+- Feature styles include `party.css`, `map.css`, `calendar.css`, `progress.css`, `auth.css`
+- Theme behavior and variable conventions are documented in `docs/css-theming.md`.
+
+## UX Notes
+
+- Home route (`/`) performs auth-aware redirect to `/journey` or `/map` based on session preferences.
+- Party route precedence is intentionally ordered to avoid dynamic route collisions (`/party/join/:inviteCode` before `/party/:id`).

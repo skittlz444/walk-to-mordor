@@ -41,7 +41,7 @@
 |---------|----------|-------------|-------------|--------|-------|------------|-------|
 | R-003 | PERF | **Calculation Latency**: Recalculating total distance + checking 171 milestones on every log update exceeds 500ms. | 2 | 2 | 4 | Optimize SQL queries. Pre-calculate "next milestone" distance. Performance tests on `POST /log`. | Dev |
 | R-004 | DATA | **Data Isolation**: Future Fellowship features compromising strict private-by-default promise. | 1 | 3 | 3 | Design immutable isolation rules in D1 schema. Regression test suite for privacy boundaries. | Architect |
-| R-005 | OPS | **Asset Limits**: High-res milestone imagery exceeding Cloudflare Worker 25MB bundle limit. | 2 | 2 | 4 | Automated asset optimization (WebP). Store assets in R2/Assets Binding, not bundle. Build-time size checks. | Ops |
+| R-005 | OPS | **Asset Limits**: High-res milestone imagery exceeding Cloudflare Worker static asset limits (including 25MB per file). | 2 | 2 | 4 | Automated asset optimization (WebP). Keep assets in Workers static assets (`public/` + Assets binding), enforce `image_id` validation, and add build-time size checks. | Ops |
 
 ### Low-Priority Risks (Score 1-2)
 

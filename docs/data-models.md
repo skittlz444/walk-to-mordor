@@ -14,6 +14,7 @@ Stores user credentials and profile status.
 - `approved`: INTEGER (0 or 1, for manual approval flows — legacy, superseded by email verification)
 - `email_verified`: INTEGER (0 or 1, default 0 — account inactive until verified via confirmation email)
 - `show_future_goals_unlocked`: INTEGER (0 or 1, default 1 — controls whether future goals display as unlocked/visible or locked/hidden)
+- `default_view_map`: INTEGER (0 or 1, default 0 — user landing preference: journey or map)
 - `created_at`: DATETIME
 - `updated_at`: DATETIME
 

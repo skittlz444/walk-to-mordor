@@ -211,6 +211,11 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **FRs Covered:** Enhanced admin capabilities via dedicated UI
 
+**Alignment Notes (2026-03-06):**
+- Keep existing asset strategy: optimized WebP files in `public/img/highres/` and `public/img/thumbs/`, referenced by `goals.image_id`.
+- Do not introduce R2 for Epic 4.
+- Admin goal management must align with current schema (`title`, `distance`, `description`, `special`, `image_id`) and distance-based ordering (no `sort_order`).
+
 **Status:** Future enhancement, after Fellowship
 
 ---
@@ -955,6 +960,11 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ### Epic 4: Admin Portal (Issue #153)
 
+**Epic 4 Alignment Decision (2026-03-06):**
+- Continue using repository-backed static assets with Workers Assets binding.
+- Keep `goals.image_id` as the canonical image reference for admin workflows.
+- Do not introduce R2 in Epic 4.
+
 #### Story 4.1: Admin Authentication & Authorization (Issue #179)
 
 **Priority:** P0 (Blocker)
@@ -999,9 +1009,9 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Acceptance Criteria:**
 - [ ] Create `/admin/goals` route
 - [ ] Paginated list of all 171+ goals
-- [ ] Display: ID, name, distance, sort_order, has_image (boolean indicator)
-- [ ] Search/filter by name
-- [ ] Sort by distance or sort_order
+- [ ] Display: ID, title, distance, has_image (boolean indicator derived from `image_id`)
+- [ ] Search/filter by title
+- [ ] Sort by distance (ascending/descending)
 - [ ] Click row to view/edit goal details
 
 **Dependencies:** Story 4.2
@@ -1016,16 +1026,17 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Acceptance Criteria:**
 - [ ] Create `/admin/goals/:id` route
-- [ ] Form fields: name, distance, description, sort_order, image_url
+- [ ] Form fields: title, distance, description, special (optional), image_id (slug)
 - [ ] Description field: Multi-line textarea with Markdown preview support
 - [ ] Save changes via API (PUT `/api/admin/goals/:id`)
 - [ ] Validation: Required fields, distance must be positive
+- [ ] Validation: `image_id` must match existing optimized asset slug format when provided
 - [ ] Show success/error feedback
 - [ ] Back button to list view
 
 **Technical Notes:**
 - Per user feedback: No rich text editor (Markdown textarea is sufficient)
-- Image hosting via R2 (see Story 4.5)
+- Image references remain `image_id` slugs backed by committed assets in `public/img/`
 
 **FRs:** FR_ADM_01
 
@@ -1033,25 +1044,23 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
-#### Story 4.5: Goal Management - Image Upload to R2 (Issue #183)
+#### Story 4.5: Goal Management - Image Asset Workflow Integration (Issue #183)
 
 **Priority:** P2
 
-**Description:** Admin interface to upload milestone images directly to Cloudflare R2.
+**Description:** Admin workflow support for preparing and assigning milestone images using the existing repository asset pipeline (no R2).
 
 **Acceptance Criteria:**
-- [ ] Configure R2 bucket binding in wrangler.json
-- [ ] Create `/api/admin/goals/:id/image` POST endpoint for upload
-- [ ] Accept image file upload (max 25MB per NFR_CONST_01)
-- [ ] Store in R2 with path: `goals/{goal_id}/{filename}`
-- [ ] Run image through optimization (WebP conversion, resize)
-- [ ] Update goal's image_url with R2 public URL
-- [ ] Show upload progress indicator
-- [ ] Preview current and new image before save
+- [ ] Expose current image assignment for a goal (`image_id`) and preview existing thumbnail/high-res assets
+- [ ] Provide a guided admin workflow for adding/updating assets via documented pipeline: `raw_assets/` + `npm run optimize:images`
+- [ ] Validate assigned `image_id` exists in both `public/img/highres/` and `public/img/thumbs/`
+- [ ] Add/update goal image assignment via existing admin goal update endpoint (`image_id` field)
+- [ ] Provide clear operator feedback when image files are missing, mismatched, or misnamed
+- [ ] Document operational steps for admins/developers in docs (including migration/update flow)
 
 **Technical Notes:**
-- Per user feedback: Images hosted on R2, not local filesystem
-- Use Workers R2 binding for direct upload
+- Per user decision: Continue with static assets in repository + Workers Assets binding
+- Reuse existing optimization script and `image_id` slug conventions
 
 **NFRs:** NFR_CONST_01
 
@@ -1067,12 +1076,13 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Acceptance Criteria:**
 - [ ] "Add New Goal" button on goals list page
-- [ ] Form: name, distance, description, sort_order, image
-- [ ] Auto-suggest sort_order based on distance (between neighbors)
+- [ ] Form: title, distance, description, special (optional), image_id (optional)
+- [ ] Use strict distance-based ordering; no `sort_order` column
 - [ ] Validation: Distance must be unique or warn if duplicate
 - [ ] Preview where goal will appear in sequence
 - [ ] Save creates new goal record
 - [ ] Existing user progress unaffected (only future calculations include new goal)
+- [ ] Add regression checks for map waypoint rendering and party milestone calculations after insertion
 
 **FRs:** FR_ADM_02
 
@@ -1211,6 +1221,6 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 1. **Epic 1** (#150) - Stories 1.1-1.2 first as blockers, then remaining
 2. **Epic 2** (#151) - After Preact infrastructure
 3. **Epic 3** (#152) - Core Fellowship features
-4. **Epic 5** (#154) - Races, leverages Fellowship patterns
-5. **Epic 4** (#153) - Admin portal, can be parallelized with Epic 3
+4. **Epic 4** (#153) - Admin portal after Fellowship stabilization and architecture alignment
+5. **Epic 5** (#154) - Races, leverages Fellowship + Admin patterns
 

@@ -1,23 +1,32 @@
-# Project Documentation: Walk to Mordor
+# Walk to Mordor Documentation
 
-Welcome to the technical documentation for Walk to Mordor.
+Last updated: 2026-03-06
 
-## Contents
+## Core Docs
 
-- [Project Summary](project-summary.md) - High-level overview and stack.
-- [Architecture](architecture.md) - System design, specific components, and security.
-- [Data Models](data-models.md) - Database schema and relationships.
-- [API Reference](api-reference.md) - Endpoints and usage.
-- [UI Overview](ui-overview.md) - Frontend architecture and components.
-- [Frontend Guide](frontend-guide.md) - Preact islands development guide.
-- [CSS Theming](css-theming.md) - Theme customization and CSS variable system.
-- [Email Setup](email-setup.md) - Resend API configuration.
-- [Email Testing](email-testing.md) - Manual email flow testing guide.
-- [Asset Workflow](asset-workflow.md) - Image optimization pipeline.
-- [UX Design](ux-design.md) - UX design specification and improvement plan.
+- [Project Summary](project-summary.md) - Product scope, runtime, and project layout.
+- [Architecture](architecture.md) - Current production architecture and request flow.
+- [Source Tree Analysis](source-tree-analysis.md) - Annotated folder map and entry points.
+- [Data Models](data-models.md) - D1 schema, relationships, and migration status.
+- [API Reference](api-reference.md) - HTTP routes, auth requirements, and payload contracts.
+
+## Frontend Docs
+
+- [UI Overview](ui-overview.md) - SSR shell, islands, and legacy JS interoperability.
+- [Frontend Guide](frontend-guide.md) - How to build and extend `client/` islands.
+- [CSS Theming](css-theming.md) - Theme variables and styling conventions.
+- [UX Design](ux-design.md) - UX specification and design direction notes.
+
+## Operations Docs
+
+- [Asset Workflow](asset-workflow.md) - Goal image optimization and `image_id` workflow.
+- [Email Setup](email-setup.md) - Resend and email delivery setup.
+- [Email Testing](email-testing.md) - End-to-end email flow validation.
 
 ## Archive
-Old documentation can be found in `docs/archive/`.
+
+Legacy docs are kept in `docs/archive/`.
+
 - [Authentication](archive/AUTHENTICATION.md)
 - [Email Setup](archive/EMAIL_SETUP.md)
 - [Testing](archive/TESTING.md)
