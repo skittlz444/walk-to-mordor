@@ -3,7 +3,7 @@
  *
  * Fetches user's active parties on mount.
  * Hidden if user has no parties.
- * Shows dropdown + visual banner when party is selected.
+ * Shows dropdown + inline member count when party is selected.
  * Persists selection to localStorage.
  * Handles 403/404 fallback to personal view.
  *
@@ -129,7 +129,7 @@ export function PartySelector({ variant = 'journey', onViewChange, onNewMileston
       </div>
 
       {isPartyView.value && selectedParty.value && partyProgress.value && (
-        <span className="party-selector__banner-members">
+        <span className="party-selector__members">
           ({partyProgress.value.member_count} {partyProgress.value.member_count === 1 ? 'member' : 'members'})
         </span>
       )}

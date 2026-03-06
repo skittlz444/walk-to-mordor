@@ -83,7 +83,7 @@ describe('PartySelector', () => {
 
     const { container } = render(<PartySelector />);
 
-    const members = container.querySelector('.party-selector__banner-members');
+    const members = container.querySelector('.party-selector__members');
     expect(members).toBeTruthy();
     expect(members?.textContent).toContain('4 members');
   });
@@ -96,7 +96,7 @@ describe('PartySelector', () => {
 
     const { container } = render(<PartySelector />);
 
-    expect(container.querySelector('.party-selector__banner-members')).toBeNull();
+    expect(container.querySelector('.party-selector__members')).toBeNull();
   });
 
   it('applies journey variant class', () => {
@@ -147,6 +147,6 @@ describe('PartySelector', () => {
 
     const { container } = render(<PartySelector />);
 
-    expect(container.querySelector('.party-selector__banner-members')?.textContent).toContain('1 member');
+    expect(container.querySelector('.party-selector__members')?.textContent).toContain('1 member');
   });
 });

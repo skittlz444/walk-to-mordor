@@ -281,39 +281,7 @@ h1 {
   font-size: 0.85em;
 }
 
-.party-selector__banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4em;
-  margin-top: 0.4em;
-  padding: 0.3em 0.7em;
-  background: rgba(15, 52, 96, 0.6);
-  border-radius: 8px;
-  border: 1px solid rgba(0, 123, 255, 0.3);
-  flex-wrap: wrap;
-}
-
-.party-selector__banner-icon {
-  font-size: 1.1em;
-}
-
-.party-selector__banner-text {
-  color: var(--text-secondary);
-  font-size: 0.85em;
-}
-
-.party-selector__banner-text strong {
-  color: var(--accent-gold);
-}
-
-.party-selector__banner-distance {
-  color: var(--text-primary);
-  font-size: 0.85em;
-  font-weight: bold;
-}
-
-.party-selector__banner-members {
+.party-selector__members {
   color: var(--text-dim);
   font-weight: normal;
   font-size: 0.9em;
@@ -352,11 +320,9 @@ h1 {
   color: var(--text-primary);
 }
 
-/* Map party selection panel (dropdown from toggle button) */
+/* Map party selection panel (dropdown from toggle button) — positioning in map.css */
 .map-party-panel {
   position: absolute;
-  top: calc(1.5rem + 3 * (40px + 0.5rem));
-  right: calc(1.5rem + 40px + 0.5rem);
   background: var(--bg-secondary);
   border: 1px solid var(--accent-gold);
   border-radius: 8px;

@@ -139,6 +139,27 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
     expect(await helpers.count()).toBeGreaterThanOrEqual(1);
   });
 
+  test('Create Fellowship form defaults to "Since Join" distance mode', async ({ page, leader1Token }) => {
+    await loginAs(page, leader1Token, '/party');
+
+    const createBtn = page.locator('button:has-text("Create Fellowship")');
+    await expect(createBtn).toBeVisible({ timeout: 8000 });
+    await createBtn.click();
+
+    // The distance mode dropdown should default to "incremental" (Since Join)
+    const distModeSelect = page.locator('select').filter({ hasText: 'Since Join' });
+    await expect(distModeSelect).toBeVisible();
+    const selectedValue = await distModeSelect.inputValue();
+    expect(selectedValue).toBe('incremental');
+
+    // "Since Join" should be the first option
+    const firstOption = distModeSelect.locator('option').first();
+    const firstOptionValue = await firstOption.getAttribute('value');
+    expect(firstOptionValue).toBe('incremental');
+    const firstOptionText = await firstOption.textContent();
+    expect(firstOptionText).toContain('Since Join');
+  });
+
   test('Create Fellowship with cumulative mode succeeds', async ({ page, leader1Token }) => {
     await loginAs(page, leader1Token, '/party');
 
@@ -808,7 +829,7 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       await dropdown.selectOption(targetValue);
 
       // Member count should appear inline
-      const members = page.locator('.party-selector__banner-members');
+      const members = page.locator('.party-selector__members');
       await expect(members).toBeVisible({ timeout: 8000 });
       const membersText = await members.textContent();
       expect(membersText).toContain('member');
@@ -835,11 +856,11 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       }
       expect(targetValue).not.toBeNull();
       await dropdown.selectOption(targetValue);
-      await expect(page.locator('.party-selector__banner-members')).toBeVisible({ timeout: 8000 });
+      await expect(page.locator('.party-selector__members')).toBeVisible({ timeout: 8000 });
 
       // Switch back to Personal
       await dropdown.selectOption('personal');
-      await expect(page.locator('.party-selector__banner-members')).toBeHidden({ timeout: 8000 });
+      await expect(page.locator('.party-selector__members')).toBeHidden({ timeout: 8000 });
     }
   });
 
@@ -873,7 +894,7 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
       await page.reload();
 
       // Should still be in party view
-      const members = page.locator('.party-selector__banner-members');
+      const members = page.locator('.party-selector__members');
       const membersVisible = await members.isVisible({ timeout: 8000 }).catch(() => false);
       // If member count visible, persistence worked
       if (membersVisible) {
@@ -893,7 +914,7 @@ test.describe('Story 3-6: Party Selector on Journey Page', () => {
     await page.reload();
 
     // Should fall back to Personal (no member count shown)
-    const members = page.locator('.party-selector__banner-members');
+    const members = page.locator('.party-selector__members');
     const membersVisible = await members.isVisible({ timeout: 8000 }).catch(() => false);
     expect(membersVisible).toBeFalsy();
   });
