@@ -251,9 +251,10 @@ describe('AdminGoalAddIsland', () => {
       target: { value: '100' },
     });
 
+    // 100 miles × 1.60934 = 160.934 km → displayed as 160.9 km
     await waitFor(() => {
       const hint = container.querySelector('#distance-hint') as HTMLElement;
-      expect(hint.textContent).toContain('km');
+      expect(hint.textContent).toContain('160.9 km');
     });
   });
 });

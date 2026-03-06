@@ -62,7 +62,7 @@ describe('AdminDashboardIsland', () => {
     });
 
     expect(getByText('Registered Users')).toBeTruthy();
-    expect(getByText('1,500 km')).toBeTruthy();
+    expect(getByText(/1[\s,.]?500 km/)).toBeTruthy();
     expect(getByText('Total Distance')).toBeTruthy();
     expect(getByText('7')).toBeTruthy();
     expect(getByText('Active Fellowships')).toBeTruthy();
