@@ -218,12 +218,6 @@
   pointer-events: auto;
 }
 
-.goal-next-target::before {
-  content: "🎯 Next: ";
-  color: var(--accent-gold, #FFD700);
-  font-weight: bold;
-}
-
 .goal-next-target .distance-remaining {
   display: block;
   color: var(--accent-gold, #FFD700);
@@ -238,8 +232,3 @@
   color: var(--text-gray-medium, #666) !important;
 }
 
-.goal-locked.goal-next-target::before {
-  content: "🔒 Next: ";
-  color: var(--accent-gold, #FFD700);
-  font-weight: bold;
-}

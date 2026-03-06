@@ -132,7 +132,7 @@ export function PartySelector({ variant = 'journey', onViewChange, onNewMileston
         <div className="party-selector__banner">
           <span className="party-selector__banner-icon">👥</span>
           <span className="party-selector__banner-text">
-            Viewing: <strong>{selectedParty.value.name}</strong>
+            <strong>{selectedParty.value.name}</strong>
           </span>
           {partyProgress.value && (
             <span className="party-selector__banner-distance">
