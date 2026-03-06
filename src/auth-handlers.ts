@@ -266,6 +266,9 @@ export async function handleSessionValidation(request: Request, env: any) {
           'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map FROM users WHERE username = ?'
         ).bind(username).first();
         
+        if (!createdUser) {
+          return createErrorResponse('Failed to create or find test user', 500);
+        }
         user = createdUser;
       } else {
         user = results[0];
@@ -373,6 +376,9 @@ export async function validateSession(request: Request, env: any): Promise<
           'SELECT id, username, email, approved FROM users WHERE username = ?'
         ).bind(username).first();
         
+        if (!createdUser) {
+          return { valid: false, error: createErrorResponse('Failed to create or find test user', 500) };
+        }
         user = createdUser;
       } else {
         user = results[0];
