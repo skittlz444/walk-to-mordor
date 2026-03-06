@@ -61,7 +61,7 @@ export async function handleAdminDashboard(_request: Request, env: { DB: D1Datab
         `SELECT COUNT(DISTINCT p.id) as count
          FROM parties p
          INNER JOIN party_members pm ON pm.party_id = p.id
-         WHERE pm.is_active = 1`
+         WHERE pm.status = 'active'`
       ).first<{ count: number }>(),
       env.DB.prepare('SELECT COUNT(*) as count FROM goals').first<{ count: number }>(),
     ]);
