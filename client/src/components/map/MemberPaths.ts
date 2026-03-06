@@ -21,9 +21,9 @@ import {
 } from '../../utils/map-utils';
 import { getMemberColor, getMutedMemberColor } from '../../utils/party-colors';
 
-const BASE_STROKE = 4;
-const MIN_STROKE = 1.5;
-const MAX_STROKE = 8;
+const BASE_STROKE = 6;
+const MIN_STROKE = 2;
+const MAX_STROKE = 10;
 const LINE_CAP: CanvasLineCap = 'round';
 const LINE_JOIN: CanvasLineJoin = 'round';
 
