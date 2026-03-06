@@ -54,7 +54,7 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `POST /api/party/:id/transfer-leadership`
 
 - Admin (requires `validateAdminSession` — 401 if unauthenticated, 403 if non-admin):
-  - `GET|POST|PUT|DELETE /api/admin/*` — prefix guard; all admin API routes require admin auth
+  - `GET|POST|PUT /api/admin/*` — prefix guard; all admin API routes require admin auth
   - `GET /api/admin/dashboard` — returns live system statistics (total users, distance, parties, goals)
   - `GET /api/admin/goals` — paginated, searchable, sortable list of goals
   - `POST /api/admin/goals` — create new goal (title, distance in miles, description, special, image_id) with audit logging
