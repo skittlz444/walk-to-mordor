@@ -506,7 +506,8 @@ function getAllowedMethods(pathname: string): string[] {
       // Admin API routes
       if (pathname.startsWith('/api/admin/')) {
         if (matchRoute(pathname, '/api/admin/goals/:id')) return ['GET', 'PUT'];
-        return ['GET', 'POST', 'PUT', 'DELETE'];
+        // Unknown admin routes — restrict to safe default; the handler will return 404
+        return ['GET'];
       }
       // Parameterized routes
       if (matchRoute(pathname, '/api/party/join/:inviteCode')) {

@@ -2193,8 +2193,7 @@ describe('Admin Handlers', () => {
 
     // ─── Edge-case tests added by QA (Story 4-4) ───
 
-    it('should return 500 when body is null (caught by try/catch)', async () => {
-      // null body causes TypeError accessing .title — caught as 500 internal error
+    it('should return 400 when body is null', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
         mockEnv as unknown as { DB: D1Database },
@@ -2203,12 +2202,12 @@ describe('Admin Handlers', () => {
         1
       );
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
       const body = await response.json();
-      expect(body.error).toBe('Internal server error');
+      expect(body.error).toBe('Invalid request body');
     });
 
-    it('should return 500 when body is undefined (caught by try/catch)', async () => {
+    it('should return 400 when body is undefined', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
         mockEnv as unknown as { DB: D1Database },
@@ -2217,9 +2216,9 @@ describe('Admin Handlers', () => {
         1
       );
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(400);
       const body = await response.json();
-      expect(body.error).toBe('Internal server error');
+      expect(body.error).toBe('Invalid request body');
     });
 
     it('should ignore extra/unknown fields in body', async () => {

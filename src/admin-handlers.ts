@@ -235,6 +235,12 @@ export async function handleAdminGoalUpdate(
 ): Promise<Response> {
   try {
     // 1. Validate body shape and fields
+    if (!body || typeof body !== 'object') {
+      return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     const data = body as Record<string, unknown>;
     const title = typeof data.title === 'string' ? data.title.trim() : '';
     const distance = typeof data.distance === 'number' ? data.distance : NaN;
@@ -398,12 +404,27 @@ export async function handleAdminGoalCreate(
     ).bind(distanceKm, title, description || null, special, imageId).run();
 
     // D1 returns last_row_id in meta
-    const newGoalId = (insertResult.meta as Record<string, unknown>).last_row_id as number;
+    const newGoalId = (insertResult.meta as Record<string, unknown>).last_row_id;
+    if (typeof newGoalId !== 'number' || !Number.isFinite(newGoalId)) {
+      console.error('Failed to retrieve new goal ID from INSERT result');
+      return new Response(JSON.stringify({ error: 'Internal server error while creating goal' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // 4. Fetch created record
     const createdGoal = await env.DB.prepare(
       'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
     ).bind(newGoalId).first<AdminGoalDetail>();
+
+    if (!createdGoal) {
+      console.error('Failed to fetch newly created goal with ID:', newGoalId);
+      return new Response(JSON.stringify({ error: 'Internal server error while creating goal' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // 5. Audit log
     await logAdminAction(env, {
