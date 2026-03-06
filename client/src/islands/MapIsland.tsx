@@ -727,6 +727,10 @@ export function MapIsland() {
     }
 
     if (!progress || !pathLayerRef.current) {
+      // Returning to personal view — show the completed journey path again
+      if (pathNodesRef.current) {
+        pathNodesRef.current.completedLine.visible(true);
+      }
       pathLayerRef.current?.batchDraw();
       return;
     }
@@ -748,6 +752,11 @@ export function MapIsland() {
         memberData,
         currentScale.value,
       );
+
+      // Hide the completed journey path — member segments already cover it
+      if (pathNodesRef.current) {
+        pathNodesRef.current.completedLine.visible(false);
+      }
     }
 
     pathLayerRef.current.batchDraw();
