@@ -813,7 +813,7 @@ describe('Admin Handlers', () => {
         expect.stringContaining('SUM(distance)')
       );
       expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
-        expect.stringContaining("pm.status = 'active'")
+        expect.stringMatching(/pm\.status\s*=\s*'active'/)
       );
       expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
         expect.stringContaining('FROM goals')
