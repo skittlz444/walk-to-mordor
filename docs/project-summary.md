@@ -42,6 +42,6 @@ Note: legacy `/wtm` aliases are deprecated and should not be reintroduced.
 
 - Language: TypeScript (strict mode on root + client configs).
 - Build/deploy: `wrangler` + Vite (`npm run build`, `npm run deploy`).
-- Unit/integration tests: Jest + Supertest (`npm test`, `npm run test:coverage`).
+- Unit/integration tests: Jest (`npm test`, `npm run test:coverage`).
 - Client tests: Vitest (`npm run test:client`, `npm run test:client:coverage`).
 - UI tests: Playwright (`npm run test:ui`, `npm run test:ui:all`).

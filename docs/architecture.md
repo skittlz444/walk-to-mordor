@@ -110,7 +110,7 @@ Refer to `docs/data-models.md` for full schema details and constraints.
 
 ## Testing Architecture
 
-- Backend: Jest + Supertest
+- Backend: Jest (direct Worker/handler tests, no Supertest)
 - Client islands/stores/utils: Vitest
 - Browser E2E: Playwright
 

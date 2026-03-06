@@ -41,6 +41,16 @@ Authenticates a user and returns session token payload consumed by the client.
 
 Invalidates current session.
 
+**Request body:**
+
+```json
+{
+  "sessionId": "<session-token>"
+}
+```
+
+Returns `400` if `sessionId` is missing from the body.
+
 ### `GET /api/session`
 
 Returns current session user context.
