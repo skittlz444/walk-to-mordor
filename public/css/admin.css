@@ -937,12 +937,12 @@
   padding: 1rem;
   background: var(--bg-secondary, #1a1a2e);
   border-radius: 8px;
-  border: 1px solid var(--border-color, #2a2a4a);
+  border: 1px solid var(--border-gray);
   margin-bottom: 1rem;
 }
 
 .admin-image-section > label {
-  color: var(--accent-gold, #d4a832);
+  color: var(--accent-gold);
   font-weight: 600;
   font-size: 0.9rem;
 }
@@ -958,9 +958,9 @@
 }
 
 .admin-image-section__browse-btn {
-  background: var(--bg-tertiary, #16213e);
-  color: var(--text-primary, #e0e0e0);
-  border: 1px solid var(--border-color, #2a2a4a);
+  background: var(--bg-dark-alt);
+  color: var(--text-primary);
+  border: 1px solid var(--border-gray);
   border-radius: 6px;
   padding: 0.5rem 1rem;
   cursor: pointer;
@@ -970,9 +970,9 @@
 }
 
 .admin-image-section__browse-btn:hover {
-  background: var(--accent-teal, #2ecc71);
+  background: var(--accent-teal);
   color: #fff;
-  border-color: var(--accent-teal, #2ecc71);
+  border-color: var(--accent-teal);
 }
 
 .admin-image-section__status-row {
@@ -990,19 +990,19 @@
 }
 
 .admin-image-status.found {
-  color: var(--accent-teal, #2ecc71);
+  color: var(--accent-teal);
 }
 
 .admin-image-status.missing {
-  color: var(--accent-gold, #d4a832);
+  color: var(--accent-gold);
 }
 
 .admin-image-status.none {
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
 }
 
 .admin-image-status.loading {
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
 }
 
 /* Image preview */
@@ -1016,11 +1016,11 @@
 .admin-image-preview img {
   max-width: 200px;
   border-radius: 6px;
-  border: 1px solid var(--border-color, #2a2a4a);
+  border: 1px solid var(--border-gray);
 }
 
 .admin-image-preview__fullsize {
-  color: var(--accent-teal, #2ecc71);
+  color: var(--accent-teal);
   font-size: 0.85rem;
   text-decoration: none;
   display: inline-flex;
@@ -1035,10 +1035,10 @@
 /* Image warning */
 .admin-image-warning {
   background: rgba(212, 168, 50, 0.1);
-  border: 1px solid var(--accent-gold, #d4a832);
+  border: 1px solid var(--accent-gold);
   border-radius: 6px;
   padding: 0.75rem 1rem;
-  color: var(--accent-gold, #d4a832);
+  color: var(--accent-gold);
   font-size: 0.85rem;
   display: flex;
   align-items: flex-start;
@@ -1049,11 +1049,14 @@
 .admin-image-warning__link {
   background: none;
   border: none;
-  color: var(--accent-teal, #2ecc71);
+  color: var(--accent-teal);
   cursor: pointer;
   font-size: 0.85rem;
-  padding: 0;
+  padding: 0.25rem 0;
   text-decoration: underline;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .admin-image-warning__link:hover {
@@ -1062,17 +1065,18 @@
 
 /* Inline help panel */
 .admin-image-help {
-  border-top: 1px solid var(--border-color, #2a2a4a);
+  border-top: 1px solid var(--border-gray);
   padding-top: 0.75rem;
 }
 
 .admin-image-help__toggle {
   background: none;
   border: none;
-  color: var(--accent-teal, #2ecc71);
+  color: var(--accent-teal);
   cursor: pointer;
   font-size: 0.85rem;
-  padding: 0;
+  padding: 0.5rem 0;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -1085,10 +1089,10 @@
 .admin-image-help__content {
   margin-top: 0.75rem;
   padding: 0.75rem 1rem;
-  background: var(--bg-tertiary, #16213e);
+  background: var(--bg-dark-alt);
   border-radius: 6px;
   font-size: 0.85rem;
-  color: var(--text-secondary, #ccc);
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
@@ -1129,8 +1133,8 @@
 }
 
 .admin-image-browser__content {
-  background: var(--bg-primary, #0a0a1a);
-  border: 1px solid var(--border-color, #2a2a4a);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gray);
   border-radius: 10px;
   width: 100%;
   max-width: 900px;
@@ -1145,19 +1149,19 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border-color, #2a2a4a);
+  border-bottom: 1px solid var(--border-gray);
 }
 
 .admin-image-browser__header h3 {
   margin: 0;
-  color: var(--accent-gold, #d4a832);
+  color: var(--accent-gold);
   font-size: 1.1rem;
 }
 
 .admin-image-browser__close {
   background: none;
   border: none;
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
   font-size: 1.5rem;
   cursor: pointer;
   line-height: 1;
@@ -1165,12 +1169,12 @@
 }
 
 .admin-image-browser__close:hover {
-  color: var(--status-error, #e74c3c);
+  color: var(--status-error);
 }
 
 .admin-image-browser__search {
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--border-color, #2a2a4a);
+  border-bottom: 1px solid var(--border-gray);
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -1178,21 +1182,21 @@
 
 .admin-image-browser__search-input {
   flex: 1;
-  background: var(--bg-secondary, #1a1a2e);
-  border: 1px solid var(--border-color, #2a2a4a);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gray);
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
-  color: var(--text-primary, #e0e0e0);
+  color: var(--text-primary);
   font-size: 0.9rem;
 }
 
 .admin-image-browser__search-input:focus {
   outline: none;
-  border-color: var(--accent-teal, #2ecc71);
+  border-color: var(--accent-teal);
 }
 
 .admin-image-browser__count {
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
   font-size: 0.8rem;
   white-space: nowrap;
 }
@@ -1209,8 +1213,8 @@
 
 /* Individual image tile */
 .admin-image-tile {
-  background: var(--bg-secondary, #1a1a2e);
-  border: 2px solid var(--border-color, #2a2a4a);
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-gray);
   border-radius: 8px;
   padding: 0.5rem;
   cursor: pointer;
@@ -1224,12 +1228,12 @@
 }
 
 .admin-image-tile:hover {
-  border-color: var(--accent-teal, #2ecc71);
+  border-color: var(--accent-teal);
   background: rgba(46, 204, 113, 0.05);
 }
 
 .admin-image-tile.selected {
-  border-color: var(--accent-teal, #2ecc71);
+  border-color: var(--accent-teal);
   background: rgba(46, 204, 113, 0.1);
 }
 
@@ -1246,7 +1250,7 @@
 
 .admin-image-tile__label {
   font-size: 0.72rem;
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1257,7 +1261,7 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  background: var(--accent-gold, #d4a832);
+  background: var(--accent-gold);
   color: #000;
   font-size: 0.6rem;
   font-weight: 700;
@@ -1267,7 +1271,7 @@
 }
 
 .admin-image-tile__badge--current {
-  background: var(--accent-teal, #2ecc71);
+  background: var(--accent-teal);
 }
 
 /* ===== Responsive: Image browser mobile ===== */

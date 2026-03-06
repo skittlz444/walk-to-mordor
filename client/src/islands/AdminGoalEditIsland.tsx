@@ -232,6 +232,14 @@ export function AdminGoalEditIsland() {
           image_id: imageId.trim() || null,
         }),
       });
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
+      if (res.status === 403) {
+        window.location.href = '/journey';
+        return;
+      }
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to save goal');
