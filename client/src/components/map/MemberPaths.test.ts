@@ -29,8 +29,14 @@ vi.mock('../../data/paths/fellowship-path', () => ({
 }));
 
 vi.mock('../../utils/map-utils', () => ({
-  calculatePathSegment: vi.fn(() => [0, 0, 50, 0, 100, 0]),
-  dynamicStrokeWidth: vi.fn((_base, _scale, _min, _max) => 4),
+  calculateCutoffPoint: vi.fn(() => ({
+    completedPoints: [0, 0, 50, 0, 100, 0, 150, 50],
+    futurePoints: [150, 50, 200, 100],
+    userPosition: { x: 150, y: 50 },
+  })),
+  computePathLength: vi.fn(() => 200),
+  slicePathByPixelDistance: vi.fn(() => [0, 0, 50, 0, 100, 0]),
+  dynamicStrokeWidth: vi.fn((_base: number, _scale: number, _min: number, _max: number) => 4),
 }));
 
 vi.mock('../../utils/party-colors', () => ({
@@ -41,6 +47,7 @@ vi.mock('../../utils/party-colors', () => ({
 import Konva from 'konva';
 import { createMemberPaths, updateMemberPaths, type MemberPathData } from './MemberPaths';
 import { getMemberColor, getMutedMemberColor } from '../../utils/party-colors';
+import { slicePathByPixelDistance, calculateCutoffPoint, computePathLength } from '../../utils/map-utils';
 
 describe('MemberPaths', () => {
   let mockLayer: { add: ReturnType<typeof vi.fn>; batchDraw: ReturnType<typeof vi.fn> };
@@ -132,6 +139,57 @@ describe('MemberPaths', () => {
       for (const fn of destroyFns) {
         expect(fn).toHaveBeenCalled();
       }
+      expect(result.lines).toHaveLength(0);
+    });
+
+    it('computes proportional pixel segments for each member', () => {
+      const members: MemberPathData[] = [
+        { userId: 1, displayName: 'Alice', distanceMiles: 10, colorIndex: 0, isDeparted: false },
+        { userId: 2, displayName: 'Bob', distanceMiles: 5, colorIndex: 1, isDeparted: false },
+      ];
+
+      createMemberPaths(mockLayer as unknown as Konva.Layer, members, 1.0);
+
+      // Total miles = 15, totalPixelLength = 200 (from mock)
+      // Alice: 10/15 * 200 ≈ 133.33 px → slice(0, 133.33)
+      // Bob:    5/15 * 200 ≈  66.67 px → slice(133.33, 200)
+      expect(calculateCutoffPoint).toHaveBeenCalledTimes(1);
+      expect(computePathLength).toHaveBeenCalledTimes(1);
+      expect(slicePathByPixelDistance).toHaveBeenCalledTimes(2);
+
+      const calls = vi.mocked(slicePathByPixelDistance).mock.calls;
+      // First member starts at 0
+      expect(calls[0][1]).toBeCloseTo(0, 5);
+      expect(calls[0][2]).toBeCloseTo(200 * 10 / 15, 2);
+      // Second member starts where first ended
+      expect(calls[1][1]).toBeCloseTo(200 * 10 / 15, 2);
+      expect(calls[1][2]).toBeCloseTo(200, 2);
+    });
+
+    it('returns empty lines when total distance is zero', () => {
+      const members: MemberPathData[] = [
+        { userId: 1, displayName: 'Alice', distanceMiles: 0, colorIndex: 0, isDeparted: false },
+      ];
+
+      const result = createMemberPaths(mockLayer as unknown as Konva.Layer, members, 1.0);
+
+      expect(result.lines).toHaveLength(0);
+      expect(mockLayer.add).not.toHaveBeenCalled();
+    });
+
+    it('returns empty lines when completed path is too short', () => {
+      vi.mocked(calculateCutoffPoint).mockReturnValueOnce({
+        completedPoints: [0, 0],
+        futurePoints: [],
+        userPosition: { x: 0, y: 0 },
+      });
+
+      const members: MemberPathData[] = [
+        { userId: 1, displayName: 'Alice', distanceMiles: 10, colorIndex: 0, isDeparted: false },
+      ];
+
+      const result = createMemberPaths(mockLayer as unknown as Konva.Layer, members, 1.0);
+
       expect(result.lines).toHaveLength(0);
     });
   });

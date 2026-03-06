@@ -2,14 +2,23 @@
  * MemberPaths – renders color-coded Konva.Line segments for each party member.
  *
  * Member segments are stacked end-to-end along the shared path so each
- * contribution occupies its own contiguous section.
+ * contribution occupies its own contiguous section.  Segments are split
+ * by **pixel proportion** (not geographic miles) so that every member's
+ * visual segment length matches their contribution ratio regardless of
+ * the underlying anchor-to-pixel density of the path data.
+ *
  * Colors are assigned deterministically via the party-colors palette.
  * Departed members use muted colors.
  */
 
 import Konva from 'konva';
 import { fellowshipPath } from '../../data/paths/fellowship-path';
-import { calculatePathSegment, dynamicStrokeWidth } from '../../utils/map-utils';
+import {
+  calculateCutoffPoint,
+  computePathLength,
+  slicePathByPixelDistance,
+  dynamicStrokeWidth,
+} from '../../utils/map-utils';
 import { getMemberColor, getMutedMemberColor } from '../../utils/party-colors';
 
 const BASE_STROKE = 4;
@@ -34,6 +43,10 @@ export interface MemberPathNodes {
 
 /**
  * Create Konva.Line nodes for each member's contribution on the path layer.
+ *
+ * The completed path (0 → total miles) is split into segments whose pixel
+ * lengths are proportional to each member's contribution, ensuring visually
+ * balanced coloring regardless of the path's anchor density.
  */
 export function createMemberPaths(
   layer: Konva.Layer,
@@ -43,23 +56,38 @@ export function createMemberPaths(
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
   const lines: Konva.Line[] = [];
 
-  // Calculate cumulative offsets so each member's segment starts
-  // where the previous one ended (stacked along the path).
-  let cumOffset = 0;
-  const segments = members.map(member => {
-    const start = cumOffset;
-    const end = cumOffset + member.distanceMiles;
-    cumOffset = end;
-    return { member, start, end };
-  });
+  // Calculate total distance to get the full completed path
+  const totalMiles = members.reduce((sum, m) => sum + m.distanceMiles, 0);
+  if (totalMiles <= 0) {
+    return { lines, destroy() { lines.length = 0; } };
+  }
 
-  for (const { member, start, end } of segments) {
+  // Get the completed path from 0 to the total party distance
+  const { completedPoints } = calculateCutoffPoint(fellowshipPath, totalMiles);
+  if (completedPoints.length < 4) {
+    return { lines, destroy() { lines.length = 0; } };
+  }
+
+  // Compute total pixel length of the completed path
+  const totalPixelLength = computePathLength(completedPoints);
+  if (totalPixelLength <= 0) {
+    return { lines, destroy() { lines.length = 0; } };
+  }
+
+  // Split the completed path proportionally by pixel distance
+  let cumPixels = 0;
+
+  for (const member of members) {
     if (member.distanceMiles <= 0) continue;
 
-    const segmentPoints = calculatePathSegment(
-      fellowshipPath,
-      start,
-      end,
+    const startPx = cumPixels;
+    const pixelShare = (member.distanceMiles / totalMiles) * totalPixelLength;
+    cumPixels += pixelShare;
+
+    const segmentPoints = slicePathByPixelDistance(
+      completedPoints,
+      startPx,
+      cumPixels,
     );
 
     if (segmentPoints.length === 0) continue;

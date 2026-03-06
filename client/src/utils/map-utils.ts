@@ -337,5 +337,69 @@ export function markerScale(
   return dynamicStrokeWidth(baseStroke, stageScale, minStroke, maxStroke) / baseStroke;
 }
 
+/**
+ * Slice a flat [x,y,...] polyline by cumulative geometric (pixel) distance.
+ * Returns the sub-path between startPx and endPx (inclusive interpolated endpoints).
+ *
+ * Used to split a completed path into proportional member segments so that
+ * each member's visual segment length matches their contribution ratio,
+ * regardless of the underlying anchor-to-pixel density.
+ *
+ * @param points   Flat [x, y, …] array of the polyline.
+ * @param startPx  Start pixel distance from the polyline's first point.
+ * @param endPx    End pixel distance from the polyline's first point.
+ * @returns Flat [x, y, …] sub-path between startPx and endPx.
+ */
+export function slicePathByPixelDistance(
+  points: number[],
+  startPx: number,
+  endPx: number,
+): number[] {
+  if (points.length < 4 || endPx <= startPx) return [];
+
+  const result: number[] = [];
+  let accumulated = 0;
+
+  for (let i = 2; i < points.length; i += 2) {
+    const x0 = points[i - 2];
+    const y0 = points[i - 1];
+    const x1 = points[i];
+    const y1 = points[i + 1];
+    const segLen = Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
+
+    if (segLen <= 0) {
+      continue;
+    }
+
+    const segStart = accumulated;
+    const segEnd = accumulated + segLen;
+
+    const overlapStart = Math.max(startPx, segStart);
+    const overlapEnd = Math.min(endPx, segEnd);
+
+    if (overlapEnd > overlapStart) {
+      const t0 = (overlapStart - segStart) / segLen;
+      const t1 = (overlapEnd - segStart) / segLen;
+
+      const sx = x0 + (x1 - x0) * t0;
+      const sy = y0 + (y1 - y0) * t0;
+      const ex = x0 + (x1 - x0) * t1;
+      const ey = y0 + (y1 - y0) * t1;
+
+      if (result.length === 0) {
+        result.push(sx, sy);
+      }
+      result.push(ex, ey);
+    }
+
+    accumulated = segEnd;
+    if (accumulated >= endPx) {
+      break;
+    }
+  }
+
+  return result;
+}
+
 /** Conversion factor from miles to kilometres. */
 export const MILES_TO_KM = 1.60934;
