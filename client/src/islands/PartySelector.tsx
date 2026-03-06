@@ -128,21 +128,10 @@ export function PartySelector({ variant = 'journey', onViewChange, onNewMileston
         )}
       </div>
 
-      {isPartyView.value && selectedParty.value && (
-        <div className="party-selector__banner">
-          <span className="party-selector__banner-icon">👥</span>
-          <span className="party-selector__banner-text">
-            Viewing: <strong>{selectedParty.value.name}</strong>
-          </span>
-          {partyProgress.value && (
-            <span className="party-selector__banner-distance">
-              {partyProgress.value.total_distance.toFixed(2)} km
-              <span className="party-selector__banner-members">
-                ({partyProgress.value.member_count} {partyProgress.value.member_count === 1 ? 'member' : 'members'})
-              </span>
-            </span>
-          )}
-        </div>
+      {isPartyView.value && selectedParty.value && partyProgress.value && (
+        <span className="party-selector__banner-members">
+          ({partyProgress.value.member_count} {partyProgress.value.member_count === 1 ? 'member' : 'members'})
+        </span>
       )}
     </div>
   );

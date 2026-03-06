@@ -355,8 +355,8 @@ h1 {
 /* Map party selection panel (dropdown from toggle button) */
 .map-party-panel {
   position: absolute;
-  top: 12px;
-  right: 60px;
+  top: calc(1.5rem + 3 * (40px + 0.5rem));
+  right: calc(1.5rem + 40px + 0.5rem);
   background: var(--bg-secondary);
   border: 1px solid var(--accent-gold);
   border-radius: 8px;

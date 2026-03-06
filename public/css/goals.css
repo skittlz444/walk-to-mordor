@@ -219,9 +219,7 @@
 }
 
 .goal-next-target::before {
-  content: "🎯 Next: ";
-  color: var(--accent-gold, #FFD700);
-  font-weight: bold;
+  content: none;
 }
 
 .goal-next-target .distance-remaining {
@@ -239,7 +237,5 @@
 }
 
 .goal-locked.goal-next-target::before {
-  content: "🔒 Next: ";
-  color: var(--accent-gold, #FFD700);
-  font-weight: bold;
+  content: none;
 }
