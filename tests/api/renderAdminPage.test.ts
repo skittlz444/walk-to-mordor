@@ -110,6 +110,29 @@ describe('renderAdminPage', () => {
     });
   });
 
+  describe('meta and scripts', () => {
+    it('should include meta description for admin dashboard', () => {
+      expect(html).toContain('content="Admin dashboard for Walk to Mordor"');
+    });
+
+    it('should include Preact islands script module', () => {
+      expect(html).toContain('src="/js/client/islands.js"');
+      expect(html).toContain('type="module"');
+    });
+
+    it('should include islands CSS', () => {
+      expect(html).toContain('/js/client/islands.css');
+    });
+
+    it('should include Font Awesome stylesheet', () => {
+      expect(html).toContain('font-awesome');
+    });
+
+    it('should include main.css stylesheet', () => {
+      expect(html).toContain('/css/main.css');
+    });
+  });
+
   describe('accessibility', () => {
     it('should use aria-hidden on decorative icons', () => {
       // All Font Awesome icons should be aria-hidden

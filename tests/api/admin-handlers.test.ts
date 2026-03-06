@@ -2396,22 +2396,32 @@ describe('Admin Handlers', () => {
       expect(body.error).toBe('Description is required');
     });
 
-    it('should pass validation for Infinity distance (isNaN is false, > 0 is true)', async () => {
-      // Infinity passes the isNaN/> 0 check; this tests that the handler doesn't crash
-      const bodyWithInfinity = { ...validBody, distance: Infinity };
-      setupUpdateDb({ updated: { ...existingGoal, distance: Infinity } });
-      mockRequest.headers.get.mockReturnValue('1.2.3.4');
-
+    it('should return 400 for Infinity distance', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
         mockEnv as unknown as { DB: D1Database },
         42,
-        bodyWithInfinity,
+        { ...validBody, distance: Infinity },
         1
       );
 
-      // Infinity passes validation → 200 (DB stores it)
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
+    });
+
+    it('should return 400 for negative Infinity distance', async () => {
+      const response = await handleAdminGoalUpdate(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        42,
+        { ...validBody, distance: -Infinity },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Distance must be a positive number');
     });
 
     it('should produce audit log details with old/new values for changed fields', async () => {

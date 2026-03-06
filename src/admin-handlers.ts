@@ -254,7 +254,7 @@ export async function handleAdminGoalUpdate(
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    if (isNaN(distance) || distance <= 0) {
+    if (isNaN(distance) || !isFinite(distance) || distance <= 0) {
       return new Response(JSON.stringify({ error: 'Distance must be a positive number' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
