@@ -70,6 +70,7 @@ describe('AdminUsersListIsland', () => {
     expect(getByText('Walker')).toBeTruthy();
     expect(getByText('The Ring Bearers')).toBeTruthy();
     expect(container.querySelector('td[data-label="Support Actions"]')).toBeTruthy();
+    expect(container.querySelectorAll('.admin-user-actions .admin-btn').length).toBe(4);
   });
 
   it('redirects to /login on 401', async () => {

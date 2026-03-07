@@ -83,6 +83,8 @@ describe('AdminMetricsIsland', () => {
     expect(getByText('Active Walkers (7 days)')).toBeTruthy();
     expect(getByText('Milestones Unlocked')).toBeTruthy();
     expect(getByText('1. frodo')).toBeTruthy();
+    expect(getByText('km/day')).toBeTruthy();
+    expect(getByText('2.5 km')).toBeTruthy();
     expect(container.querySelectorAll('.admin-timeline__column').length).toBe(30);
     expect(container.querySelectorAll('.admin-timeline__track').length).toBe(30);
     expect(container.querySelector('.admin-timeline__label--hidden')).toBeTruthy();

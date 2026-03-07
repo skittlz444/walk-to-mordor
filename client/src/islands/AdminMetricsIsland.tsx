@@ -168,6 +168,16 @@ export function AdminMetricsIsland() {
     ];
   }, [summary]);
 
+  const timelineScale = useMemo(() => {
+    if (!timeline) return [];
+    const maxDistance = timeline.maxDistanceKm > 0 ? timeline.maxDistanceKm : 1;
+    return [
+      `${maxDistance.toFixed(1)} km`,
+      `${(maxDistance / 2).toFixed(1)} km`,
+      '0.0 km',
+    ];
+  }, [timeline]);
+
   if (loading && !summary && !timeline) {
     return (
       <section className="admin-metrics">
@@ -290,30 +300,41 @@ export function AdminMetricsIsland() {
             </div>
           </div>
 
-          <div className="admin-timeline-wrap">
-            <div className="admin-timeline" role="img" aria-label="Group activity over the last 30 days">
-              {timeline?.points.map((point, index) => {
-                const maxDistance = timeline.maxDistanceKm > 0 ? timeline.maxDistanceKm : 1;
-                const height = point.distance_km > 0 ? Math.max((point.distance_km / maxDistance) * 100, 6) : 4;
-                const showLabel = index % TIMELINE_LABEL_INTERVAL === 0 || index === timeline.points.length - 1;
-                return (
-                  <div key={point.date} className="admin-timeline__column">
-                    <div className="admin-timeline__track">
-                      <div
-                        className="admin-timeline__bar"
-                        style={{ height: `${height}%` }}
-                        title={`${point.date}: ${formatDistance(point.distance_km)}`}
-                      ></div>
+          <div className="admin-timeline-chart">
+            <div className="admin-timeline-axis" aria-hidden="true">
+              <span className="admin-timeline-axis__title">km/day</span>
+              <div className="admin-timeline-axis__ticks">
+                {timelineScale.map((tick) => (
+                  <span key={tick}>{tick}</span>
+                ))}
+              </div>
+            </div>
+
+            <div className="admin-timeline-wrap">
+              <div className="admin-timeline" role="img" aria-label="Group activity over the last 30 days">
+                {timeline?.points.map((point, index) => {
+                  const maxDistance = timeline.maxDistanceKm > 0 ? timeline.maxDistanceKm : 1;
+                  const height = point.distance_km > 0 ? Math.max((point.distance_km / maxDistance) * 100, 6) : 4;
+                  const showLabel = index % TIMELINE_LABEL_INTERVAL === 0 || index === timeline.points.length - 1;
+                  return (
+                    <div key={point.date} className="admin-timeline__column">
+                      <div className="admin-timeline__track">
+                        <div
+                          className="admin-timeline__bar"
+                          style={{ height: `${height}%` }}
+                          title={`${point.date}: ${formatDistance(point.distance_km)}`}
+                        ></div>
+                      </div>
+                      <span
+                        className={`admin-timeline__label${showLabel ? '' : ' admin-timeline__label--hidden'}`}
+                        aria-hidden={!showLabel}
+                      >
+                        {showLabel ? point.date.slice(ISO_MONTH_DAY_START_INDEX) : ''}
+                      </span>
                     </div>
-                    <span
-                      className={`admin-timeline__label${showLabel ? '' : ' admin-timeline__label--hidden'}`}
-                      aria-hidden={!showLabel}
-                    >
-                      {showLabel ? point.date.slice(ISO_MONTH_DAY_START_INDEX) : ''}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
