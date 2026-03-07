@@ -202,7 +202,7 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
       LEFT JOIN (
         SELECT
           pm.user_id,
-          GROUP_CONCAT(p.name, '||') as fellowship_names
+          JSON_GROUP_ARRAY(p.name) as fellowship_names
         FROM party_members pm
         INNER JOIN parties p ON p.id = pm.party_id
         WHERE pm.status = 'active' AND p.dissolved_at IS NULL
@@ -231,7 +231,7 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
       is_admin: row.is_admin === 1,
       total_distance_km: Number(((row.total_distance_km ?? 0)).toFixed(1)),
       last_active_date: row.last_active_date,
-      fellowship_names: row.fellowship_names ? row.fellowship_names.split('||') : [],
+      fellowship_names: row.fellowship_names ? JSON.parse(row.fellowship_names) as string[] : [],
     }));
 
     const response: AdminUsersListResponse = {

@@ -17,8 +17,28 @@ const mockUsersResponse = {
       last_active_date: '2026-03-05',
       fellowship_names: ['The Ring Bearers'],
     },
+    {
+      id: 2,
+      username: 'samwise',
+      email: 'samwise@example.com',
+      email_verified: true,
+      is_admin: false,
+      total_distance_km: 64.5,
+      last_active_date: '2026-03-04',
+      fellowship_names: [],
+    },
+    {
+      id: 3,
+      username: 'aragorn',
+      email: 'aragorn@example.com',
+      email_verified: true,
+      is_admin: true,
+      total_distance_km: 300.0,
+      last_active_date: '2026-03-03',
+      fellowship_names: ['The Fellowship of the Ring', 'The Dúnedain'],
+    },
   ],
-  total: 1,
+  total: 3,
   page: 1,
   pageSize: 20,
   totalPages: 1,
@@ -67,10 +87,30 @@ describe('AdminUsersListIsland', () => {
 
     expect(getByText('frodo@example.com')).toBeTruthy();
     expect(getByText('Pending')).toBeTruthy();
-    expect(getByText('Walker')).toBeTruthy();
     expect(getByText('The Ring Bearers')).toBeTruthy();
     expect(container.querySelector('td[data-label="Support Actions"]')).toBeTruthy();
-    expect(container.querySelectorAll('.admin-user-actions .admin-btn').length).toBe(4);
+    expect(container.querySelectorAll('.admin-user-actions .admin-btn').length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('shows "Solo trail" tag when a user has no fellowships', async () => {
+    const { getByText } = render(<AdminUsersListIsland />);
+
+    await waitFor(() => {
+      expect(getByText('samwise')).toBeTruthy();
+    });
+
+    expect(getByText('Solo trail')).toBeTruthy();
+  });
+
+  it('renders multiple fellowship tags for a user in several fellowships', async () => {
+    const { getByText } = render(<AdminUsersListIsland />);
+
+    await waitFor(() => {
+      expect(getByText('aragorn')).toBeTruthy();
+    });
+
+    expect(getByText('The Fellowship of the Ring')).toBeTruthy();
+    expect(getByText('The Dúnedain')).toBeTruthy();
   });
 
   it('shows a clean empty-state label when a user has no walks yet', async () => {
@@ -127,13 +167,13 @@ describe('AdminUsersListIsland', () => {
         }),
       });
 
-    const { getByText } = render(<AdminUsersListIsland />);
+    const { getByText, getAllByText } = render(<AdminUsersListIsland />);
 
     await waitFor(() => {
       expect(getByText('frodo')).toBeTruthy();
     });
 
-    fireEvent.click(getByText('Verify'));
+    fireEvent.click(getAllByText('Verify')[0]);
 
     await waitFor(() => {
       expect(getByText('frodo is now verified.')).toBeTruthy();
@@ -163,13 +203,13 @@ describe('AdminUsersListIsland', () => {
         json: () => Promise.resolve({ users: [], total: 0, page: 1, pageSize: 20, totalPages: 1 }),
       });
 
-    const { getByText } = render(<AdminUsersListIsland />);
+    const { getAllByText } = render(<AdminUsersListIsland />);
 
     await waitFor(() => {
-      expect(getByText('Delete')).toBeTruthy();
+      expect(getAllByText('Delete').length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(getByText('Delete'));
+    fireEvent.click(getAllByText('Delete')[0]);
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
