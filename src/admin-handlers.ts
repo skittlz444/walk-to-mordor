@@ -482,13 +482,13 @@ export async function handleAdminUserDelete(
       });
     }
 
-    await env.DB.prepare(
-      `DELETE FROM admin_audit_log
-       WHERE admin_user_id = ?
-          OR (target_type = 'user' AND target_id = ?)`
-    ).bind(userId, userId).run();
-
-    const deleteResult = await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
+    const [, deleteResult] = await env.DB.batch([
+      env.DB.prepare(
+        `DELETE FROM admin_audit_log
+         WHERE admin_user_id = ?`
+      ).bind(userId),
+      env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
+    ]);
     const deletedRows = Number((deleteResult.meta as Record<string, unknown>).changes ?? 0);
 
     if (deletedRows === 0) {

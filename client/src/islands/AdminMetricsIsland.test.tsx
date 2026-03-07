@@ -89,6 +89,45 @@ describe('AdminMetricsIsland', () => {
     expect(container.querySelectorAll('.admin-timeline-svg__bar').length).toBe(30);
   });
 
+  it('keeps zero-distance days at zero height and clamps tiny bars inside the plot area', async () => {
+    mockFetch.mockReset();
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(summaryResponse),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          points: [
+            { date: '2026-02-01', distance_km: 0 },
+            { date: '2026-02-02', distance_km: 0.01 },
+            { date: '2026-02-03', distance_km: 10 },
+          ],
+          maxDistanceKm: 10,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(leaderboardResponse),
+      });
+
+    const { container, getByText } = render(<AdminMetricsIsland />);
+
+    await waitFor(() => {
+      expect(getByText('Distance (km)')).toBeTruthy();
+    });
+
+    const bars = Array.from(container.querySelectorAll<SVGRectElement>('.admin-timeline-svg__bar'));
+    expect(bars).toHaveLength(3);
+    expect(bars[0].getAttribute('height')).toBe('0');
+    expect(Number(bars[1].getAttribute('height'))).toBe(2);
+    expect(Number(bars[1].getAttribute('y'))).toBe(216);
+  });
+
   it('redirects to /journey on 403', async () => {
     mockFetch.mockReset();
     mockFetch.mockResolvedValueOnce({

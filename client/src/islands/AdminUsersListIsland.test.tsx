@@ -73,6 +73,25 @@ describe('AdminUsersListIsland', () => {
     expect(container.querySelectorAll('.admin-user-actions .admin-btn').length).toBe(4);
   });
 
+  it('shows a clean empty-state label when a user has no walks yet', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        ...mockUsersResponse,
+        users: [{ ...mockUsersResponse.users[0], last_active_date: null }],
+      }),
+    });
+
+    const { getByText, queryByText } = render(<AdminUsersListIsland />);
+
+    await waitFor(() => {
+      expect(getByText('No walks yet')).toBeTruthy();
+    });
+
+    expect(queryByText('Last active No walks yet')).toBeNull();
+  });
+
   it('redirects to /login on 401', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

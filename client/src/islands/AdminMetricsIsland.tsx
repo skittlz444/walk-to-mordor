@@ -392,31 +392,41 @@ export function AdminMetricsIsland() {
                   y2={timelineChart?.axisBottom ?? TIMELINE_MARGIN.top}
                 />
 
-                {timelineChart?.bars.map(({ point, x, y, barHeight, barWidth, showLabel, labelX }) => (
-                  <g key={point.date}>
-                    <rect
-                      className="admin-timeline-svg__bar"
-                      x={x}
-                      y={y}
-                      width={barWidth}
-                      height={Math.max(barHeight, TIMELINE_MIN_BAR_HEIGHT)}
-                      rx="1.5"
-                      ry="1.5"
-                    >
-                      <title>{`${point.date}: ${formatDistance(point.distance_km)}`}</title>
-                    </rect>
-                    {showLabel ? (
-                      <text
-                        className="admin-timeline-svg__label"
-                        x={labelX}
-                        y={TIMELINE_SVG_HEIGHT - 18}
-                        textAnchor="middle"
+                {timelineChart?.bars.map(({ point, x, y, barHeight, barWidth, showLabel, labelX }) => {
+                  const hasDistance = point.distance_km > 0;
+                  const clampedHeight = hasDistance
+                    ? Math.max(barHeight, TIMELINE_MIN_BAR_HEIGHT)
+                    : 0;
+                  const barY = hasDistance && clampedHeight !== barHeight
+                    ? timelineChart.axisBottom - clampedHeight
+                    : y;
+
+                  return (
+                    <g key={point.date}>
+                      <rect
+                        className="admin-timeline-svg__bar"
+                        x={x}
+                        y={barY}
+                        width={barWidth}
+                        height={clampedHeight}
+                        rx="1.5"
+                        ry="1.5"
                       >
-                        {point.date.slice(ISO_MONTH_DAY_START_INDEX)}
-                      </text>
-                    ) : null}
-                  </g>
-                ))}
+                        <title>{`${point.date}: ${formatDistance(point.distance_km)}`}</title>
+                      </rect>
+                      {showLabel ? (
+                        <text
+                          className="admin-timeline-svg__label"
+                          x={labelX}
+                          y={TIMELINE_SVG_HEIGHT - 18}
+                          textAnchor="middle"
+                        >
+                          {point.date.slice(ISO_MONTH_DAY_START_INDEX)}
+                        </text>
+                      ) : null}
+                    </g>
+                  );
+                })}
 
                 <text
                   className="admin-timeline-svg__axis-title admin-timeline-svg__axis-title--x"

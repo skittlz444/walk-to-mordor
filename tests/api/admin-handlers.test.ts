@@ -50,6 +50,7 @@ describe('Admin Handlers', () => {
   let mockEnv: {
     DB: {
       prepare: jest.Mock;
+      batch: jest.Mock;
     };
     ALLOW_TEST_AUTH?: string;
   };
@@ -73,7 +74,8 @@ describe('Admin Handlers', () => {
     // Mock DB
     mockEnv = {
       DB: {
-        prepare: jest.fn()
+        prepare: jest.fn(),
+        batch: jest.fn()
       }
     };
 
@@ -3535,12 +3537,16 @@ describe('Admin Handlers', () => {
     it('should delete a user and log the action', async () => {
       const first = jest.fn().mockResolvedValue({ id: 12, username: 'boromir', email: 'boromir@example.com' });
       const bind1 = jest.fn().mockReturnValue({ first });
-      const run2 = jest.fn().mockResolvedValue({ meta: { changes: 2 } });
-      const bind2 = jest.fn().mockReturnValue({ run: run2 });
-      const run3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
-      const bind3 = jest.fn().mockReturnValue({ run: run3 });
+      const statement2 = {};
+      const bind2 = jest.fn().mockReturnValue(statement2);
+      const statement3 = {};
+      const bind3 = jest.fn().mockReturnValue(statement3);
       const run4 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
       const bind4 = jest.fn().mockReturnValue({ run: run4 });
+      mockEnv.DB.batch.mockResolvedValue([
+        { meta: { changes: 0 } },
+        { meta: { changes: 1 } },
+      ]);
       mockEnv.DB.prepare
         .mockReturnValueOnce({ bind: bind1 })
         .mockReturnValueOnce({ bind: bind2 })
@@ -3557,8 +3563,9 @@ describe('Admin Handlers', () => {
       );
 
       expect(response.status).toBe(200);
-      expect(bind2).toHaveBeenCalledWith(12, 12);
+      expect(bind2).toHaveBeenCalledWith(12);
       expect(bind3).toHaveBeenCalledWith(12);
+      expect(mockEnv.DB.batch).toHaveBeenCalledWith([statement2, statement3]);
       expect((mockEnv.DB.prepare.mock.calls[3][0] as string)).toContain('INSERT INTO admin_audit_log');
     });
   });

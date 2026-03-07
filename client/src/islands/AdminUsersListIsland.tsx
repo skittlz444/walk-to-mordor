@@ -277,7 +277,11 @@ export function AdminUsersListIsland() {
                   <td data-label="Journey Stats">
                     <div className="admin-user-journey-stat">
                       <strong>{formatDistance(user.total_distance_km)}</strong>
-                      <span>Last active {formatLastActive(user.last_active_date)}</span>
+                      <span>
+                        {user.last_active_date
+                          ? `Last active ${formatLastActive(user.last_active_date)}`
+                          : 'No walks yet'}
+                      </span>
                     </div>
                   </td>
                   <td data-label="Fellowship">{user.fellowship_name ?? 'Solo trail'}</td>
