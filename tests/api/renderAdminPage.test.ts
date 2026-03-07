@@ -48,20 +48,14 @@ describe('renderAdminPage', () => {
       expect(html).toContain('fa-flag-checkered');
     });
 
-    it('should have disabled Users nav item with "Soon" badge', () => {
-      // Users should be a span (not a link) with disabled class
-      expect(html).toContain('admin-nav__link--disabled');
-      expect(html).toContain('aria-disabled="true"');
+    it('should have Users link pointing to /admin/users', () => {
+      expect(html).toContain('href="/admin/users"');
       expect(html).toContain('fa-users');
-      expect(html).toContain('Soon');
     });
 
-    it('should have disabled Metrics nav item with "Soon" badge', () => {
+    it('should have Metrics link pointing to /admin/metrics', () => {
+      expect(html).toContain('href="/admin/metrics"');
       expect(html).toContain('fa-chart-bar');
-      // Verify "Soon" badge appears (at least twice — Users + Metrics)
-      const soonMatches = html.match(/admin-nav__badge/g);
-      expect(soonMatches).not.toBeNull();
-      expect(soonMatches!.length).toBeGreaterThanOrEqual(2);
     });
 
     it('should have "Back to Site" link pointing to /journey', () => {
@@ -143,9 +137,9 @@ describe('renderAdminPage', () => {
       expect(ariaHiddenIcons.length).toBe(iconMatches.length);
     });
 
-    it('should have aria-disabled on disabled nav items', () => {
+    it('should not have aria-disabled nav items', () => {
       const disabledMatches = html.match(/aria-disabled="true"/g) || [];
-      expect(disabledMatches.length).toBe(2); // Users and Metrics
+      expect(disabledMatches.length).toBe(0);
     });
   });
 });

@@ -1706,6 +1706,7 @@
   .admin-users-table td {
     display: block;
     width: 100%;
+    box-sizing: border-box;
   }
 
   .admin-users-table thead {
