@@ -31,6 +31,8 @@ interface TimelineResponse {
 }
 
 type RangeKey = 'all' | '7' | '30' | 'custom';
+const TIMELINE_LABEL_INTERVAL = 5;
+const ISO_MONTH_DAY_START_INDEX = 5;
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('sessionToken');
@@ -293,7 +295,7 @@ export function AdminMetricsIsland() {
               {timeline?.points.map((point, index) => {
                 const maxDistance = timeline.maxDistanceKm > 0 ? timeline.maxDistanceKm : 1;
                 const height = point.distance_km > 0 ? Math.max((point.distance_km / maxDistance) * 100, 6) : 4;
-                const showLabel = index % 5 === 0 || index === timeline.points.length - 1;
+                const showLabel = index % TIMELINE_LABEL_INTERVAL === 0 || index === timeline.points.length - 1;
                 return (
                   <div key={point.date} className="admin-timeline__column">
                     <div className="admin-timeline__track">
@@ -307,7 +309,7 @@ export function AdminMetricsIsland() {
                       className={`admin-timeline__label${showLabel ? '' : ' admin-timeline__label--hidden'}`}
                       aria-hidden={!showLabel}
                     >
-                      {showLabel ? point.date.slice(5) : ''}
+                      {showLabel ? point.date.slice(ISO_MONTH_DAY_START_INDEX) : ''}
                     </span>
                   </div>
                 );
