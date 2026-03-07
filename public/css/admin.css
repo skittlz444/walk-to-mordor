@@ -1542,6 +1542,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .admin-metrics-grid {
@@ -1635,97 +1636,49 @@
 }
 
 .admin-timeline-chart {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.9rem;
-  align-items: stretch;
-}
-
-.admin-timeline-axis {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.65rem;
-  min-width: 3.75rem;
-}
-
-.admin-timeline-axis__title {
-  color: var(--text-primary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.admin-timeline-axis__ticks {
-  display: grid;
-  grid-template-rows: repeat(3, 1fr);
-  height: 210px;
-}
-
-.admin-timeline-axis__ticks span {
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  display: flex;
-  align-items: center;
-}
-
-.admin-timeline-axis__ticks span:last-child {
-  align-items: end;
-}
-
-.admin-timeline {
-  display: grid;
-  grid-template-columns: repeat(30, minmax(0, 1fr));
-  gap: 0.3rem;
-  align-items: stretch;
-  min-height: 236px;
-}
-
-.admin-timeline__column {
-  display: grid;
-  grid-template-rows: 1fr auto;
-  gap: 0.45rem;
-  min-height: 236px;
+  width: 100%;
 }
 
 .admin-timeline-wrap {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
-  padding-bottom: 0.35rem;
+  overflow: hidden;
 }
 
-.admin-timeline__track {
-  min-height: 210px;
-  display: flex;
-  align-items: end;
-  border-bottom: 1px solid var(--border-gray);
-  background-image:
-    linear-gradient(to top, transparent calc(50% - 0.5px), color-mix(in srgb, var(--border-gray) 75%, transparent) calc(50% - 0.5px), color-mix(in srgb, var(--border-gray) 75%, transparent) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-    linear-gradient(to top, color-mix(in srgb, var(--border-gray) 80%, transparent) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%;
-  background-position: bottom;
-  background-repeat: no-repeat;
-}
-
-.admin-timeline__bar {
+.admin-timeline-svg {
   width: 100%;
-  background: var(--accent-gold);
-  border-radius: 4px 4px 0 0;
-  min-height: 6px;
+  height: auto;
+  display: block;
 }
 
-.admin-timeline__label {
-  font-size: 0.72rem;
-  color: var(--text-primary);
-  opacity: 0.78;
-  text-align: center;
-  white-space: nowrap;
+.admin-timeline-svg__grid {
+  stroke: color-mix(in srgb, var(--border-gray) 80%, transparent);
+  stroke-width: 1;
 }
 
-.admin-timeline__label--hidden {
-  opacity: 0;
+.admin-timeline-svg__axis {
+  stroke: var(--border-gray);
+  stroke-width: 1.5;
+}
+
+.admin-timeline-svg__bar {
+  fill: var(--accent-gold);
+}
+
+.admin-timeline-svg__tick,
+.admin-timeline-svg__label {
+  fill: var(--text-secondary);
+  font-size: 9px;
+}
+
+.admin-timeline-svg__axis-title {
+  fill: var(--text-primary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-timeline-svg__axis-title--x {
+  letter-spacing: 0.04em;
 }
 
 @media (max-width: 900px) {
@@ -1792,14 +1745,15 @@
   }
 
   .admin-user-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.5rem;
   }
 
   .admin-user-actions .admin-btn {
     width: 100%;
     min-width: 0;
+    box-sizing: border-box;
     justify-content: center;
     padding-inline: 0.65rem;
     font-size: 0.9rem;
@@ -1822,61 +1776,24 @@
     padding: 1rem;
   }
 
-  .admin-timeline {
-    min-width: 0;
-    width: 100%;
-    gap: 0.2rem;
-  }
-
-  .admin-timeline-chart {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .admin-timeline-axis {
-    min-width: 0;
-  }
-
-  .admin-timeline-axis__title {
-    font-size: 0.72rem;
-  }
-
-  .admin-timeline-axis__ticks {
-    height: auto;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: none;
-    gap: 0.5rem;
-  }
-
-  .admin-timeline-axis__ticks span,
-  .admin-timeline-axis__ticks span:last-child {
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .admin-timeline__label {
-    font-size: 0.62rem;
-  }
-
   .admin-metrics .admin-filter-chip,
   .admin-metrics .admin-leaderboard-row__meta strong,
   .admin-metrics .admin-leaderboard-row__value,
-  .admin-metrics .admin-timeline-axis__title {
+  .admin-metrics .admin-timeline-svg__axis-title {
     color: var(--text-primary);
   }
 
   .admin-metrics .admin-section-heading p,
   .admin-metrics .admin-panel__header p,
-  .admin-metrics .admin-leaderboard-row__meta span,
-  .admin-metrics .admin-timeline__label,
-  .admin-metrics .admin-timeline-axis__ticks span {
+  .admin-metrics .admin-leaderboard-row__meta span {
     color: var(--text-secondary);
   }
 }
 
 @media (max-width: 480px) {
-  .admin-user-actions {
-    grid-template-columns: 1fr;
+  .admin-timeline-svg__tick,
+  .admin-timeline-svg__label {
+    font-size: 8px;
   }
 }
 
