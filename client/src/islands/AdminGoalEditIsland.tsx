@@ -375,7 +375,7 @@ export function AdminGoalEditIsland() {
           <input
             id="goal-distance"
             type="number"
-            step="0.1"
+            step="any"
             min="0"
             value={distance}
             onInput={(e) => setDistance((e.target as HTMLInputElement).value)}
