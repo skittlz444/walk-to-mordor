@@ -178,7 +178,7 @@ export function AdminGoalEditIsland() {
       errs.title = 'Title is required';
     }
     const distVal = parseFloat(distance);
-    if (!distance.trim() || isNaN(distVal) || distVal <= 0) {
+    if (!distance.trim() || isNaN(distVal) || !isFinite(distVal) || distVal <= 0) {
       errs.distance = 'Distance must be a positive number';
     }
     if (!description.trim()) {
@@ -198,7 +198,7 @@ export function AdminGoalEditIsland() {
       if (prev.title && title.trim()) delete next.title;
       if (prev.distance) {
         const d = parseFloat(distance);
-        if (distance.trim() && !isNaN(d) && d > 0) delete next.distance;
+        if (distance.trim() && !isNaN(d) && isFinite(d) && d > 0) delete next.distance;
       }
       if (prev.description && description.trim()) delete next.description;
       if (prev.image_id) {
@@ -375,7 +375,7 @@ export function AdminGoalEditIsland() {
           <input
             id="goal-distance"
             type="number"
-            step="0.1"
+            step="any"
             min="0"
             value={distance}
             onInput={(e) => setDistance((e.target as HTMLInputElement).value)}
