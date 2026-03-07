@@ -253,7 +253,7 @@ export function AdminUsersListIsland() {
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
-                  <td>
+                  <td data-label="User Details">
                     <div className="admin-user-card">
                       <div className="admin-user-avatar" aria-hidden="true">
                         {user.username.slice(0, 1).toUpperCase()}
@@ -264,24 +264,24 @@ export function AdminUsersListIsland() {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <span className={`admin-badge ${user.email_verified ? 'admin-badge--success' : 'admin-badge--warning'}`}>
                       {user.email_verified ? 'Verified' : 'Pending'}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Role">
                     <span className={`admin-badge ${user.is_admin ? 'admin-badge--gold' : 'admin-badge--neutral'}`}>
                       {user.is_admin ? 'Admin' : 'Walker'}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Journey Stats">
                     <div className="admin-user-journey-stat">
                       <strong>{formatDistance(user.total_distance_km)}</strong>
                       <span>Last active {formatLastActive(user.last_active_date)}</span>
                     </div>
                   </td>
-                  <td>{user.fellowship_name ?? 'Solo trail'}</td>
-                  <td>
+                  <td data-label="Fellowship">{user.fellowship_name ?? 'Solo trail'}</td>
+                  <td data-label="Support Actions">
                     <div className="admin-user-actions">
                       <button
                         type="button"

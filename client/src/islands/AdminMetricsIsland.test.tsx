@@ -84,6 +84,8 @@ describe('AdminMetricsIsland', () => {
     expect(getByText('Milestones Unlocked')).toBeTruthy();
     expect(getByText('1. frodo')).toBeTruthy();
     expect(container.querySelectorAll('.admin-timeline__column').length).toBe(30);
+    expect(container.querySelectorAll('.admin-timeline__track').length).toBe(30);
+    expect(container.querySelector('.admin-timeline__label--hidden')).toBeTruthy();
   });
 
   it('redirects to /journey on 403', async () => {

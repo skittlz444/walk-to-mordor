@@ -288,21 +288,31 @@ export function AdminMetricsIsland() {
             </div>
           </div>
 
-          <div className="admin-timeline" role="img" aria-label="Group activity over the last 30 days">
-            {timeline?.points.map((point) => {
-              const maxDistance = timeline.maxDistanceKm > 0 ? timeline.maxDistanceKm : 1;
-              const height = point.distance_km > 0 ? Math.max((point.distance_km / maxDistance) * 100, 6) : 4;
-              return (
-                <div key={point.date} className="admin-timeline__column">
-                  <div
-                    className="admin-timeline__bar"
-                    style={{ height: `${height}%` }}
-                    title={`${point.date}: ${formatDistance(point.distance_km)}`}
-                  ></div>
-                  <span>{point.date.slice(5)}</span>
-                </div>
-              );
-            })}
+          <div className="admin-timeline-wrap">
+            <div className="admin-timeline" role="img" aria-label="Group activity over the last 30 days">
+              {timeline?.points.map((point, index) => {
+                const maxDistance = timeline.maxDistanceKm > 0 ? timeline.maxDistanceKm : 1;
+                const height = point.distance_km > 0 ? Math.max((point.distance_km / maxDistance) * 100, 6) : 4;
+                const showLabel = index % 5 === 0 || index === timeline.points.length - 1;
+                return (
+                  <div key={point.date} className="admin-timeline__column">
+                    <div className="admin-timeline__track">
+                      <div
+                        className="admin-timeline__bar"
+                        style={{ height: `${height}%` }}
+                        title={`${point.date}: ${formatDistance(point.distance_km)}`}
+                      ></div>
+                    </div>
+                    <span
+                      className={`admin-timeline__label${showLabel ? '' : ' admin-timeline__label--hidden'}`}
+                      aria-hidden={!showLabel}
+                    >
+                      {showLabel ? point.date.slice(5) : ''}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
       </div>

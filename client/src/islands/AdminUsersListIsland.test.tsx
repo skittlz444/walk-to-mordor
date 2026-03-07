@@ -59,7 +59,7 @@ afterEach(() => {
 
 describe('AdminUsersListIsland', () => {
   it('renders fetched user support data', async () => {
-    const { getByText } = render(<AdminUsersListIsland />);
+    const { getByText, container } = render(<AdminUsersListIsland />);
 
     await waitFor(() => {
       expect(getByText('frodo')).toBeTruthy();
@@ -69,6 +69,7 @@ describe('AdminUsersListIsland', () => {
     expect(getByText('Pending')).toBeTruthy();
     expect(getByText('Walker')).toBeTruthy();
     expect(getByText('The Ring Bearers')).toBeTruthy();
+    expect(container.querySelector('td[data-label="Support Actions"]')).toBeTruthy();
   });
 
   it('redirects to /login on 401', async () => {
