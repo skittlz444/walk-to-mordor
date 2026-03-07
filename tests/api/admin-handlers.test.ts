@@ -3381,7 +3381,7 @@ describe('Admin Handlers', () => {
           is_admin: 0,
           total_distance_km: 123.45,
           last_active_date: '2026-03-04',
-          fellowship_name: 'The Shire Striders',
+          fellowship_names: 'The Shire Striders',
         }],
       });
       const dataBind = jest.fn().mockReturnValue({ all: dataAll });
@@ -3407,7 +3407,7 @@ describe('Admin Handlers', () => {
         is_admin: false,
         total_distance_km: 123.5,
         last_active_date: '2026-03-04',
-        fellowship_name: 'The Shire Striders',
+        fellowship_names: ['The Shire Striders'],
       });
       expect(countBind).toHaveBeenCalledWith('%fro%', '%fro%');
       expect(dataBind).toHaveBeenCalledWith('%fro%', '%fro%', 25, 0);

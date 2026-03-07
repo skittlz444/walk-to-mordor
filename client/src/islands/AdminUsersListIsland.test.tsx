@@ -15,7 +15,7 @@ const mockUsersResponse = {
       is_admin: false,
       total_distance_km: 87.2,
       last_active_date: '2026-03-05',
-      fellowship_name: 'The Ring Bearers',
+      fellowship_names: ['The Ring Bearers'],
     },
   ],
   total: 1,
