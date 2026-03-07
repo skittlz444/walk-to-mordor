@@ -35,6 +35,10 @@ function formatLastActive(date: string | null): string {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
+function formatDistance(km: number): string {
+  return `${km.toFixed(1)} km`;
+}
+
 export function AdminUsersListIsland() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -272,7 +276,7 @@ export function AdminUsersListIsland() {
                   </td>
                   <td>
                     <div className="admin-user-journey-stat">
-                      <strong>{user.total_distance_km.toFixed(1)} km</strong>
+                      <strong>{formatDistance(user.total_distance_km)}</strong>
                       <span>Last active {formatLastActive(user.last_active_date)}</span>
                     </div>
                   </td>

@@ -46,6 +46,10 @@ function getTodayOffset(daysAgo: number): string {
   return utcDate.toISOString().slice(0, 10);
 }
 
+function formatDistance(km: number): string {
+  return `${km.toFixed(1)} km`;
+}
+
 export function AdminMetricsIsland() {
   const [summary, setSummary] = useState<MetricsSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
@@ -269,7 +273,7 @@ export function AdminMetricsIsland() {
                   <div className="admin-leaderboard-row__bar-wrap">
                     <div className="admin-leaderboard-row__bar" style={{ width: `${width}%` }}></div>
                   </div>
-                  <div className="admin-leaderboard-row__value">{row.distance_km.toFixed(1)} km</div>
+                  <div className="admin-leaderboard-row__value">{formatDistance(row.distance_km)}</div>
                 </div>
               );
             })}
@@ -293,7 +297,7 @@ export function AdminMetricsIsland() {
                   <div
                     className="admin-timeline__bar"
                     style={{ height: `${height}%` }}
-                    title={`${point.date}: ${point.distance_km.toFixed(1)} km`}
+                    title={`${point.date}: ${formatDistance(point.distance_km)}`}
                   ></div>
                   <span>{point.date.slice(5)}</span>
                 </div>
