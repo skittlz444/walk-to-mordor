@@ -2,7 +2,23 @@ import {
   validateAdminSession,
   handleSessionValidation
 } from '../../src/auth-handlers';
-import { logAdminAction, handleAdminDashboard, handleAdminGoalsList, handleAdminGoalGet, handleAdminGoalUpdate, handleAdminGoalCreate } from '../../src/admin-handlers';
+import {
+  logAdminAction,
+  handleAdminDashboard,
+  handleAdminGoalsList,
+  handleAdminGoalGet,
+  handleAdminGoalUpdate,
+  handleAdminGoalCreate,
+  handleAdminUsersList,
+  handleAdminUserVerify,
+  handleAdminUserResetPassword,
+  handleAdminUserToggleAdmin,
+  handleAdminUserDelete,
+  handleAdminMetricsSummary,
+  handleAdminMetricsLeaderboard,
+  handleAdminMetricsTimeline,
+} from '../../src/admin-handlers';
+import { sendPasswordResetEmail } from '../../src/email-utils';
 import * as authUtils from '../../src/auth-utils';
 
 // Mock auth-utils
@@ -34,6 +50,7 @@ describe('Admin Handlers', () => {
   let mockEnv: {
     DB: {
       prepare: jest.Mock;
+      batch: jest.Mock;
     };
     ALLOW_TEST_AUTH?: string;
   };
@@ -57,7 +74,8 @@ describe('Admin Handlers', () => {
     // Mock DB
     mockEnv = {
       DB: {
-        prepare: jest.fn()
+        prepare: jest.fn(),
+        batch: jest.fn()
       }
     };
 
@@ -3350,6 +3368,304 @@ describe('Admin Handlers', () => {
     });
   });
 
+  describe('handleAdminUsersList', () => {
+    it('should return paginated user support data with journey stats', async () => {
+      const countFirst = jest.fn().mockResolvedValue({ total: 1 });
+      const countBind = jest.fn().mockReturnValue({ first: countFirst });
+      const dataAll = jest.fn().mockResolvedValue({
+        results: [{
+          id: 7,
+          username: 'frodo',
+          email: 'frodo@example.com',
+          email_verified: 1,
+          is_admin: 0,
+          total_distance_km: 123.45,
+          last_active_date: '2026-03-04',
+          fellowship_name: 'The Shire Striders',
+        }],
+      });
+      const dataBind = jest.fn().mockReturnValue({ all: dataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: countBind })
+        .mockReturnValueOnce({ bind: dataBind });
+      mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25&search=fro';
+
+      const response = await handleAdminUsersList(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.total).toBe(1);
+      expect(body.users[0]).toEqual({
+        id: 7,
+        username: 'frodo',
+        email: 'frodo@example.com',
+        email_verified: true,
+        is_admin: false,
+        total_distance_km: 123.5,
+        last_active_date: '2026-03-04',
+        fellowship_name: 'The Shire Striders',
+      });
+      expect(countBind).toHaveBeenCalledWith('%fro%', '%fro%');
+      expect(dataBind).toHaveBeenCalledWith('%fro%', '%fro%', 25, 0);
+    });
+
+    it('should return 500 when the user list query fails', async () => {
+      mockEnv.DB.prepare.mockImplementation(() => {
+        throw new Error('DB down');
+      });
+
+      const response = await handleAdminUsersList(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(500);
+      const body = await response.json();
+      expect(body.error).toBe('Internal server error while fetching users');
+    });
+  });
+
+  describe('admin user actions', () => {
+    it('should verify a user email and write an audit entry', async () => {
+      const first = jest.fn().mockResolvedValue({ id: 8, username: 'sam', email_verified: 0 });
+      const bind1 = jest.fn().mockReturnValue({ first });
+      const run2 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const bind2 = jest.fn().mockReturnValue({ run: run2 });
+      const run3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const bind3 = jest.fn().mockReturnValue({ run: run3 });
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: bind1 })
+        .mockReturnValueOnce({ bind: bind2 })
+        .mockReturnValueOnce({ bind: bind3 });
+      mockRequest.headers.get.mockReturnValue('5.6.7.8');
+
+      const response = await handleAdminUserVerify(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        8,
+        1
+      );
+
+      expect(response.status).toBe(200);
+      expect(bind2).toHaveBeenCalledWith(8);
+      expect((mockEnv.DB.prepare.mock.calls[2][0] as string)).toContain('INSERT INTO admin_audit_log');
+    });
+
+    it('should trigger a password reset email and log success', async () => {
+      (authUtils.generatePasswordResetToken as jest.Mock).mockReturnValue('reset-token');
+      (authUtils.getPasswordResetExpiry as jest.Mock).mockReturnValue('2099-01-01T00:00:00.000Z');
+      (sendPasswordResetEmail as jest.Mock).mockResolvedValue({ success: true });
+
+      const first = jest.fn().mockResolvedValue({ id: 9, username: 'merry', email: 'merry@example.com' });
+      const bind1 = jest.fn().mockReturnValue({ first });
+      const run2 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const bind2 = jest.fn().mockReturnValue({ run: run2 });
+      const run3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const bind3 = jest.fn().mockReturnValue({ run: run3 });
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: bind1 })
+        .mockReturnValueOnce({ bind: bind2 })
+        .mockReturnValueOnce({ bind: bind3 });
+      mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users/9/reset';
+      mockRequest.headers.get.mockReturnValue('5.6.7.8');
+
+      const response = await handleAdminUserResetPassword(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database; RESEND_API_KEY?: string },
+        9,
+        1
+      );
+
+      expect(response.status).toBe(200);
+      expect(sendPasswordResetEmail).toHaveBeenCalledWith(
+        expect.any(Object),
+        'merry@example.com',
+        'merry',
+        'reset-token',
+        'https://wtm.haydencarson.com'
+      );
+    });
+
+    it('should toggle admin privileges', async () => {
+      const first = jest.fn().mockResolvedValue({ id: 10, username: 'pippin', is_admin: 0 });
+      const bind1 = jest.fn().mockReturnValue({ first });
+      const run2 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const bind2 = jest.fn().mockReturnValue({ run: run2 });
+      const run3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const bind3 = jest.fn().mockReturnValue({ run: run3 });
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: bind1 })
+        .mockReturnValueOnce({ bind: bind2 })
+        .mockReturnValueOnce({ bind: bind3 });
+      mockRequest.headers.get.mockReturnValue('9.9.9.9');
+
+      const response = await handleAdminUserToggleAdmin(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        10,
+        1
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.is_admin).toBe(true);
+      expect(bind2).toHaveBeenCalledWith(1, 10);
+    });
+
+    it('should require exact confirmation text before deleting a user', async () => {
+      const first = jest.fn().mockResolvedValue({ id: 11, username: 'gandalf', email: 'gandalf@example.com' });
+      const bind1 = jest.fn().mockReturnValue({ first });
+      mockEnv.DB.prepare.mockReturnValueOnce({ bind: bind1 });
+
+      const response = await handleAdminUserDelete(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        11,
+        { confirmation: 'wrong' },
+        1
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toContain('Confirmation text');
+    });
+
+    it('should delete a user and log the action', async () => {
+      const first = jest.fn().mockResolvedValue({ id: 12, username: 'boromir', email: 'boromir@example.com' });
+      const bind1 = jest.fn().mockReturnValue({ first });
+      const statement2 = {};
+      const bind2 = jest.fn().mockReturnValue(statement2);
+      const statement3 = {};
+      const bind3 = jest.fn().mockReturnValue(statement3);
+      const run4 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+      const bind4 = jest.fn().mockReturnValue({ run: run4 });
+      mockEnv.DB.batch.mockResolvedValue([
+        { meta: { changes: 0 } },
+        { meta: { changes: 1 } },
+      ]);
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: bind1 })
+        .mockReturnValueOnce({ bind: bind2 })
+        .mockReturnValueOnce({ bind: bind3 })
+        .mockReturnValueOnce({ bind: bind4 });
+      mockRequest.headers.get.mockReturnValue('1.1.1.1');
+
+      const response = await handleAdminUserDelete(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database },
+        12,
+        { confirmation: 'boromir' },
+        1
+      );
+
+      expect(response.status).toBe(200);
+      expect(bind2).toHaveBeenCalledWith(12);
+      expect(bind3).toHaveBeenCalledWith(12);
+      expect(mockEnv.DB.batch).toHaveBeenCalledWith([statement2, statement3]);
+      expect((mockEnv.DB.prepare.mock.calls[3][0] as string)).toContain('INSERT INTO admin_audit_log');
+    });
+  });
+
+  describe('admin metrics handlers', () => {
+    it('should calculate summary metrics from progress and goals', async () => {
+      const distanceFirst = jest.fn().mockResolvedValue({ total_group_distance_km: 150.5 });
+      const distancePrepare = { first: distanceFirst };
+      const activeFirst = jest.fn().mockResolvedValue({ active_walkers: 3 });
+      const activePrepare = { first: activeFirst };
+      const goalsAll = jest.fn().mockResolvedValue({ results: [{ distance: 10 }, { distance: 100 }] });
+      const goalsPrepare = { all: goalsAll };
+      const totalsAll = jest.fn().mockResolvedValue({
+        results: [
+          { user_id: 1, total_distance_km: 150 },
+          { user_id: 2, total_distance_km: 5 },
+        ],
+      });
+      const totalsPrepare = { all: totalsAll };
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce(distancePrepare)
+        .mockReturnValueOnce(activePrepare)
+        .mockReturnValueOnce(goalsPrepare)
+        .mockReturnValueOnce(totalsPrepare);
+
+      const response = await handleAdminMetricsSummary(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body).toEqual({
+        totalGroupDistanceKm: 150.5,
+        activeWalkers: 3,
+        milestonesUnlocked: 2,
+      });
+    });
+
+    it('should keep zero-distance users in the leaderboard date range', async () => {
+      const bind = jest.fn().mockReturnValue({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { id: 1, username: 'aragorn', email: 'a@example.com', distance_km: 12.4 },
+            { id: 2, username: 'legolas', email: 'l@example.com', distance_km: 0 },
+          ],
+        }),
+      });
+      mockEnv.DB.prepare.mockReturnValue({ bind });
+      mockRequest.url = 'https://wtm.haydencarson.com/api/admin/metrics/leaderboard?start=2026-03-01&end=2026-03-07';
+
+      const response = await handleAdminMetricsLeaderboard(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.rows).toHaveLength(2);
+      expect(body.rows[1].distance_km).toBe(0);
+      expect(bind).toHaveBeenCalledWith('2026-03-01', '2026-03-07');
+    });
+
+    it('should reject invalid leaderboard date ranges', async () => {
+      mockRequest.url = 'https://wtm.haydencarson.com/api/admin/metrics/leaderboard?start=2026-03-07&end=2026-03-01';
+
+      const response = await handleAdminMetricsLeaderboard(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.error).toBe('Start date must be on or before end date');
+    });
+
+    it('should return 30 timeline points with gaps filled as zeroes', async () => {
+      const bind = jest.fn().mockReturnValue({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: '2026-03-01', distance_km: 4.2 },
+            { date: '2026-03-03', distance_km: 8.5 },
+          ],
+        }),
+      });
+      mockEnv.DB.prepare.mockReturnValue({ bind });
+
+      const response = await handleAdminMetricsTimeline(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.points).toHaveLength(30);
+      expect(body.maxDistanceKm).toBeGreaterThanOrEqual(0);
+    });
+  });
+
   describe('renderAdminGoalAddPage', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { renderAdminGoalAddPage } = require('../../src/renderAdminGoalAddPage');
@@ -3386,6 +3702,30 @@ describe('Admin Handlers', () => {
       const html: string = renderAdminGoalAddPage();
       expect(html).toContain('href="/journey"');
       expect(html).toContain('Back to Site');
+    });
+  });
+
+  describe('renderAdminUsersPage', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { renderAdminUsersPage } = require('../../src/renderAdminUsersPage');
+
+    it('should render the users island and active nav link', () => {
+      const html: string = renderAdminUsersPage();
+      expect(html).toContain('data-island="AdminUsersListIsland"');
+      expect(html).toContain('href="/admin/users"');
+      expect(html).toContain('admin-nav__link--active');
+    });
+  });
+
+  describe('renderAdminMetricsPage', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { renderAdminMetricsPage } = require('../../src/renderAdminMetricsPage');
+
+    it('should render the metrics island and active nav link', () => {
+      const html: string = renderAdminMetricsPage();
+      expect(html).toContain('data-island="AdminMetricsIsland"');
+      expect(html).toContain('href="/admin/metrics"');
+      expect(html).toContain('admin-nav__link--active');
     });
   });
 });

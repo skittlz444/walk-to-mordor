@@ -1,9 +1,9 @@
 import { renderLayout } from './renderLayout';
 
-export function renderAdminGoalAddPage(): string {
+export function renderAdminMetricsPage(): string {
   return renderLayout({
-    title: 'Walk to Mordor - Add New Goal',
-    description: 'Admin add new goal for Walk to Mordor',
+    title: 'Walk to Mordor - Admin Metrics',
+    description: 'Admin community metrics for Walk to Mordor',
     stylesheets: ['/css/admin.css'],
     bodyClass: 'admin-body',
     headerContent: `
@@ -21,7 +21,7 @@ export function renderAdminGoalAddPage(): string {
               </a>
             </li>
             <li>
-              <a href="/admin/goals" class="admin-nav__link admin-nav__link--active" aria-current="page">
+              <a href="/admin/goals" class="admin-nav__link">
                 <i class="fas fa-flag-checkered" aria-hidden="true"></i>
                 <span>Goals</span>
               </a>
@@ -33,7 +33,7 @@ export function renderAdminGoalAddPage(): string {
               </a>
             </li>
             <li>
-              <a href="/admin/metrics" class="admin-nav__link">
+              <a href="/admin/metrics" class="admin-nav__link admin-nav__link--active" aria-current="page">
                 <i class="fas fa-chart-bar" aria-hidden="true"></i>
                 <span>Metrics</span>
               </a>
@@ -50,11 +50,10 @@ export function renderAdminGoalAddPage(): string {
           <nav class="admin-breadcrumb" aria-label="Breadcrumb">
             <ol>
               <li><a href="/admin">Admin</a></li>
-              <li><a href="/admin/goals">Goals</a></li>
-              <li aria-current="page">Add New Goal</li>
+              <li aria-current="page">Metrics</li>
             </ol>
           </nav>
-          <div data-island="AdminGoalAddIsland"></div>
+          <div data-island="AdminMetricsIsland"></div>
         </div>
       </div>`,
   });

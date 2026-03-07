@@ -59,9 +59,9 @@ describe('renderAdminGoalEditPage', () => {
       expect(dashboardLinkSnippet).not.toContain('admin-nav__link--active');
     });
 
-    it('should have disabled Users and Metrics nav items', () => {
-      expect(html).toContain('admin-nav__link--disabled');
-      expect(html).toContain('aria-disabled="true"');
+    it('should have Users and Metrics links', () => {
+      expect(html).toContain('href="/admin/users"');
+      expect(html).toContain('href="/admin/metrics"');
     });
 
     it('should have "Back to Site" link', () => {
@@ -124,9 +124,9 @@ describe('renderAdminGoalEditPage', () => {
       expect(ariaHiddenIcons.length).toBe(iconMatches.length);
     });
 
-    it('should have aria-disabled on disabled nav items', () => {
+    it('should not have aria-disabled nav items', () => {
       const disabledMatches = html.match(/aria-disabled="true"/g) || [];
-      expect(disabledMatches.length).toBe(2);
+      expect(disabledMatches.length).toBe(0);
     });
   });
 });

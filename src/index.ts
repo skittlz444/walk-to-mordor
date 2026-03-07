@@ -42,9 +42,26 @@ import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
 import { renderAdminPage } from "./renderAdminPage";
 import { renderAdminGoalsPage } from "./renderAdminGoalsPage";
-import { handleAdminDashboard, handleAdminGoalsList, handleAdminGoalGet, handleAdminGoalUpdate, handleAdminImageInventory, handleAdminGoalCreate } from "./admin-handlers";
+import {
+  handleAdminDashboard,
+  handleAdminGoalsList,
+  handleAdminGoalGet,
+  handleAdminGoalUpdate,
+  handleAdminImageInventory,
+  handleAdminGoalCreate,
+  handleAdminUsersList,
+  handleAdminUserVerify,
+  handleAdminUserResetPassword,
+  handleAdminUserToggleAdmin,
+  handleAdminUserDelete,
+  handleAdminMetricsSummary,
+  handleAdminMetricsLeaderboard,
+  handleAdminMetricsTimeline,
+} from "./admin-handlers";
 import { renderAdminGoalEditPage } from "./renderAdminGoalEditPage";
 import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
+import { renderAdminUsersPage } from "./renderAdminUsersPage";
+import { renderAdminMetricsPage } from "./renderAdminMetricsPage";
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -151,6 +168,20 @@ export default {
           return handleAdminDashboard(request, env);
         }
 
+        if (url.pathname === "/api/admin/users" && method === "GET") {
+          return handleAdminUsersList(request, env);
+        }
+
+        if (url.pathname === "/api/admin/metrics" && method === "GET") {
+          return handleAdminMetricsSummary(request, env);
+        }
+        if (url.pathname === "/api/admin/metrics/leaderboard" && method === "GET") {
+          return handleAdminMetricsLeaderboard(request, env);
+        }
+        if (url.pathname === "/api/admin/metrics/timeline" && method === "GET") {
+          return handleAdminMetricsTimeline(request, env);
+        }
+
         // Admin Goals List (Story 4.3) / Create (Story 4.6)
         if (url.pathname === "/api/admin/goals" && method === "GET") {
           return handleAdminGoalsList(request, env);
@@ -173,6 +204,42 @@ export default {
           }
           if (method === 'GET') return handleAdminGoalGet(request, env, goalId);
           if (method === 'PUT') return handleAdminGoalUpdate(request, env, goalId, body, adminValidation.userId);
+        }
+
+        const adminUserVerifyParams = matchRoute(url.pathname, '/api/admin/users/:id/verify');
+        if (adminUserVerifyParams) {
+          const userId = Number.parseInt(adminUserVerifyParams.id, 10);
+          if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserVerifyParams.id) {
+            return createErrorResponse('Invalid user ID', 400);
+          }
+          if (method === 'PUT') return handleAdminUserVerify(request, env, userId, adminValidation.userId);
+        }
+
+        const adminUserResetParams = matchRoute(url.pathname, '/api/admin/users/:id/reset');
+        if (adminUserResetParams) {
+          const userId = Number.parseInt(adminUserResetParams.id, 10);
+          if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserResetParams.id) {
+            return createErrorResponse('Invalid user ID', 400);
+          }
+          if (method === 'PUT') return handleAdminUserResetPassword(request, env, userId, adminValidation.userId);
+        }
+
+        const adminUserToggleAdminParams = matchRoute(url.pathname, '/api/admin/users/:id/admin');
+        if (adminUserToggleAdminParams) {
+          const userId = Number.parseInt(adminUserToggleAdminParams.id, 10);
+          if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserToggleAdminParams.id) {
+            return createErrorResponse('Invalid user ID', 400);
+          }
+          if (method === 'PUT') return handleAdminUserToggleAdmin(request, env, userId, adminValidation.userId);
+        }
+
+        const adminUserParams = matchRoute(url.pathname, '/api/admin/users/:id');
+        if (adminUserParams) {
+          const userId = Number.parseInt(adminUserParams.id, 10);
+          if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserParams.id) {
+            return createErrorResponse('Invalid user ID', 400);
+          }
+          if (method === 'DELETE') return handleAdminUserDelete(request, env, userId, body, adminValidation.userId);
         }
 
         return new Response(JSON.stringify({ error: 'Admin API endpoint not found' }), {
@@ -392,6 +459,18 @@ export default {
       });
     }
 
+    if (url.pathname === "/admin/users") {
+      return new Response(renderAdminUsersPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
+    if (url.pathname === "/admin/metrics") {
+      return new Response(renderAdminMetricsPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
     // Admin Goal Add page — auth handled client-side by Preact islands
     // MUST be matched BEFORE /admin/goals/:id to prevent "new" being parsed as an id
     if (url.pathname === "/admin/goals/new") {
@@ -479,6 +558,10 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/auth/confirm-email":
     case "/api/user/parties":
     case "/api/admin/dashboard":
+    case "/api/admin/users":
+    case "/api/admin/metrics":
+    case "/api/admin/metrics/leaderboard":
+    case "/api/admin/metrics/timeline":
     case "/api/admin/images":
       return ['GET'];
     case "/api/admin/goals":
@@ -498,6 +581,10 @@ function getAllowedMethods(pathname: string): string[] {
       // Admin API routes
       if (pathname.startsWith('/api/admin/')) {
         if (matchRoute(pathname, '/api/admin/goals/:id')) return ['GET', 'PUT'];
+        if (matchRoute(pathname, '/api/admin/users/:id')) return ['DELETE'];
+        if (matchRoute(pathname, '/api/admin/users/:id/verify')) return ['PUT'];
+        if (matchRoute(pathname, '/api/admin/users/:id/reset')) return ['PUT'];
+        if (matchRoute(pathname, '/api/admin/users/:id/admin')) return ['PUT'];
         // Unknown admin routes — restrict to safe default; the handler will return 404
         return ['GET'];
       }

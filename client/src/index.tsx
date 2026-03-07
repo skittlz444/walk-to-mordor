@@ -15,6 +15,8 @@ import { AdminDashboardIsland } from './islands/AdminDashboardIsland';
 import { AdminGoalsListIsland } from './islands/AdminGoalsListIsland';
 import { AdminGoalEditIsland } from './islands/AdminGoalEditIsland';
 import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
+import { AdminUsersListIsland } from './islands/AdminUsersListIsland';
+import { AdminMetricsIsland } from './islands/AdminMetricsIsland';
 import * as partyStore from './stores/partyStore';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
@@ -23,6 +25,8 @@ const autoHydratedIslands = {
   AdminGoalAddIsland,
   AdminGoalEditIsland,
   AdminGoalsListIsland,
+  AdminMetricsIsland,
+  AdminUsersListIsland,
   AuthForms,
   DrawerIsland,
   MapIsland,
@@ -38,6 +42,8 @@ const allIslands = {
   AdminGoalAddIsland,
   AdminGoalEditIsland,
   AdminGoalsListIsland,
+  AdminMetricsIsland,
+  AdminUsersListIsland,
   AuthForms,
   DistanceModal,
   DrawerIsland,
