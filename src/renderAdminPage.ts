@@ -27,18 +27,16 @@ export function renderAdminPage(): string {
               </a>
             </li>
             <li>
-              <span class="admin-nav__link admin-nav__link--disabled" aria-disabled="true">
+              <a href="/admin/users" class="admin-nav__link">
                 <i class="fas fa-users" aria-hidden="true"></i>
                 <span>Users</span>
-                <small class="admin-nav__badge">Soon</small>
-              </span>
+              </a>
             </li>
             <li>
-              <span class="admin-nav__link admin-nav__link--disabled" aria-disabled="true">
+              <a href="/admin/metrics" class="admin-nav__link">
                 <i class="fas fa-chart-bar" aria-hidden="true"></i>
                 <span>Metrics</span>
-                <small class="admin-nav__badge">Soon</small>
-              </span>
+              </a>
             </li>
           </ul>
           <div class="admin-nav__footer">

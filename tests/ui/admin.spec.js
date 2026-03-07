@@ -74,6 +74,15 @@ test.describe('Admin Routes - Access Control', () => {
     expect(contentType).toContain('text/html');
   });
 
+  test('admin users and metrics pages return HTML shells for browser navigation', async ({ request }) => {
+    for (const path of ['/admin/users', '/admin/metrics']) {
+      const response = await request.get(`${BASE_URL}${path}`);
+      expect(response.status(), `${path} should render an HTML shell`).toBe(200);
+      const contentType = response.headers()['content-type'] || '';
+      expect(contentType).toContain('text/html');
+    }
+  });
+
   test('/api/session includes isAdmin field for non-admin user', async ({ request, regularToken }) => {
     const sessionData = await ensureUserExists(request, regularToken);
 
@@ -111,7 +120,7 @@ test.describe('Admin Routes - Access Control', () => {
     await ensureUserExists(request, regularToken);
 
     // Test several sub-paths under /api/admin/
-    const paths = ['/api/admin/users', '/api/admin/goals', '/api/admin/audit-log'];
+    const paths = ['/api/admin/users', '/api/admin/goals', '/api/admin/metrics'];
     for (const path of paths) {
       const response = await request.get(`${BASE_URL}${path}`, {
         headers: { Authorization: `Bearer ${regularToken}` },
