@@ -8,7 +8,7 @@ interface UserRow {
   is_admin: boolean;
   total_distance_km: number;
   last_active_date: string | null;
-  fellowship_name: string | null;
+  fellowship_names: string[];
 }
 
 interface UsersListResponse {
@@ -284,7 +284,19 @@ export function AdminUsersListIsland() {
                       </span>
                     </div>
                   </td>
-                  <td data-label="Fellowship">{user.fellowship_name ?? 'Solo trail'}</td>
+                  <td data-label="Fellowship">
+                    <div className="admin-fellowship-tags">
+                      {user.fellowship_names.length > 0
+                        ? user.fellowship_names.map((name) => (
+                            <span key={name} className="admin-fellowship-tag">
+                              <i className="fas fa-users" aria-hidden="true"></i>
+                              {name}
+                            </span>
+                          ))
+                        : <span className="admin-fellowship-tag admin-fellowship-tag--solo">Solo trail</span>
+                      }
+                    </div>
+                  </td>
                   <td data-label="Support Actions">
                     <div className="admin-user-actions">
                       <button

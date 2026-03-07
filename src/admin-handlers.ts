@@ -59,7 +59,7 @@ export interface AdminUserRow {
   is_admin: boolean;
   total_distance_km: number;
   last_active_date: string | null;
-  fellowship_name: string | null;
+  fellowship_names: string[];
 }
 
 export interface AdminUsersListResponse {
@@ -189,7 +189,7 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
         u.is_admin,
         COALESCE(progress_stats.total_distance_km, 0) as total_distance_km,
         progress_stats.last_active_date as last_active_date,
-        membership.fellowship_name as fellowship_name
+        membership.fellowship_names as fellowship_names
       FROM users u
       LEFT JOIN (
         SELECT
@@ -202,7 +202,7 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
       LEFT JOIN (
         SELECT
           pm.user_id,
-          MIN(p.name) as fellowship_name
+          JSON_GROUP_ARRAY(p.name) as fellowship_names
         FROM party_members pm
         INNER JOIN parties p ON p.id = pm.party_id
         WHERE pm.status = 'active' AND p.dissolved_at IS NULL
@@ -222,7 +222,7 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
       is_admin: number;
       total_distance_km: number | null;
       last_active_date: string | null;
-      fellowship_name: string | null;
+      fellowship_names: string | null;
     }>).map((row) => ({
       id: row.id,
       username: row.username,
@@ -231,7 +231,7 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
       is_admin: row.is_admin === 1,
       total_distance_km: Number(((row.total_distance_km ?? 0)).toFixed(1)),
       last_active_date: row.last_active_date,
-      fellowship_name: row.fellowship_name,
+      fellowship_names: row.fellowship_names ? JSON.parse(row.fellowship_names) as string[] : [],
     }));
 
     const response: AdminUsersListResponse = {

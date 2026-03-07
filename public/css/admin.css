@@ -1545,6 +1545,36 @@
   width: 100%;
 }
 
+.admin-fellowship-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-fellowship-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-teal);
+  background: color-mix(in srgb, var(--accent-teal) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-teal) 30%, transparent);
+  white-space: nowrap;
+}
+
+.admin-fellowship-tag i {
+  font-size: 0.7rem;
+}
+
+.admin-fellowship-tag--solo {
+  color: var(--text-muted);
+  background: transparent;
+  border-color: var(--border-gray);
+}
+
 .admin-metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

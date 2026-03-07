@@ -3381,7 +3381,7 @@ describe('Admin Handlers', () => {
           is_admin: 0,
           total_distance_km: 123.45,
           last_active_date: '2026-03-04',
-          fellowship_name: 'The Shire Striders',
+          fellowship_names: '["The Shire Striders"]',
         }],
       });
       const dataBind = jest.fn().mockReturnValue({ all: dataAll });
@@ -3407,10 +3407,72 @@ describe('Admin Handlers', () => {
         is_admin: false,
         total_distance_km: 123.5,
         last_active_date: '2026-03-04',
-        fellowship_name: 'The Shire Striders',
+        fellowship_names: ['The Shire Striders'],
       });
       expect(countBind).toHaveBeenCalledWith('%fro%', '%fro%');
       expect(dataBind).toHaveBeenCalledWith('%fro%', '%fro%', 25, 0);
+    });
+
+    it('should split multiple fellowship names from JSON_GROUP_ARRAY', async () => {
+      const countFirst = jest.fn().mockResolvedValue({ total: 1 });
+      const dataAll = jest.fn().mockResolvedValue({
+        results: [{
+          id: 8,
+          username: 'aragorn',
+          email: 'aragorn@example.com',
+          email_verified: 1,
+          is_admin: 1,
+          total_distance_km: 300.0,
+          last_active_date: '2026-03-03',
+          fellowship_names: '["Alpha","Beta"]',
+        }],
+      });
+      const dataBind = jest.fn().mockReturnValue({ all: dataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ first: countFirst })
+        .mockReturnValueOnce({ bind: dataBind });
+      mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25';
+
+      const response = await handleAdminUsersList(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.users[0].fellowship_names).toEqual(['Alpha', 'Beta']);
+    });
+
+    it('should return empty array when user has no fellowships', async () => {
+      const countFirst = jest.fn().mockResolvedValue({ total: 1 });
+      const dataAll = jest.fn().mockResolvedValue({
+        results: [{
+          id: 9,
+          username: 'samwise',
+          email: 'samwise@example.com',
+          email_verified: 1,
+          is_admin: 0,
+          total_distance_km: 64.5,
+          last_active_date: '2026-03-04',
+          fellowship_names: null,
+        }],
+      });
+      const dataBind = jest.fn().mockReturnValue({ all: dataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ first: countFirst })
+        .mockReturnValueOnce({ bind: dataBind });
+      mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25';
+
+      const response = await handleAdminUsersList(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.users[0].fellowship_names).toEqual([]);
     });
 
     it('should return 500 when the user list query fails', async () => {
