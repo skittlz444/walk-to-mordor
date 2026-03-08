@@ -121,7 +121,7 @@ export function AdminGoalsListIsland() {
             <i className="fas fa-search" aria-hidden="true"></i>
             <input
               type="text"
-              placeholder="Search goals by title..."
+              placeholder="Search goals..."
               disabled
               className="admin-goals-search__input"
             />
@@ -179,7 +179,7 @@ export function AdminGoalsListIsland() {
           <i className="fas fa-search" aria-hidden="true"></i>
           <input
             type="text"
-            placeholder="Search goals by title..."
+            placeholder="Search goals..."
             value={search}
             onInput={handleSearchChange}
             className="admin-goals-search__input"

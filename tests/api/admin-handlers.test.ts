@@ -1216,9 +1216,10 @@ describe('Admin Handlers', () => {
       expect(body.goals[0].title).toBe('Rivendell');
       expect(body.total).toBe(1);
 
-      // Verify parameterized binding was used (not string concatenation)
-      expect(mockCountBind).toHaveBeenCalledWith('%rivendell%');
-      expect(mockDataBind).toHaveBeenCalledWith('%rivendell%', 25, 0);
+      // Verify parameterized binding was used (not string concatenation) — one binding per searched field (6 fields)
+      const searchParam = '%rivendell%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
+      expect(mockDataBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, 25, 0);
     });
 
     it('should include WHERE LIKE clause in SQL when search is provided', async () => {
@@ -1237,9 +1238,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // Verify SQL includes WHERE title LIKE
+      // Verify SQL includes WHERE with multi-field LIKE
       expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE title LIKE')
+        expect.stringContaining('WHERE (title LIKE')
       );
     });
 
@@ -1396,8 +1397,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // Should trim to 'rivendell'
-      expect(mockCountBind).toHaveBeenCalledWith('%rivendell%');
+      // Should trim to 'rivendell' — one binding per searched field (6 fields)
+      const searchParam = '%rivendell%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
 
     it('should treat whitespace-only search as empty (no WHERE clause)', async () => {
@@ -1445,8 +1447,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // % and _ should be escaped with backslash
-      expect(mockCountBind).toHaveBeenCalledWith('%100\\%\\_done%');
+      // % and _ should be escaped with backslash — one binding per searched field (6 fields)
+      const searchParam = '%100\\%\\_done%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
 
     it('should clamp page to totalPages when requested page exceeds total', async () => {
@@ -1480,8 +1483,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // Backslash should be escaped: \ → \\
-      expect(mockCountBind).toHaveBeenCalledWith('%path\\\\to%');
+      // Backslash should be escaped: \ → \\ — one binding per searched field (6 fields)
+      const searchParam = '%path\\\\to%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
 
     it('should include ESCAPE clause in SQL when search is provided', async () => {
@@ -1607,11 +1611,12 @@ describe('Admin Handlers', () => {
 
       // Verify both WHERE LIKE and ORDER BY DESC are in data SQL
       const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0] as string;
-      expect(dataSqlCall).toContain('WHERE title LIKE');
+      expect(dataSqlCall).toContain('WHERE (title LIKE');
       expect(dataSqlCall).toContain('ORDER BY distance DESC');
 
-      // Verify search binding is used
-      expect(mockCountBind).toHaveBeenCalledWith('%river%');
+      // Verify search binding is used — one binding per searched field (6 fields)
+      const searchParam = '%river%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
 
     it('should return empty goals array when no results match', async () => {
@@ -1667,8 +1672,34 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // \ → \\, % → \%, _ → \_ (backslash first, then %, then _)
-      expect(mockCountBind).toHaveBeenCalledWith('%a\\\\b\\%c\\_d%');
+      // \ → \\, % → \%, _ → \_ (backslash first, then %, then _) — one binding per searched field (6 fields)
+      const searchParam = '%a\\\\b\\%c\\_d%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
+    });
+
+    it('should search across all goal fields including special, description, and image_id', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 0 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=council');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // Verify the WHERE clause searches all text fields
+      const countSqlCall = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      expect(countSqlCall).toContain('description LIKE');
+      expect(countSqlCall).toContain('special LIKE');
+      expect(countSqlCall).toContain('image_id LIKE');
+      expect(countSqlCall).toContain('CAST(id AS TEXT) LIKE');
+      expect(countSqlCall).toContain('CAST(distance AS TEXT) LIKE');
     });
   });
 
@@ -3409,8 +3440,8 @@ describe('Admin Handlers', () => {
         last_active_date: '2026-03-04',
         fellowship_names: ['The Shire Striders'],
       });
-      expect(countBind).toHaveBeenCalledWith('%fro%', '%fro%');
-      expect(dataBind).toHaveBeenCalledWith('%fro%', '%fro%', 25, 0);
+      expect(countBind).toHaveBeenCalledWith('%fro%', '%fro%', '%fro%');
+      expect(dataBind).toHaveBeenCalledWith('%fro%', '%fro%', '%fro%', 25, 0);
     });
 
     it('should split multiple fellowship names from JSON_GROUP_ARRAY', async () => {
@@ -3488,6 +3519,46 @@ describe('Admin Handlers', () => {
       expect(response.status).toBe(500);
       const body = await response.json();
       expect(body.error).toBe('Internal server error while fetching users');
+    });
+
+    it('should search across fellowship names in addition to username and email', async () => {
+      const countFirst = jest.fn().mockResolvedValue({ total: 1 });
+      const countBind = jest.fn().mockReturnValue({ first: countFirst });
+      const dataAll = jest.fn().mockResolvedValue({
+        results: [{
+          id: 10,
+          username: 'legolas',
+          email: 'legolas@example.com',
+          email_verified: 1,
+          is_admin: 0,
+          total_distance_km: 200.0,
+          last_active_date: '2026-03-04',
+          fellowship_names: '["The Fellowship of the Ring"]',
+        }],
+      });
+      const dataBind = jest.fn().mockReturnValue({ all: dataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: countBind })
+        .mockReturnValueOnce({ bind: dataBind });
+      mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25&search=Fellowship';
+
+      const response = await handleAdminUsersList(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.users).toHaveLength(1);
+
+      // Verify search includes fellowship_names — 3 bindings (username, email, fellowship)
+      expect(countBind).toHaveBeenCalledWith('%Fellowship%', '%Fellowship%', '%Fellowship%');
+
+      // Verify the count SQL includes the membership JOIN for fellowship search
+      const countSqlCall = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      expect(countSqlCall).toContain('membership.fellowship_names LIKE');
+      expect(countSqlCall).toContain('LEFT JOIN');
     });
   });
 
