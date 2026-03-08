@@ -1676,6 +1676,31 @@ describe('Admin Handlers', () => {
       const searchParam = '%a\\\\b\\%c\\_d%';
       expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
+
+    it('should search across all goal fields including special, description, and image_id', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 0 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=council');
+      await handleAdminGoalsList(
+        request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      // Verify the WHERE clause searches all text fields
+      const countSqlCall = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      expect(countSqlCall).toContain('description LIKE');
+      expect(countSqlCall).toContain('special LIKE');
+      expect(countSqlCall).toContain('image_id LIKE');
+      expect(countSqlCall).toContain('CAST(id AS TEXT) LIKE');
+      expect(countSqlCall).toContain('CAST(distance AS TEXT) LIKE');
+    });
   });
 
   describe('handleAdminGoalGet', () => {
@@ -3494,6 +3519,46 @@ describe('Admin Handlers', () => {
       expect(response.status).toBe(500);
       const body = await response.json();
       expect(body.error).toBe('Internal server error while fetching users');
+    });
+
+    it('should search across fellowship names in addition to username and email', async () => {
+      const countFirst = jest.fn().mockResolvedValue({ total: 1 });
+      const countBind = jest.fn().mockReturnValue({ first: countFirst });
+      const dataAll = jest.fn().mockResolvedValue({
+        results: [{
+          id: 10,
+          username: 'legolas',
+          email: 'legolas@example.com',
+          email_verified: 1,
+          is_admin: 0,
+          total_distance_km: 200.0,
+          last_active_date: '2026-03-04',
+          fellowship_names: '["The Fellowship of the Ring"]',
+        }],
+      });
+      const dataBind = jest.fn().mockReturnValue({ all: dataAll });
+
+      mockEnv.DB.prepare
+        .mockReturnValueOnce({ bind: countBind })
+        .mockReturnValueOnce({ bind: dataBind });
+      mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25&search=Fellowship';
+
+      const response = await handleAdminUsersList(
+        mockRequest as unknown as Request,
+        mockEnv as unknown as { DB: D1Database }
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.users).toHaveLength(1);
+
+      // Verify search includes fellowship_names — 3 bindings (username, email, fellowship)
+      expect(countBind).toHaveBeenCalledWith('%Fellowship%', '%Fellowship%', '%Fellowship%');
+
+      // Verify the count SQL includes the membership JOIN for fellowship search
+      const countSqlCall = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      expect(countSqlCall).toContain('membership.fellowship_names LIKE');
+      expect(countSqlCall).toContain('LEFT JOIN');
     });
   });
 
