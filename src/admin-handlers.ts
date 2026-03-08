@@ -719,13 +719,17 @@ export async function handleAdminGoalsList(request: Request, env: { DB: D1Databa
     const dataBindings: (string | number)[] = [];
 
     if (search) {
-      const whereClause = ` WHERE (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR special LIKE ? ESCAPE '\\' OR image_id LIKE ? ESCAPE '\\' OR CAST(id AS TEXT) LIKE ? ESCAPE '\\' OR CAST(distance AS TEXT) LIKE ? ESCAPE '\\')`;
+      // Search across all goal fields: title, description, special, image_id, id, distance
+      const searchFields = [
+        'title', 'description', 'special', 'image_id', 'CAST(id AS TEXT)', 'CAST(distance AS TEXT)',
+      ];
+      const whereClause = ` WHERE (${searchFields.map((f) => `${f} LIKE ? ESCAPE '\\'`).join(' OR ')})`;
       countSql += whereClause;
       dataSql += whereClause;
       // Escape LIKE wildcards in user input to prevent unintended pattern matching
       const escapedSearch = search.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
       const searchParam = `%${escapedSearch}%`;
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < searchFields.length; i++) {
         countBindings.push(searchParam);
         dataBindings.push(searchParam);
       }
