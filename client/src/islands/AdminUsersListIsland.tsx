@@ -211,7 +211,7 @@ export function AdminUsersListIsland() {
             type="search"
             value={searchInput}
             onInput={(event) => setSearchInput((event.target as HTMLInputElement).value)}
-            placeholder="Search by username or email"
+            placeholder="Search by username, email, or fellowship"
             aria-label="Search users"
           />
           <button type="submit" className="admin-btn admin-btn-secondary">Search</button>

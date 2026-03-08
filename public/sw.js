@@ -1,5 +1,5 @@
 // Build timestamp - this should be replaced during build process
-const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}';
+const BUILD_TIMESTAMP = '20260308-022132';
 const CACHE_NAME = `walk-to-mordor-${BUILD_TIMESTAMP}`;
 const urlsToCache = [
   '/css/main.css',

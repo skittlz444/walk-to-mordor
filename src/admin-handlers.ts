@@ -166,11 +166,24 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
 
     if (search) {
       const escapedSearch = `%${escapeLikeSearch(search)}%`;
-      whereClause = ` WHERE (u.username LIKE ? ESCAPE '\\' OR u.email LIKE ? ESCAPE '\\')`;
-      searchBindings.push(escapedSearch, escapedSearch);
+      whereClause = ` WHERE (u.username LIKE ? ESCAPE '\\' OR u.email LIKE ? ESCAPE '\\' OR membership.fellowship_names LIKE ? ESCAPE '\\')`;
+      searchBindings.push(escapedSearch, escapedSearch, escapedSearch);
     }
 
-    const countSql = `SELECT COUNT(*) as total FROM users u${whereClause}`;
+    const membershipJoinSql = `
+      LEFT JOIN (
+        SELECT
+          pm.user_id,
+          JSON_GROUP_ARRAY(p.name) as fellowship_names
+        FROM party_members pm
+        INNER JOIN parties p ON p.id = pm.party_id
+        WHERE pm.status = 'active' AND p.dissolved_at IS NULL
+        GROUP BY pm.user_id
+      ) membership ON membership.user_id = u.id`;
+
+    const countSql = search
+      ? `SELECT COUNT(*) as total FROM users u${membershipJoinSql}${whereClause}`
+      : `SELECT COUNT(*) as total FROM users u${whereClause}`;
     const countResult = searchBindings.length > 0
       ? await env.DB.prepare(countSql).bind(...searchBindings).first<{ total: number }>()
       : await env.DB.prepare(countSql).first<{ total: number }>();
@@ -688,7 +701,7 @@ export async function handleAdminMetricsTimeline(_request: Request, env: { DB: D
  * Query parameters:
  *   - page (default 1)
  *   - pageSize (default 25, max 100)
- *   - search (optional, filters title LIKE %term%)
+ *   - search (optional, filters across all text fields: title, description, special, image_id, id, distance)
  *   - order ('asc' | 'desc', default 'asc' — by distance)
  */
 export async function handleAdminGoalsList(request: Request, env: { DB: D1Database }): Promise<Response> {
@@ -706,13 +719,16 @@ export async function handleAdminGoalsList(request: Request, env: { DB: D1Databa
     const dataBindings: (string | number)[] = [];
 
     if (search) {
-      const whereClause = ' WHERE title LIKE ? ESCAPE \'\\\'';
+      const whereClause = ` WHERE (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR special LIKE ? ESCAPE '\\' OR image_id LIKE ? ESCAPE '\\' OR CAST(id AS TEXT) LIKE ? ESCAPE '\\' OR CAST(distance AS TEXT) LIKE ? ESCAPE '\\')`;
       countSql += whereClause;
       dataSql += whereClause;
       // Escape LIKE wildcards in user input to prevent unintended pattern matching
       const escapedSearch = search.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
-      countBindings.push(`%${escapedSearch}%`);
-      dataBindings.push(`%${escapedSearch}%`);
+      const searchParam = `%${escapedSearch}%`;
+      for (let i = 0; i < 6; i++) {
+        countBindings.push(searchParam);
+        dataBindings.push(searchParam);
+      }
     }
 
     dataSql += ` ORDER BY distance ${order} LIMIT ? OFFSET ?`;

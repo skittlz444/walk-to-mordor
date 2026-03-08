@@ -1216,9 +1216,10 @@ describe('Admin Handlers', () => {
       expect(body.goals[0].title).toBe('Rivendell');
       expect(body.total).toBe(1);
 
-      // Verify parameterized binding was used (not string concatenation)
-      expect(mockCountBind).toHaveBeenCalledWith('%rivendell%');
-      expect(mockDataBind).toHaveBeenCalledWith('%rivendell%', 25, 0);
+      // Verify parameterized binding was used (not string concatenation) — one binding per searched field (6 fields)
+      const searchParam = '%rivendell%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
+      expect(mockDataBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam, 25, 0);
     });
 
     it('should include WHERE LIKE clause in SQL when search is provided', async () => {
@@ -1237,9 +1238,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // Verify SQL includes WHERE title LIKE
+      // Verify SQL includes WHERE with multi-field LIKE
       expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE title LIKE')
+        expect.stringContaining('WHERE (title LIKE')
       );
     });
 
@@ -1396,8 +1397,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // Should trim to 'rivendell'
-      expect(mockCountBind).toHaveBeenCalledWith('%rivendell%');
+      // Should trim to 'rivendell' — one binding per searched field (6 fields)
+      const searchParam = '%rivendell%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
 
     it('should treat whitespace-only search as empty (no WHERE clause)', async () => {
@@ -1445,8 +1447,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // % and _ should be escaped with backslash
-      expect(mockCountBind).toHaveBeenCalledWith('%100\\%\\_done%');
+      // % and _ should be escaped with backslash — one binding per searched field (6 fields)
+      const searchParam = '%100\\%\\_done%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
 
     it('should clamp page to totalPages when requested page exceeds total', async () => {
@@ -1480,8 +1483,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // Backslash should be escaped: \ → \\
-      expect(mockCountBind).toHaveBeenCalledWith('%path\\\\to%');
+      // Backslash should be escaped: \ → \\ — one binding per searched field (6 fields)
+      const searchParam = '%path\\\\to%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
 
     it('should include ESCAPE clause in SQL when search is provided', async () => {
@@ -1607,11 +1611,12 @@ describe('Admin Handlers', () => {
 
       // Verify both WHERE LIKE and ORDER BY DESC are in data SQL
       const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0] as string;
-      expect(dataSqlCall).toContain('WHERE title LIKE');
+      expect(dataSqlCall).toContain('WHERE (title LIKE');
       expect(dataSqlCall).toContain('ORDER BY distance DESC');
 
-      // Verify search binding is used
-      expect(mockCountBind).toHaveBeenCalledWith('%river%');
+      // Verify search binding is used — one binding per searched field (6 fields)
+      const searchParam = '%river%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
 
     it('should return empty goals array when no results match', async () => {
@@ -1667,8 +1672,9 @@ describe('Admin Handlers', () => {
         mockEnv as unknown as { DB: D1Database }
       );
 
-      // \ → \\, % → \%, _ → \_ (backslash first, then %, then _)
-      expect(mockCountBind).toHaveBeenCalledWith('%a\\\\b\\%c\\_d%');
+      // \ → \\, % → \%, _ → \_ (backslash first, then %, then _) — one binding per searched field (6 fields)
+      const searchParam = '%a\\\\b\\%c\\_d%';
+      expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
     });
   });
 
@@ -3409,8 +3415,8 @@ describe('Admin Handlers', () => {
         last_active_date: '2026-03-04',
         fellowship_names: ['The Shire Striders'],
       });
-      expect(countBind).toHaveBeenCalledWith('%fro%', '%fro%');
-      expect(dataBind).toHaveBeenCalledWith('%fro%', '%fro%', 25, 0);
+      expect(countBind).toHaveBeenCalledWith('%fro%', '%fro%', '%fro%');
+      expect(dataBind).toHaveBeenCalledWith('%fro%', '%fro%', '%fro%', 25, 0);
     });
 
     it('should split multiple fellowship names from JSON_GROUP_ARRAY', async () => {
