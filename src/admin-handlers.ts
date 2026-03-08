@@ -701,7 +701,7 @@ export async function handleAdminMetricsTimeline(_request: Request, env: { DB: D
  * Query parameters:
  *   - page (default 1)
  *   - pageSize (default 25, max 100)
- *   - search (optional, filters across all text fields: title, description, special, image_id, id, distance)
+ *   - search (optional, performs a text search over goal fields)
  *   - order ('asc' | 'desc', default 'asc' — by distance)
  */
 export async function handleAdminGoalsList(request: Request, env: { DB: D1Database }): Promise<Response> {
