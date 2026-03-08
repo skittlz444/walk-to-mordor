@@ -727,7 +727,7 @@ export async function handleAdminGoalsList(request: Request, env: { DB: D1Databa
       countSql += whereClause;
       dataSql += whereClause;
       // Escape LIKE wildcards in user input to prevent unintended pattern matching
-      const escapedSearch = search.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+      const escapedSearch = escapeLikeSearch(search);
       const searchParam = `%${escapedSearch}%`;
       for (let i = 0; i < searchFields.length; i++) {
         countBindings.push(searchParam);
