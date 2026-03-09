@@ -186,12 +186,25 @@ export function isEmailConfirmationTokenExpired(expiresAt: string): boolean {
  * Shared by friend-code and invite-code generation.
  */
 export function generateAlphanumericCode(): string {
+  const length = 8;
   const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const values = new Uint8Array(8);
+  // Generate more random bytes than needed to account for rejection
+  const bufferSize = length * 2; // Extra to handle rejections
+  const values = new Uint8Array(bufferSize);
   crypto.getRandomValues(values);
   let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += charset[values[i] % charset.length];
+  let idx = 0;
+  while (code.length < length) {
+    if (idx >= values.length) {
+      // Need more random bytes
+      crypto.getRandomValues(values);
+      idx = 0;
+    }
+    // Rejection sampling: reject values that cause modulo bias
+    if (values[idx] < 256 - (256 % charset.length)) {
+      code += charset[values[idx] % charset.length];
+    }
+    idx++;
   }
   return code;
 }

@@ -181,6 +181,9 @@ Claude Sonnet 4 (via Copilot CLI)
 - The backfill strategy for cryptographically random `friend_code` values is implemented as a Worker-side utility (`backfillFriendCodes` in `src/auth-utils.ts`) that uses the same `generateUniqueFriendCode` helper as registration. Run via: `import { backfillFriendCodes } from './auth-utils'; await backfillFriendCodes(env.DB);`
 - `generateInviteCode` in `party-handlers.ts` was refactored to delegate to the shared `generateAlphanumericCode` utility, eliminating duplicated crypto logic.
 - Placeholder WebP assets (minimal RIFF stubs) are checked in for all 22 avatar slugs. Replace with real watercolour-style artwork before shipping the avatar picker UI.
+- **Code-review fix (CR-1 CRITICAL):** Both mock auth INSERT statements in `auth-handlers.ts` now include `email_verified = 1` so test users aren't blocked by email verification.
+- **Code-review fix (CR-2 HIGH):** `generateAlphanumericCode` in `auth-utils.ts` now uses rejection sampling to eliminate modulo bias (`256 % 62 != 0`).
+- **Code-review fix (CR-3 MEDIUM):** Migration `0122` updated to use a partial unique index on `friend_code` (`WHERE friend_code IS NOT NULL`) to avoid SQLite treating multiple NULLs as duplicates.
 - The `CHECK(status IN ('pending', 'accepted'))` constraint on `friendships` was added to the migration and documented in `data-models.md`.
 
 ### File List

@@ -3,7 +3,7 @@ ALTER TABLE users ADD COLUMN avatar_id TEXT DEFAULT NULL;
 ALTER TABLE users ADD COLUMN friend_code TEXT DEFAULT NULL;
 
 -- Enforce uniqueness for friend_code
-CREATE UNIQUE INDEX idx_users_friend_code ON users(friend_code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_friend_code ON users(friend_code) WHERE friend_code IS NOT NULL;
 
 -- Create friendships table
 CREATE TABLE friendships (

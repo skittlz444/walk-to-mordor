@@ -263,7 +263,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         const friendCode = await generateUniqueFriendCode(env.DB);
         
         await env.DB.prepare(
-          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, friend_code) VALUES (?, ?, ?, ?, 1, ?)'
+          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, email_verified, friend_code) VALUES (?, ?, ?, ?, 1, 1, ?)'
         ).bind(username, `${username}@example.com`, passwordHash, salt, friendCode).run();
         
         // Fetch the user (created here or by a concurrent request)
@@ -376,7 +376,7 @@ export async function validateSession(request: Request, env: any): Promise<
         const friendCode = await generateUniqueFriendCode(env.DB);
         
         await env.DB.prepare(
-          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, friend_code) VALUES (?, ?, ?, ?, 1, ?)'
+          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, email_verified, friend_code) VALUES (?, ?, ?, ?, 1, 1, ?)'
         ).bind(username, `${username}@example.com`, passwordHash, salt, friendCode).run();
         
         // Fetch the user (created here or by a concurrent request)
