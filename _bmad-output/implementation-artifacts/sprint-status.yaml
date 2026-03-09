@@ -94,7 +94,7 @@ development_status:
   4-4-goal-management-edit-goal: done
   4-5-goal-management-image-asset-workflow-integration: done
   4-6-goal-management-add-intermediary-goal: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   # ============================================
   # EPIC 5: Races (Competitive Events) (#154)
@@ -107,3 +107,15 @@ development_status:
   5-5-race-ui-discovery-join: backlog
   5-6-race-ui-leaderboard-progress: backlog
   epic-5-retrospective: optional
+
+  # ============================================
+  # EPIC 6: Friends & Social Identity (TBD)
+  # ============================================
+  epic-6: in-progress
+  6-1-friends-database-schema-avatar-system: ready-for-dev
+  6-2-friend-request-api: ready-for-dev
+  6-3-fellowship-invite-via-friends-api: ready-for-dev
+  6-4-friends-ui-friends-page-friend-profile: ready-for-dev
+  6-5-avatar-ui-avatar-selection: ready-for-dev
+  6-6-map-social-panel-friends-on-map: ready-for-dev
+  epic-6-retrospective: optional

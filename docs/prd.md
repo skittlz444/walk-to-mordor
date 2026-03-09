@@ -108,8 +108,10 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 *   **Party Lifecycle:** Empty parties (all members departed) are automatically dissolved (soft-deleted). Users who leave or are kicked can re-join via invite code.
 *   **Multi-Party UI:** Journey and Map pages include a party selector (hidden if user has no parties) to toggle between personal distance and any party's combined distance. Navigation drawer includes link to Fellowships page. The Fellowships UI uses a 3-page flow: Fellowships list (select or create) → Fellowship detail (members, contributions, total progress, last milestone crossed) → Fellowship management (leader only — settings, kick, transfer, invite code). Shareable invite links (`/party/join/:inviteCode`) enable joining via clickable URLs with a preview landing page (works for both authenticated and non-authenticated users).
 *   **Party Milestone Notifications:** Swapping to a party view that has passed a new milestone since the user last viewed it triggers the milestone modal.
-*   **Personalization (Future):** User custom map icons and fellowship profile icons for visual distinction.
-*   **Races:** Challenge functionality between users/parties.
+*   **Personalization:** Users can select a predefined LOTR-themed avatar as their profile image from a curated gallery.
+*   **Friends & Social Identity:** Mutual friend relationships via username search or shareable friend link. Friends list with username, avatar, and "last progressed" date. Friend profile pages showing total distance and fellowships (highlighting shared ones). Friends visible on the Map as avatars at their journey position (toggle in a unified Social panel). Friend requests display a badge count on the Friends nav link.
+*   **Fellowship Invites via Friends:** Users can invite friends to a Fellowship (acceptance required). Pending fellowship invites display a badge count on the Fellowships nav link. Invites can be accepted/rejected from the Fellowships list with basic details shown. "Add Friend" shortcut available on Fellowship member lists.
+*   **Races:** Challenge functionality between users/parties (leverages Friends foundation for discovery, privacy, and identity).
 *   *Requirement:* This phase introduces complex database relations and potential privacy refactoring.
 
 ### Phase 4: Expansion (Content Scale)
@@ -169,8 +171,23 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 *   **FR_PARTY_10:** Party leaders can update mutable party settings (e.g., party name and leave-distance behavior) after party creation. The distance calculation mode is immutable once the party is created.
 *   **FR_PARTY_11:** Party leaders can transfer leadership to another active member without leaving the party.
 *   **FR_PARTY_12:** When all members have left a party, the party is automatically dissolved (soft-deleted). Members cannot re-join a dissolved party.
-*   **FR_PARTY_13 (Future):** Users can set a custom icon/avatar to distinguish themselves on the Map view.
-*   **FR_PARTY_14 (Future):** Party leaders can set a profile icon for their Fellowship.
+*   **FR_PARTY_13 (Future):** Party leaders can set a profile icon for their Fellowship.
+*   **FR_PARTY_14:** Users can invite friends to a Fellowship. The invited friend must accept to join (replaces direct invite-code-only flow for friends).
+*   **FR_PARTY_15:** Pending fellowship invites display a badge count on the Fellowships navigation link.
+*   **FR_PARTY_16:** Users can accept or reject fellowship invites from the Fellowships list page, seeing basic details (name, member count, current distance).
+*   **FR_PARTY_17:** On the Fellowship detail page, members can send a friend request to non-friend members via an "Add Friend" shortcut.
+
+### 7. Friends & Social Identity
+*   **FR_FRIEND_01:** Users can send a friend request to another user by searching their username.
+*   **FR_FRIEND_02:** Users can share a personal friend link that others can use to send them a friend request.
+*   **FR_FRIEND_03:** Users can accept or reject incoming friend requests.
+*   **FR_FRIEND_04:** Users can remove an existing friend (mutual unfriend).
+*   **FR_FRIEND_05:** Users can view a list of their friends showing username, avatar, and last progressed date.
+*   **FR_FRIEND_06:** Users can view a friend's profile page showing username, avatar, total distance walked, and fellowships they belong to (highlighting shared fellowships).
+*   **FR_FRIEND_07:** Users can select a predefined LOTR-themed avatar as their profile image.
+*   **FR_FRIEND_08:** Pending friend requests display a badge count on the Friends navigation link.
+*   **FR_FRIEND_09:** Users can toggle "Show Friends" on the Map page to see friend avatars at their current journey positions.
+*   **FR_FRIEND_10:** Users can tap a friend's map avatar to see a mini-card with username, total distance, and a link to their profile.
 
 ## Non-Functional Requirements
 

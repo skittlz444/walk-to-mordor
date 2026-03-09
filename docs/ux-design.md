@@ -242,6 +242,82 @@ Two visual states based on completion:
 - Previous/Next navigation to browse adjacent milestones
 - Reading progress indicator for long descriptions
 
+### 6. Friends List Page
+
+**Observations:**
+- Dark card list layout matching Goals List pattern
+- Each friend row: avatar thumbnail (predefined LOTR image), username, "Last Progressed" date
+- Pending requests section at top with accept/reject actions
+- Search bar for username lookup, friend code input field
+- Badge on nav link shows pending request count
+
+**What Works:**
+- ✅ Reuses established card patterns from goals/fellowship
+- ✅ Avatar thumbnails add visual personality without complexity
+- ✅ "Last Progressed" subtly encourages walking activity
+
+**Improvement Opportunities:**
+- Consider skeleton loading states for avatar images
+- Empty state needs motivational copy ("Invite a friend to share the journey")
+
+### 7. Friend Profile Page
+
+**Observations:**
+- Centered card with large avatar, username, shared fellowships list
+- Action button: Remove Friend (with confirmation)
+- "Invite to Fellowship" button if user leads/belongs to a party
+- Shows friend's current goal name (no distance — privacy)
+
+**What Works:**
+- ✅ Focused, single-purpose view
+- ✅ Fellowship invite shortcut reduces navigation
+
+**Improvement Opportunities:**
+- Could show mutual friend count in future iteration
+
+### 8. Add Friend Page (Friend Code Landing)
+
+**Observations:**
+- Reached via `/friends/add/:friendCode` shareable link
+- Shows target user preview: avatar + username
+- Single "Send Friend Request" CTA button
+- Unauthenticated users redirected to login, then back to this page
+
+**What Works:**
+- ✅ Minimal friction for link-based friend discovery
+- ✅ Auth redirect preserves intent
+
+### 9. Avatar Selection
+
+**Observations:**
+- Grid gallery of ~20-30 predefined LOTR-themed avatar images
+- Embedded within Profile Settings page (not a standalone page)
+- Current avatar highlighted with gold border
+- Tap to select, confirm to save
+- WebP format, consistent 128x128 display size
+
+**What Works:**
+- ✅ No upload flow avoids moderation complexity
+- ✅ Curated LOTR themes reinforce narrative immersion
+- ✅ Gold highlight matches design system accent
+
+### 10. Map Social Panel
+
+**Observations:**
+- Unified panel replacing fellowship-only selector
+- Two sections: Fellowship selector (existing) + Friends toggle
+- Friends toggle shows/hides friend avatar markers on the journey path
+- Panel collapses to icon button when closed (map real estate preserved)
+- Friend markers show avatar + username tooltip on tap
+
+**What Works:**
+- ✅ Consolidates all social map controls in one panel
+- ✅ Toggle pattern is familiar from other map apps
+- ✅ Collapsed state preserves immersive map experience
+
+**Improvement Opportunities:**
+- Consider filtering friends by "nearby on path" for long friend lists
+
 ---
 
 ## Recommended Improvements
@@ -310,10 +386,12 @@ Two visual states based on completion:
 
 This document establishes the baseline for Walk to Mordor's current UX. The following topics should be addressed in separate design workshops:
 
-1. **Map Visualization (Phase 2)** - Interactive journey visualization
-2. **Fellowship Features (Phase 3)** - Multiplayer/social UX patterns
-3. **Onboarding Flow** - New user first-run experience
-4. **Dark Mode Refinement** - Formalized theme system with potential light mode
+1. ~~**Map Visualization (Phase 2)**~~ - ✅ Implemented (Epic 3)
+2. ~~**Fellowship Features (Phase 3)**~~ - ✅ Implemented (Epic 4)
+3. **Friends & Social Identity (Phase 3)** - Avatar system, friend discovery, social map panel
+4. **Races (Phase 3)** - Competitive gameplay UX patterns
+5. **Onboarding Flow** - New user first-run experience
+6. **Dark Mode Refinement** - Formalized theme system with potential light mode
 
 ---
 

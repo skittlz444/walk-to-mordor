@@ -21,10 +21,10 @@ Rule of thumb:
 
 ```text
 client/src/
-  components/        # Reusable TSX components (including map primitives)
+  components/        # Reusable TSX components (including map primitives, Avatar)
   data/              # Static map/waypoint datasets
   islands/           # Mountable page islands
-  stores/            # Preact Signals state stores
+  stores/            # Preact Signals state stores (map, party, friends)
   types/             # Shared client types
   utils/             # Client utilities and cache helpers
   index.tsx          # Island registry and hydration entry
@@ -96,3 +96,33 @@ The `AdminGoalEditIsland` component (`client/src/islands/AdminGoalEditIsland.tsx
 - **Save** button sends `PUT /api/admin/goals/:id`; success toast auto-dismisses after 3s
 - **Back to Goals** link navigates to `/admin/goals`
 - Loading, 404, and error states with retry
+
+## Friends Islands
+
+### FriendsListIsland
+
+The `FriendsListIsland` component (`client/src/islands/FriendsListIsland.tsx`) renders the friends page at `/friends`. Sections:
+- **Pending Requests** (collapsible): incoming requests with Accept/Reject actions
+- **Friends List**: username, avatar (via `Avatar` component), last progressed date. Click navigates to `/friends/:id`
+- **Search**: username prefix search (min 3 chars, debounced 300ms) with friendship status indicators and Add Friend action
+- **Share Link**: personal friend link with Copy/Share buttons
+
+### FriendProfileIsland
+
+The `FriendProfileIsland` component (`client/src/islands/FriendProfileIsland.tsx`) renders a friend's profile at `/friends/:id`. Shows username, avatar (128px), total distance, member-since date, and fellowships (shared ones highlighted). Includes Remove Friend with confirmation dialog.
+
+### FriendAddIsland
+
+The `FriendAddIsland` component (`client/src/islands/FriendAddIsland.tsx`) renders the friend link landing page at `/friends/add/:friendCode`. Resolves the friend code to a user preview and provides Send Request action for authenticated users or login redirect for unauthenticated users.
+
+### SocialPanelIsland
+
+The `SocialPanelIsland` component replaces the fellowship-only selector on the Map page. Two independent sections:
+- **View As**: Personal + fellowship list (preserves existing `PartySelector` behavior)
+- **Friends on Map**: Toggle to show/hide friend avatars at their journey positions. Friend avatars render as 32px circular images (thumbnails from `public/img/avatars/thumbs/`), tappable for a mini-card with username, distance, and profile link.
+
+## Reusable Components
+
+### Avatar
+
+The `Avatar` component (`client/src/components/Avatar.tsx`) renders a user's avatar consistently across all surfaces. Props: `avatarId`, `username`, `size`. When `avatarId` is set, renders the predefined image from `/img/avatars/`. When NULL, renders an initials circle with a deterministic background color seeded from the username.
