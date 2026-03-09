@@ -1503,7 +1503,8 @@ export function MapIsland() {
       {/* Social panel (replaces party panel — contains View As + Friends on Map) */}
       {showSocialPanel.value && !loading.value && (
         <div className="map-social-panel">
-          {/* View As section — only when user has fellowships */}
+          {/* View As section — only renders when user belongs to at least one fellowship.
+             Hidden in test/demo when the auth state has no parties. */}
           {userParties.value.length > 0 && (
             <div className="social-panel-section">
               <h4>View As</h4>

@@ -338,6 +338,8 @@ h1 {
   box-shadow: 0 4px 12px var(--shadow-std);
   max-height: 300px;
   overflow-y: auto;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .map-party-option {

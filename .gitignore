@@ -207,3 +207,6 @@ public/js/client/
 
 # Raw source images for optimization (not committed to repo)
 raw_assets/
+
+# Inspection screenshots
+_inspection-screenshots/
