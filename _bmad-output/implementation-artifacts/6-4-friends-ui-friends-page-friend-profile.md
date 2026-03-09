@@ -1,7 +1,7 @@
 # Story 6.4: Friends UI — Friends Page & Friend Profile
 
 Status: ready-for-dev
-Issue: #TBD
+Issue: #302
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

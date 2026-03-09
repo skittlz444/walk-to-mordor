@@ -1,7 +1,7 @@
 # Story 6.6: Map Social Panel & Friends on Map
 
 Status: ready-for-dev
-Issue: #TBD
+Issue: #304
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

@@ -1,7 +1,7 @@
 # Story 6.2: Friend Request API
 
 Status: ready-for-dev
-Issue: #TBD
+Issue: #300
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

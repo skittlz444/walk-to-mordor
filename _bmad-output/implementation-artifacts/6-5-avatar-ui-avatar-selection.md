@@ -1,7 +1,7 @@
 # Story 6.5: Avatar UI — Avatar Selection
 
 Status: ready-for-dev
-Issue: #TBD
+Issue: #303
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
