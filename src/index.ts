@@ -36,6 +36,7 @@ import {
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
+import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend } from "./friends-handlers";
 import { renderPartyListPage } from "./renderPartyListPage";
 import { renderPartyDetailPage } from "./renderPartyDetailPage";
 import { renderPartyManagePage } from "./renderPartyManagePage";
@@ -373,6 +374,57 @@ export default {
         return handleTransferLeadership(request, env, partyId, body);
       }
 
+      // Friends (Social) endpoints — exact routes first, then parameterized
+      if (url.pathname === "/api/friends" && method === "GET") {
+        return handleGetFriends(request, env);
+      }
+      if (url.pathname === "/api/friends/pending" && method === "GET") {
+        return handleGetPendingFriends(request, env);
+      }
+      if (url.pathname === "/api/friends/search" && method === "GET") {
+        return handleSearchUsers(request, env);
+      }
+      if (url.pathname === "/api/friends/request" && method === "POST") {
+        return handleFriendRequest(request, env, body);
+      }
+      if (url.pathname === "/api/friends/request/code" && method === "POST") {
+        return handleFriendRequestByCode(request, env, body);
+      }
+
+      // Parameterized friend routes — resolve before friendshipId routes
+      const resolveParams = matchRoute(url.pathname, '/api/friends/resolve/:friendCode');
+      if (resolveParams && method === "GET") {
+        return handleResolveFriendCode(request, env, resolveParams.friendCode);
+      }
+
+      const acceptParams = matchRoute(url.pathname, '/api/friends/:friendshipId/accept');
+      if (acceptParams && method === "POST") {
+        const friendshipId = Number.parseInt(acceptParams.friendshipId, 10);
+        if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== acceptParams.friendshipId) {
+          return createErrorResponse('Invalid friendship ID', 400);
+        }
+        return handleAcceptFriend(request, env, friendshipId);
+      }
+
+      const rejectParams = matchRoute(url.pathname, '/api/friends/:friendshipId/reject');
+      if (rejectParams && method === "POST") {
+        const friendshipId = Number.parseInt(rejectParams.friendshipId, 10);
+        if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== rejectParams.friendshipId) {
+          return createErrorResponse('Invalid friendship ID', 400);
+        }
+        return handleRejectFriend(request, env, friendshipId);
+      }
+
+      // DELETE /api/friends/:friendshipId — unfriend
+      const unfriendParams = matchRoute(url.pathname, '/api/friends/:friendshipId');
+      if (unfriendParams && method === "DELETE") {
+        const friendshipId = Number.parseInt(unfriendParams.friendshipId, 10);
+        if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== unfriendParams.friendshipId) {
+          return createErrorResponse('Invalid friendship ID', 400);
+        }
+        return handleUnfriend(request, env, friendshipId);
+      }
+
       // CRUD for calendar events
       if (url.pathname === "/api/calendar-progress" && method === "POST") {
         return handleProgressPost(request, env, body);
@@ -557,6 +609,9 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/session":
     case "/api/auth/confirm-email":
     case "/api/user/parties":
+    case "/api/friends":
+    case "/api/friends/pending":
+    case "/api/friends/search":
     case "/api/admin/dashboard":
     case "/api/admin/users":
     case "/api/admin/metrics":
@@ -573,6 +628,8 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/password-reset":
     case "/api/auth/resend-confirmation":
     case "/api/party":
+    case "/api/friends/request":
+    case "/api/friends/request/code":
       return ['POST'];
     case "/api/profile":
     case "/api/user/preferences":
@@ -612,6 +669,19 @@ function getAllowedMethods(pathname: string): string[] {
       }
       if (matchRoute(pathname, '/api/party/:id/transfer-leadership')) {
         return ['POST'];
+      }
+      // Friend parameterized routes
+      if (matchRoute(pathname, '/api/friends/resolve/:friendCode')) {
+        return ['GET'];
+      }
+      if (matchRoute(pathname, '/api/friends/:friendshipId/accept')) {
+        return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/friends/:friendshipId/reject')) {
+        return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/friends/:friendshipId')) {
+        return ['DELETE'];
       }
       return ['GET'];
   }

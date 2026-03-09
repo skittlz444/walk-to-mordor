@@ -33,6 +33,7 @@ jest.mock('../../src/renderAdminGoalsPage');
 jest.mock('../../src/renderAdminGoalEditPage');
 jest.mock('../../src/renderAdminGoalAddPage');
 jest.mock('../../src/admin-handlers');
+jest.mock('../../src/friends-handlers');
 
 // Import after mocking
 import worker from '../../src/index';
@@ -47,6 +48,7 @@ import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
 import { renderAdminGoalAddPage } from '../../src/renderAdminGoalAddPage';
 import { renderAdminGoalEditPage } from '../../src/renderAdminGoalEditPage';
 import { handleAdminDashboard, handleAdminGoalsList, handleAdminGoalCreate } from '../../src/admin-handlers';
+import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend } from '../../src/friends-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
@@ -84,6 +86,15 @@ const mockRenderAdminGoalEditPage = jest.mocked(renderAdminGoalEditPage);
 const mockHandleAdminDashboard = jest.mocked(handleAdminDashboard);
 const mockHandleAdminGoalsList = jest.mocked(handleAdminGoalsList);
 const mockHandleAdminGoalCreate = jest.mocked(handleAdminGoalCreate);
+const mockHandleGetFriends = jest.mocked(handleGetFriends);
+const mockHandleGetPendingFriends = jest.mocked(handleGetPendingFriends);
+const mockHandleSearchUsers = jest.mocked(handleSearchUsers);
+const mockHandleResolveFriendCode = jest.mocked(handleResolveFriendCode);
+const mockHandleFriendRequest = jest.mocked(handleFriendRequest);
+const mockHandleFriendRequestByCode = jest.mocked(handleFriendRequestByCode);
+const mockHandleAcceptFriend = jest.mocked(handleAcceptFriend);
+const mockHandleRejectFriend = jest.mocked(handleRejectFriend);
+const mockHandleUnfriend = jest.mocked(handleUnfriend);
 
 describe('Cloudflare Worker Index', () => {
   let mockEnv: any;
@@ -177,6 +188,17 @@ describe('Cloudflare Worker Index', () => {
     mockHandleAdminGoalsList.mockResolvedValue(new Response(JSON.stringify({
       goals: [], total: 0, page: 1, pageSize: 25, totalPages: 1
     }), { status: 200, headers: { 'content-type': 'application/json' } }));
+
+    // Friends handler mocks
+    mockHandleGetFriends.mockResolvedValue(new Response(JSON.stringify({ friends: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleGetPendingFriends.mockResolvedValue(new Response(JSON.stringify({ pending: [], count: 0 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleSearchUsers.mockResolvedValue(new Response(JSON.stringify({ results: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleResolveFriendCode.mockResolvedValue(new Response(JSON.stringify({ username: 'alice', avatar_id: 'gandalf-grey' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleFriendRequest.mockResolvedValue(new Response(JSON.stringify({ friendship_id: 1, status: 'pending' }), { status: 201, headers: { 'content-type': 'application/json' } }));
+    mockHandleFriendRequestByCode.mockResolvedValue(new Response(JSON.stringify({ friendship_id: 1, status: 'pending' }), { status: 201, headers: { 'content-type': 'application/json' } }));
+    mockHandleAcceptFriend.mockResolvedValue(new Response(JSON.stringify({ status: 'accepted' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleRejectFriend.mockResolvedValue(new Response(JSON.stringify({ status: 'rejected' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleUnfriend.mockResolvedValue(new Response(JSON.stringify({ status: 'removed' }), { status: 200, headers: { 'content-type': 'application/json' } }));
 
     // Create simple mock environment
     mockEnv = {
@@ -507,6 +529,179 @@ describe('Cloudflare Worker Index', () => {
       const data = await response.json();
       expect(data.error).toBe('Invalid party ID');
     });
+
+    // ===== Friends (Social) route tests =====
+
+    // GET /api/friends
+    it('should route GET /api/friends to handleGetFriends', async () => {
+      const request = createRequest('http://localhost/api/friends', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleGetFriends).toHaveBeenCalledWith(expect.anything(), mockEnv);
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for POST on /api/friends', async () => {
+      const request = createRequest('http://localhost/api/friends', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+      const data = await response.json();
+      expect(data.allowedMethods).toContain('GET');
+    });
+
+    // GET /api/friends/pending
+    it('should route GET /api/friends/pending to handleGetPendingFriends', async () => {
+      const request = createRequest('http://localhost/api/friends/pending', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleGetPendingFriends).toHaveBeenCalledWith(expect.anything(), mockEnv);
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for POST on /api/friends/pending', async () => {
+      const request = createRequest('http://localhost/api/friends/pending', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+    });
+
+    // GET /api/friends/search
+    it('should route GET /api/friends/search to handleSearchUsers', async () => {
+      const request = createRequest('http://localhost/api/friends/search?q=test', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleSearchUsers).toHaveBeenCalledWith(expect.anything(), mockEnv);
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for POST on /api/friends/search', async () => {
+      const request = createRequest('http://localhost/api/friends/search', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+    });
+
+    // POST /api/friends/request
+    it('should route POST /api/friends/request to handleFriendRequest', async () => {
+      const request = createRequest('http://localhost/api/friends/request', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleFriendRequest).toHaveBeenCalledWith(expect.anything(), mockEnv, expect.anything());
+      expect(response.status).toBe(201);
+    });
+
+    it('should return 405 for GET on /api/friends/request', async () => {
+      const request = createRequest('http://localhost/api/friends/request', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+    });
+
+    // POST /api/friends/request/code
+    it('should route POST /api/friends/request/code to handleFriendRequestByCode', async () => {
+      const request = createRequest('http://localhost/api/friends/request/code', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleFriendRequestByCode).toHaveBeenCalledWith(expect.anything(), mockEnv, expect.anything());
+      expect(response.status).toBe(201);
+    });
+
+    it('should return 405 for GET on /api/friends/request/code', async () => {
+      const request = createRequest('http://localhost/api/friends/request/code', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+    });
+
+    // GET /api/friends/resolve/:friendCode
+    it('should route GET /api/friends/resolve/:friendCode to handleResolveFriendCode', async () => {
+      const request = createRequest('http://localhost/api/friends/resolve/AbCd1234', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleResolveFriendCode).toHaveBeenCalledWith(expect.anything(), mockEnv, 'AbCd1234');
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for POST on /api/friends/resolve/:friendCode', async () => {
+      const request = createRequest('http://localhost/api/friends/resolve/AbCd1234', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+    });
+
+    // POST /api/friends/:friendshipId/accept
+    it('should route POST /api/friends/:friendshipId/accept to handleAcceptFriend', async () => {
+      const request = createRequest('http://localhost/api/friends/5/accept', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleAcceptFriend).toHaveBeenCalledWith(expect.anything(), mockEnv, 5);
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for GET on /api/friends/:friendshipId/accept', async () => {
+      const request = createRequest('http://localhost/api/friends/5/accept', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+    });
+
+    it('should return 400 for invalid friendship ID in /api/friends/:friendshipId/accept', async () => {
+      const request = createRequest('http://localhost/api/friends/abc/accept', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid friendship ID');
+    });
+
+    it('should return 400 for negative friendship ID in /api/friends/-1/accept', async () => {
+      const request = createRequest('http://localhost/api/friends/-1/accept', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 400 for float friendship ID in /api/friends/1.5/accept', async () => {
+      const request = createRequest('http://localhost/api/friends/1.5/accept', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+    });
+
+    // POST /api/friends/:friendshipId/reject
+    it('should route POST /api/friends/:friendshipId/reject to handleRejectFriend', async () => {
+      const request = createRequest('http://localhost/api/friends/5/reject', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleRejectFriend).toHaveBeenCalledWith(expect.anything(), mockEnv, 5);
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for GET on /api/friends/:friendshipId/reject', async () => {
+      const request = createRequest('http://localhost/api/friends/5/reject', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+    });
+
+    it('should return 400 for invalid friendship ID in /api/friends/:friendshipId/reject', async () => {
+      const request = createRequest('http://localhost/api/friends/abc/reject', 'POST');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid friendship ID');
+    });
+
+    // DELETE /api/friends/:friendshipId
+    it('should route DELETE /api/friends/:friendshipId to handleUnfriend', async () => {
+      const request = createRequest('http://localhost/api/friends/5', 'DELETE');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(mockHandleUnfriend).toHaveBeenCalledWith(expect.anything(), mockEnv, 5);
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 405 for GET on /api/friends/:friendshipId (not exact /api/friends)', async () => {
+      const request = createRequest('http://localhost/api/friends/5', 'GET');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(405);
+    });
+
+    it('should return 400 for invalid friendship ID in DELETE /api/friends/:friendshipId', async () => {
+      const request = createRequest('http://localhost/api/friends/abc', 'DELETE');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('Invalid friendship ID');
+    });
+
+    it('should return 400 for zero friendship ID in DELETE /api/friends/0', async () => {
+      const request = createRequest('http://localhost/api/friends/0', 'DELETE');
+      const response = await worker.fetch(request as any, mockEnv, {} as any);
+      expect(response.status).toBe(400);
+    });
+
   it('should call renderHomePage for root page', async () => {
     const request = createRequest('https://example.com/');
     const response = await worker.fetch(request, mockEnv);
