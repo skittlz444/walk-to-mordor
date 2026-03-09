@@ -1,0 +1,346 @@
+/* Friends-specific styles — complements party.css design system */
+
+/* ─── Inline Avatar ─── */
+.friend-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friend-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friend-avatar--initials {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.friend-avatar--large {
+  width: 128px;
+  height: 128px;
+  font-size: 3rem;
+  margin: 0 auto 1rem;
+}
+
+/* ─── Friend List Items ─── */
+.friend-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-gray);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.friend-list-item:last-child {
+  border-bottom: none;
+}
+
+.friend-list-item:hover {
+  background: var(--hover-overlay);
+}
+
+.friend-list-item__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.friend-list-item__name {
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friend-list-item__meta {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.15rem;
+}
+
+.friend-list-item__chevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ─── Pending Requests ─── */
+.friend-pending-section {
+  margin-bottom: 1rem;
+}
+
+.friend-pending-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--accent-gold);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.friend-pending-toggle i {
+  transition: transform 0.2s;
+  font-size: 0.75rem;
+}
+
+.friend-pending-toggle--open i {
+  transform: rotate(90deg);
+}
+
+.friend-pending-badge {
+  background: var(--status-error);
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.25rem;
+}
+
+.friend-pending-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border-gray);
+}
+
+.friend-pending-item:last-child {
+  border-bottom: none;
+}
+
+.friend-pending-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+/* ─── Search Section ─── */
+.friend-search-wrap {
+  position: relative;
+}
+
+.friend-search-wrap input {
+  width: 100%;
+  padding: 0.6rem 0.75rem 0.6rem 2.25rem;
+  background: var(--bg-dark-alt);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.friend-search-wrap input:focus {
+  outline: none;
+  border-color: var(--accent-teal);
+}
+
+.friend-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+/* ─── Search Result Status Badges ─── */
+.friend-status-badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.friend-status-badge--friends {
+  background: var(--status-success);
+  color: var(--text-primary);
+}
+
+.friend-status-badge--pending {
+  background: var(--bg-dark-alt);
+  color: var(--text-muted);
+  border: 1px solid var(--border-gray);
+}
+
+/* ─── Share Link Section ─── */
+.friend-share-section {
+  margin-top: 1rem;
+}
+
+.friend-share-url {
+  background: var(--bg-dark-alt);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  word-break: break-all;
+  margin-bottom: 0.5rem;
+}
+
+/* ─── Friend Profile ─── */
+.friend-profile-header {
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.friend-profile-username {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.friend-profile-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.friend-profile-stat {
+  text-align: center;
+}
+
+.friend-profile-stat__value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+}
+
+.friend-profile-stat__label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+/* ─── Shared Fellowship Badge ─── */
+.friend-fellowship-shared {
+  color: var(--accent-teal);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.4rem;
+}
+
+/* ─── Fellowship Item in Profile ─── */
+.friend-fellowship-item {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-gray);
+  color: var(--text-secondary);
+}
+
+.friend-fellowship-item:last-child {
+  border-bottom: none;
+}
+
+.friend-fellowship-item__name {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+/* ─── Add Friend Page ─── */
+.friend-add-preview {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.friend-add-preview__username {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0.75rem 0 0.25rem;
+}
+
+.friend-add-success {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--status-success);
+}
+
+.friend-add-success i {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ─── Inline member friend action ─── */
+.friend-member-action {
+  font-size: 0.7rem;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.friend-member-action button {
+  background: none;
+  border: 1px solid var(--accent-teal);
+  color: var(--accent-teal);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.friend-member-action button:hover {
+  background: var(--accent-teal);
+  color: var(--text-primary);
+}
+
+.friend-member-action--label {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+/* ─── Invite Section on PartyListIsland ─── */
+.friend-invite-card {
+  margin-bottom: 0.5rem;
+}
+
+.friend-invite-card__detail {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.friend-invite-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 480px) {
+  .friend-profile-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .friend-pending-actions .party-btn {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+  }
+}

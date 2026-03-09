@@ -20,8 +20,18 @@ afterEach(() => {
 });
 
 describe('DrawerIsland — Admin link visibility', () => {
+  /** Helper: mock session + badge fetches. Badge fetches fire only after session success. */
+  function mockSessionAndBadges(sessionResponse: Parameters<typeof mockFetch.mockResolvedValueOnce>[0]) {
+    // 1st call: /api/session — if ok, badge fetches follow
+    mockFetch.mockResolvedValueOnce(sessionResponse);
+    // 2nd call: /api/friends/pending (badge) — only fires if session ok
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ count: 0 }) });
+    // 3rd call: /api/user/fellowship-invites (badge) — only fires if session ok
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ count: 0 }) });
+  }
+
   it('does not show the Admin link when session isAdmin is false', async () => {
-    mockFetch.mockResolvedValueOnce({
+    mockSessionAndBadges({
       ok: true,
       json: () => Promise.resolve({ isAdmin: false }),
     });
@@ -39,7 +49,7 @@ describe('DrawerIsland — Admin link visibility', () => {
   });
 
   it('shows the Admin link when session isAdmin is true', async () => {
-    mockFetch.mockResolvedValueOnce({
+    mockSessionAndBadges({
       ok: true,
       json: () => Promise.resolve({ isAdmin: true }),
     });
@@ -69,6 +79,7 @@ describe('DrawerIsland — Admin link visibility', () => {
   });
 
   it('does not show Admin link when session fetch fails', async () => {
+    // Session fails — badge fetches should NOT fire
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
     const { queryByText } = render(<DrawerIsland />);
@@ -81,6 +92,7 @@ describe('DrawerIsland — Admin link visibility', () => {
   });
 
   it('does not show Admin link when session response is not ok', async () => {
+    // Session not ok — badge fetches should NOT fire (no extra mocks needed)
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 401,
@@ -97,7 +109,7 @@ describe('DrawerIsland — Admin link visibility', () => {
   });
 
   it('always renders standard nav links regardless of admin status', () => {
-    mockFetch.mockResolvedValueOnce({
+    mockSessionAndBadges({
       ok: true,
       json: () => Promise.resolve({ isAdmin: false }),
     });
@@ -106,7 +118,8 @@ describe('DrawerIsland — Admin link visibility', () => {
 
     expect(getByText('Journey')).toBeTruthy();
     expect(getByText('Map')).toBeTruthy();
-    expect(getByText('Fellowships')).toBeTruthy();
+    expect(getByText(/Fellowships/)).toBeTruthy();
+    expect(getByText(/Friends/)).toBeTruthy();
     expect(getByText('Profile')).toBeTruthy();
   });
 });

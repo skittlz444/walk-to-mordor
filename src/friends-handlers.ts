@@ -1,5 +1,6 @@
 // Friends (Social) API handlers
 import { validateSession } from './auth-handlers';
+import { calculateTotalDistance } from './goals-handlers';
 import { createErrorResponse, createSuccessResponse } from './validators';
 
 /** Maximum number of pending outgoing friend requests per user */
@@ -74,6 +75,11 @@ export async function handleGetFriends(request: Request, env: { DB: D1Database }
   const userId = sessionValidation.userId;
 
   try {
+    // Fetch the current user's friend_code for the share link section
+    const currentUser = await env.DB.prepare(
+      'SELECT friend_code FROM users WHERE id = ?'
+    ).bind(userId).first<{ friend_code: string }>();
+
     const { results } = await env.DB.prepare(`
       SELECT
         u.id,
@@ -95,7 +101,7 @@ export async function handleGetFriends(request: Request, env: { DB: D1Database }
       ORDER BY u.username COLLATE NOCASE ASC
     `).bind(userId, userId, userId).all<FriendRow>();
 
-    return createSuccessResponse({ friends: results });
+    return createSuccessResponse({ friends: results, friend_code: currentUser?.friend_code ?? null });
   } catch (error) {
     console.error('Error fetching friends list:', error);
     return createErrorResponse('Internal server error', 500);
@@ -196,12 +202,9 @@ export async function handleSearchUsers(request: Request, env: { DB: D1Database 
  *
  * Returns { username, avatar_id } or 404 if code not found.
  */
-export async function handleResolveFriendCode(request: Request, env: { DB: D1Database }, friendCode: string): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
-  if (!sessionValidation.valid) {
-    return sessionValidation.error;
-  }
-
+export async function handleResolveFriendCode(_request: Request, env: { DB: D1Database }, friendCode: string): Promise<Response> {
+  // No authentication required — the friend code itself acts as authorization
+  // to view the minimal preview. Actual friend request endpoints still require auth.
   if (!friendCode || friendCode.length !== 8 || !/^[A-Za-z0-9]{8}$/.test(friendCode)) {
     return createErrorResponse('Invalid friend code format', 400);
   }
@@ -475,6 +478,123 @@ export async function handleUnfriend(request: Request, env: { DB: D1Database }, 
     return createSuccessResponse({ status: 'removed' });
   } catch (error) {
     console.error('Error removing friendship:', error);
+    return createErrorResponse('Internal server error', 500);
+  }
+}
+
+/** D1 result row for friend profile user data */
+interface ProfileUserRow {
+  username: string;
+  avatar_id: string | null;
+  created_at: string;
+}
+
+/** D1 result row for friend profile fellowship list */
+interface ProfileFellowshipRow {
+  id: number;
+  name: string;
+  is_shared: number;
+}
+
+/** D1 result row for goals */
+interface GoalRow {
+  id: number;
+  distance: number;
+  title: string;
+}
+
+/**
+ * GET /api/friends/:userId/profile — Get a friend's profile.
+ *
+ * Requires authentication. Returns 404 if not friends (privacy enforcement).
+ * Returns { username, avatar_id, total_distance, member_since, current_goal_title,
+ *           friendship_id, fellowships: [{ id, name, is_shared }] }.
+ */
+export async function handleGetFriendProfile(
+  request: Request,
+  env: { DB: D1Database },
+  profileUserId: number
+): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const currentUserId = sessionValidation.userId;
+
+  try {
+    // Verify accepted friendship exists (privacy enforcement)
+    const friendship = await env.DB.prepare(`
+      SELECT id FROM friendships
+      WHERE status = 'accepted'
+        AND ((requester_id = ? AND addressee_id = ?)
+          OR (requester_id = ? AND addressee_id = ?))
+    `).bind(currentUserId, profileUserId, profileUserId, currentUserId).first<{ id: number }>();
+
+    if (!friendship) {
+      return createErrorResponse('User not found or not a friend', 404);
+    }
+
+    // Fetch user profile data
+    const user = await env.DB.prepare(
+      'SELECT username, avatar_id, created_at FROM users WHERE id = ?'
+    ).bind(profileUserId).first<ProfileUserRow>();
+
+    if (!user) {
+      return createErrorResponse('User not found or not a friend', 404);
+    }
+
+    // Calculate total distance
+    const totalDistance = await calculateTotalDistance(env, profileUserId);
+
+    // Determine current goal title (next unlocked goal)
+    const { results: goals } = await env.DB.prepare(
+      'SELECT id, distance, title FROM goals ORDER BY distance ASC'
+    ).all<GoalRow>();
+
+    let currentGoalTitle = '';
+    if (goals.length > 0) {
+      const nextGoal = goals.find(g => g.distance > totalDistance);
+      currentGoalTitle = nextGoal ? nextGoal.title : goals[goals.length - 1].title;
+    }
+
+    // Fetch fellowships the friend is an active member of (non-dissolved)
+    // Decorate with is_shared when current user is also active in that party
+    const { results: fellowships } = await env.DB.prepare(`
+      SELECT
+        p.id,
+        p.name,
+        CASE
+          WHEN EXISTS (
+            SELECT 1 FROM party_members pm2
+            WHERE pm2.party_id = p.id
+              AND pm2.user_id = ?
+              AND pm2.status = 'active'
+          ) THEN 1
+          ELSE 0
+        END as is_shared
+      FROM party_members pm
+      JOIN parties p ON p.id = pm.party_id
+      WHERE pm.user_id = ?
+        AND pm.status = 'active'
+        AND p.dissolved_at IS NULL
+      ORDER BY p.name COLLATE NOCASE ASC
+    `).bind(currentUserId, profileUserId).all<ProfileFellowshipRow>();
+
+    return createSuccessResponse({
+      username: user.username,
+      avatar_id: user.avatar_id,
+      total_distance: totalDistance,
+      member_since: user.created_at,
+      current_goal_title: currentGoalTitle,
+      friendship_id: friendship.id,
+      fellowships: fellowships.map(f => ({
+        id: f.id,
+        name: f.name,
+        is_shared: f.is_shared === 1,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching friend profile:', error);
     return createErrorResponse('Internal server error', 500);
   }
 }

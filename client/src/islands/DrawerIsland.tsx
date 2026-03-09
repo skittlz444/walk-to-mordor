@@ -8,26 +8,39 @@ export function DrawerIsland() {
   const [isOpen, setIsOpen] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingFriendsCount, setPendingFriendsCount] = useState(0);
+  const [pendingInvitesCount, setPendingInvitesCount] = useState(0);
   const drawerRef = useRef<HTMLElement | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
-    // Fetch admin status from session API
+    // Fetch session status first; only fire badge fetches on success
     const token = localStorage.getItem('sessionToken');
     if (!token) return;
+    const authHeaders = { Authorization: `Bearer ${token}` };
     fetch('/api/session', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeaders,
     })
       .then((res) => {
         if (res.ok) return res.json() as Promise<SessionData>;
         return null;
       })
       .then((data: SessionData | null) => {
-        if (data && data.isAdmin === true) {
+        if (!data) return; // Session invalid — skip badge fetches
+        if (data.isAdmin === true) {
           setIsAdmin(true);
         }
+        // Badge fetches only after confirmed valid session (avoids 401s)
+        fetch('/api/friends/pending', { headers: authHeaders })
+          .then((res) => res.ok ? res.json() as Promise<{ count: number }> : null)
+          .then((d) => { if (d && d.count > 0) setPendingFriendsCount(d.count); })
+          .catch(() => { /* non-critical */ });
+        fetch('/api/user/fellowship-invites', { headers: authHeaders })
+          .then((res) => res.ok ? res.json() as Promise<{ count: number }> : null)
+          .then((d) => { if (d && d.count > 0) setPendingInvitesCount(d.count); })
+          .catch(() => { /* non-critical */ });
       })
       .catch(() => {
         // Silently ignore — non-critical for drawer rendering
@@ -157,7 +170,14 @@ export function DrawerIsland() {
         <nav className="drawer-nav">
           <a className="drawer-link" href="/journey" onClick={closeDrawer}>Journey</a>
           <a className="drawer-link" href="/map" onClick={closeDrawer}>Map</a>
-          <a className="drawer-link" href="/party" onClick={closeDrawer}>Fellowships</a>
+          <a className="drawer-link" href="/party" onClick={closeDrawer}>
+            Fellowships
+            {pendingInvitesCount > 0 && <span className="drawer-badge">{pendingInvitesCount}</span>}
+          </a>
+          <a className="drawer-link" href="/friends" onClick={closeDrawer}>
+            Friends
+            {pendingFriendsCount > 0 && <span className="drawer-badge">{pendingFriendsCount}</span>}
+          </a>
           {isAdmin && <a className="drawer-link" href="/admin" onClick={closeDrawer}>Admin</a>}
           <button className="drawer-link drawer-profile" type="button" onClick={handleProfileClick}>Profile</button>
         </nav>

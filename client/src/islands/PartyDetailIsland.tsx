@@ -58,6 +58,16 @@ function milestoneToGoal(m: MilestoneData): Goal {
   return { id: m.id, title: m.title, distance: m.distance, description: m.description ?? null, image_id: m.image_id ?? null, special: m.special ?? null };
 }
 
+interface FriendInfo {
+  id: number;
+  username: string;
+}
+
+interface PendingFriendInfo {
+  id: number;
+  username: string;
+}
+
 export function PartyDetailIsland() {
   const partyId = getPartyIdFromUrl();
   const [progress, setProgress] = useState<PartyProgressData | null>(null);
@@ -69,6 +79,9 @@ export function PartyDetailIsland() {
   const [copied, setCopied] = useState(false);
   const [modalGoal, setModalGoal] = useState<Goal | null>(null);
   const [modalDistance, setModalDistance] = useState<number>(0);
+  const [friendIds, setFriendIds] = useState<Set<number>>(new Set());
+  const [pendingFriendIds, setPendingFriendIds] = useState<Set<number>>(new Set());
+  const [sendingFriendRequest, setSendingFriendRequest] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!partyId) { setError('Invalid party ID'); setLoading(false); return; }
@@ -76,10 +89,11 @@ export function PartyDetailIsland() {
     setError(null);
     try {
       const headers = getAuthHeaders();
-      // Parallel fetch for party info and progress
-      const [partiesRes, progressRes] = await Promise.all([
+      // Parallel fetch for party info, progress, and friends list
+      const [partiesRes, progressRes, friendsRes] = await Promise.all([
         fetch('/api/user/parties?include_dissolved=true', { headers }),
         fetch(`/api/party/${partyId}/progress`, { headers }),
+        fetch('/api/friends', { headers }),
       ]);
 
       if (!partiesRes.ok) {
@@ -97,6 +111,25 @@ export function PartyDetailIsland() {
         throw new Error('Failed to load progress');
       }
       setProgress(await progressRes.json());
+
+      // Process friends list for member decorations (non-blocking)
+      if (friendsRes.ok) {
+        const friendsData = await friendsRes.json() as { friends: FriendInfo[] };
+        setFriendIds(new Set((friendsData.friends ?? []).map((f: FriendInfo) => f.id)));
+      }
+      // Also fetch pending to decorate pending members
+      try {
+        const pendingRes = await fetch('/api/friends/pending', { headers });
+        if (pendingRes.ok) {
+          const pendingData = await pendingRes.json() as { pending: PendingFriendInfo[] };
+          // pending contains users who sent requests TO us — but for member list we also
+          // need outgoing pending. Search each non-friend member would be expensive.
+          // For simplicity, mark incoming pending friends.
+          setPendingFriendIds(new Set((pendingData.pending ?? []).map((p: PendingFriendInfo) => p.id)));
+        }
+      } catch {
+        // Non-critical
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -106,7 +139,28 @@ export function PartyDetailIsland() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleLeave = async () => {
+  const handleSendFriendRequest = async (targetUserId: number) => {
+    setSendingFriendRequest(targetUserId);
+    try {
+      const res = await fetch('/api/friends/request', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ user_id: targetUserId }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error: string };
+        throw new Error(data.error || 'Failed to send request');
+      }
+      // Optimistically update to pending
+      setPendingFriendIds(prev => new Set([...prev, targetUserId]));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send friend request');
+    } finally {
+      setSendingFriendRequest(null);
+    }
+  };
+
+  const handleLeave= async () => {
     setLeaving(true);
     try {
       const res = await fetch(`/api/party/${partyId}/leave`, { method: 'POST', headers: getAuthHeaders() });
@@ -285,6 +339,26 @@ export function PartyDetailIsland() {
                   </span>
                 </div>
                 <span className="party-member-contribution">{member.contribution.toFixed(2)} km</span>
+                {!isCurrentUser && member.status === 'active' && (
+                  <span className="friend-member-action">
+                    {friendIds.has(member.user_id) ? (
+                      <span className="friend-member-action--label">Friends ✓</span>
+                    ) : pendingFriendIds.has(member.user_id) ? (
+                      <span className="friend-member-action--label">Pending</span>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleSendFriendRequest(member.user_id); }}
+                        disabled={sendingFriendRequest === member.user_id}
+                        title={`Add ${member.display_name} as friend`}
+                      >
+                        {sendingFriendRequest === member.user_id
+                          ? <i className="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                          : <><i className="fas fa-user-plus" aria-hidden="true"></i> Add</>
+                        }
+                      </button>
+                    )}
+                  </span>
+                )}
               </li>
               );
             })}

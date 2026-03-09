@@ -36,12 +36,15 @@ import {
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
-import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend } from "./friends-handlers";
+import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile } from "./friends-handlers";
 import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from "./fellowship-invite-handlers";
 import { renderPartyListPage } from "./renderPartyListPage";
 import { renderPartyDetailPage } from "./renderPartyDetailPage";
 import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
+import { renderFriendsPage } from "./renderFriendsPage";
+import { renderFriendAddPage } from "./renderFriendAddPage";
+import { renderFriendProfilePage } from "./renderFriendProfilePage";
 import { renderAdminPage } from "./renderAdminPage";
 import { renderAdminGoalsPage } from "./renderAdminGoalsPage";
 import {
@@ -445,7 +448,17 @@ export default {
         return handleResolveFriendCode(request, env, resolveParams.friendCode);
       }
 
-      const acceptParams = matchRoute(url.pathname, '/api/friends/:friendshipId/accept');
+      // GET /api/friends/:userId/profile — friend profile (before generic :friendshipId routes)
+      const profileParams = matchRoute(url.pathname, '/api/friends/:userId/profile');
+      if (profileParams && method === "GET") {
+        const profileUserId = Number.parseInt(profileParams.userId, 10);
+        if (!Number.isInteger(profileUserId) || profileUserId <= 0 || String(profileUserId) !== profileParams.userId) {
+          return createErrorResponse('Invalid user ID', 400);
+        }
+        return handleGetFriendProfile(request, env, profileUserId);
+      }
+
+      const acceptParams= matchRoute(url.pathname, '/api/friends/:friendshipId/accept');
       if (acceptParams && method === "POST") {
         const friendshipId = Number.parseInt(acceptParams.friendshipId, 10);
         if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== acceptParams.friendshipId) {
@@ -620,6 +633,27 @@ export default {
       });
     }
 
+    // Friends pages — exact /friends first, then /friends/add/:friendCode, then /friends/:id
+    if (url.pathname === "/friends") {
+      return new Response(renderFriendsPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    const friendAddPageParams = matchRoute(url.pathname, '/friends/add/:friendCode');
+    if (friendAddPageParams) {
+      return new Response(renderFriendAddPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    const friendProfilePageParams = matchRoute(url.pathname, '/friends/:id');
+    if (friendProfilePageParams) {
+      return new Response(renderFriendProfilePage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
     if (url.pathname === "/") {
       return new Response(renderHomePage(), {
         headers: {
@@ -731,6 +765,9 @@ function getAllowedMethods(pathname: string): string[] {
       }
       // Friend parameterized routes
       if (matchRoute(pathname, '/api/friends/resolve/:friendCode')) {
+        return ['GET'];
+      }
+      if (matchRoute(pathname, '/api/friends/:userId/profile')) {
         return ['GET'];
       }
       if (matchRoute(pathname, '/api/friends/:friendshipId/accept')) {

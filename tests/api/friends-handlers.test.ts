@@ -7,11 +7,14 @@ import {
   handleFriendRequestByCode,
   handleAcceptFriend,
   handleRejectFriend,
-  handleUnfriend
+  handleUnfriend,
+  handleGetFriendProfile
 } from '../../src/friends-handlers';
 import { validateSession } from '../../src/auth-handlers';
+import { calculateTotalDistance } from '../../src/goals-handlers';
 
 jest.mock('../../src/auth-handlers');
+jest.mock('../../src/goals-handlers');
 
 describe('Friends Handlers', () => {
   let mockEnv: any;
@@ -26,6 +29,7 @@ describe('Friends Handlers', () => {
 
     // Default: authenticated as user 1
     (validateSession as jest.Mock).mockResolvedValue({ valid: true, userId: 1 });
+    (calculateTotalDistance as jest.Mock).mockResolvedValue(100.50);
 
     mockFirst = jest.fn().mockResolvedValue(null);
     mockRun = jest.fn().mockResolvedValue({ meta: { last_row_id: 1, changes: 1 } });
@@ -84,13 +88,14 @@ describe('Friends Handlers', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return 401 for unauthenticated GET /api/friends/resolve/:code', async () => {
-      (validateSession as jest.Mock).mockResolvedValue({
-        valid: false,
-        error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
-      });
+    it('should resolve friend code without authentication (public endpoint)', async () => {
+      mockFirst.mockResolvedValue({ id: 5, username: 'alice', avatar_id: 'arwen' });
       const response = await handleResolveFriendCode(mockRequest, mockEnv, 'AbCd1234');
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(200);
+      const data = await response.json() as { id: number; username: string; avatar_id: string };
+      expect(data.username).toBe('alice');
+      // validateSession should NOT have been called
+      expect(validateSession).not.toHaveBeenCalled();
     });
 
     it('should return 401 for unauthenticated POST /api/friends/request', async () => {
@@ -681,6 +686,168 @@ describe('Friends Handlers', () => {
       const originalConsoleError = console.error;
       console.error = jest.fn();
       const response = await handleUnfriend(mockRequest, mockEnv, 1);
+      expect(response.status).toBe(500);
+      console.error = originalConsoleError;
+    });
+  });
+
+  // ===== handleGetFriendProfile tests =====
+  describe('handleGetFriendProfile', () => {
+    it('should return 401 for unauthenticated request', async () => {
+      (validateSession as jest.Mock).mockResolvedValue({
+        valid: false,
+        error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
+      });
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 404 when users are not friends', async () => {
+      // No friendship found
+      mockFirst.mockResolvedValueOnce(null);
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('User not found or not a friend');
+    });
+
+    it('should return 404 when target user does not exist', async () => {
+      // Friendship exists
+      mockFirst.mockResolvedValueOnce({ id: 10 });
+      // User not found
+      mockFirst.mockResolvedValueOnce(null);
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 999);
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('User not found or not a friend');
+    });
+
+    it('should return 200 with correct profile shape for valid friend', async () => {
+      // Friendship exists
+      mockFirst.mockResolvedValueOnce({ id: 10 });
+      // User found
+      mockFirst.mockResolvedValueOnce({ username: 'alice', avatar_id: 'gandalf-grey', created_at: '2024-01-01T00:00:00Z' });
+      // Goals
+      mockAll.mockResolvedValueOnce({
+        results: [
+          { id: 1, distance: 50, title: 'Bag End' },
+          { id: 2, distance: 200, title: 'Rivendell' },
+          { id: 3, distance: 500, title: 'Moria' },
+        ],
+      });
+      // Fellowships
+      mockAll.mockResolvedValueOnce({ results: [] });
+
+      (calculateTotalDistance as jest.Mock).mockResolvedValue(100.50);
+
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.username).toBe('alice');
+      expect(data.avatar_id).toBe('gandalf-grey');
+      expect(data.total_distance).toBe(100.50);
+      expect(data.member_since).toBe('2024-01-01T00:00:00Z');
+      expect(data.current_goal_title).toBe('Rivendell'); // next goal after 100.50
+      expect(data.friendship_id).toBe(10);
+      expect(data.fellowships).toEqual([]);
+    });
+
+    it('should include shared fellowship decoration', async () => {
+      // Friendship exists
+      mockFirst.mockResolvedValueOnce({ id: 10 });
+      // User found
+      mockFirst.mockResolvedValueOnce({ username: 'bob', avatar_id: null, created_at: '2024-06-15T00:00:00Z' });
+      // Goals
+      mockAll.mockResolvedValueOnce({
+        results: [{ id: 1, distance: 50, title: 'Bag End' }],
+      });
+      // Fellowships with is_shared decoration
+      mockAll.mockResolvedValueOnce({
+        results: [
+          { id: 1, name: 'The Fellowship', is_shared: 1 },
+          { id: 2, name: 'Solo Quest', is_shared: 0 },
+        ],
+      });
+
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 3);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.fellowships).toEqual([
+        { id: 1, name: 'The Fellowship', is_shared: true },
+        { id: 2, name: 'Solo Quest', is_shared: false },
+      ]);
+    });
+
+    it('should return empty fellowships array when friend has no fellowships', async () => {
+      // Friendship exists
+      mockFirst.mockResolvedValueOnce({ id: 10 });
+      // User found
+      mockFirst.mockResolvedValueOnce({ username: 'carol', avatar_id: null, created_at: '2024-01-01T00:00:00Z' });
+      // Goals
+      mockAll.mockResolvedValueOnce({
+        results: [{ id: 1, distance: 50, title: 'Bag End' }],
+      });
+      // No fellowships
+      mockAll.mockResolvedValueOnce({ results: [] });
+
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 4);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.fellowships).toEqual([]);
+    });
+
+    it('should return total_distance 0 when friend has no progress', async () => {
+      // Friendship exists
+      mockFirst.mockResolvedValueOnce({ id: 10 });
+      // User found
+      mockFirst.mockResolvedValueOnce({ username: 'dave', avatar_id: null, created_at: '2024-01-01T00:00:00Z' });
+
+      (calculateTotalDistance as jest.Mock).mockResolvedValue(0);
+
+      // Goals
+      mockAll.mockResolvedValueOnce({
+        results: [{ id: 1, distance: 50, title: 'Bag End' }],
+      });
+      // No fellowships
+      mockAll.mockResolvedValueOnce({ results: [] });
+
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 5);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.total_distance).toBe(0);
+      expect(data.current_goal_title).toBe('Bag End');
+    });
+
+    it('should return last goal title when all goals are passed', async () => {
+      // Friendship exists
+      mockFirst.mockResolvedValueOnce({ id: 10 });
+      // User found
+      mockFirst.mockResolvedValueOnce({ username: 'eve', avatar_id: null, created_at: '2024-01-01T00:00:00Z' });
+
+      (calculateTotalDistance as jest.Mock).mockResolvedValue(99999);
+
+      // Goals
+      mockAll.mockResolvedValueOnce({
+        results: [
+          { id: 1, distance: 50, title: 'Bag End' },
+          { id: 2, distance: 200, title: 'Rivendell' },
+          { id: 3, distance: 500, title: 'Moria' },
+        ],
+      });
+      // No fellowships
+      mockAll.mockResolvedValueOnce({ results: [] });
+
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 6);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.current_goal_title).toBe('Moria'); // last goal
+    });
+
+    it('should handle database errors', async () => {
+      mockFirst.mockRejectedValueOnce(new Error('DB error'));
+      const originalConsoleError = console.error;
+      console.error = jest.fn();
+      const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });

@@ -28,6 +28,9 @@ jest.mock('../../src/renderPartyListPage');
 jest.mock('../../src/renderPartyDetailPage');
 jest.mock('../../src/renderPartyManagePage');
 jest.mock('../../src/renderPartyJoinPage');
+jest.mock('../../src/renderFriendsPage');
+jest.mock('../../src/renderFriendAddPage');
+jest.mock('../../src/renderFriendProfilePage');
 jest.mock('../../src/renderAdminPage');
 jest.mock('../../src/renderAdminGoalsPage');
 jest.mock('../../src/renderAdminGoalEditPage');
@@ -44,12 +47,15 @@ import { renderPartyListPage } from '../../src/renderPartyListPage';
 import { renderPartyDetailPage } from '../../src/renderPartyDetailPage';
 import { renderPartyManagePage } from '../../src/renderPartyManagePage';
 import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
+import { renderFriendsPage } from '../../src/renderFriendsPage';
+import { renderFriendAddPage } from '../../src/renderFriendAddPage';
+import { renderFriendProfilePage } from '../../src/renderFriendProfilePage';
 import { renderAdminPage } from '../../src/renderAdminPage';
 import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
 import { renderAdminGoalAddPage } from '../../src/renderAdminGoalAddPage';
 import { renderAdminGoalEditPage } from '../../src/renderAdminGoalEditPage';
 import { handleAdminDashboard, handleAdminGoalsList, handleAdminGoalCreate } from '../../src/admin-handlers';
-import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend } from '../../src/friends-handlers';
+import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile } from '../../src/friends-handlers';
 import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from '../../src/fellowship-invite-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
@@ -81,6 +87,9 @@ const mockRenderPartyListPage = jest.mocked(renderPartyListPage);
 const mockRenderPartyDetailPage = jest.mocked(renderPartyDetailPage);
 const mockRenderPartyManagePage = jest.mocked(renderPartyManagePage);
 const mockRenderPartyJoinPage = jest.mocked(renderPartyJoinPage);
+const mockRenderFriendsPage = jest.mocked(renderFriendsPage);
+const mockRenderFriendAddPage = jest.mocked(renderFriendAddPage);
+const mockRenderFriendProfilePage = jest.mocked(renderFriendProfilePage);
 const mockRenderAdminPage = jest.mocked(renderAdminPage);
 const mockRenderAdminGoalsPage = jest.mocked(renderAdminGoalsPage);
 const mockRenderAdminGoalAddPage = jest.mocked(renderAdminGoalAddPage);
@@ -97,6 +106,7 @@ const mockHandleFriendRequestByCode = jest.mocked(handleFriendRequestByCode);
 const mockHandleAcceptFriend = jest.mocked(handleAcceptFriend);
 const mockHandleRejectFriend = jest.mocked(handleRejectFriend);
 const mockHandleUnfriend = jest.mocked(handleUnfriend);
+const mockHandleGetFriendProfile = jest.mocked(handleGetFriendProfile);
 const mockHandleInviteFriend = jest.mocked(handleInviteFriend);
 const mockHandleGetFellowshipInvites = jest.mocked(handleGetFellowshipInvites);
 const mockHandleAcceptFellowshipInvite = jest.mocked(handleAcceptFellowshipInvite);
@@ -184,6 +194,9 @@ describe('Cloudflare Worker Index', () => {
     mockRenderPartyDetailPage.mockReturnValue('<html>Party Detail</html>');
     mockRenderPartyManagePage.mockReturnValue('<html>Party Manage</html>');
     mockRenderPartyJoinPage.mockReturnValue('<html>Party Join</html>');
+    mockRenderFriendsPage.mockReturnValue('<html>Friends</html>');
+    mockRenderFriendAddPage.mockReturnValue('<html>Friend Add</html>');
+    mockRenderFriendProfilePage.mockReturnValue('<html>Friend Profile</html>');
     mockRenderAdminPage.mockReturnValue('<html>Admin Dashboard</html>');
     mockRenderAdminGoalsPage.mockReturnValue('<html>Admin Goals</html>');
     mockRenderAdminGoalAddPage.mockReturnValue('<html>Admin Goal Add</html>');
@@ -205,6 +218,7 @@ describe('Cloudflare Worker Index', () => {
     mockHandleAcceptFriend.mockResolvedValue(new Response(JSON.stringify({ status: 'accepted' }), { status: 200, headers: { 'content-type': 'application/json' } }));
     mockHandleRejectFriend.mockResolvedValue(new Response(JSON.stringify({ status: 'rejected' }), { status: 200, headers: { 'content-type': 'application/json' } }));
     mockHandleUnfriend.mockResolvedValue(new Response(JSON.stringify({ status: 'removed' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockHandleGetFriendProfile.mockResolvedValue(new Response(JSON.stringify({ username: 'alice', total_distance: 100 }), { status: 200, headers: { 'content-type': 'application/json' } }));
 
     // Fellowship invite handler mocks
     mockHandleInviteFriend.mockResolvedValue(new Response(JSON.stringify({ id: 1, party_id: 1, party_name: 'Party', invitee_id: 2, status: 'pending' }), { status: 201, headers: { 'content-type': 'application/json' } }));
@@ -891,6 +905,71 @@ describe('Cloudflare Worker Index', () => {
     expect(mockRenderPartyJoinPage).toHaveBeenCalled();
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  // Friends page routing tests
+  it('should render friends page for /friends route', async () => {
+    const request = createRequest('https://example.com/friends');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockRenderFriendsPage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  it('should render friend add page for /friends/add/:friendCode route', async () => {
+    const request = createRequest('https://example.com/friends/add/AbCd1234');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockRenderFriendAddPage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  it('should render friend profile page for /friends/:id route', async () => {
+    const request = createRequest('https://example.com/friends/42');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockRenderFriendProfilePage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  it('should not shadow /friends/add/:friendCode with /friends/:id', async () => {
+    const request = createRequest('https://example.com/friends/add/Test1234');
+    const response = await worker.fetch(request, mockEnv);
+
+    // /friends/add/:friendCode should match, NOT /friends/:id
+    expect(mockRenderFriendAddPage).toHaveBeenCalled();
+    expect(mockRenderFriendProfilePage).not.toHaveBeenCalled();
+  });
+
+  // Friend profile API route tests
+  it('should route GET /api/friends/:userId/profile to handleGetFriendProfile', async () => {
+    const request = createRequest('http://localhost/api/friends/5/profile', 'GET');
+    const response = await worker.fetch(request as any, mockEnv, {} as any);
+    expect(mockHandleGetFriendProfile).toHaveBeenCalledWith(expect.anything(), mockEnv, 5);
+    expect(response.status).toBe(200);
+  });
+
+  it('should return 405 for POST on /api/friends/:userId/profile', async () => {
+    const request = createRequest('http://localhost/api/friends/5/profile', 'POST');
+    const response = await worker.fetch(request as any, mockEnv, {} as any);
+    expect(response.status).toBe(405);
+  });
+
+  it('should return 400 for invalid user ID in /api/friends/:userId/profile', async () => {
+    const request = createRequest('http://localhost/api/friends/abc/profile', 'GET');
+    const response = await worker.fetch(request as any, mockEnv, {} as any);
+    expect(response.status).toBe(400);
+    const data = await response.json() as { error: string };
+    expect(data.error).toBe('Invalid user ID');
+  });
+
+  it('should return 400 for float user ID in /api/friends/1.5/profile', async () => {
+    const request = createRequest('http://localhost/api/friends/1.5/profile', 'GET');
+    const response = await worker.fetch(request as any, mockEnv, {} as any);
+    expect(response.status).toBe(400);
   });
 
   // Admin route tests
