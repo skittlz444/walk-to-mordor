@@ -1289,9 +1289,9 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 **Description:** API endpoints for sending, accepting, rejecting, and removing friends. Includes username search and friend link resolution.
 
 **Acceptance Criteria:**
-- [ ] `GET /api/friends` — List current user's accepted friends: `{ id, username, avatar_id, last_progressed }` where `last_progressed` is the date of their most recent `progress` entry
-- [ ] `GET /api/friends/pending` — List pending incoming requests: `{ id, username, avatar_id, created_at }`. Also return count for badge.
-- [ ] `GET /api/friends/search?q=<username>` — Search users by username prefix (min 3 chars). Return `{ id, username, avatar_id, friendship_status }` where status is null/pending/accepted. Limit 10 results. Exclude current user.
+- [ ] `GET /api/friends` — List current user's accepted friends: `{ friendship_id, user_id, username, avatar_id, last_progressed }` where `friendship_id` is the friendships row ID, `user_id` is the friend's user ID, and `last_progressed` is the date of their most recent `progress` entry
+- [ ] `GET /api/friends/pending` — List pending incoming requests: `{ friendship_id, user_id, username, avatar_id, created_at }`. Also return count for badge.
+- [ ] `GET /api/friends/search?q=<username>` — Search users by username prefix (min 3 chars). Return `{ user_id, username, avatar_id, friendship_status }` where status is null/pending/accepted. Limit 10 results. Exclude current user.
 - [ ] `GET /api/friends/resolve/:friendCode` — Resolve a friend code to user preview: `{ username, avatar_id }`. Returns 404 for invalid codes.
 - [ ] `POST /api/friends/request` — Send friend request. Body: `{ user_id: number }`. Creates pending friendship. Returns 400 if already friends/pending, 404 if user not found.
 - [ ] `POST /api/friends/request/code` — Send friend request via friend code. Body: `{ friend_code: string }`. Resolves code to user, creates pending friendship.

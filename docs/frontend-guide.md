@@ -1,6 +1,6 @@
 # Frontend Guide
 
-Last updated: 2026-03-06
+Last updated: 2026-03-09
 
 ## Purpose
 
@@ -115,9 +115,9 @@ The `FriendProfileIsland` component (`client/src/islands/FriendProfileIsland.tsx
 
 The `FriendAddIsland` component (`client/src/islands/FriendAddIsland.tsx`) renders the friend link landing page at `/friends/add/:friendCode`. Resolves the friend code to a user preview and provides Send Request action for authenticated users or login redirect for unauthenticated users.
 
-### SocialPanelIsland
+### Social Panel (MapIsland-internal)
 
-The `SocialPanelIsland` component replaces the fellowship-only selector on the Map page. Two independent sections:
+The Social Panel is built directly inside `MapIsland` (not a separate island). It replaces the fellowship-only selector on the Map page. Two independent sections:
 - **View As**: Personal + fellowship list (preserves existing `PartySelector` behavior)
 - **Friends on Map**: Toggle to show/hide friend avatars at their journey positions. Friend avatars render as 32px circular images (thumbnails from `public/img/avatars/thumbs/`), tappable for a mini-card with username, distance, and profile link.
 

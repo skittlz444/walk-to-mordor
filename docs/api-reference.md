@@ -458,6 +458,38 @@ Auth: Required.
 
 IDOR prevention: all friendship operations validate the current user is a party to the friendship record.
 
+### `GET /api/friends/:userId/profile`
+
+Returns a friend's profile details. Only accessible for accepted friends (returns 404 for non-friends — privacy enforcement).
+
+Auth: Required.
+
+Response:
+
+```json
+{
+  "username": "samwise",
+  "avatar_id": "samwise",
+  "total_distance": 245.5,
+  "member_since": "2026-01-15T00:00:00Z",
+  "current_goal_title": "Rivendell",
+  "fellowships": [
+    { "id": 1, "name": "The Fellowship", "is_shared": true },
+    { "id": 5, "name": "Hobbits Only", "is_shared": false }
+  ]
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `total_distance` | number | Sum of all progress entries (km) |
+| `member_since` | string | User's `created_at` timestamp |
+| `current_goal_title` | string | Next unlocked goal title (first goal whose distance exceeds the friend's total) |
+| `fellowships` | array | Non-dissolved parties the friend is an active member of |
+| `is_shared` | boolean | Whether the current user is also an active member of that party |
+
+Errors: `400` (malformed userId), `401` (unauthenticated), `404` (not friends or user not found).
+
 ## Admin Endpoints
 
 All admin endpoints require `Authorization: Bearer <token>` from an admin user (`is_admin = 1`). Returns `401` for unauthenticated requests and `403` for non-admin users.

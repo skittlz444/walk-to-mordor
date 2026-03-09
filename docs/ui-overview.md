@@ -1,6 +1,6 @@
 # UI Overview
 
-Last updated: 2026-03-06
+Last updated: 2026-03-09
 
 ## Rendering Pattern
 
@@ -83,7 +83,7 @@ Programmatic islands used by legacy scripts or targeted mounts:
 - `NextGoalCard`
 - `UpcomingGoalCard`
 - `PartySelector`
-- `SocialPanelIsland` (Map page — unified panel replacing fellowship-only selector; includes fellowship view selector + "Show Friends" toggle for friend avatar markers)
+- `MapIsland` also contains the Social Panel (unified panel replacing fellowship-only selector; includes fellowship view selector + "Show Friends" toggle for friend avatar markers — not a separate island)
 
 ## Legacy JS Modules
 

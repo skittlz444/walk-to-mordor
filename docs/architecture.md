@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-03-06
+Last updated: 2026-03-09
 
 ## System Shape
 
@@ -59,6 +59,7 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `GET /api/friends/search?q=`
 - `GET /api/friends/resolve/:friendCode`
 - `GET /api/friends/positions`
+- `GET /api/friends/:userId/profile`
 - `POST /api/friends/request`
 - `POST /api/friends/request/code`
 - `POST /api/friends/:friendshipId/accept`
@@ -88,8 +89,8 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `/login`, `/password-reset`, `/reset-password`
 - `/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`
 - `/friends` friends list (`src/renderFriendsPage.ts`)
+- `/friends/add/:friendCode` friend link landing (`src/renderFriendAddPage.ts`) — must precede `/friends/:id` to avoid route shadowing
 - `/friends/:id` friend profile (`src/renderFriendProfilePage.ts`)
-- `/friends/add/:friendCode` friend link landing (`src/renderFriendAddPage.ts`)
 - `/admin` admin dashboard shell (`src/renderAdminPage.ts`) — requires admin auth; includes `AdminDashboardIsland` for stats
 - `/admin/goals` admin goals list (`src/renderAdminGoalsPage.ts`) — requires admin auth; includes `AdminGoalsListIsland`
 - `/admin/goals/new` admin add goal (`src/renderAdminGoalAddPage.ts`) — requires admin auth; includes `AdminGoalAddIsland` with form, distance preview, duplicate check

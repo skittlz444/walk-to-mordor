@@ -146,6 +146,8 @@ Mutual friend relationships between users. One row per user pair. Status transit
 - `UNIQUE(requester_id, addressee_id)` — one relationship record per ordered user pair
 - `CHECK(requester_id != addressee_id)` — cannot friend yourself
 
+> **Invariant:** The `UNIQUE(requester_id, addressee_id)` constraint only prevents duplicate rows in the same direction. The application layer **must** check both `(requester_id, addressee_id)` and `(addressee_id, requester_id)` before inserting to prevent reverse-direction duplicate rows. This bidirectional check is enforced in the friend request handler.
+
 > **Query pattern:** To find all friends of user A, query `WHERE (requester_id = A OR addressee_id = A) AND status = 'accepted'`. To find pending incoming requests for user A, query `WHERE addressee_id = A AND status = 'pending'`.
 
 **Indexes:**
@@ -161,7 +163,7 @@ Friend-based fellowship invitations. A friend can be invited to a party; they mu
 - `invitee_id`: INTEGER NOT NULL (FK -> users.id, ON DELETE CASCADE) — the friend being invited
 - `status`: TEXT NOT NULL DEFAULT 'pending' — `'pending'`, `'accepted'`, or `'rejected'`
 - `created_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
-- `UNIQUE(party_id, invitee_id)` — prevent duplicate pending invites per user per party (allows re-invite after rejection by deleting old record)
+- Duplicate-pending prevention: the application layer must check for an existing `pending` invite for the same `(party_id, invitee_id)` pair before inserting. Rejected rows are retained but do not block future re-invites. A `UNIQUE(party_id, invitee_id)` constraint is **not** used because it would prevent re-invites when rejected rows exist. Instead, use an app-level check or a SQLite-compatible partial strategy (e.g., delete the rejected row before re-inserting, or use `CREATE UNIQUE INDEX ... WHERE status = 'pending'` if D1 supports partial indexes).
 
 > **Invariant:** `inviter_id` must be an active member of `party_id` at invite time. `invitee_id` must have an accepted friendship with `inviter_id`. These are enforced at the application layer.
 

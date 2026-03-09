@@ -172,7 +172,7 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 *   **FR_PARTY_11:** Party leaders can transfer leadership to another active member without leaving the party.
 *   **FR_PARTY_12:** When all members have left a party, the party is automatically dissolved (soft-deleted). Members cannot re-join a dissolved party.
 *   **FR_PARTY_13 (Future):** Party leaders can set a profile icon for their Fellowship.
-*   **FR_PARTY_14:** Users can invite friends to a Fellowship. The invited friend must accept to join (replaces direct invite-code-only flow for friends).
+*   **FR_PARTY_14:** Users can invite friends to a Fellowship. The invited friend must accept to join. This is an additional join pathway alongside the existing invite-code flow (both remain functional).
 *   **FR_PARTY_15:** Pending fellowship invites display a badge count on the Fellowships navigation link.
 *   **FR_PARTY_16:** Users can accept or reject fellowship invites from the Fellowships list page, seeing basic details (name, member count, current distance).
 *   **FR_PARTY_17:** On the Fellowship detail page, members can send a friend request to non-friend members via an "Add Friend" shortcut.

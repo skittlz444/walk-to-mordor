@@ -266,7 +266,7 @@ Two visual states based on completion:
 - Centered card with large avatar, username, shared fellowships list
 - Action button: Remove Friend (with confirmation)
 - "Invite to Fellowship" button if user leads/belongs to a party
-- Shows friend's current goal name (no distance — privacy)
+- Shows friend's total distance walked and current goal name (friend profiles show distance for accepted friends per PRD FR_FRIEND_06)
 
 **What Works:**
 - ✅ Focused, single-purpose view
