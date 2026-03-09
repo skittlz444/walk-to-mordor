@@ -1,5 +1,6 @@
 // Party (Fellowship) API handlers
 import { validateSession } from "./auth-handlers";
+import { generateAlphanumericCode } from "./auth-utils";
 import { calculateTotalDistance } from "./goals-handlers";
 import { createErrorResponse, createSuccessResponse } from "./validators";
 
@@ -48,14 +49,7 @@ interface PartyMemberRow {
  * Uses crypto.getRandomValues() for non-enumerable codes.
  */
 export function generateInviteCode(): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const values = new Uint8Array(8);
-  crypto.getRandomValues(values);
-  let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += charset[values[i] % charset.length];
-  }
-  return code;
+  return generateAlphanumericCode();
 }
 
 /**

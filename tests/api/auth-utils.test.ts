@@ -11,7 +11,10 @@ import {
   isSessionExpired,
   generatePasswordResetToken,
   getPasswordResetExpiry,
-  isPasswordResetTokenExpired
+  isPasswordResetTokenExpired,
+  generateAlphanumericCode,
+  generateUniqueFriendCode,
+  backfillFriendCodes
 } from '../../src/auth-utils';
 
 describe('Authentication Utilities', () => {
@@ -242,6 +245,148 @@ describe('Authentication Utilities', () => {
       // Token that expires right now should be considered expired
       const now = new Date(Date.now() - 1000); // 1 second ago to ensure it's past
       expect(isPasswordResetTokenExpired(now.toISOString())).toBe(true);
+    });
+  });
+
+  describe('generateAlphanumericCode', () => {
+    it('should generate an 8-character alphanumeric string', () => {
+      const code = generateAlphanumericCode();
+      expect(code).toHaveLength(8);
+      expect(code).toMatch(/^[A-Za-z0-9]+$/);
+    });
+
+    it('should generate unique codes', () => {
+      const codes = new Set<string>();
+      for (let i = 0; i < 100; i++) {
+        codes.add(generateAlphanumericCode());
+      }
+      // With 62^8 possible codes, 100 codes should all be unique
+      expect(codes.size).toBe(100);
+    });
+
+    it('should use full alphanumeric character set', () => {
+      const chars = new Set<string>();
+      // Generate enough codes to sample the character space
+      for (let i = 0; i < 500; i++) {
+        const code = generateAlphanumericCode();
+        for (const ch of code) {
+          chars.add(ch);
+        }
+      }
+      // Should have a good sampling of uppercase, lowercase, and digits
+      const hasUpper = [...chars].some(c => /[A-Z]/.test(c));
+      const hasLower = [...chars].some(c => /[a-z]/.test(c));
+      const hasDigit = [...chars].some(c => /[0-9]/.test(c));
+      expect(hasUpper).toBe(true);
+      expect(hasLower).toBe(true);
+      expect(hasDigit).toBe(true);
+    });
+  });
+
+  describe('generateUniqueFriendCode', () => {
+    it('should return a code when no collision exists', async () => {
+      const mockDb = {
+        prepare: jest.fn().mockReturnValue({
+          bind: jest.fn().mockReturnValue({
+            first: jest.fn().mockResolvedValue(null) // No collision
+          })
+        })
+      };
+
+      const code = await generateUniqueFriendCode(mockDb);
+      expect(code).toHaveLength(8);
+      expect(code).toMatch(/^[A-Za-z0-9]+$/);
+      expect(mockDb.prepare).toHaveBeenCalledWith('SELECT id FROM users WHERE friend_code = ?');
+    });
+
+    it('should retry on collision and succeed', async () => {
+      const mockFirst = jest.fn()
+        .mockResolvedValueOnce({ id: 1 })  // First attempt: collision
+        .mockResolvedValueOnce({ id: 2 })  // Second attempt: collision
+        .mockResolvedValueOnce(null);       // Third attempt: success
+
+      const mockDb = {
+        prepare: jest.fn().mockReturnValue({
+          bind: jest.fn().mockReturnValue({
+            first: mockFirst
+          })
+        })
+      };
+
+      const code = await generateUniqueFriendCode(mockDb);
+      expect(code).toHaveLength(8);
+      expect(mockFirst).toHaveBeenCalledTimes(3);
+    });
+
+    it('should throw after max retries', async () => {
+      const mockDb = {
+        prepare: jest.fn().mockReturnValue({
+          bind: jest.fn().mockReturnValue({
+            first: jest.fn().mockResolvedValue({ id: 1 }) // Always collision
+          })
+        })
+      };
+
+      await expect(generateUniqueFriendCode(mockDb, 3)).rejects.toThrow(
+        'Failed to generate unique friend code after maximum retries'
+      );
+    });
+
+    it('should respect custom maxRetries parameter', async () => {
+      const mockFirst = jest.fn().mockResolvedValue({ id: 1 }); // Always collision
+      const mockDb = {
+        prepare: jest.fn().mockReturnValue({
+          bind: jest.fn().mockReturnValue({
+            first: mockFirst
+          })
+        })
+      };
+
+      await expect(generateUniqueFriendCode(mockDb, 5)).rejects.toThrow();
+      expect(mockFirst).toHaveBeenCalledTimes(5);
+    });
+  });
+
+  describe('backfillFriendCodes', () => {
+    it('should backfill users without friend codes', async () => {
+      const mockRun = jest.fn().mockResolvedValue({});
+      const mockFirst = jest.fn().mockResolvedValue(null); // No collisions
+      const mockAll = jest.fn().mockResolvedValue({
+        results: [{ id: 1 }, { id: 2 }, { id: 3 }]
+      });
+
+      const mockDb = {
+        prepare: jest.fn().mockReturnValue({
+          bind: jest.fn().mockReturnValue({
+            run: mockRun,
+            all: mockAll,
+            first: mockFirst
+          })
+        })
+      };
+
+      const count = await backfillFriendCodes(mockDb);
+      expect(count).toBe(3);
+      // Should have called prepare for: SELECT NULL users, then for each user: SELECT collision check + UPDATE
+      expect(mockDb.prepare).toHaveBeenCalledWith('SELECT id FROM users WHERE friend_code IS NULL');
+      expect(mockDb.prepare).toHaveBeenCalledWith(
+        'UPDATE users SET friend_code = ? WHERE id = ? AND friend_code IS NULL'
+      );
+    });
+
+    it('should return 0 when no users need backfill', async () => {
+      const mockDb = {
+        prepare: jest.fn().mockReturnValue({
+          bind: jest.fn().mockReturnValue({
+            all: jest.fn().mockResolvedValue({ results: [] }),
+            first: jest.fn().mockResolvedValue(null),
+            run: jest.fn().mockResolvedValue({})
+          })
+        })
+      };
+
+      const count = await backfillFriendCodes(mockDb);
+      expect(count).toBe(0);
     });
   });
 });

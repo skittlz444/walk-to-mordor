@@ -14,7 +14,8 @@ import {
   isPasswordResetTokenExpired,
   generateEmailConfirmationToken,
   getEmailConfirmationExpiry,
-  isEmailConfirmationTokenExpired
+  isEmailConfirmationTokenExpired,
+  generateUniqueFriendCode
 } from './auth-utils';
 import { createErrorResponse, createSuccessResponse } from './validators';
 import { sendPasswordResetEmail, sendConfirmationEmail } from './email-utils';
@@ -67,10 +68,13 @@ export async function handleRegister(request: Request, env: any, body: any) {
     const salt = await generateSalt();
     const passwordHash = await hashPassword(password, salt);
 
+    // Generate unique friend code
+    const friendCode = await generateUniqueFriendCode(env.DB);
+
     // Insert new user (first user is automatically approved and verified)
     const result = await env.DB.prepare(
-      'INSERT INTO users (username, email, password_hash, salt, approved, email_verified) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(username, email, passwordHash, salt, 1, isFirstUser ? 1 : 0).run();
+      'INSERT INTO users (username, email, password_hash, salt, approved, email_verified, friend_code) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).bind(username, email, passwordHash, salt, 1, isFirstUser ? 1 : 0, friendCode).run();
 
     const userId = result.meta.last_row_id;
 
@@ -256,10 +260,11 @@ export async function handleSessionValidation(request: Request, env: any) {
         // Create test user (INSERT OR IGNORE to handle concurrent requests)
         const salt = 'test_salt';
         const passwordHash = 'dummy_hash_for_testing'; // Optimized for tests
+        const friendCode = await generateUniqueFriendCode(env.DB);
         
         await env.DB.prepare(
-          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
-        ).bind(username, `${username}@example.com`, passwordHash, salt).run();
+          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, friend_code) VALUES (?, ?, ?, ?, 1, ?)'
+        ).bind(username, `${username}@example.com`, passwordHash, salt, friendCode).run();
         
         // Fetch the user (created here or by a concurrent request)
         const createdUser = await env.DB.prepare(
@@ -368,10 +373,11 @@ export async function validateSession(request: Request, env: any): Promise<
         // Create test user (INSERT OR IGNORE to handle concurrent requests)
         const salt = 'test_salt';
         const passwordHash = 'dummy_hash_for_testing'; // Optimized for tests
+        const friendCode = await generateUniqueFriendCode(env.DB);
         
         await env.DB.prepare(
-          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved) VALUES (?, ?, ?, ?, 1)'
-        ).bind(username, `${username}@example.com`, passwordHash, salt).run();
+          'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, friend_code) VALUES (?, ?, ?, ?, 1, ?)'
+        ).bind(username, `${username}@example.com`, passwordHash, salt, friendCode).run();
         
         // Fetch the user (created here or by a concurrent request)
         const createdUser = await env.DB.prepare(

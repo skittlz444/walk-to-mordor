@@ -16,8 +16,8 @@ Stores user credentials and profile status.
 - `show_future_goals_unlocked`: INTEGER (0 or 1, default 1 — controls whether future goals display as unlocked/visible or locked/hidden)
 - `default_view_map`: INTEGER (0 or 1, default 0 — user landing preference: journey or map)
 - `is_admin`: INTEGER (0 or 1, default 0 — admin role flag; can only be set via direct D1 database access, e.g. `UPDATE users SET is_admin = 1 WHERE username = '<admin_username>';`)
-- `avatar_id`: TEXT (default NULL — slug referencing a predefined LOTR-themed avatar image in `public/img/avatars/`, e.g. `gandalf-grey`, `samwise`. When NULL, UI renders initials circle.)
-- `friend_code`: TEXT UNIQUE (8-char alphanumeric, cryptographically random — personal shareable code for friend link discovery. Generated on account creation; existing users backfilled via migration.)
+- `avatar_id`: TEXT (default NULL — slug referencing a predefined LOTR-themed avatar image in `public/img/avatars/`, e.g. `gandalf-grey`, `samwise`. When NULL, UI renders initials circle. Valid slugs are defined in `src/avatar-slugs.ts`.)
+- `friend_code`: TEXT UNIQUE (8-char alphanumeric, cryptographically random — personal shareable code for friend link discovery. Generated on account creation; existing users backfilled via Worker-side utility in `src/auth-utils.ts`.)
 - `created_at`: DATETIME
 - `updated_at`: DATETIME
 
@@ -145,6 +145,7 @@ Mutual friend relationships between users. One row per user pair. Status transit
 - `updated_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
 - `UNIQUE(requester_id, addressee_id)` — one relationship record per ordered user pair
 - `CHECK(requester_id != addressee_id)` — cannot friend yourself
+- `CHECK(status IN ('pending', 'accepted'))` — enforces valid status values
 
 > **Invariant:** The `UNIQUE(requester_id, addressee_id)` constraint only prevents duplicate rows in the same direction. The application layer **must** check both `(requester_id, addressee_id)` and `(addressee_id, requester_id)` before inserting to prevent reverse-direction duplicate rows. This bidirectional check is enforced in the friend request handler.
 

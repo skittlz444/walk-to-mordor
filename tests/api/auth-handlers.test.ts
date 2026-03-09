@@ -31,7 +31,9 @@ jest.mock('../../src/auth-utils', () => ({
   isPasswordResetTokenExpired: jest.fn(),
   generateEmailConfirmationToken: jest.fn(),
   getEmailConfirmationExpiry: jest.fn(),
-  isEmailConfirmationTokenExpired: jest.fn()
+  isEmailConfirmationTokenExpired: jest.fn(),
+  generateAlphanumericCode: jest.fn(),
+  generateUniqueFriendCode: jest.fn()
 }));
 
 // Mock email-utils
@@ -63,6 +65,7 @@ describe('Auth Handlers', () => {
     (authUtils.generateEmailConfirmationToken as jest.Mock).mockReturnValue('mock-confirm-token');
     (authUtils.getEmailConfirmationExpiry as jest.Mock).mockReturnValue('2026-01-18T17:00:00Z');
     (authUtils.isEmailConfirmationTokenExpired as jest.Mock).mockReturnValue(false);
+    (authUtils.generateUniqueFriendCode as jest.Mock).mockResolvedValue('ABCD1234');
     (emailUtils.sendPasswordResetEmail as jest.Mock).mockResolvedValue({ success: true });
     (emailUtils.sendConfirmationEmail as jest.Mock).mockResolvedValue({ success: true });
 
@@ -1789,6 +1792,125 @@ describe('Auth Handlers', () => {
 
       expect(response.status).toBe(200);
       expect(data.defaultViewMap).toBe(true);
+    });
+  });
+
+  describe('friend_code generation during registration', () => {
+    it('should call generateUniqueFriendCode during registration', async () => {
+      const body = {
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'Password123!'
+      };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      // First call: check count (first user)
+      mockAll.mockResolvedValueOnce({ results: [{ count: 0 }] });
+      // Second call: insert user
+      mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
+      // Third call: update progress
+      mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
+
+      await handleRegister(mockRequest, mockEnv, body);
+
+      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
+      // Verify INSERT includes friend_code column
+      expect(mockPrepare).toHaveBeenCalledWith(
+        expect.stringContaining('friend_code')
+      );
+    });
+
+    it('should include friend_code in INSERT for subsequent user registration', async () => {
+      const body = {
+        username: 'testuser2',
+        email: 'test2@example.com',
+        password: 'Password123!'
+      };
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockRun = jest.fn();
+      const mockAll = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll });
+
+      // First call: check count (not first user)
+      mockAll.mockResolvedValueOnce({ results: [{ count: 1 }] });
+      // Second call: insert user
+      mockRun.mockResolvedValueOnce({ meta: { last_row_id: 2 } });
+      // Third call: insert email confirmation token
+      mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
+
+      await handleRegister(mockRequest, mockEnv, body);
+
+      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
+    });
+  });
+
+  describe('friend_code generation during mock auth user creation', () => {
+    it('should call generateUniqueFriendCode when creating mock auth user in handleSessionValidation', async () => {
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_newuser');
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+      const mockRun = jest.fn();
+      const mockFirst = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun, first: mockFirst });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll, first: mockFirst });
+
+      // No existing user
+      mockAll.mockResolvedValueOnce({ results: [] });
+      // INSERT run succeeds
+      mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
+      // Fetch created user
+      mockFirst.mockResolvedValueOnce({
+        id: 1, username: 'newuser', email: 'newuser@example.com',
+        approved: 1, show_future_goals_unlocked: 1, default_view_map: 0, is_admin: 0
+      });
+
+      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
+    });
+
+    it('should call generateUniqueFriendCode when creating mock auth user in validateSession', async () => {
+      mockEnv.ALLOW_TEST_AUTH = 'true';
+      mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_newuser2');
+
+      const mockPrepare = mockEnv.DB.prepare;
+      const mockBind = jest.fn();
+      const mockAll = jest.fn();
+      const mockRun = jest.fn();
+      const mockFirst = jest.fn();
+
+      mockPrepare.mockReturnValue({ bind: mockBind, all: mockAll, run: mockRun, first: mockFirst });
+      mockBind.mockReturnValue({ run: mockRun, all: mockAll, first: mockFirst });
+
+      // No existing user
+      mockAll.mockResolvedValueOnce({ results: [] });
+      // INSERT run succeeds
+      mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
+      // Fetch created user
+      mockFirst.mockResolvedValueOnce({
+        id: 1, username: 'newuser2', email: 'newuser2@example.com', approved: 1
+      });
+
+      const result = await validateSession(mockRequest, mockEnv);
+      expect(result.valid).toBe(true);
+      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
     });
   });
 });

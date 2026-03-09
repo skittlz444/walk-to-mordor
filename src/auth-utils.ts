@@ -179,3 +179,62 @@ export function getEmailConfirmationExpiry(): string {
 export function isEmailConfirmationTokenExpired(expiresAt: string): boolean {
   return new Date(expiresAt) < new Date();
 }
+
+/**
+ * Generate a cryptographically secure 8-character alphanumeric code.
+ * Uses crypto.getRandomValues() for non-enumerable codes.
+ * Shared by friend-code and invite-code generation.
+ */
+export function generateAlphanumericCode(): string {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const values = new Uint8Array(8);
+  crypto.getRandomValues(values);
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += charset[values[i] % charset.length];
+  }
+  return code;
+}
+
+/**
+ * Generate a unique friend code for a user.
+ * Retries up to maxRetries times on uniqueness collisions.
+ */
+export async function generateUniqueFriendCode(
+  db: { prepare: (sql: string) => { bind: (...args: unknown[]) => { first: () => Promise<unknown> } } },
+  maxRetries = 10
+): Promise<string> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const code = generateAlphanumericCode();
+    const existing = await db.prepare(
+      'SELECT id FROM users WHERE friend_code = ?'
+    ).bind(code).first();
+    if (!existing) {
+      return code;
+    }
+  }
+  throw new Error('Failed to generate unique friend code after maximum retries');
+}
+
+/**
+ * Backfill friend_code for all users who don't have one.
+ * Uses crypto-strength generation with uniqueness verification.
+ * Returns the number of users updated.
+ */
+export async function backfillFriendCodes(
+  db: { prepare: (sql: string) => { bind: (...args: unknown[]) => { run: () => Promise<unknown>; all: () => Promise<{ results: Array<{ id: number }> }>; first: () => Promise<unknown> } } }
+): Promise<number> {
+  const { results: usersWithoutCode } = await db.prepare(
+    'SELECT id FROM users WHERE friend_code IS NULL'
+  ).bind().all();
+
+  let updated = 0;
+  for (const user of usersWithoutCode) {
+    const code = await generateUniqueFriendCode(db);
+    await db.prepare(
+      'UPDATE users SET friend_code = ? WHERE id = ? AND friend_code IS NULL'
+    ).bind(code, user.id).run();
+    updated++;
+  }
+  return updated;
+}
