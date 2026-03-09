@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
+import { Avatar } from '../components/Avatar';
 
 interface FriendProfile {
   username: string;
@@ -19,31 +20,9 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
-function getAvatarBg(username: string): string {
-  return `hsl(${(username.charCodeAt(0) * 137) % 360}, 50%, 35%)`;
-}
-
 function getUserIdFromUrl(): number {
   const match = window.location.pathname.match(/^\/friends\/(\d+)$/);
   return match ? parseInt(match[1], 10) : 0;
-}
-
-function InlineAvatar({ username, avatarId, size = 128 }: { username: string; avatarId: string | null; size?: number }) {
-  if (avatarId) {
-    return (
-      <div className="friend-avatar friend-avatar--large" style={{ width: `${size}px`, height: `${size}px` }}>
-        <img src={`/img/avatars/${avatarId}.webp`} alt={username} />
-      </div>
-    );
-  }
-  return (
-    <div
-      className="friend-avatar friend-avatar--initials friend-avatar--large"
-      style={{ width: `${size}px`, height: `${size}px`, fontSize: '3rem', backgroundColor: getAvatarBg(username) }}
-    >
-      {username.charAt(0).toUpperCase()}
-    </div>
-  );
 }
 
 export function FriendProfileIsland() {
@@ -136,7 +115,7 @@ export function FriendProfileIsland() {
 
       {/* Profile Header */}
       <div className="party-card friend-profile-header">
-        <InlineAvatar username={profile.username} avatarId={profile.avatar_id} />
+        <Avatar username={profile.username} avatarId={profile.avatar_id} size={128} />
         <h2 className="friend-profile-username">{profile.username}</h2>
 
         <div className="friend-profile-stats">

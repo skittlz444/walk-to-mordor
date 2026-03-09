@@ -47,6 +47,12 @@ body.drawer-open .drawer-backdrop {
   border-bottom: 1px solid var(--border-gray);
 }
 
+.drawer-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .drawer-title {
   color: var(--accent-gold);
   font-weight: 600;

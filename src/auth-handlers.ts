@@ -19,6 +19,7 @@ import {
 } from './auth-utils';
 import { createErrorResponse, createSuccessResponse } from './validators';
 import { sendPasswordResetEmail, sendConfirmationEmail } from './email-utils';
+import { isValidAvatarSlug, VALID_AVATAR_SLUGS } from './avatar-slugs';
 
 // Rate limit constants
 const PASSWORD_RESET_RATE_LIMIT = 3; // Maximum password reset emails per hour
@@ -252,7 +253,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       
       // Check if user exists
       let { results } = await env.DB.prepare(
-        'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin FROM users WHERE username = ?'
+        'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin, avatar_id FROM users WHERE username = ?'
       ).bind(username).all();
 
       let user;
@@ -268,7 +269,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         
         // Fetch the user (created here or by a concurrent request)
         const createdUser = await env.DB.prepare(
-          'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin FROM users WHERE username = ?'
+          'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin, avatar_id FROM users WHERE username = ?'
         ).bind(username).first();
         
         if (!createdUser) {
@@ -286,6 +287,7 @@ export async function handleSessionValidation(request: Request, env: any) {
         showFutureGoalsUnlocked: user.show_future_goals_unlocked === 1,
         defaultViewMap: user.default_view_map === 1,
         isAdmin: user.is_admin === 1,
+        avatarId: user.avatar_id ?? null,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       }, 200);
     } catch (error: any) {
@@ -296,7 +298,7 @@ export async function handleSessionValidation(request: Request, env: any) {
 
   try {
     const { results } = await env.DB.prepare(
-      'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved, u.show_future_goals_unlocked, u.default_view_map, u.is_admin FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
+      'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved, u.show_future_goals_unlocked, u.default_view_map, u.is_admin, u.avatar_id FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
     ).bind(sessionId).all();
 
     if (results.length === 0) {
@@ -324,6 +326,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       showFutureGoalsUnlocked: session.show_future_goals_unlocked === 1,
       defaultViewMap: session.default_view_map === 1,
       isAdmin: session.is_admin === 1,
+      avatarId: session.avatar_id ?? null,
       expiresAt: session.expires_at
     }, 200);
   } catch (error: any) {
@@ -568,6 +571,18 @@ export async function handleUpdateProfile(request: Request, env: any, body: any)
 }
 
 /**
+ * Return the list of valid avatar slugs (requires authentication)
+ */
+export async function handleGetAvatars(request: Request, env: any) {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+
+  return createSuccessResponse([...VALID_AVATAR_SLUGS], 200);
+}
+
+/**
  * Handle user preferences update (e.g., goal visibility, default view)
  */
 export async function handleUpdatePreferences(request: Request, env: any, body: any) {
@@ -577,13 +592,14 @@ export async function handleUpdatePreferences(request: Request, env: any, body: 
     return sessionValidation.error;
   }
 
-  const { showFutureGoalsUnlocked, defaultViewMap } = body || {};
+  const { showFutureGoalsUnlocked, defaultViewMap, avatarId } = body || {};
 
   // At least one preference must be provided
   const hasShowFutureGoals = typeof showFutureGoalsUnlocked !== 'undefined';
   const hasDefaultView = typeof defaultViewMap !== 'undefined';
+  const hasAvatarId = typeof avatarId !== 'undefined';
 
-  if (!hasShowFutureGoals && !hasDefaultView) {
+  if (!hasShowFutureGoals && !hasDefaultView && !hasAvatarId) {
     return createErrorResponse('At least one preference must be provided', 400);
   }
 
@@ -594,11 +610,14 @@ export async function handleUpdatePreferences(request: Request, env: any, body: 
   if (hasDefaultView && typeof defaultViewMap !== 'boolean') {
     return createErrorResponse('Invalid input: defaultViewMap must be a boolean', 400);
   }
+  if (hasAvatarId && avatarId !== null && (typeof avatarId !== 'string' || !isValidAvatarSlug(avatarId))) {
+    return createErrorResponse('Invalid avatar_id', 400);
+  }
 
   try {
     const userId = sessionValidation.userId;
     const updates: string[] = [];
-    const values: (number | string)[] = [];
+    const values: (number | string | null)[] = [];
 
     if (hasShowFutureGoals) {
       updates.push('show_future_goals_unlocked = ?');
@@ -608,6 +627,10 @@ export async function handleUpdatePreferences(request: Request, env: any, body: 
       updates.push('default_view_map = ?');
       values.push(defaultViewMap ? 1 : 0);
     }
+    if (hasAvatarId) {
+      updates.push('avatar_id = ?');
+      values.push(avatarId);
+    }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(userId);
@@ -615,9 +638,10 @@ export async function handleUpdatePreferences(request: Request, env: any, body: 
     const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
     await env.DB.prepare(query).bind(...values).run();
 
-    const response: Record<string, boolean> = {};
+    const response: Record<string, boolean | string | null> = {};
     if (hasShowFutureGoals) response.showFutureGoalsUnlocked = showFutureGoalsUnlocked;
     if (hasDefaultView) response.defaultViewMap = defaultViewMap;
+    if (hasAvatarId) response.avatarId = avatarId;
 
     return createSuccessResponse(response, 200);
   } catch (error: any) {

@@ -64,9 +64,12 @@ Typical response fields:
   "email": "sam@example.com",
   "showFutureGoalsUnlocked": true,
   "defaultViewMap": false,
+  "avatarId": "gandalf-grey",
   "expiresAt": "2026-03-07T..."
 }
 ```
+
+`avatarId` is `null` when the user has not selected an avatar (initials fallback).
 
 ### `PUT /api/profile`
 
@@ -76,10 +79,23 @@ Updates profile properties (username/email/password fields as supported by handl
 
 Updates user preferences.
 
-Body:
+Body (all fields optional, at least one required):
 
 ```json
-{ "showFutureGoalsUnlocked": true, "defaultViewMap": false }
+{ "showFutureGoalsUnlocked": true, "defaultViewMap": false, "avatarId": "frodo" }
+```
+
+- `avatarId` must be a valid slug from `GET /api/avatars`, or `null` to clear.
+- Returns 400 with `"Invalid avatar_id"` for unknown slugs.
+
+### `GET /api/avatars`
+
+Returns the list of valid avatar slugs. Requires authentication.
+
+Response:
+
+```json
+["aragorn", "arwen", "bilbo", "boromir", ...]
 ```
 
 ### `POST /api/password-reset-request`

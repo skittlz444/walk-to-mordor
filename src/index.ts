@@ -27,6 +27,7 @@ import {
   handleSessionValidation,
   handleUpdateProfile,
   handleUpdatePreferences,
+  handleGetAvatars,
   handlePasswordResetRequest,
   handlePasswordReset,
   handleConfirmEmail,
@@ -152,6 +153,8 @@ export default {
         return handleUpdateProfile(request, env, body);
       } else if (url.pathname === "/api/user/preferences" && method === "PUT") {
         return handleUpdatePreferences(request, env, body);
+      } else if (url.pathname === "/api/avatars" && method === "GET") {
+        return handleGetAvatars(request, env);
       } else if (url.pathname === "/api/password-reset-request" && method === "POST") {
         return handlePasswordResetRequest(request, env, body);
       } else if (url.pathname === "/api/password-reset" && method === "POST") {
@@ -689,6 +692,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/goals":
     case "/api/total-distance":
     case "/api/session":
+    case "/api/avatars":
     case "/api/auth/confirm-email":
     case "/api/user/parties":
     case "/api/user/fellowship-invites":

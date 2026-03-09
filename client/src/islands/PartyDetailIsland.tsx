@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { GoalModal } from './GoalModal';
 import { ActivityFeed } from '../components/ActivityFeed';
+import { Avatar } from '../components/Avatar';
 import { getMemberColor, getMutedMemberColor } from '../utils/party-colors';
 import type { Goal } from '../types/goal';
 
@@ -20,6 +21,7 @@ interface PartyMember {
   joined_at: string;
   status: string;
   color: number;
+  avatar_id: string | null;
 }
 
 interface PartyProgressData {
@@ -320,6 +322,7 @@ export function PartyDetailIsland() {
                   style={{ backgroundColor: member.status === 'active' ? getMemberColor(member.color) : getMutedMemberColor(member.color) }}
                   aria-hidden="true"
                 ></span>
+                <Avatar username={member.display_name} avatarId={member.avatar_id} size={24} />
                 <div className="party-member-info">
                   <span className="party-member-name">
                     {member.display_name}

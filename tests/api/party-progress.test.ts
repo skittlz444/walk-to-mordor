@@ -173,6 +173,7 @@ describe('Party Progress API (Story 3.4)', () => {
         joined_at: '2026-01-15T00:00:00Z',
         status: 'active',
         color: 1 % 12,
+        avatar_id: null,
       });
       expect(data.members[1]).toEqual({
         user_id: 2,
@@ -181,6 +182,7 @@ describe('Party Progress API (Story 3.4)', () => {
         joined_at: '2026-01-16T00:00:00Z',
         status: 'active',
         color: 2 % 12,
+        avatar_id: null,
       });
       expect(data.newly_passed_milestones).toHaveLength(2);
     });

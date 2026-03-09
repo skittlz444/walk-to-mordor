@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
+import { Avatar } from '../components/Avatar';
 
 interface Friend {
   id: number;
@@ -26,10 +27,6 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
-function getAvatarBg(username: string): string {
-  return `hsl(${(username.charCodeAt(0) * 137) % 360}, 50%, 35%)`;
-}
-
 function relativeTime(dateStr: string | null): string {
   if (!dateStr) return 'No activity yet';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -39,25 +36,6 @@ function relativeTime(dateStr: string | null): string {
   if (days < 30) return `${days} days ago`;
   if (days < 365) return `${Math.floor(days / 30)} months ago`;
   return `${Math.floor(days / 365)} years ago`;
-}
-
-function InlineAvatar({ username, avatarId, size = 32 }: { username: string; avatarId: string | null; size?: number }) {
-  const sizeClass = size > 64 ? ' friend-avatar--large' : '';
-  if (avatarId) {
-    return (
-      <div className={`friend-avatar${sizeClass}`} style={{ width: `${size}px`, height: `${size}px` }}>
-        <img src={`/img/avatars/${avatarId}.webp`} alt={username} />
-      </div>
-    );
-  }
-  return (
-    <div
-      className={`friend-avatar friend-avatar--initials${sizeClass}`}
-      style={{ width: `${size}px`, height: `${size}px`, fontSize: size > 64 ? '3rem' : '0.85rem', backgroundColor: getAvatarBg(username) }}
-    >
-      {username.charAt(0).toUpperCase()}
-    </div>
-  );
 }
 
 export function FriendsListIsland() {
@@ -293,7 +271,7 @@ export function FriendsListIsland() {
             <div className="party-card">
               {pending.map(req => (
                 <div key={req.id} className="friend-pending-item">
-                  <InlineAvatar username={req.username} avatarId={req.avatar_id} />
+                  <Avatar username={req.username} avatarId={req.avatar_id} size={32} />
                   <div className="friend-list-item__info">
                     <div className="friend-list-item__name">{req.username}</div>
                   </div>
@@ -345,7 +323,7 @@ export function FriendsListIsland() {
         )}
         {searchResults.map(user => (
           <div key={user.id} className="friend-list-item" style={{ cursor: 'default' }}>
-            <InlineAvatar username={user.username} avatarId={user.avatar_id} />
+            <Avatar username={user.username} avatarId={user.avatar_id} size={32} />
             <div className="friend-list-item__info">
               <div className="friend-list-item__name">{user.username}</div>
             </div>
@@ -387,7 +365,7 @@ export function FriendsListIsland() {
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFriendClick(friend.id); } }}
               aria-label={`View ${friend.username}'s profile`}
             >
-              <InlineAvatar username={friend.username} avatarId={friend.avatar_id} />
+              <Avatar username={friend.username} avatarId={friend.avatar_id} size={32} />
               <div className="friend-list-item__info">
                 <div className="friend-list-item__name">{friend.username}</div>
                 <div className="friend-list-item__meta">Last progressed: {relativeTime(friend.last_progressed)}</div>

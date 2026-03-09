@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
+import { Avatar } from '../components/Avatar';
 
 interface ResolveData {
   id: number;
@@ -11,31 +12,9 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
-function getAvatarBg(username: string): string {
-  return `hsl(${(username.charCodeAt(0) * 137) % 360}, 50%, 35%)`;
-}
-
 function getFriendCodeFromUrl(): string {
   const match = window.location.pathname.match(/^\/friends\/add\/([A-Za-z0-9]{8})$/);
   return match ? match[1] : '';
-}
-
-function InlineAvatar({ username, avatarId, size = 128 }: { username: string; avatarId: string | null; size?: number }) {
-  if (avatarId) {
-    return (
-      <div className="friend-avatar friend-avatar--large" style={{ width: `${size}px`, height: `${size}px` }}>
-        <img src={`/img/avatars/${avatarId}.webp`} alt={username} />
-      </div>
-    );
-  }
-  return (
-    <div
-      className="friend-avatar friend-avatar--initials friend-avatar--large"
-      style={{ width: `${size}px`, height: `${size}px`, fontSize: '3rem', backgroundColor: getAvatarBg(username) }}
-    >
-      {username.charAt(0).toUpperCase()}
-    </div>
-  );
 }
 
 export function FriendAddIsland() {
@@ -185,7 +164,7 @@ export function FriendAddIsland() {
       <div className="party-card friend-add-preview">
         {preview && (
           <>
-            <InlineAvatar username={preview.username} avatarId={preview.avatar_id} />
+            <Avatar username={preview.username} avatarId={preview.avatar_id} size={128} />
             <div className="friend-add-preview__username">{preview.username}</div>
           </>
         )}

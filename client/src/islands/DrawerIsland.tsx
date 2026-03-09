@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { Avatar } from '../components/Avatar';
 
 interface SessionData {
   isAdmin?: boolean;
+  avatarId?: string | null;
+  username?: string;
 }
 
 export function DrawerIsland() {
   const [isOpen, setIsOpen] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [avatarId, setAvatarId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string>('');
   const [pendingFriendsCount, setPendingFriendsCount] = useState(0);
   const [pendingInvitesCount, setPendingInvitesCount] = useState(0);
   const drawerRef = useRef<HTMLElement | null>(null);
@@ -32,6 +37,10 @@ export function DrawerIsland() {
         if (data.isAdmin === true) {
           setIsAdmin(true);
         }
+        if (data.username) {
+          setUsername(data.username);
+        }
+        setAvatarId(data.avatarId ?? null);
         // Badge fetches only after confirmed valid session (avoids 401s)
         fetch('/api/friends/pending', { headers: authHeaders })
           .then((res) => res.ok ? res.json() as Promise<{ count: number }> : null)
@@ -45,6 +54,18 @@ export function DrawerIsland() {
       .catch(() => {
         // Silently ignore — non-critical for drawer rendering
       });
+  }, []);
+
+  // Listen for avatar changes from the legacy profile modal
+  useEffect(() => {
+    function handlePreferenceChanged(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail && typeof detail.avatarId !== 'undefined') {
+        setAvatarId(detail.avatarId);
+      }
+    }
+    window.addEventListener('preferenceChanged', handlePreferenceChanged);
+    return () => window.removeEventListener('preferenceChanged', handlePreferenceChanged);
   }, []);
 
   useEffect(() => {
@@ -156,7 +177,10 @@ export function DrawerIsland() {
       <div className="drawer-backdrop" aria-hidden="true" onClick={closeDrawer}></div>
       <aside id="navigation-drawer" className="side-drawer" aria-hidden={isOpen ? 'false' : 'true'} ref={drawerRef}>
         <div className="drawer-header">
-          <span className="drawer-title">Navigation</span>
+          <div className="drawer-header-left">
+            {username && <Avatar username={username} avatarId={avatarId} size={32} />}
+            <span className="drawer-title">Navigation</span>
+          </div>
           <button
             type="button"
             className="drawer-close"
