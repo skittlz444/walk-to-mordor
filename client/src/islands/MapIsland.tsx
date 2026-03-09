@@ -53,6 +53,8 @@ import {
   userParties,
   fetchUserParties,
   selectView,
+  hasTriggeredMilestones,
+  markMilestoneTriggered,
   type PartySelection,
   type PartyProgress as PartyProgressType,
 } from '../stores/partyStore';
@@ -276,6 +278,7 @@ export function MapIsland() {
   const measuredPopupSize = useSignal<{ width: number; height: number } | null>(null);
   const isMobile = useSignal(false);
   const expandGoal = useSignal<Goal | null>(null);
+  const partyMilestoneGoal = useSignal<Goal | null>(null);
   const showPartyPanel = useSignal(false);
 
   const partyViewActive = useComputed(() => isPartyView.value);
@@ -801,6 +804,31 @@ export function MapIsland() {
       }
 
       centerOnPosition(newPos, currentScale.value, true);
+    }
+
+    // Check for newly passed milestones when switching to a party view
+    if (
+      progress &&
+      effectiveSelection !== 'personal' &&
+      typeof effectiveSelection === 'number' &&
+      progress.newly_passed_milestones &&
+      progress.newly_passed_milestones.length > 0
+    ) {
+      const partyId = effectiveSelection;
+      const newMilestones = progress.newly_passed_milestones.filter(
+        m => !hasTriggeredMilestones(partyId, m.distance)
+      );
+
+      if (newMilestones.length > 0) {
+        newMilestones.forEach(m => markMilestoneTriggered(partyId, m.distance));
+        // Show the highest/latest milestone
+        const latest = newMilestones[newMilestones.length - 1];
+        partyMilestoneGoal.value = {
+          id: latest.id,
+          title: latest.title,
+          distance: latest.distance,
+        };
+      }
     }
 
     showPartyPanel.value = false;
@@ -1396,6 +1424,15 @@ export function MapIsland() {
           goal={expandGoal.value}
           currentDistance={userDistance.value * MILES_TO_KM}
           onClose={() => { expandGoal.value = null; }}
+        />
+      )}
+      {/* Party milestone congratulations modal (opened on party view switch) */}
+      {partyMilestoneGoal.value && (
+        <GoalModal
+          goal={partyMilestoneGoal.value}
+          currentDistance={userDistance.value * MILES_TO_KM}
+          isCongratulations={true}
+          onClose={() => { partyMilestoneGoal.value = null; }}
         />
       )}
       {/* Walk logging FAB and congratulations flow (Story 2.8) */}
