@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-03-06
+Last updated: 2026-03-09
 
 ## System Shape
 
@@ -53,6 +53,25 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `PUT /api/party/:id/settings`
 - `POST /api/party/:id/transfer-leadership`
 
+- Friends:
+- `GET /api/friends`
+- `GET /api/friends/pending`
+- `GET /api/friends/search?q=`
+- `GET /api/friends/resolve/:friendCode`
+- `GET /api/friends/positions`
+- `GET /api/friends/:userId/profile`
+- `POST /api/friends/request`
+- `POST /api/friends/request/code`
+- `POST /api/friends/:friendshipId/accept`
+- `POST /api/friends/:friendshipId/reject`
+- `DELETE /api/friends/:friendshipId`
+
+- Fellowship invites (friend-based):
+- `POST /api/party/:id/invite-friend`
+- `GET /api/user/fellowship-invites`
+- `POST /api/user/fellowship-invites/:inviteId/accept`
+- `POST /api/user/fellowship-invites/:inviteId/reject`
+
 - Admin (requires `validateAdminSession` — 401 if unauthenticated, 403 if non-admin):
   - `GET|POST|PUT /api/admin/*` — prefix guard; all admin API routes require admin auth
   - `GET /api/admin/dashboard` — returns live system statistics (total users, distance, parties, goals)
@@ -69,6 +88,9 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `/map` map UI (`src/map-handlers.ts`)
 - `/login`, `/password-reset`, `/reset-password`
 - `/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`
+- `/friends` friends list (`src/renderFriendsPage.ts`)
+- `/friends/add/:friendCode` friend link landing (`src/renderFriendAddPage.ts`) — must precede `/friends/:id` to avoid route shadowing
+- `/friends/:id` friend profile (`src/renderFriendProfilePage.ts`)
 - `/admin` admin dashboard shell (`src/renderAdminPage.ts`) — requires admin auth; includes `AdminDashboardIsland` for stats
 - `/admin/goals` admin goals list (`src/renderAdminGoalsPage.ts`) — requires admin auth; includes `AdminGoalsListIsland`
 - `/admin/goals/new` admin add goal (`src/renderAdminGoalAddPage.ts`) — requires admin auth; includes `AdminGoalAddIsland` with form, distance preview, duplicate check
@@ -102,6 +124,7 @@ This allows incremental migration without breaking existing vanilla workflows.
 - Primary map island: `MapIsland`
 - Rendering technology: Konva + typed map utilities (`client/src/components/map`, `client/src/utils/map-*.ts`)
 - State: Preact Signals stores (`client/src/stores/mapStore.ts`, `partyStore.ts`)
+- Social panel: Unified panel replacing the fellowship-only selector — includes fellowship view selector and "Show Friends" toggle for friend avatar markers on the map
 
 ## Authentication Model
 
@@ -122,6 +145,7 @@ D1 remains the source of truth.
 - Core domain tables: `users`, `sessions`, `progress`, `goals`
 - Auth support tables: `password_reset_tokens`, `email_confirmation_tokens`
 - Fellowship tables: `parties`, `party_members`, `party_progress_log`
+- Social tables: `friendships`, `fellowship_invites`
 - Admin tables: `admin_audit_log`
 
 Refer to `docs/data-models.md` for full schema details and constraints.

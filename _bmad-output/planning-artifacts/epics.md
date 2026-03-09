@@ -139,7 +139,20 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 | FR_PARTY_11 | Epic 3 | Party leader can transfer leadership without leaving |
 | FR_PARTY_12 | Epic 3 | Auto-dissolve empty parties when all members depart |
 | FR_PARTY_13 | Epic 3 (Future) | User custom map icon for visual distinction |
-| FR_PARTY_14 | Epic 3 (Future) | Fellowship profile icon |
+| FR_PARTY_14 | Epic 6 | Invite friends to Fellowship (acceptance required) |
+| FR_PARTY_15 | Epic 6 | Pending fellowship invite badge on nav |
+| FR_PARTY_16 | Epic 6 | Accept/reject fellowship invites from list |
+| FR_PARTY_17 | Epic 6 | Add Friend shortcut on Fellowship member list |
+| FR_FRIEND_01 | Epic 6 | Send friend request via username search |
+| FR_FRIEND_02 | Epic 6 | Share personal friend link |
+| FR_FRIEND_03 | Epic 6 | Accept/reject friend requests |
+| FR_FRIEND_04 | Epic 6 | Remove friend (mutual unfriend) |
+| FR_FRIEND_05 | Epic 6 | Friends list with username, avatar, last progressed |
+| FR_FRIEND_06 | Epic 6 | Friend profile page (distance, shared fellowships) |
+| FR_FRIEND_07 | Epic 6 | Select predefined LOTR-themed avatar |
+| FR_FRIEND_08 | Epic 6 | Pending friend request badge on nav |
+| FR_FRIEND_09 | Epic 6 | Toggle Show Friends on Map |
+| FR_FRIEND_10 | Epic 6 | Tap friend map avatar for mini-card |
 
 ## Epic List
 
@@ -228,7 +241,38 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 **Tech:** New `races` table with start_date, end_date, and leaderboard tracking
 
-**Status:** New feature, after Fellowship
+**Alignment Notes (2026-03-09):**
+- Stories 5.1, 5.3–5.6 should leverage the Friends layer (Epic 6) for discovery, privacy, and identity once available.
+- Entrant model decision can reference friendships for "invite friends to race" flow.
+- Race leaderboard identity uses `username` + `avatar_id` from the avatar system (Epic 6, Story 6.1).
+- Privacy/visibility rules for race discovery and standings should build on the friend relationship model.
+- See [Epic 5 Architecture Alignment Review](../implementation-artifacts/epic-5-architecture-alignment-2026-03-09.md) for the full gap analysis.
+
+**Status:** New feature, requires Epic 6 (Friends) alignment before story execution
+
+---
+
+### Epic 6: Friends & Social Identity
+
+**Goal:** Mutual friend relationships, predefined LOTR-themed avatars, friend-based fellowship invitations, and friend visibility on the Map — providing a relational/social layer that simplifies Race design.
+
+**FRs Covered:** FR_FRIEND_01–FR_FRIEND_10, FR_PARTY_14–FR_PARTY_17
+
+**Tech:** New `friendships` table, `avatar_id` on users, predefined avatar assets in `public/img/avatars/`, unified Social panel on Map
+
+**Includes:**
+- Mutual friend system (send/accept/reject/remove)
+- Friend discovery via username search and shareable friend link
+- Predefined LOTR-themed avatar gallery (stored in `public/img/avatars/`)
+- Friends list page with username, avatar, last progressed date
+- Friend profile page showing total distance and fellowships (highlighting shared ones)
+- Fellowship invite via friends (acceptance required, badge on Fellowships nav, accept/reject from list)
+- Add Friend shortcut on Fellowship member list
+- Unified Social panel on Map (fellowship selector + "Show Friends" toggle)
+- Friend avatars rendered at journey positions on Map, tappable for mini-card
+- Pending request badges on Friends and Fellowships nav links
+
+**Status:** New feature, can be implemented independently of Epic 5
 
 ---
 
@@ -1205,6 +1249,219 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ---
 
+### Epic 6: Friends & Social Identity
+
+#### Story 6.1: Friends Database Schema & Avatar System (Issue #TBD)
+
+**Priority:** P0 (Blocker)
+
+**Description:** Create the friendships table, add avatar support to users, and prepare predefined LOTR-themed avatar assets.
+
+**Acceptance Criteria:**
+- [ ] Create `friendships` table: id, requester_id (FK → users.id), addressee_id (FK → users.id), status ('pending', 'accepted'), created_at, updated_at
+- [ ] Add UNIQUE constraint on `(requester_id, addressee_id)` — enforce one relationship record per user pair
+- [ ] Add CHECK constraint: `requester_id != addressee_id` (cannot friend yourself)
+- [ ] Add `avatar_id` TEXT column to `users` table (default NULL — shows default initials avatar)
+- [ ] Add `friend_code` TEXT UNIQUE column to `users` table — personal shareable code for friend link discovery (generated on account creation, 8-char alphanumeric, cryptographically random)
+- [ ] Create migration to generate `friend_code` for all existing users
+- [ ] Prepare ~20–30 predefined LOTR-themed avatar images in `public/img/avatars/` (WebP, 128×128, <10KB each)
+- [ ] Avatar filenames are the `avatar_id` slug (e.g., `gandalf-grey`, `samwise`, `eowyn`)
+- [ ] Thumbnails in `public/img/avatars/thumbs/` (32×32) for Map marker use
+- [ ] Add indexes: `idx_friendships_requester` on `requester_id`, `idx_friendships_addressee` on `addressee_id`, `idx_friendships_status` on `status`
+- [ ] Document schema in `docs/data-models.md`
+
+**FRs:** FR_FRIEND_01, FR_FRIEND_02, FR_FRIEND_07
+
+**Technical Notes:**
+- Mutual friendship model: when accepted, query both directions (WHERE (requester=A AND addressee=B) OR (requester=B AND addressee=A))
+- `friend_code` follows the same pattern as party `invite_code` — non-enumerable, cryptographically secure
+- Avatar assets follow the same `image_id` slug pattern as `goals.image_id`
+- No user-uploaded images — predefined gallery only (avoids R2, moderation, and abuse concerns)
+
+**Dependencies:** None
+
+---
+
+#### Story 6.2: Friend Request API (Issue #TBD)
+
+**Priority:** P1
+
+**Description:** API endpoints for sending, accepting, rejecting, and removing friends. Includes username search and friend link resolution.
+
+**Acceptance Criteria:**
+- [ ] `GET /api/friends` — List current user's accepted friends: `{ friendship_id, user_id, username, avatar_id, last_progressed }` where `friendship_id` is the friendships row ID, `user_id` is the friend's user ID, and `last_progressed` is the date of their most recent `progress` entry
+- [ ] `GET /api/friends/pending` — List pending incoming requests: `{ friendship_id, user_id, username, avatar_id, created_at }`. Also return count for badge.
+- [ ] `GET /api/friends/search?q=<username>` — Search users by username prefix (min 3 chars). Return `{ user_id, username, avatar_id, friendship_status }` where status is null/pending/accepted. Limit 10 results. Exclude current user.
+- [ ] `GET /api/friends/resolve/:friendCode` — Resolve a friend code to user preview: `{ username, avatar_id }`. Returns 404 for invalid codes.
+- [ ] `POST /api/friends/request` — Send friend request. Body: `{ user_id: number }`. Creates pending friendship. Returns 400 if already friends/pending, 404 if user not found.
+- [ ] `POST /api/friends/request/code` — Send friend request via friend code. Body: `{ friend_code: string }`. Resolves code to user, creates pending friendship.
+- [ ] `POST /api/friends/:friendshipId/accept` — Accept pending request. Only the addressee can accept.
+- [ ] `POST /api/friends/:friendshipId/reject` — Reject pending request. Deletes the friendship record. Only the addressee can reject.
+- [ ] `DELETE /api/friends/:friendshipId` — Remove friend (mutual unfriend). Deletes the friendship record. Either party can remove.
+- [ ] All endpoints validate session (401 if unauthenticated)
+- [ ] IDOR prevention: friendship operations validate the current user is a party to the friendship record
+- [ ] Rate limit friend requests: max 20 outgoing pending requests at any time
+
+**FRs:** FR_FRIEND_01, FR_FRIEND_02, FR_FRIEND_03, FR_FRIEND_04, FR_FRIEND_05, FR_FRIEND_08
+
+**Technical Notes:**
+- `last_progressed` is computed as `SELECT MAX(date) FROM progress WHERE user_id = ?` — efficient with existing indexes
+- Username search uses `LIKE ? || '%'` on the `username` column (case-insensitive)
+- Friend code resolution is a simple index lookup on `users.friend_code`
+
+**Dependencies:** Story 6.1
+
+---
+
+#### Story 6.3: Fellowship Invite via Friends API (Issue #TBD)
+
+**Priority:** P1
+
+**Description:** API endpoints for inviting friends to a fellowship (acceptance required) and accepting/rejecting fellowship invites.
+
+**Acceptance Criteria:**
+- [ ] Create `fellowship_invites` table: id, party_id (FK → parties.id ON DELETE CASCADE), inviter_id (FK → users.id), invitee_id (FK → users.id), status ('pending', 'accepted', 'rejected'), created_at
+- [ ] UNIQUE constraint on `(party_id, invitee_id)` per pending invite — prevent duplicate pending invites to same user for same party
+- [ ] `POST /api/party/:id/invite-friend` — Invite a friend to the fellowship. Body: `{ user_id: number }`. Validates: inviter is active member, invitee is a friend (accepted friendship), invitee is not already an active member, party is not dissolved. Creates pending invite.
+- [ ] `GET /api/user/fellowship-invites` — List pending incoming fellowship invites: `{ id, party_id, party_name, member_count, total_distance, inviter_username, created_at }`. Also return count for badge.
+- [ ] `POST /api/user/fellowship-invites/:inviteId/accept` — Accept invite. Joins the party (same logic as `POST /api/party/join/:inviteCode` — records `distance_at_join`, sets status active). Marks invite as accepted.
+- [ ] `POST /api/user/fellowship-invites/:inviteId/reject` — Reject invite. Marks invite as rejected.
+- [ ] Only the invitee can accept/reject their own invites
+- [ ] Invalidate pending invites when a party is dissolved
+- [ ] Existing invite-code join flow remains functional — friend invites are an additional pathway, not a replacement
+
+**FRs:** FR_PARTY_14, FR_PARTY_15, FR_PARTY_16
+
+**Technical Notes:**
+- `member_count` and `total_distance` for the invite preview are computed the same way as `GET /api/user/parties`
+- Acceptance reuses the same join logic as invite-code joins (Story 3.3) to maintain consistency
+
+**Dependencies:** Story 6.2, Story 3.3 (Fellowship Join API)
+
+---
+
+#### Story 6.4: Friends UI — Friends Page & Friend Profile (Issue #TBD)
+
+**Priority:** P1
+
+**Description:** Friends list page accessible from the navigation drawer, friend profile page, and pending request management. Fellowship invite acceptance also surfaces on the Fellowships list page.
+
+**Acceptance Criteria:**
+
+**Friends Page (`/friends`)**
+- [ ] Create `/friends` route with SSR shell (`renderFriendsPage.ts` following `renderLayout()` pattern) and Preact island
+- [ ] **Add "Friends" link to DrawerIsland** navigation (alongside Journey, Map, Fellowships)
+- [ ] **Badge on Friends nav link** showing count of pending incoming friend requests
+- [ ] **Pending Requests section** at top (collapsible): each shows username, avatar, "Accept" / "Reject" buttons
+- [ ] **Friends list**: username, avatar (32px circle), last progressed date (e.g., "3 days ago"). Clicking a friend navigates to their profile.
+- [ ] **Search section**: username search input (min 3 chars, debounced 300ms). Results show username, avatar, friendship status, and "Add Friend" button for non-friends / "Pending" label / "Friends ✓" label.
+- [ ] **Share friend link section**: Display personal friend link (`{origin}/friends/add/{friendCode}`) with "Copy Link" button. Uses same copy/share pattern as fellowship invite links.
+- [ ] **Empty state**: "No friends yet" with prompt to search or share link
+- [ ] **Loading skeleton** while data loads
+
+**Friend Link Landing Page (`/friends/add/:friendCode`)**
+- [ ] Create `/friends/add/:friendCode` route with SSR shell and Preact island
+- [ ] **Authenticated users**: Show user preview (username, avatar) via `GET /api/friends/resolve/:friendCode`. "Send Friend Request" button.
+- [ ] **Non-authenticated users**: Same preview with "Log in to Add Friend" button (redirects to login with `returnTo`)
+- [ ] **Error states**: Invalid code, already friends, pending request, self-add
+
+**Friend Profile Page (`/friends/:id`)**
+- [ ] Create `/friends/:id` route with SSR shell and Preact island
+- [ ] Show: username (large), avatar (128px), total distance walked, member since date
+- [ ] **Fellowships section**: List fellowships the friend belongs to. Highlight shared fellowships with a distinct visual (e.g., "✦ Shared" badge). Non-shared fellowships show name only (no join shortcut to avoid bypassing invite flow).
+- [ ] **Remove Friend** button with confirmation dialog
+- [ ] **Back navigation**: `← Friends / [Username]`
+- [ ] Return 404 if not friends with this user (privacy: can only view friends' profiles)
+
+**Fellowship Invites on Fellowships Page**
+- [ ] **Badge on Fellowships nav link** showing count of pending fellowship invites
+- [ ] **New "Pending Invites" section** on Fellowships list page (`/party`): each shows party name, member count, total distance, invited by username. "Accept" / "Decline" buttons.
+- [ ] On accept: user joins the fellowship and invite disappears from list (party appears in active fellowships)
+
+**Add Friend from Fellowship Detail**
+- [ ] On Fellowship detail page (`/party/:id`), show "Add Friend" icon/button next to members who are not already the user's friend and have no pending request
+- [ ] Clicking sends a friend request inline (button changes to "Pending")
+
+**Cross-cutting:**
+- [ ] All pages follow existing accessibility patterns (ARIA, focus, keyboard, WCAG AA)
+- [ ] All pages functional on ≥320px screens
+- [ ] `history.pushState` for navigation
+
+**FRs:** FR_FRIEND_01, FR_FRIEND_02, FR_FRIEND_03, FR_FRIEND_04, FR_FRIEND_05, FR_FRIEND_06, FR_FRIEND_08, FR_PARTY_15, FR_PARTY_16, FR_PARTY_17
+
+**Dependencies:** Story 6.2, Story 6.3
+
+---
+
+#### Story 6.5: Avatar UI — Avatar Selection (Issue #TBD)
+
+**Priority:** P1
+
+**Description:** Avatar gallery picker in profile settings and avatar display integration across all surfaces.
+
+**Acceptance Criteria:**
+- [ ] **Avatar gallery in Profile Settings modal**: Grid of all available predefined avatars (~20–30). Selecting one calls `PUT /api/user/preferences` with `{ avatar_id: string }`. Current selection highlighted.
+- [ ] **Default avatar**: When `avatar_id` is NULL, render a circle with the user's initials (first letter of username, uppercase) on a deterministic background color (seeded from user ID)
+- [ ] **Avatar display integration**: Render avatar consistently across:
+  - [ ] Profile Settings modal (128px, large preview)
+  - [ ] Friends list (32px inline)
+  - [ ] Friend profile page (128px hero)
+  - [ ] Fellowship member lists (24px inline)
+  - [ ] Navigation drawer (32px, next to username)
+- [ ] **`/api/session` response** includes `avatar_id` for client-side rendering
+- [ ] **Avatar component**: Create a reusable `Avatar` Preact component (`client/src/components/Avatar.tsx`) that handles both predefined images and initials fallback, accepting `size`, `avatarId`, and `username` props
+- [ ] **Cache**: Avatar images use long cache headers (immutable assets in `public/img/avatars/`)
+
+**FRs:** FR_FRIEND_07
+
+**Technical Notes:**
+- `PUT /api/user/preferences` already exists — add `avatar_id` to accepted fields
+- Validate `avatar_id` against a known list of avatar slugs on the server (prevent invalid values)
+
+**Dependencies:** Story 6.1
+
+---
+
+#### Story 6.6: Map Social Panel & Friends on Map (Issue #TBD)
+
+**Priority:** P2
+
+**Description:** Replace the fellowship-only selector on the Map page with a unified Social panel. Add friend avatar markers at their journey positions.
+
+**Acceptance Criteria:**
+
+**Social Panel (replaces fellowship selector)**
+- [ ] Rename existing fellowship selector button to "Social" (or use a people icon)
+- [ ] Panel opens with two sections:
+  - **"View As"** section: Personal + list of user's fellowships (same behavior as current selector)
+  - **"Friends on Map"** section: Toggle switch to show/hide friend avatars
+- [ ] Both sections are independent — fellowship view and friend visibility can be combined
+- [ ] Toggle state persists to `localStorage` (same pattern as fellowship view preference)
+- [ ] Panel design follows existing Map panel patterns (same width, animation, close behavior)
+
+**Friend Avatars on Map**
+- [ ] `GET /api/friends/positions` — New endpoint: Returns each friend's interpolated position on the journey path. Response: `[{ user_id, username, avatar_id, total_distance }]`. Only returns accepted friends. Position interpolation is client-side (using existing path coordinate utilities).
+- [ ] Render friend avatars as circular images (32px, using `public/img/avatars/thumbs/`) at each friend's interpolated path position
+- [ ] Default avatar (initials circle) for friends without `avatar_id`
+- [ ] Avatars scale with zoom level (same `dynamicStrokeWidth` scaling approach used by map paths)
+- [ ] **Tap/click avatar**: Show mini-card tooltip: username, avatar (64px), total distance, "View Profile →" link to `/friends/:id`
+- [ ] Mini-card dismissible (tap outside, ESC)
+- [ ] **Performance**: Avatars only render for friends within the visible viewport bounds (frustum culling). Positions endpoint is cached for 5 minutes client-side.
+- [ ] **Overlap handling**: When friend avatars overlap at similar distances, offset slightly along the perpendicular axis. At low zoom, cluster nearby friends with a count badge.
+- [ ] **Current user marker**: Ensure the user's own position marker renders above friend avatars (higher z-index)
+
+**FRs:** FR_FRIEND_09, FR_FRIEND_10, FR_PARTY_08
+
+**Technical Notes:**
+- The Social panel replaces the fellowship selector button but preserves all existing fellowship selection behavior
+- Friend position interpolation reuses `interpolatePosition()` from existing map path utilities
+- Avatar thumbnails (32×32 WebP) are tiny and pre-cached by the service worker
+- The `GET /api/friends/positions` endpoint is deliberately minimal — it only returns `total_distance` and lets the client interpolate position from the path coordinates it already has
+
+**Dependencies:** Story 6.2, Story 2.3 (Journey Path), Story 3.6 (Fellowship Selector)
+
+---
+
 ## Summary
 
 | Epic | Issue # | Stories | Priority Range |
@@ -1214,7 +1471,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 | Epic 3: Fellowship | #152 | 10 | P0-P3 |
 | Epic 4: Admin Portal | #153 | 6 | P0-P2 |
 | Epic 5: Races | #154 | 6 | P0-P2 |
-| **Total** | | **39** | |
+| Epic 6: Friends & Social Identity | TBD | 6 | P0-P2 |
+| **Total** | | **45** | |
 
 ### Recommended Implementation Order
 
@@ -1222,5 +1480,6 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 2. **Epic 2** (#151) - After Preact infrastructure
 3. **Epic 3** (#152) - Core Fellowship features
 4. **Epic 4** (#153) - Admin portal after Fellowship stabilization and architecture alignment
-5. **Epic 5** (#154) - Races, leverages Fellowship + Admin patterns
+5. **Epic 6** (TBD) - Friends & Social Identity, can run in parallel with or after Epic 4
+6. **Epic 5** (#154) - Races, leverages Fellowship + Friends + Admin patterns; requires Epic 6 alignment
 

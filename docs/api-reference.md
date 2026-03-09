@@ -236,6 +236,260 @@ Body:
 { "new_leader_id": 123 }
 ```
 
+### `POST /api/party/:id/invite-friend`
+
+Invite a friend to a fellowship. The friend must accept to join.
+
+Auth: Required (must be active member of party).
+
+Body:
+
+```json
+{ "user_id": 456 }
+```
+
+Validates:
+- Inviter is active member of party
+- Invitee is an accepted friend of inviter
+- Invitee is not already an active member
+- Party is not dissolved
+
+Returns `201` with invite details.
+
+Errors: `400` (already member, not friends, dissolved), `403` (not a member), `404` (user/party not found).
+
+### `GET /api/user/fellowship-invites`
+
+Returns pending incoming fellowship invites for the current user.
+
+Auth: Required.
+
+Response:
+
+```json
+{
+  "invites": [
+    {
+      "id": 1,
+      "party_id": 10,
+      "party_name": "The Nine Walkers",
+      "member_count": 5,
+      "total_distance": 1234.5,
+      "inviter_username": "aragorn",
+      "created_at": "2026-03-09T12:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+### `POST /api/user/fellowship-invites/:inviteId/accept`
+
+Accept a fellowship invite. Joins the party (same join logic as invite-code flow).
+
+Auth: Required (must be the invitee).
+
+### `POST /api/user/fellowship-invites/:inviteId/reject`
+
+Reject a fellowship invite. Marks invite as rejected.
+
+Auth: Required (must be the invitee).
+
+## Friends Endpoints
+
+### `GET /api/friends`
+
+Returns the current user's accepted friends list.
+
+Auth: Required.
+
+Response:
+
+```json
+{
+  "friends": [
+    {
+      "friendship_id": 1,
+      "user_id": 42,
+      "username": "samwise",
+      "avatar_id": "samwise",
+      "last_progressed": "2026-03-08"
+    }
+  ]
+}
+```
+
+`last_progressed` is the date of the friend's most recent progress entry (null if no walks logged).
+
+### `GET /api/friends/pending`
+
+Returns pending incoming friend requests.
+
+Auth: Required.
+
+Response:
+
+```json
+{
+  "requests": [
+    {
+      "friendship_id": 5,
+      "user_id": 99,
+      "username": "legolas",
+      "avatar_id": null,
+      "created_at": "2026-03-09T10:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+### `GET /api/friends/search?q=<username>`
+
+Search users by username prefix. Minimum 3 characters.
+
+Auth: Required.
+
+Response:
+
+```json
+{
+  "results": [
+    {
+      "user_id": 42,
+      "username": "samwise",
+      "avatar_id": "samwise",
+      "friendship_status": "accepted"
+    }
+  ]
+}
+```
+
+`friendship_status`: `null` (no relationship), `"pending"` (request exists), `"accepted"` (already friends). Excludes current user. Limit 10 results.
+
+### `GET /api/friends/resolve/:friendCode`
+
+Resolve a friend code to a user preview. Used by the friend link landing page.
+
+Auth: Not required (public preview).
+
+Response:
+
+```json
+{
+  "user_id": 42,
+  "username": "samwise",
+  "avatar_id": "samwise"
+}
+```
+
+Errors: `404` (invalid friend code).
+
+### `GET /api/friends/positions`
+
+Returns each friend's total distance for map position interpolation.
+
+Auth: Required.
+
+Response:
+
+```json
+{
+  "friends": [
+    {
+      "user_id": 42,
+      "username": "samwise",
+      "avatar_id": "samwise",
+      "total_distance": 245.5
+    }
+  ]
+}
+```
+
+Only returns accepted friends. Position interpolation is performed client-side using existing path coordinate utilities. Recommended client cache: 5 minutes.
+
+### `POST /api/friends/request`
+
+Send a friend request by user ID.
+
+Auth: Required.
+
+Body:
+
+```json
+{ "user_id": 42 }
+```
+
+Returns `201` with friendship record. Errors: `400` (already friends/pending, self-add), `404` (user not found).
+
+Rate limit: max 20 outgoing pending requests at any time.
+
+### `POST /api/friends/request/code`
+
+Send a friend request via friend code.
+
+Auth: Required.
+
+Body:
+
+```json
+{ "friend_code": "Ab3xK9mZ" }
+```
+
+Resolves code to user and creates pending friendship. Same validation and rate limits as `POST /api/friends/request`.
+
+### `POST /api/friends/:friendshipId/accept`
+
+Accept a pending friend request. Only the addressee can accept.
+
+Auth: Required.
+
+### `POST /api/friends/:friendshipId/reject`
+
+Reject a pending friend request. Deletes the friendship record. Only the addressee can reject.
+
+Auth: Required.
+
+### `DELETE /api/friends/:friendshipId`
+
+Remove an existing friend (mutual unfriend). Deletes the friendship record. Either party can remove.
+
+Auth: Required.
+
+IDOR prevention: all friendship operations validate the current user is a party to the friendship record.
+
+### `GET /api/friends/:userId/profile`
+
+Returns a friend's profile details. Only accessible for accepted friends (returns 404 for non-friends — privacy enforcement).
+
+Auth: Required.
+
+Response:
+
+```json
+{
+  "username": "samwise",
+  "avatar_id": "samwise",
+  "total_distance": 245.5,
+  "member_since": "2026-01-15T00:00:00Z",
+  "current_goal_title": "Rivendell",
+  "fellowships": [
+    { "id": 1, "name": "The Fellowship", "is_shared": true },
+    { "id": 5, "name": "Hobbits Only", "is_shared": false }
+  ]
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `total_distance` | number | Sum of all progress entries (km) |
+| `member_since` | string | User's `created_at` timestamp |
+| `current_goal_title` | string | Next unlocked goal title (first goal whose distance exceeds the friend's total) |
+| `fellowships` | array | Non-dissolved parties the friend is an active member of |
+| `is_shared` | boolean | Whether the current user is also an active member of that party |
+
+Errors: `400` (malformed userId), `401` (unauthenticated), `404` (not friends or user not found).
+
 ## Admin Endpoints
 
 All admin endpoints require `Authorization: Bearer <token>` from an admin user (`is_admin = 1`). Returns `401` for unauthenticated requests and `403` for non-admin users.

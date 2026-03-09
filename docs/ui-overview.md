@@ -1,6 +1,6 @@
 # UI Overview
 
-Last updated: 2026-03-06
+Last updated: 2026-03-09
 
 ## Rendering Pattern
 
@@ -38,6 +38,14 @@ Rendered by:
 - `src/renderPartyManagePage.ts` -> `PartyManageIsland`
 - `src/renderPartyJoinPage.ts` -> `PartyJoinIsland`
 
+### Friends Pages
+
+Rendered by:
+
+- `src/renderFriendsPage.ts` -> `FriendsListIsland` (friends list, pending requests, username search, share friend link)
+- `src/renderFriendProfilePage.ts` -> `FriendProfileIsland` (friend profile with avatar, distance, shared fellowships)
+- `src/renderFriendAddPage.ts` -> `FriendAddIsland` (friend link landing page for `/friends/add/:friendCode`)
+
 ### Admin Pages
 
 Rendered by:
@@ -59,6 +67,9 @@ Auto-hydrated islands:
 - `AdminGoalsListIsland`
 - `AuthForms`
 - `DrawerIsland`
+- `FriendsListIsland`
+- `FriendProfileIsland`
+- `FriendAddIsland`
 - `MapIsland`
 - `PartyListIsland`
 - `PartyDetailIsland`
@@ -72,6 +83,7 @@ Programmatic islands used by legacy scripts or targeted mounts:
 - `NextGoalCard`
 - `UpcomingGoalCard`
 - `PartySelector`
+- `MapIsland` also contains the Social Panel (unified panel replacing fellowship-only selector; includes fellowship view selector + "Show Friends" toggle for friend avatar markers — not a separate island)
 
 ## Legacy JS Modules
 
@@ -96,7 +108,11 @@ Primary modules in `public/js/`:
 - Feature styles include `party.css`, `map.css`, `calendar.css`, `progress.css`, `auth.css`
 - Theme behavior and variable conventions are documented in `docs/css-theming.md`.
 
-## UX Notes
+## Navigation
 
+- `DrawerIsland` navigation links: Journey, Map, Fellowships, Friends
+- **Friends nav link** displays a badge count of pending incoming friend requests
+- **Fellowships nav link** displays a badge count of pending fellowship invites
 - Home route (`/`) performs auth-aware redirect to `/journey` or `/map` based on session preferences.
 - Party route precedence is intentionally ordered to avoid dynamic route collisions (`/party/join/:inviteCode` before `/party/:id`).
+- Friends route precedence: `/friends/add/:friendCode` before `/friends/:id`.
