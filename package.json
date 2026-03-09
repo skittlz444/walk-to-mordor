@@ -75,7 +75,7 @@
     "tile:map": "node scripts/tile-map-image.js"
   },
   "dependencies": {
-    "@preact/signals": "^2.8.0",
+    "@preact/signals": "^2.8.2",
     "dompurify": "^3.3.2",
     "konva": "^10.2.0",
     "marked": "^17.0.4",
