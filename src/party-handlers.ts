@@ -696,6 +696,10 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
         stmts.push(
           env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
         );
+        // Invalidate pending fellowship invites for the dissolved party
+        stmts.push(
+          env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
+        );
       }
     } else {
       // Non-leader leaving: check if any active members remain after this departure
@@ -706,6 +710,10 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
       if (!remainingCount || remainingCount.count === 0) {
         stmts.push(
           env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+        );
+        // Invalidate pending fellowship invites for the dissolved party
+        stmts.push(
+          env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
         );
       }
     }
@@ -800,6 +808,10 @@ export async function handleKickMember(
     if (!remainingCount || remainingCount.count === 0) {
       stmts.push(
         env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+      );
+      // Invalidate pending fellowship invites for the dissolved party
+      stmts.push(
+        env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
       );
     }
 

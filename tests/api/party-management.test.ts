@@ -221,12 +221,14 @@ describe('Party Management API (Story 3.5)', () => {
       }));
       // Build dissolve statement
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock());
+      // Build fellowship invite invalidation statement
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock());
 
       const response = await handleLeaveParty(mockRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
       expect(response.status).toBe(200);
       const batchCalls = mockEnv.DB.batch.mock.calls[0][0];
-      // 1 = member update, 2 = dissolve party
-      expect(batchCalls).toHaveLength(2);
+      // 1 = member update, 2 = dissolve party, 3 = invalidate fellowship invites
+      expect(batchCalls).toHaveLength(3);
     });
 
     it('should auto-dissolve when last non-leader member leaves', async () => {
@@ -248,12 +250,14 @@ describe('Party Management API (Story 3.5)', () => {
       }));
       // Build dissolve statement
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock());
+      // Build fellowship invite invalidation statement
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock());
 
       const response = await handleLeaveParty(mockRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
       expect(response.status).toBe(200);
       const batchCalls = mockEnv.DB.batch.mock.calls[0][0];
-      // 1 = member update, 2 = dissolve party
-      expect(batchCalls).toHaveLength(2);
+      // 1 = member update, 2 = dissolve party, 3 = invalidate fellowship invites
+      expect(batchCalls).toHaveLength(3);
     });
 
     it('should floor contribution at 0 in incremental mode', async () => {
@@ -461,11 +465,13 @@ describe('Party Management API (Story 3.5)', () => {
       }));
       // Build dissolve statement
       mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock());
+      // Build fellowship invite invalidation statement
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock());
 
       const response = await handleKickMember(mockRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1, 2, {});
       expect(response.status).toBe(200);
       const batchCalls = mockEnv.DB.batch.mock.calls[0][0];
-      expect(batchCalls).toHaveLength(2); // member update + dissolve
+      expect(batchCalls).toHaveLength(3); // member update + dissolve + invalidate fellowship invites
     });
 
     it('should compute contribution in cumulative mode', async () => {

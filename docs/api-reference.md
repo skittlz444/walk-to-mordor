@@ -238,6 +238,8 @@ Body:
 
 ### `POST /api/party/:id/invite-friend`
 
+> **Implementation note (Story 6.3):** The fellowship invite endpoints below through `POST /api/user/fellowship-invites/:inviteId/reject` are implemented. Self-invite is rejected with `400`. Duplicate pending invites return `400`; UNIQUE constraint race conditions return `409`.
+
 Invite a friend to a fellowship. The friend must accept to join.
 
 Auth: Required (must be active member of party).

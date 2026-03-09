@@ -164,13 +164,14 @@ Friend-based fellowship invitations. A friend can be invited to a party; they mu
 - `invitee_id`: INTEGER NOT NULL (FK -> users.id, ON DELETE CASCADE) — the friend being invited
 - `status`: TEXT NOT NULL DEFAULT 'pending' — `'pending'`, `'accepted'`, or `'rejected'`
 - `created_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
-- Duplicate-pending prevention: the application layer must check for an existing `pending` invite for the same `(party_id, invitee_id)` pair before inserting. Rejected rows are retained but do not block future re-invites. A `UNIQUE(party_id, invitee_id)` constraint is **not** used because it would prevent re-invites when rejected rows exist. Instead, use an app-level check or a SQLite-compatible partial strategy (e.g., delete the rejected row before re-inserting, or use `CREATE UNIQUE INDEX ... WHERE status = 'pending'` if D1 supports partial indexes).
+- Duplicate-pending prevention: a SQLite partial unique index `CREATE UNIQUE INDEX idx_fellowship_invites_pending ON fellowship_invites(party_id, invitee_id) WHERE status = 'pending'` prevents concurrent duplicate pending invites. The application layer also checks for an existing `pending` invite before inserting for a friendlier error message. Rejected rows are retained but do not block future re-invites.
 
-> **Invariant:** `inviter_id` must be an active member of `party_id` at invite time. `invitee_id` must have an accepted friendship with `inviter_id`. These are enforced at the application layer.
+> **Invariant:** `inviter_id` must be an active member of `party_id` at invite time. `invitee_id` must have an accepted friendship with `inviter_id`. These are enforced at the application layer. Pending invites are invalidated (set to `'rejected'`) when a party is dissolved.
 
 **Indexes:**
-- `idx_fellowship_invites_invitee` on `invitee_id` — for pending invite badge queries
-- `idx_fellowship_invites_party` on `party_id`
+- `idx_fellowship_invites_pending` partial unique on `(party_id, invitee_id) WHERE status = 'pending'` — prevents duplicate pending invites while allowing re-invites after rejection
+- `idx_fellowship_invites_invitee` on `(invitee_id, status)` — for pending invite badge/list queries
+- `idx_fellowship_invites_party` on `(party_id, status)` — for party-focused cleanup queries
 
 ## Entity Relationship Diagram (Mermaid)
 

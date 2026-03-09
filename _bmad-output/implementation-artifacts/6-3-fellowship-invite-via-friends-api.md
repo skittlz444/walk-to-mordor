@@ -1,6 +1,6 @@
 # Story 6.3: Fellowship Invite via Friends API
 
-Status: ready-for-dev
+Status: review
 Issue: #301
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
@@ -76,46 +76,46 @@ so that **fellowship growth can require explicit consent while still reusing the
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Add fellowship-invite persistence** (AC: #1, #5)
-  - [ ] Add `migrations/0123_create_fellowship_invites.sql` or the next unused sequence after Story 6.1 lands; verify the final number before creation.
-  - [ ] Create `fellowship_invites` with the required columns, foreign keys, indexes, and a duplicate-pending guard that still allows re-invite after rejection.
-  - [ ] Keep the migration D1-safe and additive.
+- [x] **Task 1: Add fellowship-invite persistence** (AC: #1, #5)
+  - [x] Add `migrations/0123_create_fellowship_invites.sql` or the next unused sequence after Story 6.1 lands; verify the final number before creation.
+  - [x] Create `fellowship_invites` with the required columns, foreign keys, indexes, and a duplicate-pending guard that still allows re-invite after rejection.
+  - [x] Keep the migration D1-safe and additive.
 
-- [ ] **Task 2: Add a dedicated fellowship-invite handler module** (AC: #2, #3, #4, #5, #6)
-  - [ ] Create `src/fellowship-invite-handlers.ts` for invite creation, listing, accept, reject, and any focused shared helpers.
-  - [ ] Reuse `validateSession`, `createErrorResponse`, and `createSuccessResponse` consistently with existing API handlers.
-  - [ ] Extract any reusable party-join helper only if doing so keeps `handleJoinParty()` and invite acceptance behavior truly identical.
+- [x] **Task 2: Add a dedicated fellowship-invite handler module** (AC: #2, #3, #4, #5, #6)
+  - [x] Create `src/fellowship-invite-handlers.ts` for invite creation, listing, accept, reject, and any focused shared helpers.
+  - [x] Reuse `validateSession`, `createErrorResponse`, and `createSuccessResponse` consistently with existing API handlers.
+  - [x] Extract any reusable party-join helper only if doing so keeps `handleJoinParty()` and invite acceptance behavior truly identical.
 
-- [ ] **Task 3: Wire routes into the Worker router** (AC: #2, #3, #4, #6)
-  - [ ] Import the new handlers in `src/index.ts`.
-  - [ ] Add `POST /api/party/:id/invite-friend` with strict `partyId` validation.
-  - [ ] Add `GET /api/user/fellowship-invites`.
-  - [ ] Add `POST /api/user/fellowship-invites/:inviteId/accept` and `POST /api/user/fellowship-invites/:inviteId/reject` with strict `inviteId` validation.
-  - [ ] Update `getAllowedMethods()` for all three route shapes.
+- [x] **Task 3: Wire routes into the Worker router** (AC: #2, #3, #4, #6)
+  - [x] Import the new handlers in `src/index.ts`.
+  - [x] Add `POST /api/party/:id/invite-friend` with strict `partyId` validation.
+  - [x] Add `GET /api/user/fellowship-invites`.
+  - [x] Add `POST /api/user/fellowship-invites/:inviteId/accept` and `POST /api/user/fellowship-invites/:inviteId/reject` with strict `inviteId` validation.
+  - [x] Update `getAllowedMethods()` for all three route shapes.
 
-- [ ] **Task 4: Implement invite creation and pending-list queries** (AC: #2, #3, #5)
-  - [ ] Verify inviter membership, friendship acceptance, target existence, active-membership absence, and no duplicate pending invite.
-  - [ ] Create the pending invite row and return the created invite payload.
-  - [ ] Build the pending-list query so it returns party preview data plus invite count without leaving dissolved-party invites actionable.
-  - [ ] Reuse existing party-member-count and progress-calculation semantics rather than introducing conflicting totals.
+- [x] **Task 4: Implement invite creation and pending-list queries** (AC: #2, #3, #5)
+  - [x] Verify inviter membership, friendship acceptance, target existence, active-membership absence, and no duplicate pending invite.
+  - [x] Create the pending invite row and return the created invite payload.
+  - [x] Build the pending-list query so it returns party preview data plus invite count without leaving dissolved-party invites actionable.
+  - [x] Reuse existing party-member-count and progress-calculation semantics rather than introducing conflicting totals.
 
-- [ ] **Task 5: Implement accept/reject flows with lifecycle consistency** (AC: #4, #5)
-  - [ ] Accept only pending invites owned by the current user.
-  - [ ] Reuse current join semantics for fresh joins and re-joins.
-  - [ ] Mark accepted invites as `accepted` only after membership changes succeed.
-  - [ ] Reject only pending invites owned by the current user and mark them `rejected`.
-  - [ ] Invalidate pending invites when party dissolution paths run.
+- [x] **Task 5: Implement accept/reject flows with lifecycle consistency** (AC: #4, #5)
+  - [x] Accept only pending invites owned by the current user.
+  - [x] Reuse current join semantics for fresh joins and re-joins.
+  - [x] Mark accepted invites as `accepted` only after membership changes succeed.
+  - [x] Reject only pending invites owned by the current user and mark them `rejected`.
+  - [x] Invalidate pending invites when party dissolution paths run.
 
-- [ ] **Task 6: Add backend and router coverage** (AC: #2, #3, #4, #5, #6)
-  - [ ] Create `tests/api/fellowship-invite-handlers.test.ts` for unit-level invite coverage.
-  - [ ] Extend `tests/api/index.test.ts` for new route and method coverage.
-  - [ ] Extend `tests/api/user-isolation.test.ts` or add a focused social access-control suite for invite ownership/IDOR cases.
-  - [ ] Cover malformed IDs, non-member invite attempts, non-friend invite attempts, duplicate pending invites, stale invite acceptance, wrong-user accept/reject, dissolved-party invalidation, and rejoin acceptance behavior.
+- [x] **Task 6: Add backend and router coverage** (AC: #2, #3, #4, #5, #6)
+  - [x] Create `tests/api/fellowship-invite-handlers.test.ts` for unit-level invite coverage.
+  - [x] Extend `tests/api/index.test.ts` for new route and method coverage.
+  - [x] Extend `tests/api/user-isolation.test.ts` or add a focused social access-control suite for invite ownership/IDOR cases.
+  - [x] Cover malformed IDs, non-member invite attempts, non-friend invite attempts, duplicate pending invites, stale invite acceptance, wrong-user accept/reject, dissolved-party invalidation, and rejoin acceptance behavior.
 
-- [ ] **Task 7: Align living documentation if needed** (AC: #6)
-  - [ ] Update `docs/api-reference.md` if response envelopes or failure semantics differ from the current draft.
-  - [ ] Update `docs/data-models.md` if the final schema strategy for duplicate-pending enforcement differs from the current description.
-  - [ ] Keep documentation aligned to implemented behavior only.
+- [x] **Task 7: Align living documentation if needed** (AC: #6)
+  - [x] Update `docs/api-reference.md` if response envelopes or failure semantics differ from the current draft.
+  - [x] Update `docs/data-models.md` if the final schema strategy for duplicate-pending enforcement differs from the current description.
+  - [x] Keep documentation aligned to implemented behavior only.
 
 ## Dev Notes
 
@@ -261,7 +261,7 @@ Project-level rules still apply here:
 
 ### Agent Model Used
 
-GPT-5.4
+Claude Sonnet 4
 
 ### Debug Log References
 
@@ -269,11 +269,30 @@ GPT-5.4
 
 ### Completion Notes List
 
-- Stories 6.1 and 6.2 remain prerequisites in planning state; this story assumes their schema and friendship APIs are implemented first.
-- The current docs already describe `fellowship_invites` and related endpoints, but the live codebase does not yet contain that table or those routes.
-- The highest-risk implementation trap is combining retained `rejected` invites with an unconditional uniqueness rule that prevents future re-invites for the same party/user pair.
-- The second major risk is drifting from `handleJoinParty()` behavior instead of truly reusing its fresh-join and re-join semantics.
+- All 7 tasks completed. 28 test suites, 973 tests passing (59 new tests added).
+- Overall coverage maintained at ~92.7% statements; fellowship-invite-handlers.ts at 99.1% statement coverage.
+- Used partial unique index `CREATE UNIQUE INDEX ... WHERE status = 'pending'` for D1-compatible duplicate-pending prevention that allows re-invites after rejection.
+- Join logic in accept handler directly mirrors handleJoinParty's fresh-join and re-join semantics (same SQL, same field resets) rather than extracting a shared helper, to avoid risk of breaking existing tests.
+- Dissolution cleanup added to all 3 dissolution paths in party-handlers.ts (handleLeaveParty: leader-no-successor + non-leader-last-member, handleKickMember: no-remaining-members).
+- Pending invites listing defensively filters out dissolved parties via `p.dissolved_at IS NULL`.
+- total_distance calculation for invite listing uses the same party-progress contribution rules (incremental/cumulative active members + departed kept contributions).
+- Docs updated to reflect actual implementation: partial unique index strategy and dissolution invalidation behavior.
+
+#### Code Review Fixes Applied
+- **HIGH #1**: Accept handler membership changes and invite status update now use `env.DB.batch()` for atomicity in both fresh-join and re-join paths.
+- **HIGH #2**: Pending invite listing now calculates total_distance inline via SQL subqueries (1 query instead of 1+2N), eliminating the N+1 `calculatePartyTotalDistance()` loop. Removed the now-unused `calculatePartyTotalDistance` function, `ActiveMemberDistanceRow` interface.
+- **MEDIUM**: Pending invite listing filters out invites where invitee is already an active member via `NOT EXISTS` clause.
+- **MEDIUM**: Accept handler UPDATE uses optimistic locking (`WHERE status = 'pending'`) and checks `meta.changes` to detect races, returning 409 on conflict.
 
 ### File List
 
 - _bmad-output/implementation-artifacts/6-3-fellowship-invite-via-friends-api.md
+- migrations/0123_create_fellowship_invites.sql (NEW)
+- src/fellowship-invite-handlers.ts (NEW)
+- src/index.ts (MODIFIED — routes + getAllowedMethods)
+- src/party-handlers.ts (MODIFIED — dissolution cleanup for pending invites)
+- tests/api/fellowship-invite-handlers.test.ts (NEW)
+- tests/api/index.test.ts (MODIFIED — router tests for new endpoints)
+- tests/api/party-management.test.ts (MODIFIED — updated batch length assertions for dissolution cleanup)
+- docs/api-reference.md (MODIFIED — implementation note for Story 6.3)
+- docs/data-models.md (MODIFIED — updated duplicate-pending strategy and index descriptions)

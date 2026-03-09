@@ -37,6 +37,7 @@ import {
 import { handleMapPage } from "./map-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend } from "./friends-handlers";
+import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from "./fellowship-invite-handlers";
 import { renderPartyListPage } from "./renderPartyListPage";
 import { renderPartyDetailPage } from "./renderPartyDetailPage";
 import { renderPartyManagePage } from "./renderPartyManagePage";
@@ -259,6 +260,39 @@ export default {
         return handleGetUserParties(request, env);
       }
 
+      // GET /api/user/fellowship-invites — list pending fellowship invites
+      if (url.pathname === "/api/user/fellowship-invites" && method === "GET") {
+        return handleGetFellowshipInvites(request, env);
+      }
+
+      // POST /api/user/fellowship-invites/:inviteId/accept
+      const acceptInviteParams = matchRoute(url.pathname, '/api/user/fellowship-invites/:inviteId/accept');
+      if (acceptInviteParams && method === "POST") {
+        const inviteId = Number.parseInt(acceptInviteParams.inviteId, 10);
+        if (
+          !Number.isInteger(inviteId) ||
+          inviteId <= 0 ||
+          String(inviteId) !== acceptInviteParams.inviteId
+        ) {
+          return createErrorResponse('Invalid invite ID', 400);
+        }
+        return handleAcceptFellowshipInvite(request, env, inviteId);
+      }
+
+      // POST /api/user/fellowship-invites/:inviteId/reject
+      const rejectInviteParams = matchRoute(url.pathname, '/api/user/fellowship-invites/:inviteId/reject');
+      if (rejectInviteParams && method === "POST") {
+        const inviteId = Number.parseInt(rejectInviteParams.inviteId, 10);
+        if (
+          !Number.isInteger(inviteId) ||
+          inviteId <= 0 ||
+          String(inviteId) !== rejectInviteParams.inviteId
+        ) {
+          return createErrorResponse('Invalid invite ID', 400);
+        }
+        return handleRejectFellowshipInvite(request, env, inviteId);
+      }
+
       // Parameterized party routes
       const joinParams = matchRoute(url.pathname, '/api/party/join/:inviteCode');
       if (joinParams) {
@@ -280,6 +314,20 @@ export default {
           return createErrorResponse('Invalid party ID', 400);
         }
         return handleRegenerateInvite(request, env, partyId);
+      }
+
+      // POST /api/party/:id/invite-friend — invite an accepted friend to a party
+      const inviteFriendParams = matchRoute(url.pathname, '/api/party/:id/invite-friend');
+      if (inviteFriendParams && method === "POST") {
+        const partyId = Number.parseInt(inviteFriendParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== inviteFriendParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleInviteFriend(request, env, partyId, body);
       }
 
       // GET /api/party/:id/progress — party progress calculation
@@ -609,6 +657,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/session":
     case "/api/auth/confirm-email":
     case "/api/user/parties":
+    case "/api/user/fellowship-invites":
     case "/api/friends":
     case "/api/friends/pending":
     case "/api/friends/search":
@@ -652,6 +701,9 @@ function getAllowedMethods(pathname: string): string[] {
       if (matchRoute(pathname, '/api/party/:id/invite')) {
         return ['POST'];
       }
+      if (matchRoute(pathname, '/api/party/:id/invite-friend')) {
+        return ['POST'];
+      }
       if (matchRoute(pathname, '/api/party/:id/progress')) {
         return ['GET'];
       }
@@ -668,6 +720,13 @@ function getAllowedMethods(pathname: string): string[] {
         return ['PUT'];
       }
       if (matchRoute(pathname, '/api/party/:id/transfer-leadership')) {
+        return ['POST'];
+      }
+      // Fellowship invite parameterized routes
+      if (matchRoute(pathname, '/api/user/fellowship-invites/:inviteId/accept')) {
+        return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/user/fellowship-invites/:inviteId/reject')) {
         return ['POST'];
       }
       // Friend parameterized routes
