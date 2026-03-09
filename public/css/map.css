@@ -75,7 +75,8 @@
 }
 
 .map-controls button,
-.map-party-toggle {
+.map-party-toggle,
+.map-social-toggle {
   width: 40px;
   height: 40px;
   border: none;
@@ -107,7 +108,8 @@
 }
 
 /* Position panel to top-align with 4th button in .map-controls */
-.map-party-panel {
+.map-party-panel,
+.map-social-panel {
   top: calc(1.5rem + 3 * (40px + 0.5rem));
   right: calc(1.5rem + 40px + 0.5rem);
 }
@@ -123,13 +125,15 @@
   }
   
   .map-controls button,
-  .map-party-toggle {
+  .map-party-toggle,
+  .map-social-toggle {
     width: 36px;
     height: 36px;
     font-size: 1rem;
   }
 
-  .map-party-panel {
+  .map-party-panel,
+  .map-social-panel {
     top: calc(1.5rem + 3 * (36px + 0.5rem));
     right: calc(1.5rem + 36px + 0.5rem);
   }

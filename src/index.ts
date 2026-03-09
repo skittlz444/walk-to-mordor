@@ -37,7 +37,7 @@ import {
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
-import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile } from "./friends-handlers";
+import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile, handleFriendPositions } from "./friends-handlers";
 import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from "./fellowship-invite-handlers";
 import { renderPartyListPage } from "./renderPartyListPage";
 import { renderPartyDetailPage } from "./renderPartyDetailPage";
@@ -444,6 +444,9 @@ export default {
       if (url.pathname === "/api/friends/request/code" && method === "POST") {
         return handleFriendRequestByCode(request, env, body);
       }
+      if (url.pathname === "/api/friends/positions" && method === "GET") {
+        return handleFriendPositions(request, env);
+      }
 
       // Parameterized friend routes — resolve before friendshipId routes
       const resolveParams = matchRoute(url.pathname, '/api/friends/resolve/:friendCode');
@@ -699,6 +702,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/friends":
     case "/api/friends/pending":
     case "/api/friends/search":
+    case "/api/friends/positions":
     case "/api/admin/dashboard":
     case "/api/admin/users":
     case "/api/admin/metrics":

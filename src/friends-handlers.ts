@@ -598,3 +598,51 @@ export async function handleGetFriendProfile(
     return createErrorResponse('Internal server error', 500);
   }
 }
+
+/** D1 result row for friend positions on the map */
+interface FriendPositionRow {
+  user_id: number;
+  username: string;
+  avatar_id: string | null;
+  total_distance: number;
+}
+
+/**
+ * GET /api/friends/positions — Get positions of all accepted friends for map display.
+ *
+ * Returns { friends: [{ user_id, username, avatar_id, total_distance }] }
+ * where total_distance is in km (sum of progress entries).
+ * Only returns accepted friends.
+ */
+export async function handleFriendPositions(request: Request, env: { DB: D1Database }): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    const { results } = await env.DB.prepare(`
+      SELECT
+        u.id as user_id,
+        u.username,
+        u.avatar_id,
+        COALESCE(SUM(p.distance), 0) as total_distance
+      FROM friendships f
+      JOIN users u ON u.id = CASE
+        WHEN f.requester_id = ? THEN f.addressee_id
+        ELSE f.requester_id
+      END
+      LEFT JOIN progress p ON p.user_id = u.id
+      WHERE f.status = 'accepted'
+        AND (f.requester_id = ? OR f.addressee_id = ?)
+      GROUP BY u.id
+      ORDER BY u.username COLLATE NOCASE ASC
+    `).bind(userId, userId, userId).all<FriendPositionRow>();
+
+    return createSuccessResponse({ friends: results });
+  } catch (error) {
+    console.error('Error fetching friend positions:', error);
+    return createErrorResponse('Internal server error', 500);
+  }
+}

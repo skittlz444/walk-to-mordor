@@ -8,7 +8,8 @@ import {
   handleAcceptFriend,
   handleRejectFriend,
   handleUnfriend,
-  handleGetFriendProfile
+  handleGetFriendProfile,
+  handleFriendPositions
 } from '../../src/friends-handlers';
 import { validateSession } from '../../src/auth-handlers';
 import { calculateTotalDistance } from '../../src/goals-handlers';
@@ -848,6 +849,93 @@ describe('Friends Handlers', () => {
       const originalConsoleError = console.error;
       console.error = jest.fn();
       const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
+      expect(response.status).toBe(500);
+      console.error = originalConsoleError;
+    });
+  });
+
+  // ===== GET /api/friends/positions =====
+  describe('handleFriendPositions', () => {
+    it('should return 401 for unauthenticated request', async () => {
+      (validateSession as jest.Mock).mockResolvedValue({
+        valid: false,
+        error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
+      });
+      const response = await handleFriendPositions(mockRequest, mockEnv);
+      expect(response.status).toBe(401);
+    });
+
+    it('should return empty friends array when user has no accepted friends', async () => {
+      mockAll.mockResolvedValueOnce({ results: [] });
+      const response = await handleFriendPositions(mockRequest, mockEnv);
+      expect(response.status).toBe(200);
+      const data = await response.json() as { friends: unknown[] };
+      expect(data.friends).toEqual([]);
+    });
+
+    it('should return correct shape for accepted friends with progress', async () => {
+      mockAll.mockResolvedValueOnce({
+        results: [
+          { user_id: 42, username: 'samwise', avatar_id: 'samwise', total_distance: 245.5 },
+          { user_id: 99, username: 'frodo', avatar_id: null, total_distance: 180.2 },
+        ],
+      });
+      const response = await handleFriendPositions(mockRequest, mockEnv);
+      expect(response.status).toBe(200);
+      const data = await response.json() as { friends: Array<{ user_id: number; username: string; avatar_id: string | null; total_distance: number }> };
+      expect(data.friends).toHaveLength(2);
+      expect(data.friends[0]).toEqual({
+        user_id: 42,
+        username: 'samwise',
+        avatar_id: 'samwise',
+        total_distance: 245.5,
+      });
+      expect(data.friends[1]).toEqual({
+        user_id: 99,
+        username: 'frodo',
+        avatar_id: null,
+        total_distance: 180.2,
+      });
+    });
+
+    it('should return avatar_id as null for friends without avatar', async () => {
+      mockAll.mockResolvedValueOnce({
+        results: [
+          { user_id: 5, username: 'pippin', avatar_id: null, total_distance: 50 },
+        ],
+      });
+      const response = await handleFriendPositions(mockRequest, mockEnv);
+      expect(response.status).toBe(200);
+      const data = await response.json() as { friends: Array<{ avatar_id: string | null }> };
+      expect(data.friends[0].avatar_id).toBeNull();
+    });
+
+    it('should return total_distance 0 for friends with no progress', async () => {
+      mockAll.mockResolvedValueOnce({
+        results: [
+          { user_id: 7, username: 'merry', avatar_id: null, total_distance: 0 },
+        ],
+      });
+      const response = await handleFriendPositions(mockRequest, mockEnv);
+      expect(response.status).toBe(200);
+      const data = await response.json() as { friends: Array<{ total_distance: number }> };
+      expect(data.friends[0].total_distance).toBe(0);
+    });
+
+    it('should query with status=accepted to exclude pending/rejected', async () => {
+      mockAll.mockResolvedValueOnce({ results: [] });
+      await handleFriendPositions(mockRequest, mockEnv);
+      // Verify the SQL contains status = 'accepted'
+      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+        expect.stringContaining("status = 'accepted'")
+      );
+    });
+
+    it('should handle database errors', async () => {
+      mockAll.mockRejectedValueOnce(new Error('DB error'));
+      const originalConsoleError = console.error;
+      console.error = jest.fn();
+      const response = await handleFriendPositions(mockRequest, mockEnv);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });

@@ -288,8 +288,9 @@ h1 {
   margin-left: 0.3em;
 }
 
-/* Map party selector button (toggle) */
-.map-party-toggle {
+/* Map party selector button (toggle) — also used as social toggle */
+.map-party-toggle,
+.map-social-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -307,21 +308,24 @@ h1 {
   font-family: inherit;
 }
 
-.map-party-toggle:hover {
+.map-party-toggle:hover,
+.map-social-toggle:hover {
   background: var(--accent-dark-blue);
   border-color: var(--accent-teal);
   color: var(--text-primary);
   transform: scale(1.05);
 }
 
-.map-party-toggle.active {
+.map-party-toggle.active,
+.map-social-toggle.active {
   background: var(--accent-dark-blue);
   border-color: var(--accent-blue);
   color: var(--text-primary);
 }
 
 /* Map party selection panel (dropdown from toggle button) — positioning in map.css */
-.map-party-panel {
+.map-party-panel,
+.map-social-panel {
   position: absolute;
   background: var(--bg-secondary);
   border: 1px solid var(--accent-gold);
@@ -332,7 +336,7 @@ h1 {
   gap: 2px;
   z-index: 15;
   box-shadow: 0 4px 12px var(--shadow-std);
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
@@ -360,6 +364,173 @@ h1 {
   background: var(--accent-dark-blue);
   color: var(--accent-gold);
   font-weight: 600;
+}
+
+/* Social panel sections */
+.social-panel-section {
+  padding: 8px 10px;
+}
+
+.social-panel-section + .social-panel-section {
+  border-top: 1px solid var(--border-gray);
+}
+
+.social-panel-section h4 {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin: 0 0 6px 0;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Friends toggle row */
+.friends-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.friends-toggle-row span {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+/* Toggle switch for "Friends on Map" */
+.friends-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.friends-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.friends-toggle .toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-dark-alt);
+  border-radius: 20px;
+  transition: background 0.25s;
+}
+
+.friends-toggle .toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.25s, background 0.25s;
+}
+
+.friends-toggle input:checked + .toggle-slider {
+  background: var(--accent-teal);
+}
+
+.friends-toggle input:checked + .toggle-slider::before {
+  transform: translateX(16px);
+  background: var(--text-primary);
+}
+
+.friends-toggle input:focus-visible + .toggle-slider {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+/* Hint text below toggle */
+.friends-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Friend mini-card popup */
+.friend-mini-card {
+  position: absolute;
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent-gold);
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 20;
+  box-shadow: 0 4px 12px var(--shadow-std);
+  min-width: 180px;
+  max-width: 240px;
+}
+
+.friend-mini-card-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.friend-mini-card-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid var(--accent-gold);
+}
+
+.friend-mini-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friend-mini-card-avatar .friend-initials {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.friend-mini-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.friend-mini-card-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friend-mini-card-distance {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 4px 0;
+}
+
+.friend-mini-card-link {
+  font-size: 0.85rem;
+  color: var(--accent-teal);
+  text-decoration: none;
+}
+
+.friend-mini-card-link:hover {
+  text-decoration: underline;
 }
 
 /* Map legend (member colors overlay) */
