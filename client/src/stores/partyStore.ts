@@ -242,3 +242,23 @@ export function markMilestoneTriggered(partyId: number, milestoneDistance: numbe
   const key = `${partyId}_${milestoneDistance}`;
   triggeredMilestones.add(key);
 }
+
+/**
+ * Filter newly-passed milestones to only those not yet triggered this session,
+ * mark them all as triggered, and return them.
+ *
+ * Centralises the filter-then-mark pattern so callers (PartySelector, MapIsland)
+ * stay consistent.
+ *
+ * @param partyId   The party whose milestones are being processed.
+ * @param milestones Milestones returned by the progress API.
+ * @returns The subset of milestones that were not previously triggered.
+ */
+export function consumeNewlyPassedMilestones(
+  partyId: number,
+  milestones: Array<{ id: number; title: string; distance: number }>,
+): Array<{ id: number; title: string; distance: number }> {
+  const fresh = milestones.filter(m => !hasTriggeredMilestones(partyId, m.distance));
+  fresh.forEach(m => markMilestoneTriggered(partyId, m.distance));
+  return fresh;
+}
