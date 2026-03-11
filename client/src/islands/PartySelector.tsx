@@ -22,8 +22,7 @@ import {
   selectedParty,
   fetchUserParties,
   selectView,
-  hasTriggeredMilestones,
-  markMilestoneTriggered,
+  consumeNewlyPassedMilestones,
   type PartySelection,
   type PartyProgress,
 } from '../stores/partyStore';
@@ -71,13 +70,8 @@ export function PartySelector({ variant = 'journey', onViewChange, onNewMileston
       progress.newly_passed_milestones.length > 0 &&
       onNewMilestones
     ) {
-      const partyId = effectiveSelection;
-      const newMilestones = progress.newly_passed_milestones.filter(
-        m => !hasTriggeredMilestones(partyId, m.distance)
-      );
-
+      const newMilestones = consumeNewlyPassedMilestones(effectiveSelection, progress.newly_passed_milestones);
       if (newMilestones.length > 0) {
-        newMilestones.forEach(m => markMilestoneTriggered(partyId, m.distance));
         onNewMilestones(newMilestones);
       }
     }

@@ -15,6 +15,7 @@ import {
   selectView,
   hasTriggeredMilestones,
   markMilestoneTriggered,
+  consumeNewlyPassedMilestones,
 } from './partyStore';
 
 // Mock fetch
@@ -215,5 +216,49 @@ describe('milestone tracking', () => {
     expect(hasTriggeredMilestones(1, 100)).toBe(true);
     expect(hasTriggeredMilestones(1, 200)).toBe(false);
     expect(hasTriggeredMilestones(2, 100)).toBe(false);
+  });
+});
+
+describe('consumeNewlyPassedMilestones', () => {
+  const milestones = [
+    { id: 1, title: 'Bag End', distance: 10 },
+    { id: 2, title: 'The Prancing Pony', distance: 50 },
+    { id: 3, title: 'Rivendell', distance: 100 },
+  ];
+
+  it('returns all milestones when none have been triggered', () => {
+    const result = consumeNewlyPassedMilestones(10, milestones);
+    expect(result).toHaveLength(3);
+    expect(result.map(m => m.id)).toEqual([1, 2, 3]);
+  });
+
+  it('marks returned milestones as triggered', () => {
+    consumeNewlyPassedMilestones(20, [{ id: 5, title: 'Test', distance: 77 }]);
+    expect(hasTriggeredMilestones(20, 77)).toBe(true);
+  });
+
+  it('filters out already-triggered milestones', () => {
+    markMilestoneTriggered(30, 10);
+    const result = consumeNewlyPassedMilestones(30, milestones);
+    expect(result).toHaveLength(2);
+    expect(result.map(m => m.distance)).toEqual([50, 100]);
+  });
+
+  it('returns empty array when all milestones already triggered', () => {
+    milestones.forEach(m => markMilestoneTriggered(40, m.distance));
+    const result = consumeNewlyPassedMilestones(40, milestones);
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns empty array for empty milestones input', () => {
+    const result = consumeNewlyPassedMilestones(50, []);
+    expect(result).toHaveLength(0);
+  });
+
+  it('isolates triggered state per party', () => {
+    markMilestoneTriggered(60, 10);
+    // Party 61 should not be affected by party 60's triggered state
+    const result = consumeNewlyPassedMilestones(61, [{ id: 1, title: 'Bag End', distance: 10 }]);
+    expect(result).toHaveLength(1);
   });
 });
