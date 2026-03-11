@@ -858,7 +858,7 @@ export function MapIsland() {
       initialPartyAppliedRef.current = true;
       handlePartyViewChange(selectedView.value);
     }
-  }, [loading.value, userParties.value.length, handlePartyViewChange]);
+  }, [loading.value, userParties.value.length, handlePartyViewChange, selectedView.value]);
 
   // Initialize Konva stage and fetch metadata
   useEffect(() => {

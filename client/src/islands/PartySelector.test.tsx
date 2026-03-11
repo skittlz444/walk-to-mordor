@@ -13,6 +13,7 @@ import {
 const mockFetch = vi.fn();
 
 beforeEach(() => {
+  mockFetch.mockClear();
   vi.stubGlobal('fetch', mockFetch);
   // Reset signals
   userParties.value = [];
