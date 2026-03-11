@@ -5,11 +5,6 @@ import * as path from 'path';
 
 describe('Avatar Slugs', () => {
   describe('VALID_AVATAR_SLUGS', () => {
-    it('should contain between 20 and 30 slugs', () => {
-      expect(VALID_AVATAR_SLUGS.length).toBeGreaterThanOrEqual(20);
-      expect(VALID_AVATAR_SLUGS.length).toBeLessThanOrEqual(30);
-    });
-
     it('should contain only kebab-case slugs', () => {
       for (const slug of VALID_AVATAR_SLUGS) {
         expect(slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
@@ -49,6 +44,22 @@ describe('Avatar Slugs', () => {
   describe('Avatar asset files', () => {
     const avatarsDir = path.resolve(__dirname, '../../public/img/avatars');
     const thumbsDir = path.resolve(__dirname, '../../public/img/avatars/thumbs');
+
+    function getWebpSlugs(dir: string): string[] {
+      return fs
+        .readdirSync(dir)
+        .filter((file) => file.endsWith('.webp'))
+        .map((file) => path.basename(file, '.webp'))
+        .sort();
+    }
+
+    it('should exactly match the full-size WebP asset inventory', () => {
+      expect([...VALID_AVATAR_SLUGS].sort()).toEqual(getWebpSlugs(avatarsDir));
+    });
+
+    it('should exactly match the thumbnail WebP asset inventory', () => {
+      expect([...VALID_AVATAR_SLUGS].sort()).toEqual(getWebpSlugs(thumbsDir));
+    });
 
     it('should have a full-size WebP file for each slug', () => {
       for (const slug of VALID_AVATAR_SLUGS) {

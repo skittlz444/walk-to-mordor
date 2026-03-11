@@ -92,6 +92,8 @@ Body (all fields optional, at least one required):
 
 Returns the list of valid avatar slugs. Requires authentication.
 
+The response is sourced from `src/avatar-slugs.ts` and should stay aligned with the checked-in WebP assets under `public/img/avatars/` and `public/img/avatars/thumbs/`.
+
 Response:
 
 ```json
