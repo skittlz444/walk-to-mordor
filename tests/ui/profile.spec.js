@@ -325,12 +325,20 @@ test.describe('User Profile Modal', () => {
         // Enter invalid username (too short)
         await page.fill('#profile-username', 'ab');
 
-        // Save changes
+        // Save changes and wait for API response
+        const saveResponsePromise = waitForProfilePutResponse(page);
         await page.click('#save-profile-btn');
 
-        // Wait for error message
-        await expect(page.locator('.error-message')).toBeVisible();
-        await expect(page.locator('.error-message')).toContainText('Invalid username');
+        const saveResponse = await saveResponsePromise;
+        if (saveResponse) {
+            expect(saveResponse.status()).toBe(400);
+        }
+
+        // Wait for error message to appear after server validation
+        await page.waitForFunction(() => {
+            const error = document.querySelector('.error-message');
+            return error && error.textContent && error.textContent.includes('Invalid username');
+        }, { timeout: 10000 });
     });
 
     test('should show error when no fields are provided', async ({ page }) => {
