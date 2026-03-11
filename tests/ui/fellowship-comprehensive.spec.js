@@ -940,8 +940,8 @@ test.describe('Story 3-6: Party Selector on Map Page', () => {
       return stages && stages.length > 0;
     }, { timeout: 15000 });
 
-    // Party toggle button on map (renders when loading is complete)
-    const toggleBtn = page.locator('.map-party-toggle');
+    // Social toggle button on map (renders when loading is complete)
+    const toggleBtn = page.locator('.map-social-toggle');
     await expect(toggleBtn).toBeVisible({ timeout: 8000 });
   });
 });
