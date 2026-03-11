@@ -8,6 +8,16 @@ const { test, expect } = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
+/**
+ * Wait for the map page to be fully ready, including FAB hydration.
+ * The loading overlay hiding does NOT guarantee the FAB is rendered,
+ * so we wait for both conditions sequentially.
+ */
+async function waitForMapReady(page) {
+  await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+  await page.waitForSelector('.map-walk-button', { state: 'visible', timeout: 15000 });
+}
+
 test.describe('Map Walk Logging (Story 2.8)', () => {
   test.beforeEach(async ({ page, authToken }) => {
     // Set up authentication
@@ -20,8 +30,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
     test('map page shows walk logging FAB button', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
 
-      // Wait for map to load (loading overlay should disappear)
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       // FAB should be visible
       const fab = page.locator('.map-walk-button');
@@ -30,7 +39,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('FAB has correct accessibility attributes', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       const fab = page.locator('.map-walk-button');
       await expect(fab).toHaveAttribute('aria-label', 'Log a walk');
@@ -39,7 +48,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('FAB contains walking icon SVG', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       const svg = page.locator('.map-walk-button svg');
       await expect(svg).toBeVisible();
@@ -50,7 +59,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
   test.describe('Calendar Sheet Integration', () => {
     test('clicking FAB opens calendar sheet', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       // Click the FAB
       const fab = page.locator('.map-walk-button');
@@ -64,7 +73,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('calendar sheet shows week or month view', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       await page.locator('.map-walk-button').click();
       await expect(page.locator('#map-calendar-sheet')).toBeVisible();
@@ -76,7 +85,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('calendar sheet has close button', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       await page.locator('.map-walk-button').click();
       await expect(page.locator('#map-calendar-sheet')).toBeVisible();
@@ -87,7 +96,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('calendar sheet is dismissible via close button', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       await page.locator('.map-walk-button').click();
       await expect(page.locator('#map-calendar-sheet')).toBeVisible();
@@ -99,7 +108,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('calendar sheet is dismissible via ESC key', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       await page.locator('.map-walk-button').click();
       await expect(page.locator('#map-calendar-sheet')).toBeVisible();
@@ -115,7 +124,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('calendar sheet has view toggle buttons', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       await page.locator('.map-walk-button').click();
       await expect(page.locator('#map-calendar-sheet')).toBeVisible();
@@ -129,7 +138,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
   test.describe('Distance Modal Integration', () => {
     test('clicking calendar date opens distance modal', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       // Open calendar sheet
       await page.locator('.map-walk-button').click();
@@ -150,7 +159,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('distance modal has quick entry buttons', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       // Open calendar and click a date
       await page.locator('.map-walk-button').click();
@@ -165,7 +174,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('distance modal is dismissible via ESC', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       // Open calendar and click a date
       await page.locator('.map-walk-button').click();
@@ -179,7 +188,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('can cancel modal with Cancel button', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       // Open calendar and click a date
       await page.locator('.map-walk-button').click();
@@ -195,7 +204,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
   test.describe('Walk Entry Submission', () => {
     test('can enter distance and save', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       // Open calendar and click a date
       await page.locator('.map-walk-button').click();
@@ -215,7 +224,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
     test('quick entry buttons update distance', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
-      await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
+      await waitForMapReady(page);
 
       // Open calendar and click a date
       await page.locator('.map-walk-button').click();
