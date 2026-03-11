@@ -53,8 +53,7 @@ import {
   userParties,
   fetchUserParties,
   selectView,
-  hasTriggeredMilestones,
-  markMilestoneTriggered,
+  consumeNewlyPassedMilestones,
   type PartySelection,
   type PartyProgress as PartyProgressType,
 } from '../stores/partyStore';
@@ -769,6 +768,16 @@ export function MapIsland() {
   const handlePartyViewChange = useCallback(async (selection: PartySelection) => {
     const progress = await selectView(selection);
 
+    // Guard against stale responses: discard if the user moved to a different
+    // selection while this request was in flight.
+    // Exception: a null progress when selection is a party ID means selectView
+    // fell back to 'personal' due to a 403/404 — that is intentional and must
+    // be processed, not discarded.
+    const isFallback = progress === null && typeof selection === 'number';
+    if (!isFallback && selection !== selectedView.value) {
+      return;
+    }
+
     // Determine the effective selection after selectView resolves.
     // selectView may fall back to 'personal' on 403/404, so re-read the store.
     const effectiveSelection: PartySelection =
@@ -814,13 +823,8 @@ export function MapIsland() {
       progress.newly_passed_milestones &&
       progress.newly_passed_milestones.length > 0
     ) {
-      const partyId = effectiveSelection;
-      const newMilestones = progress.newly_passed_milestones.filter(
-        m => !hasTriggeredMilestones(partyId, m.distance)
-      );
-
+      const newMilestones = consumeNewlyPassedMilestones(effectiveSelection, progress.newly_passed_milestones);
       if (newMilestones.length > 0) {
-        newMilestones.forEach(m => markMilestoneTriggered(partyId, m.distance));
         // Show the highest/latest milestone
         const latest = newMilestones[newMilestones.length - 1];
         partyMilestoneGoal.value = {
