@@ -39,7 +39,7 @@ async function loginAs(page, token, url = '/journey') {
   await page.goto(`${BASE_URL}/login`);
   await page.evaluate((t) => localStorage.setItem('sessionToken', t), token);
   await page.goto(`${BASE_URL}${url}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 async function createFellowship(request, token, name, mode = 'cumulative', leaveBehavior = 'keep') {
@@ -320,6 +320,7 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
   });
 
   test('Member list shows join dates', async ({ page, request, leader1Token, member1Token }) => {
+    test.slow(); // Multi-step: create fellowship, join, login, render members
     const party = await createFellowship(request, leader1Token, 'Comp Join Date Party');
     await joinFellowship(request, member1Token, party.invite_code);
 
