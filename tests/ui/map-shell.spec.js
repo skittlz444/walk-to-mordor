@@ -26,6 +26,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await page.waitForURL((url) => {
       return url.pathname.endsWith('/journey') || url.pathname.endsWith('/login');
     });
+    await page.waitForLoadState('networkidle');
 
     if (page.url().endsWith('/login')) {
       await page.evaluate((token) => {
@@ -33,18 +34,26 @@ test.describe('Map Shell (Authenticated)', () => {
       }, authToken);
       await page.goto(`${BASE_URL}/journey`);
       await page.waitForURL('**/journey');
+      await page.waitForLoadState('networkidle');
     }
 
-    await page.click('.menu-icon');
+    const menuIcon = page.locator('.menu-icon');
+    await expect(menuIcon).toBeVisible();
+    await menuIcon.click();
     await page.waitForSelector('body.drawer-open', { timeout: 5000 });
     await page.click('.drawer-link:has-text("Map")');
     await page.waitForURL('**/map');
+    await page.waitForLoadState('networkidle');
 
-    await page.click('.menu-icon');
+    await expect(menuIcon).toBeVisible();
+    await menuIcon.click();
     await page.waitForSelector('body.drawer-open', { timeout: 5000 });
-    await page.click('.drawer-profile');
+    const profileButton = page.locator('.drawer-profile');
+    await expect(profileButton).toBeVisible();
+    await expect(profileButton).toBeEnabled();
+    await profileButton.click();
 
-    await expect(page.locator('.modal-overlay')).toBeVisible();
+    await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 5000 });
   });
 
   test('drawer opens and closes via backdrop and escape', async ({ page }) => {

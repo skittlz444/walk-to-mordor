@@ -8,13 +8,18 @@
 const fs = require('fs');
 const path = require('path');
 
-const SW_PATH = path.join(__dirname, '..', 'sw.js');
+const DEFAULT_SW_PATH = path.join(__dirname, '..', 'sw.js');
 const BUILD_TIMESTAMP_PLACEHOLDER = '{{BUILD_TIMESTAMP}}';
+
+function getSwPath() {
+  return process.env.SW_PATH || DEFAULT_SW_PATH;
+}
 
 function resetCacheVersion() {
   try {
+    const swPath = getSwPath();
     // Read the service worker file
-    let swContent = fs.readFileSync(SW_PATH, 'utf8');
+    let swContent = fs.readFileSync(swPath, 'utf8');
     
     // Find the cache name line and replace with placeholder
     const cacheNameRegex = /const CACHE_NAME = `walk-to-mordor-[^`]+`;/;
@@ -36,7 +41,7 @@ function resetCacheVersion() {
     }
     
     // Write back to file
-    fs.writeFileSync(SW_PATH, swContent, 'utf8');
+    fs.writeFileSync(swPath, swContent, 'utf8');
     
     console.log('✅ Reset service worker cache version to development placeholder');
     

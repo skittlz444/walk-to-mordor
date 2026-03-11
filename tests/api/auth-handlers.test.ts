@@ -15,6 +15,7 @@ import {
 } from '../../src/auth-handlers';
 import * as authUtils from '../../src/auth-utils';
 import * as emailUtils from '../../src/email-utils';
+import { VALID_AVATAR_SLUGS } from '../../src/avatar-slugs';
 
 // Mock auth-utils
 jest.mock('../../src/auth-utils', () => ({
@@ -1946,7 +1947,7 @@ describe('Auth Handlers', () => {
       expect(data).toContain('samwise');
     });
 
-    it('should return all 22 avatar slugs', async () => {
+    it('should return all avatar slugs', async () => {
       mockEnv.ALLOW_TEST_AUTH = 'true';
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
 
@@ -1961,7 +1962,7 @@ describe('Auth Handlers', () => {
 
       const response = await handleGetAvatars(mockRequest, mockEnv);
       const data = await response.json();
-      expect(data).toHaveLength(22);
+      expect(data).toHaveLength(VALID_AVATAR_SLUGS.length);
     });
   });
 

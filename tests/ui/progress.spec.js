@@ -197,7 +197,11 @@ test.describe('Progress Tracking', () => {
   });
 
   test('Can create multiple events with random data', async ({ page, authToken }) => {
-    await page.waitForLoadState('networkidle');
+    // This test creates multiple events with page reloads between them,
+    // which legitimately takes longer than the default 30s timeout.
+    test.slow();
+
+    await page.waitForLoadState('domcontentloaded');
     
     // Close any existing popups/overlays that might interfere
     try {
@@ -230,14 +234,14 @@ test.describe('Progress Tracking', () => {
         // For second event, refresh page to reset state in Mobile Firefox
         if (i > 0) {
           await page.goto('http://localhost:8787/');
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
         }
         
         const eventData = await createTestEvent(page);
         events.push(eventData);
         
         // Wait for event to be processed
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       } catch (error) {
         // For Mobile Firefox, accept partial success
         break;

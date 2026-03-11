@@ -80,10 +80,16 @@ describe('generate-image-manifest.js', () => {
     const tempDir = path.join(__dirname, '..', '..', 'public', 'img', 'highres-empty-test');
     fs.mkdirSync(tempDir, { recursive: true });
 
+    const realDir = HIGHRES_DIR;
+    const backupDir = realDir + '-backup';
+
+    // Recover from a previously crashed test run
+    if (!fs.existsSync(realDir) && fs.existsSync(backupDir)) {
+      fs.renameSync(backupDir, realDir);
+    }
+
     try {
       // Temporarily rename real dir and point script at empty one
-      const realDir = HIGHRES_DIR;
-      const backupDir = realDir + '-backup';
       fs.renameSync(realDir, backupDir);
       fs.renameSync(tempDir, realDir);
 
@@ -96,8 +102,8 @@ describe('generate-image-manifest.js', () => {
         expect(manifest.generated).toBeDefined();
       } finally {
         // Restore original directory
-        fs.renameSync(realDir, tempDir);
-        fs.renameSync(backupDir, realDir);
+        if (fs.existsSync(realDir)) fs.renameSync(realDir, tempDir);
+        if (fs.existsSync(backupDir)) fs.renameSync(backupDir, realDir);
       }
     } finally {
       // Clean up temp dir

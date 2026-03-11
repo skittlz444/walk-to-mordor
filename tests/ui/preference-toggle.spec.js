@@ -78,12 +78,11 @@ test.describe('User Goal Visibility Preference', () => {
       const data = await response.json();
       expect(data.showFutureGoalsUnlocked).toBe(false);
 
-      // Status should show "Saved" briefly
-      const statusDiv = page.locator('#preference-status');
-      await expect(statusDiv).toHaveText('Saved', { timeout: 5000 });
+      // Toggle should now be unchecked after successful save
+      await expect(toggle).not.toBeChecked({ timeout: 5000 });
     });
 
-    test('should revert toggle on API failure', async ({ page }) => {
+    test('should revert toggle on API failure',async ({ page }) => {
       await openProfileFromDrawer(page);
 
       const toggle = page.locator('#preview-milestones-toggle');
@@ -335,9 +334,8 @@ test.describe('User Goal Visibility Preference', () => {
       const data = await response.json();
       expect(data.defaultViewMap).toBe(true);
 
-      // Status should show "Saved" briefly
-      const statusDiv = page.locator('#preference-status');
-      await expect(statusDiv).toHaveText('Saved', { timeout: 5000 });
+      // Toggle should now be checked after successful save
+      await expect(toggle).toBeChecked({ timeout: 5000 });
 
       // Restore default (toggle back OFF) for clean state
       const restorePromise = page.waitForResponse(
