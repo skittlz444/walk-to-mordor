@@ -149,4 +149,49 @@ describe('PartySelector', () => {
 
     expect(container.querySelector('.party-selector__members')?.textContent).toContain('1 member');
   });
+
+  it('auto-applies persisted party view after parties load', async () => {
+    const partyList = [
+      { id: 5, name: 'Shire Walkers', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 3 },
+    ];
+
+    const progressData = {
+      total_distance: 80.0,
+      member_count: 3,
+      calculated_position: null,
+      distance_mode: 'incremental',
+      leave_distance_behavior: 'keep',
+      members: [],
+      newly_passed_milestones: [],
+    };
+
+    // Simulate persisted party selection from a previous session
+    selectedView.value = 5;
+
+    // First call: fetchUserParties, second call: fetchPartyProgress (auto-triggered)
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ parties: partyList }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(progressData),
+      });
+
+    const onViewChange = vi.fn();
+    render(<PartySelector onViewChange={onViewChange} />);
+
+    // After parties load with persisted selection, should auto-fetch progress
+    // and invoke the onViewChange callback with the fellowship data
+    await waitFor(() => {
+      expect(onViewChange).toHaveBeenCalledWith(5, progressData);
+    });
+
+    // The progress fetch should have been for the persisted party
+    const progressCall = mockFetch.mock.calls.find(
+      (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('/api/party/5/progress')
+    );
+    expect(progressCall).toBeTruthy();
+  });
 });
