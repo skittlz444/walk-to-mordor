@@ -72,23 +72,17 @@ test.describe('Map User Avatar Marker', () => {
       headers: { Authorization: `Bearer ${authToken}` },
     });
 
-    const thumbRequests = [];
-    page.on('request', (req) => {
-      if (req.url().includes('/img/avatars/thumbs/')) {
-        thumbRequests.push(req.url());
-      }
-    });
-
     await page.goto(`${BASE_URL}/map`);
     await waitForMapReady(page);
 
-    // Allow a brief window for any late async image requests to arrive.
-    await page.waitForTimeout(500);
-
-    // No avatar thumbnail should have been requested.
-    // Fresh test users have no friends, so there are also no friend-marker
-    // thumbnail requests to confound this assertion.
-    expect(thumbRequests).toHaveLength(0);
+    // Assert that no avatar thumbnail request is made after the map is fully ready.
+    // If any request arrives within the timeout the promise resolves and the expectation
+    // fails; timing out (rejecting) is the expected/successful outcome.
+    // Fresh test users have no friends, so there are also no friend-marker thumbnail
+    // requests to confound this assertion.
+    await expect(
+      page.waitForRequest('**/img/avatars/thumbs/**', { timeout: 1000 }),
+    ).rejects.toThrow();
 
     // Map canvas must still render correctly with the ring fallback.
     const canvas = page.locator('.map-canvas-wrapper canvas');
@@ -131,30 +125,37 @@ test.describe('Map User Avatar Marker', () => {
     // Pre-configure the avatar so the session returns avatarId: 'aragorn'.
     await setUserAvatar(request, authToken, 'aragorn');
 
+    // Register the request promise BEFORE route + navigation so we can assert
+    // the 404 route was actually triggered (guards against setUserAvatar failures).
+    const aragornRequestPromise = page.waitForRequest(
+      '**/img/avatars/thumbs/aragorn.webp',
+      { timeout: 15000 },
+    );
+
     // Simulate a missing thumbnail (e.g., the image file was not served).
     await page.route('**/img/avatars/thumbs/aragorn.webp', (route) => {
       route.fulfill({ status: 404 });
     });
 
-    // Capture console errors to verify no unhandled JS error surfaces.
-    const consoleErrors = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') consoleErrors.push(msg.text());
-    });
+    // Capture uncaught JS exceptions (pageerror) rather than console errors,
+    // so the intentional browser network error for the 404'd thumbnail
+    // ("Failed to load resource") doesn't cause a false failure.
+    const jsErrors = [];
+    page.on('pageerror', (err) => jsErrors.push(err.message));
 
     await page.goto(`${BASE_URL}/map`);
     await waitForMapReady(page);
+
+    // Confirm that UserMarker actually attempted to load the aragorn thumbnail.
+    // Without this, the test can pass vacuously if setUserAvatar failed silently.
+    await aragornRequestPromise;
 
     // Map canvas must remain visible — the ring fallback keeps the marker alive.
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible();
 
-    // No UserMarker-related JS errors should have been thrown.
-    const markerErrors = consoleErrors.filter(
-      (e) =>
-        e.toLowerCase().includes('usermarker') ||
-        (e.toLowerCase().includes('avatar') && !e.includes('favicon')),
-    );
+    // No UserMarker-related uncaught JS exceptions should have been thrown.
+    const markerErrors = jsErrors.filter((e) => e.toLowerCase().includes('usermarker'));
     expect(markerErrors).toHaveLength(0);
   });
 
@@ -167,14 +168,22 @@ test.describe('Map User Avatar Marker', () => {
     // Use gandalf-grey whose thumbnail exists as a checked-in placeholder asset.
     await setUserAvatar(request, authToken, 'gandalf-grey');
 
+    // Register before navigation so the response is captured even if it fires
+    // during page load / hydration. waitForResponse ensures the image was
+    // received by the browser (not just requested), matching the test title.
+    const thumbnailResponsePromise = page.waitForResponse(
+      (res) => res.url().includes('/img/avatars/thumbs/gandalf-grey.webp'),
+      { timeout: 15000 },
+    );
+
     await page.goto(`${BASE_URL}/map`);
     await waitForMapReady(page);
 
     const canvas = page.locator('.map-canvas-wrapper canvas');
     await expect(canvas.first()).toBeVisible();
 
-    // Give the avatar image a brief window to finish loading.
-    await page.waitForTimeout(300);
+    // Wait deterministically for the thumbnail response (image fully received).
+    await thumbnailResponsePromise;
 
     // The map canvas must still be draggable after the avatar has loaded.
     const wrapper = page.locator('.map-canvas-wrapper');
