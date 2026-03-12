@@ -13,7 +13,7 @@ async function deleteTestEvent(page, distance, authToken) {
         await cleanupAllTestData('http://localhost:8787', authToken);
         // Refresh page to reflect data changes
         await page.reload();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         return true;
       }
     } catch (cleanupError) {
@@ -31,7 +31,7 @@ async function deleteTestEvent(page, distance, authToken) {
       await expect(deleteButton).toBeVisible({ timeout: 3000 }).catch(() => {});
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         return true;
       }
     }
@@ -48,7 +48,7 @@ async function deleteTestEvent(page, distance, authToken) {
           await confirmButton.click();
         }
         
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         return true;
       }
     }
@@ -67,7 +67,7 @@ test.describe('Progress Tracking', () => {
   });
 
   test('Can create and delete a walking event', async ({ page, authToken }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     const testDistance = generateRealisticTestDistance();
     
@@ -75,7 +75,7 @@ test.describe('Progress Tracking', () => {
     await createTestEvent(page, testDistance);
     
     // Wait for event to be processed
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify via API endpoint first (more reliable)
     let eventVerified = false;
@@ -107,7 +107,7 @@ test.describe('Progress Tracking', () => {
   });
 
   test('Can edit and delete an event', async ({ page, authToken }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     const initialDistance = generateRealisticTestDistance();
     const editedDistance = generateRealisticTestDistance();
@@ -116,7 +116,7 @@ test.describe('Progress Tracking', () => {
     await createTestEvent(page, initialDistance);
     
     // Wait for initial event to be processed
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify initial event exists using API first
     let initialEventVerified = false;
