@@ -269,6 +269,8 @@ export function MapIsland() {
   const userDistance = useSignal(0);
   // Personal distance (miles) saved for restoring when switching from party view.
   const personalDistanceRef = useRef(0);
+  // Guard: whether the persisted party view has been auto-applied on load.
+  const initialPartyAppliedRef = useRef(false);
 
   // Popup state signals
   const selectedWaypoint = useSignal<Waypoint | null>(null);
@@ -842,6 +844,21 @@ export function MapIsland() {
   useEffect(() => {
     fetchUserParties();
   }, []);
+
+  // Auto-apply persisted fellowship view once map + parties are ready.
+  // Without this, the map always initialises at the personal distance even
+  // when the user's last-selected view was a fellowship.
+  useEffect(() => {
+    if (
+      !initialPartyAppliedRef.current &&
+      !loading.value &&
+      userParties.value.length > 0 &&
+      selectedView.value !== 'personal'
+    ) {
+      initialPartyAppliedRef.current = true;
+      handlePartyViewChange(selectedView.value);
+    }
+  }, [loading.value, userParties.value.length, handlePartyViewChange, selectedView.value]);
 
   // Initialize Konva stage and fetch metadata
   useEffect(() => {
