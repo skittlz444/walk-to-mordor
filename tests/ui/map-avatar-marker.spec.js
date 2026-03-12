@@ -21,11 +21,23 @@ const { test, expect } = require('./helpers/common');
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
 /**
- * Wait for MapIsland to fully hydrate.
- * Uses the deterministic data-hydrated signal set by the Preact component.
+ * Wait for MapIsland to fully hydrate and for the map canvas to be rendered.
+ *
+ * Hydration alone can complete before async map/session fetches and marker
+ * creation have finished. We therefore also wait for the Konva canvas to
+ * become visible so that downstream assertions that depend on marker/image
+ * logic are less flaky.
  */
 async function waitForMapReady(page) {
+  // 1. Wait for the MapIsland Preact component to report hydration.
   await page.waitForSelector('[data-island="MapIsland"][data-hydrated="true"]', {
+    timeout: 20000,
+  });
+
+  // 2. Wait for the map canvas to be present and visible, indicating that
+  //    Konva has mounted and map rendering/marker creation logic has run.
+  await page.waitForSelector('.map-canvas-wrapper canvas', {
+    state: 'visible',
     timeout: 20000,
   });
 }
@@ -40,17 +52,20 @@ async function waitForMapReady(page) {
  */
 async function setUserAvatar(request, authToken, avatarSlug) {
   // 1. Bootstrap the user in the DB (mock auth auto-creates on first call).
-  await request.get(`${BASE_URL}/api/session`, {
+  const sessionRes = await request.get(`${BASE_URL}/api/session`, {
     headers: { Authorization: `Bearer ${authToken}` },
   });
+  expect(sessionRes.ok(), `GET /api/session failed: ${await sessionRes.text()}`).toBeTruthy();
+
   // 2. Set the avatar via the preferences endpoint.
-  await request.put(`${BASE_URL}/api/user/preferences`, {
+  const prefsRes = await request.put(`${BASE_URL}/api/user/preferences`, {
     headers: {
       Authorization: `Bearer ${authToken}`,
       'Content-Type': 'application/json',
     },
     data: JSON.stringify({ avatarId: avatarSlug }),
   });
+  expect(prefsRes.ok(), `PUT /api/user/preferences failed: ${await prefsRes.text()}`).toBeTruthy();
 }
 
 test.describe('Map User Avatar Marker', () => {
@@ -72,17 +87,21 @@ test.describe('Map User Avatar Marker', () => {
       headers: { Authorization: `Bearer ${authToken}` },
     });
 
+    // Track any avatar thumbnail requests that fire during navigation + map init.
+    // Must be registered before page.goto() so requests during load are captured.
+    let avatarThumbRequestCount = 0;
+    await page.route('**/img/avatars/thumbs/**', async (route) => {
+      avatarThumbRequestCount += 1;
+      await route.continue();
+    });
+
     await page.goto(`${BASE_URL}/map`);
     await waitForMapReady(page);
 
-    // Assert that no avatar thumbnail request is made after the map is fully ready.
-    // If any request arrives within the timeout the promise resolves and the expectation
-    // fails; timing out (rejecting) is the expected/successful outcome.
+    // Assert that no avatar thumbnail request was made while loading/rendering the map.
     // Fresh test users have no friends, so there are also no friend-marker thumbnail
     // requests to confound this assertion.
-    await expect(
-      page.waitForRequest('**/img/avatars/thumbs/**', { timeout: 1000 }),
-    ).rejects.toThrow();
+    expect(avatarThumbRequestCount).toBe(0);
 
     // Map canvas must still render correctly with the ring fallback.
     const canvas = page.locator('.map-canvas-wrapper canvas');
