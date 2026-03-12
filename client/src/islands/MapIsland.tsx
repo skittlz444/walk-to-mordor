@@ -1147,8 +1147,11 @@ export function MapIsland() {
           .catch(() => [] as Goal[])
       : Promise.resolve([] as Goal[]);
 
-    // Fetch session for user preference (showFutureGoalsUnlocked)
-    interface SessionPreference { showFutureGoalsUnlocked?: boolean }
+    // Fetch session for user preference and current-user avatar marker data
+    interface SessionPreference {
+      avatarId?: string | null;
+      showFutureGoalsUnlocked?: boolean;
+    }
     const sessionPromise: Promise<SessionPreference> = token
       ? fetch(SESSION_API_URL, {
           headers: { Authorization: `Bearer ${token}` },
@@ -1213,6 +1216,7 @@ export function MapIsland() {
           userPos,
           initialZoom,
           initialDistance,
+          sessionData.avatarId,
         );
 
         // Create waypoint markers from goals data
