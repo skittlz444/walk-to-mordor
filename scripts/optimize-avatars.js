@@ -14,6 +14,10 @@ const THUMB_QUALITY = 50;
 
 const SUPPORTED_FORMATS = ['.png', '.jpg', '.jpeg', '.tiff', '.tif'];
 
+function normalizeAvatarSlug(filename) {
+  return path.basename(filename, path.extname(filename)).replace(/_\d+_$/, '');
+}
+
 function formatSize(bytes) {
   if (bytes < 1024 * 1024) {
     return `${(bytes / 1024).toFixed(2)} KB`;
@@ -49,7 +53,7 @@ async function main() {
 
   for (const file of sourceFiles) {
     const inputPath = path.join(AVATAR_DIR, file);
-    const slug = path.basename(file, path.extname(file));
+    const slug = normalizeAvatarSlug(file);
     const fullOut = path.join(AVATAR_DIR, `${slug}.webp`);
     const thumbOut = path.join(THUMB_DIR, `${slug}.webp`);
 
@@ -74,7 +78,8 @@ async function main() {
       totalThumb += thumbBuffer.length;
 
       processed++;
-      console.log(`  ✓ ${slug}  full: ${formatSize(fullBuffer.length)}  thumb: ${formatSize(thumbBuffer.length)}`);
+      const sourceLabel = slug === path.basename(file, path.extname(file)) ? slug : `${file} -> ${slug}`;
+      console.log(`  ✓ ${sourceLabel}  full: ${formatSize(fullBuffer.length)}  thumb: ${formatSize(thumbBuffer.length)}`);
     } catch (error) {
       console.error(`  ✗ ${slug}: ${error.message}`);
     }
