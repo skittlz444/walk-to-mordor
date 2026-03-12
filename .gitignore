@@ -210,3 +210,4 @@ raw_assets/
 
 # Inspection screenshots
 _inspection-screenshots/
+client/test-results/junit.xml
