@@ -59,6 +59,7 @@ import {
   userParties,
   fetchUserParties,
   selectView,
+  consumeNewlyPassedMilestones,
   type PartySelection,
   type PartyProgress as PartyProgressType,
 } from '../stores/partyStore';
@@ -274,6 +275,8 @@ export function MapIsland() {
   const userDistance = useSignal(0);
   // Personal distance (miles) saved for restoring when switching from party view.
   const personalDistanceRef = useRef(0);
+  // Guard: whether the persisted party view has been auto-applied on load.
+  const initialPartyAppliedRef = useRef(false);
 
   // Popup state signals
   const selectedWaypoint = useSignal<Waypoint | null>(null);
@@ -295,6 +298,7 @@ export function MapIsland() {
 
   /** Cache TTL for friend positions: 5 minutes */
   const FRIEND_CACHE_TTL = 5 * 60 * 1000;
+  const partyMilestoneGoal = useSignal<Goal | null>(null);
 
   const partyViewActive = useComputed(() => isPartyView.value);
 
@@ -800,6 +804,16 @@ export function MapIsland() {
   const handlePartyViewChange = useCallback(async (selection: PartySelection) => {
     const progress = await selectView(selection);
 
+    // Guard against stale responses: discard if the user moved to a different
+    // selection while this request was in flight.
+    // Exception: a null progress when selection is a party ID means selectView
+    // fell back to 'personal' due to a 403/404 — that is intentional and must
+    // be processed, not discarded.
+    const isFallback = progress === null && typeof selection === 'number';
+    if (!isFallback && selection !== selectedView.value) {
+      return;
+    }
+
     // Determine the effective selection after selectView resolves.
     // selectView may fall back to 'personal' on 403/404, so re-read the store.
     const effectiveSelection: PartySelection =
@@ -835,6 +849,28 @@ export function MapIsland() {
       }
 
       centerOnPosition(newPos, currentScale.value, true);
+    }
+
+    showSocialPanel.value = false;
+
+    // Check for newly passed milestones when switching to a party view
+    if (
+      progress &&
+      effectiveSelection !== 'personal' &&
+      typeof effectiveSelection === 'number' &&
+      progress.newly_passed_milestones &&
+      progress.newly_passed_milestones.length > 0
+    ) {
+      const newMilestones = consumeNewlyPassedMilestones(effectiveSelection, progress.newly_passed_milestones);
+      if (newMilestones.length > 0) {
+        // Show the highest/latest milestone
+        const latest = newMilestones[newMilestones.length - 1];
+        partyMilestoneGoal.value = {
+          id: latest.id,
+          title: latest.title,
+          distance: latest.distance,
+        };
+      }
     }
 
     showSocialPanel.value = false;
@@ -930,6 +966,21 @@ export function MapIsland() {
   useEffect(() => {
     fetchUserParties();
   }, []);
+
+  // Auto-apply persisted fellowship view once map + parties are ready.
+  // Without this, the map always initialises at the personal distance even
+  // when the user's last-selected view was a fellowship.
+  useEffect(() => {
+    if (
+      !initialPartyAppliedRef.current &&
+      !loading.value &&
+      userParties.value.length > 0 &&
+      selectedView.value !== 'personal'
+    ) {
+      initialPartyAppliedRef.current = true;
+      handlePartyViewChange(selectedView.value);
+    }
+  }, [loading.value, userParties.value.length, handlePartyViewChange, selectedView.value]);
 
   // Initialize Konva stage and fetch metadata
   useEffect(() => {
@@ -1583,6 +1634,15 @@ export function MapIsland() {
           goal={expandGoal.value}
           currentDistance={userDistance.value * MILES_TO_KM}
           onClose={() => { expandGoal.value = null; }}
+        />
+      )}
+      {/* Party milestone congratulations modal (opened on party view switch) */}
+      {partyMilestoneGoal.value && (
+        <GoalModal
+          goal={partyMilestoneGoal.value}
+          currentDistance={userDistance.value * MILES_TO_KM}
+          isCongratulations={true}
+          onClose={() => { partyMilestoneGoal.value = null; }}
         />
       )}
       {/* Walk logging FAB and congratulations flow (Story 2.8) */}
