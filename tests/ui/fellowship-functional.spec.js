@@ -36,6 +36,7 @@ async function loginAs(page, token, url = '/journey') {
   await page.goto(`${BASE_URL}/login`);
   await page.evaluate((t) => localStorage.setItem('sessionToken', t), token);
   await page.goto(`${BASE_URL}${url}`);
+  await page.waitForSelector('body.authenticated', { timeout: 15000 });
 }
 
 /**

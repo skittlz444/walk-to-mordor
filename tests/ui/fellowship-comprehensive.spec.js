@@ -40,6 +40,11 @@ async function loginAs(page, token, url = '/journey') {
   await page.evaluate((t) => localStorage.setItem('sessionToken', t), token);
   await page.goto(`${BASE_URL}${url}`);
   await page.waitForLoadState('domcontentloaded');
+  // Join pages use a different template without main.js, so body.authenticated is never set.
+  // All other authenticated pages use renderLayout() which loads main.js.
+  if (!url.includes('/party/join/')) {
+    await page.waitForSelector('body.authenticated', { timeout: 15000 });
+  }
 }
 
 async function createFellowship(request, token, name, mode = 'cumulative', leaveBehavior = 'keep') {
@@ -474,6 +479,7 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
   });
 
   test('Kick member with two-step confirmation', async ({ page, request, leader1Token, member1Token }) => {
+    test.slow(); // Multiple API calls + page navigation + dialog interaction
     const party = await createFellowship(request, leader1Token, 'Comp Kick Confirm Party');
     await joinFellowship(request, member1Token, party.invite_code);
 
@@ -644,6 +650,7 @@ test.describe('Story 3-7: Join Landing Page (/party/join/:code)', () => {
 test.describe('Story 3-8: Activity Feed', () => {
 
   test('Activity feed renders on fellowship detail page', async ({ page, request, leader1Token, member1Token }) => {
+    test.slow(); // Multiple API setup calls + page navigation + island data fetch
     const party = await createFellowship(request, leader1Token, 'Comp Activity Render Party');
     await joinFellowship(request, member1Token, party.invite_code);
     await logDistance(request, leader1Token, '2026-03-01', 5.5);
@@ -657,6 +664,7 @@ test.describe('Story 3-8: Activity Feed', () => {
   });
 
   test('Activity items show formatted walk entries', async ({ page, request, leader1Token, member1Token }) => {
+    test.slow(); // Multiple API setup calls + page navigation + island data fetch
     const party = await createFellowship(request, leader1Token, 'Comp Activity Format Party');
     await joinFellowship(request, member1Token, party.invite_code);
     // Use unique dates to avoid "already exists" collisions

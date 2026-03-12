@@ -15,6 +15,22 @@ const test = base.extend({
   },
 });
 
+/**
+ * Wait for the app to be fully authenticated and ready.
+ * Uses the deterministic `body.authenticated` class set by main.js after session validation.
+ */
+async function waitForAuthenticated(page) {
+  await page.waitForSelector('body.authenticated', { timeout: 15000 });
+}
+
+/**
+ * Wait for a specific Preact island to be hydrated.
+ * Islands get `data-hydrated="true"` after Preact renders them.
+ */
+async function waitForIsland(page, islandName) {
+  await page.waitForSelector(`[data-island="${islandName}"][data-hydrated="true"]`);
+}
+
 async function setupTest({ page, authToken }) {
     // Ensure clean state for this user
     await cleanupAllTestData(BASE_URL, authToken);
@@ -29,13 +45,8 @@ async function setupTest({ page, authToken }) {
     // Navigate back to the journey page to apply auth state
     await page.goto(`${BASE_URL}/journey`);
     
-    // Wait for the calendar to be initialized (proof of successful login and app load)
-    // This helps avoid race conditions where tests try to interact with elements before the app is ready
-    try {
-      await page.waitForSelector('#next-btn', { state: 'visible', timeout: 10000 });
-    } catch (e) {
-      console.log('Setup wait warning: Calendar next button did not appear', e.message);
-    }
+    // Wait for authenticated state — deterministic signal from main.js
+    await waitForAuthenticated(page);
     
     try {
       // Close any existing popups that might interfere with the next test
@@ -77,8 +88,8 @@ function generateRandomTestDate() {
 }
 
 async function selectCalendarDate(page, dateInfo) {
-    // Wait for calendar to be ready on the page
-    await page.waitForSelector('.calendar-cell, [data-date], [data-timestamp]', { timeout: 10000 }).catch(() => {});
+    // Wait for calendar to be ready
+    await page.waitForSelector('.calendar-cell, [data-date], [data-timestamp]').catch(() => {});
     
     // Attempt to find cell by specific date attribute first if provided
     if (dateInfo && typeof dateInfo === 'object' && dateInfo.date) {
@@ -188,6 +199,8 @@ module.exports = {
     test,
     expect,
     setupTest,
+    waitForAuthenticated,
+    waitForIsland,
     generateRealisticTestDistance,
     generateLargeTestDistance,
     generateRandomTestDate,

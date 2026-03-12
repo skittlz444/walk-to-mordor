@@ -51,15 +51,15 @@ test.describe('Map Canvas & Base Image Layer', () => {
     await page.goto(`${BASE_URL}/map`);
     // Konva creates its own canvas inside the container
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
   });
 
   test('canvas fills the map shell area', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
-    const wrapper = page.locator('.map-canvas-wrapper');
+    const wrapper= page.locator('.map-canvas-wrapper');
     const wrapperBox = await wrapper.boundingBox();
 
     expect(wrapperBox).not.toBeNull();
@@ -70,7 +70,7 @@ test.describe('Map Canvas & Base Image Layer', () => {
   test('map can be dragged (panned)', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     const wrapper = page.locator('.map-canvas-wrapper');
     const box = await wrapper.boundingBox();
@@ -88,7 +88,7 @@ test.describe('Map Canvas & Base Image Layer', () => {
   test('map can be zoomed via mouse wheel', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     const wrapper = page.locator('.map-canvas-wrapper');
     const box = await wrapper.boundingBox();
@@ -98,7 +98,7 @@ test.describe('Map Canvas & Base Image Layer', () => {
       const stages = window.Konva?.stages;
       if (!stages || stages.length === 0) return false;
       return stages[0].scaleX() !== 1;
-    }, { timeout: 5000 });
+    });
 
     await expect(canvas.first()).toBeVisible();
   });
@@ -106,13 +106,13 @@ test.describe('Map Canvas & Base Image Layer', () => {
   test('map responds to window resize', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     await page.setViewportSize({ width: 800, height: 400 });
     await page.waitForFunction(() => {
       const c = document.querySelector('.map-canvas-wrapper canvas');
       return c && c.width > 0 && c.height > 0;
-    }, { timeout: 5000 });
+    });
 
     await expect(canvas.first()).toBeVisible();
     const wrapper = page.locator('.map-canvas-wrapper');
@@ -124,9 +124,9 @@ test.describe('Map Canvas & Base Image Layer', () => {
   test('grab cursor style is applied', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
-    const cursor = await page.locator('.map-canvas-wrapper').evaluate(
+    const cursor= await page.locator('.map-canvas-wrapper').evaluate(
       (el) => window.getComputedStyle(el).cursor,
     );
     expect(cursor).toBe('grab');
@@ -145,13 +145,13 @@ test.describe('Map Canvas - Mobile Touch', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
   });
 
   test('touch-action none prevents browser gestures', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     const touchAction = await page.locator('.map-canvas-wrapper').evaluate(
       (el) => window.getComputedStyle(el).touchAction,
@@ -169,10 +169,10 @@ test.describe('Map Canvas - Stage Initialization & Metadata', () => {
 
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Loading overlay should disappear after metadata loads
-    await expect(page.locator('.map-loading-overlay')).toBeHidden({ timeout: 15000 });
+    await expect(page.locator('.map-loading-overlay')).toBeHidden();
   });
 
   test('shows error state when metadata fetch fails', async ({ page, authToken }) => {
@@ -187,7 +187,7 @@ test.describe('Map Canvas - Stage Initialization & Metadata', () => {
 
     await page.goto(`${BASE_URL}/map`);
     // Should show error message
-    await expect(page.locator('text=Failed to load map data')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Failed to load map data')).toBeVisible();
   });
 
   test('stage cleanup removes canvas on navigation away', async ({ page, authToken }) => {
@@ -198,7 +198,7 @@ test.describe('Map Canvas - Stage Initialization & Metadata', () => {
 
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Navigate away from the map page
     try {
@@ -243,31 +243,30 @@ test.describe('Map Canvas - Tile Update Logic', () => {
 
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Wait for map content to render
     await page.waitForFunction(() => {
       const c = document.querySelector('.map-canvas-wrapper canvas');
       return c && c.width > 0 && c.height > 0;
-    }, { timeout: 10000 });
+    });
 
     const wrapper = page.locator('.map-canvas-wrapper');
     const box = await wrapper.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     for (let i = 0; i < 8; i++) {
       await page.mouse.wheel(0, -180);
-      await page.waitForTimeout(70);
     }
     await page.waitForFunction(() => {
       const stages = window.Konva?.stages;
       if (!stages || stages.length === 0) return false;
       return stages[0].scaleX() !== 1;
-    }, { timeout: 5000 });
+    });
 
     // Use polling assertions so tile requests captured asynchronously are retried
-    await expect.poll(() => tileRequests.filter((u) => u.includes('metadata.json')).length, { timeout: 15000 })
+    await expect.poll(() => tileRequests.filter((u) => u.includes('metadata.json')).length, { timeout: 5000 })
       .toBeGreaterThanOrEqual(1);
-    await expect.poll(() => tileRequests.filter((u) => u.includes('/img/map/tiles/') && !u.includes('metadata.json')).length, { timeout: 15000 })
+    await expect.poll(() => tileRequests.filter((u) => u.includes('/img/map/tiles/') && !u.includes('metadata.json')).length, { timeout: 5000 })
       .toBeGreaterThanOrEqual(1);
   });
 
@@ -293,7 +292,7 @@ test.describe('Map Canvas - Tile Update Logic', () => {
 
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Wait for initial tiles to load
     await page.waitForFunction(() => {
@@ -302,7 +301,7 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       const tileLayer = stages[0].getLayers()[0];
       if (!tileLayer) return false;
       return tileLayer.getChildren().length > 0;
-    }, { timeout: 10000 });
+    });
 
     // Zoom in significantly (multiple scroll events)
     const wrapper = page.locator('.map-canvas-wrapper');
@@ -310,7 +309,6 @@ test.describe('Map Canvas - Tile Update Logic', () => {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     for (let i = 0; i < 10; i++) {
       await page.mouse.wheel(0, -200);
-      await page.waitForTimeout(100);
     }
 
     // Wait for Konva zoom to settle
@@ -318,10 +316,10 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       const stages = window.Konva?.stages;
       if (!stages || stages.length === 0) return false;
       return stages[0].scaleX() !== 1;
-    }, { timeout: 5000 });
+    });
 
     // Use polling assertion so tile requests captured asynchronously are retried
-    await expect.poll(() => tileRequests.filter((u) => u.includes('/img/map/tiles/') && !u.includes('metadata.json')).length, { timeout: 15000 })
+    await expect.poll(() => tileRequests.filter((u) => u.includes('/img/map/tiles/') && !u.includes('metadata.json')).length, { timeout: 5000 })
       .toBeGreaterThanOrEqual(1);
   });
 
@@ -330,7 +328,7 @@ test.describe('Map Canvas - Tile Update Logic', () => {
 
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Wait for initial tiles to fully load and render
     await page.waitForFunction(() => {
@@ -339,7 +337,7 @@ test.describe('Map Canvas - Tile Update Logic', () => {
       const tileLayer = stages[0].getLayers()[0];
       if (!tileLayer) return false;
       return tileLayer.getChildren().length > 0;
-    }, { timeout: 10000 });
+    });
 
     // Zoom in to trigger a level change
     const wrapper = page.locator('.map-canvas-wrapper');
@@ -347,7 +345,6 @@ test.describe('Map Canvas - Tile Update Logic', () => {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     for (let i = 0; i < 8; i++) {
       await page.mouse.wheel(0, -200);
-      await page.waitForTimeout(50);
     }
 
     // After zoom, verify the canvas still has content rendered
@@ -382,12 +379,12 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('.map-loading-overlay')).toBeHidden({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
+    await expect(page.locator('.map-loading-overlay')).toBeHidden();
     await page.waitForFunction(() => {
       const c = document.querySelector('.map-canvas-wrapper canvas');
       return c && c.width > 0 && c.height > 0;
-    }, { timeout: 10000 });
+    });
 
     // Get the Konva stage scale before pinch
     const scaleBefore = await page.evaluate(() => {
@@ -527,11 +524,11 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
     await page.waitForFunction(() => {
       const c = document.querySelector('.map-canvas-wrapper canvas');
       return c && c.width > 0 && c.height > 0;
-    }, { timeout: 10000 });
+    });
 
     // Test drag state toggling during pinch
     const dragStates = await page.evaluate(async () => {
@@ -658,13 +655,13 @@ test.describe('Map Canvas - Touch Gesture Handlers', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
     await page.waitForFunction(() => {
       const c = document.querySelector('.map-canvas-wrapper canvas');
       return c && c.width > 0 && c.height > 0;
-    }, { timeout: 10000 });
+    });
 
-    // Simulate an extreme pinch-out (zoom in a lot) and verify scale is capped at MAX_ZOOM
+    // Simulate an extreme pinch-out(zoom in a lot) and verify scale is capped at MAX_ZOOM
     const scaleAfterExtremePinch = await page.evaluate(async () => {
       const container = document.querySelector('.map-canvas-wrapper .konvajs-content') ||
         document.querySelector('.map-canvas-wrapper');
@@ -783,7 +780,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
   test('renders journey path lines on the map', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Wait for path layer to have Line shapes
     await page.waitForFunction(() => {
@@ -792,7 +789,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
       return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
-    }, { timeout: 10000 });
+    });
 
     // Verify the Konva stage has a path layer with Line shapes
     const pathInfo = await page.evaluate(() => {
@@ -819,7 +816,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
   test('future path line has dashed style with reduced opacity', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Wait for path lines to be created
     await page.waitForFunction(() => {
@@ -828,9 +825,9 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
       return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
-    }, { timeout: 10000 });
+    });
 
-    const futureLineInfo = await page.evaluate(() => {
+    const futureLineInfo= await page.evaluate(() => {
       const stages = window.Konva?.stages;
       if (!stages || stages.length === 0) return null;
       const stage = stages[0];
@@ -861,7 +858,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
   test('path stroke width adjusts with zoom level', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Wait for path lines to be created
     await page.waitForFunction(() => {
@@ -870,7 +867,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
       return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
-    }, { timeout: 10000 });
+    });
 
     // Get initial stroke width
     const strokeBefore = await page.evaluate(() => {
@@ -888,7 +885,6 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     for (let i = 0; i < 8; i++) {
       await page.mouse.wheel(0, -200);
-      await page.waitForTimeout(100);
     }
 
     // Wait for zoom scale to have changed
@@ -900,7 +896,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       const lines = pathLayer.getChildren().filter(c => c.getClassName() === 'Line');
       const currentStroke = lines[0]?.strokeWidth();
       return currentStroke !== undefined && currentStroke !== prevStroke;
-    }, strokeBefore, { timeout: 5000 });
+    }, strokeBefore);
 
     // Get stroke width after zoom
     const strokeAfter = await page.evaluate(() => {
@@ -923,7 +919,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
   test('path lines use listening false for performance', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Wait for path lines to be created
     await page.waitForFunction(() => {
@@ -932,9 +928,9 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
       return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
-    }, { timeout: 10000 });
+    });
 
-    const listeningState = await page.evaluate(() => {
+    const listeningState= await page.evaluate(() => {
       const stages = window.Konva?.stages;
       if (!stages || stages.length === 0) return null;
       const pathLayer = stages[0].getLayers()[1];
@@ -953,7 +949,7 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
   test('path layer is non-listening for performance', async ({ page }) => {
     await page.goto(`${BASE_URL}/map`);
     const canvas = page.locator('.map-canvas-wrapper canvas');
-    await expect(canvas.first()).toBeVisible({ timeout: 15000 });
+    await expect(canvas.first()).toBeVisible();
 
     // Wait for path lines to be created
     await page.waitForFunction(() => {
@@ -962,9 +958,9 @@ test.describe('Map Canvas - Journey Path Rendering', () => {
       const layers = stages[0].getLayers();
       if (layers.length < 2) return false;
       return layers[1].getChildren().filter(c => c.getClassName() === 'Line').length >= 2;
-    }, { timeout: 10000 });
+    });
 
-    const layerListening = await page.evaluate(() => {
+    const layerListening= await page.evaluate(() => {
       const stages = window.Konva?.stages;
       if (!stages || stages.length === 0) return null;
       const pathLayer = stages[0].getLayers()[1];

@@ -115,6 +115,7 @@ function hydrateIslands() {
 
     // Render the island component into the target element
     render(h(IslandComponent, null), element);
+    element.setAttribute('data-hydrated', 'true');
 
     console.log(`✅ Hydrated island: ${islandName}`);
   });

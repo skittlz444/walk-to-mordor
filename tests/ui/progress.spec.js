@@ -197,53 +197,34 @@ test.describe('Progress Tracking', () => {
   });
 
   test('Can create multiple events with random data', async ({ page, authToken }) => {
-    // This test creates multiple events with page reloads between them,
-    // which legitimately takes longer than the default 30s timeout.
+    // This test creates multiple events sequentially, which takes longer.
     test.slow();
 
     await page.waitForLoadState('domcontentloaded');
     
-    // Close any existing popups/overlays that might interfere
-    try {
-      const overlay = page.locator('.mbsc-popup-overlay');
-      if (await overlay.isVisible({ timeout: 1000 })) {
-        await overlay.click();
-        await expect(overlay).toBeHidden({ timeout: 3000 });
-      }
-    } catch (error) {
-      // No overlay to close, continue
-    }
-    
     const events = [];
-    const numEvents = 2; // Try for 2 events, but accept 1 for Mobile Firefox
+    const numEvents = 2;
     
-    // Create multiple events with different random data
     for (let i = 0; i < numEvents; i++) {
       try {
-        // Close any popups before each event creation
-        try {
-          const popup = page.locator('.mbsc-popup, .modal');
-          if (await popup.isVisible({ timeout: 500 })) {
+        // Close any goal congratulation popups from previous events
+        const goalPopup = page.locator('.modal-overlay');
+        if (await goalPopup.isVisible({ timeout: 1000 })) {
+          const closeBtn = page.locator('text=Close').last();
+          if (await closeBtn.isVisible({ timeout: 1000 })) {
+            await closeBtn.click();
+          } else {
             await page.keyboard.press('Escape');
-            await expect(popup).toBeHidden({ timeout: 3000 });
           }
-        } catch (e) {
-          // No popup to close
-        }
-        
-        // For second event, refresh page to reset state in Mobile Firefox
-        if (i > 0) {
-          await page.goto('http://localhost:8787/');
-          await page.waitForLoadState('domcontentloaded');
+          await goalPopup.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
         }
         
         const eventData = await createTestEvent(page);
         events.push(eventData);
         
-        // Wait for event to be processed
+        // Wait for the event to be reflected in the UI
         await page.waitForLoadState('domcontentloaded');
       } catch (error) {
-        // For Mobile Firefox, accept partial success
         break;
       }
     }
@@ -253,7 +234,7 @@ test.describe('Progress Tracking', () => {
     
     // Clean up all test events using the cleanup helper
     try {
-      await cleanupAllTestData('http://localhost:8787', authToken);
+      await cleanupAllTestData('http://127.0.0.1:8787', authToken);
     } catch (error) {
       console.log("Cleanup helper failed, but test still passed");
     }

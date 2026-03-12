@@ -16,7 +16,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(menuButton).toBeVisible();
 
     await menuButton.click();
-    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.waitForSelector('body.drawer-open');
 
     await expect(page.locator('.drawer-link', { hasText: 'Journey' })).toBeVisible();
     await expect(page.locator('.drawer-link', { hasText: 'Map' })).toBeVisible();
@@ -26,7 +26,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await page.waitForURL((url) => {
       return url.pathname.endsWith('/journey') || url.pathname.endsWith('/login');
     });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     if (page.url().endsWith('/login')) {
       await page.evaluate((token) => {
@@ -34,26 +34,26 @@ test.describe('Map Shell (Authenticated)', () => {
       }, authToken);
       await page.goto(`${BASE_URL}/journey`);
       await page.waitForURL('**/journey');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     }
 
     const menuIcon = page.locator('.menu-icon');
     await expect(menuIcon).toBeVisible();
     await menuIcon.click();
-    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.waitForSelector('body.drawer-open');
     await page.click('.drawer-link:has-text("Map")');
     await page.waitForURL('**/map');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(menuIcon).toBeVisible();
     await menuIcon.click();
-    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.waitForSelector('body.drawer-open');
     const profileButton = page.locator('.drawer-profile');
     await expect(profileButton).toBeVisible();
     await expect(profileButton).toBeEnabled();
     await profileButton.click();
 
-    await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.modal-overlay')).toBeVisible();
   });
 
   test('drawer opens and closes via backdrop and escape', async ({ page }) => {
@@ -64,7 +64,7 @@ test.describe('Map Shell (Authenticated)', () => {
     const drawer = page.locator('.side-drawer');
 
     await menuButton.click();
-    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.waitForSelector('body.drawer-open');
     await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
     await expect(drawer).toHaveAttribute('aria-hidden', 'false');
 
@@ -74,7 +74,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(drawer).toHaveAttribute('aria-hidden', 'true');
 
     await menuButton.click();
-    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.waitForSelector('body.drawer-open');
     await page.keyboard.press('Escape');
     await expect(page.locator('body')).not.toHaveClass(/drawer-open/);
   });
@@ -107,7 +107,7 @@ test.describe('Map Shell (Authenticated)', () => {
     // Initially, menu button should not have focus (page just loaded)
     // Open the drawer
     await menuButton.click();
-    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.waitForSelector('body.drawer-open');
 
     // Focus should move to the close button inside the drawer
     await expect(closeButton).toBeFocused();
@@ -121,7 +121,7 @@ test.describe('Map Shell (Authenticated)', () => {
 
     // Open drawer again
     await menuButton.click();
-    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.waitForSelector('body.drawer-open');
 
     // Focus should move to close button again
     await expect(closeButton).toBeFocused();
@@ -135,7 +135,7 @@ test.describe('Map Shell (Authenticated)', () => {
 
     // Open drawer once more
     await menuButton.click();
-    await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+    await page.waitForSelector('body.drawer-open');
 
     // Focus should move to close button
     await expect(closeButton).toBeFocused();

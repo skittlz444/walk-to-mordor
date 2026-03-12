@@ -14,8 +14,8 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
  * so we wait for both conditions sequentially.
  */
 async function waitForMapReady(page) {
-  await page.waitForSelector('.map-loading-overlay', { state: 'hidden', timeout: 15000 });
-  await page.waitForSelector('.map-walk-button', { state: 'visible', timeout: 15000 });
+  await page.waitForSelector('[data-island="MapIsland"][data-hydrated="true"]');
+  await page.waitForSelector('.map-walk-button', { state: 'visible' });
 }
 
 test.describe('Map Walk Logging (Story 2.8)', () => {
@@ -67,7 +67,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
       // Calendar sheet should appear
       const calendarSheet = page.locator('#map-calendar-sheet');
-      await expect(calendarSheet).toBeVisible({ timeout: 5000 });
+      await expect(calendarSheet).toBeVisible();
       await expect(calendarSheet).toHaveClass(/open/);
     });
 
@@ -103,10 +103,10 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
       // Click close button
       await page.locator('#sheet-close-btn').click();
-      await expect(page.locator('#map-calendar-sheet')).toBeHidden({ timeout: 2000 });
+      await expect(page.locator('#map-calendar-sheet')).toBeHidden();
     });
 
-    test('calendar sheet is dismissible via ESC key', async ({ page }) => {
+    test('calendar sheet is dismissible via ESC key',async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
       await waitForMapReady(page);
 
@@ -119,7 +119,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
       // Press ESC
       await page.keyboard.press('Escape');
-      await expect(page.locator('#map-calendar-sheet')).toBeHidden({ timeout: 3000 });
+      await expect(page.locator('#map-calendar-sheet')).toBeHidden();
     });
 
     test('calendar sheet has view toggle buttons', async ({ page }) => {
@@ -150,7 +150,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
       // Distance modal should appear
       const modal = page.locator('.modal-overlay');
-      await expect(modal).toBeVisible({ timeout: 5000 });
+      await expect(modal).toBeVisible();
 
       // Should have distance input
       const distanceInput = page.locator('#distance-input');
@@ -183,10 +183,10 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
       // Close with ESC
       await page.keyboard.press('Escape');
-      await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 2000 });
+      await expect(page.locator('.modal-overlay')).toBeHidden();
     });
 
-    test('can cancel modal with Cancel button', async ({ page }) => {
+    test('can cancel modal with Cancel button',async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
       await waitForMapReady(page);
 
@@ -197,11 +197,11 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
 
       // Click Cancel
       await page.locator('#cancel-btn').click();
-      await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 2000 });
+      await expect(page.locator('.modal-overlay')).toBeHidden();
     });
   });
 
-  test.describe('Walk Entry Submission', () => {
+  test.describe('Walk Entry Submission',() => {
     test('can enter distance and save', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
       await waitForMapReady(page);
@@ -219,7 +219,7 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
       await page.locator('#save-btn').click();
 
       // Modal should close
-      await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 5000 });
+      await expect(page.locator('.modal-overlay')).toBeHidden();
     });
 
     test('quick entry buttons update distance', async ({ page }) => {

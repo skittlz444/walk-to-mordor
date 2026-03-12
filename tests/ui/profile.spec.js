@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect, setupTest } = require('./helpers/common');
+const { test, expect, setupTest, waitForAuthenticated } = require('./helpers/common');
 
 // Helper to properly close popup with Firefox compatibility
 async function closePopupRobust(page, closeButton) {
@@ -15,38 +15,14 @@ async function closePopupRobust(page, closeButton) {
     const popup = document.querySelector('.modal-overlay');
     return !popup || window.getComputedStyle(popup).display === 'none' || 
            popup.style.display === 'none' || !popup.offsetParent;
-  }, { timeout: 10000 });
+  });
   
-  await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 5000 });
+  await expect(page.locator('.modal-overlay')).toBeHidden();
 }
 
 async function waitForProfileSave(page) {
-    await page.waitForFunction(() => {
-        const success = document.querySelector('.success-message');
-        const modal = document.querySelector('.modal-overlay');
-
-        const successVisible = !!success &&
-            window.getComputedStyle(success).display !== 'none' &&
-            (success.textContent || '').includes('Profile updated successfully');
-
-        const modalHidden = !modal ||
-            window.getComputedStyle(modal).display === 'none' ||
-            modal.style.display === 'none' ||
-            !modal.offsetParent;
-
-        return successVisible || modalHidden;
-    }, { timeout: 20000 });
-
-    const modal = page.locator('.modal-overlay');
-    if (await modal.isVisible().catch(() => false)) {
-        const closeButton = page.locator('#close-profile-modal');
-        if (await closeButton.isVisible().catch(() => false)) {
-            await closePopupRobust(page, closeButton);
-        } else {
-            await page.keyboard.press('Escape');
-            await expect(modal).toBeHidden({ timeout: 10000 });
-        }
-    }
+    // Wait for modal to close after save
+    await expect(page.locator('.modal-overlay')).toBeHidden();
 }
 
 async function waitForProfileFormReady(page) {
@@ -107,13 +83,12 @@ async function setFieldValueRobust(page, selector, value) {
  * UI Tests - Profile Modal Functionality
  */
 test.describe('User Profile Modal', () => {
-    test.setTimeout(30000);
     const menuSelector = '.menu-icon';
     const profileDrawerSelector = '.drawer-profile';
 
     async function openProfileFromDrawer(page) {
         await page.click(menuSelector);
-        await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+        await page.waitForSelector('body.drawer-open');
         const profileButton = page.locator(profileDrawerSelector);
         await expect(profileButton).toBeVisible();
         await expect(profileButton).toBeEnabled();
@@ -122,7 +97,7 @@ test.describe('User Profile Modal', () => {
 
     test.beforeEach(async ({ page, authToken }) => {
         await setupTest({ page, authToken });
-        await page.waitForSelector('header', { timeout: 10000 });
+        await waitForAuthenticated(page);
     });
 
     test('should display menu button in header', async ({ page }) => {
@@ -180,14 +155,14 @@ test.describe('User Profile Modal', () => {
         await page.click('.modal-overlay', { position: { x: 5, y: 5 }, force: true });
 
         // Verify modal is closed
-        await expect(page.locator('.modal-overlay')).not.toBeVisible({ timeout: 10000 });
+        await expect(page.locator('.modal-overlay')).not.toBeVisible();
         
         // Robust wait for Firefox
         await page.waitForFunction(() => {
           const popup = document.querySelector('.modal-overlay');
           return !popup || window.getComputedStyle(popup).display === 'none' || 
                  popup.style.display === 'none' || !popup.offsetParent;
-        }, { timeout: 10000 });
+        });
     });
 
     test('should display current username and email in form fields', async ({ page, authToken }) => {
@@ -250,7 +225,7 @@ test.describe('User Profile Modal', () => {
         // Reopen modal to verify update
         await openProfileFromDrawer(page);
         await expect(page.locator('.modal-overlay')).toBeVisible();
-        await expect(page.locator('#profile-email')).toHaveValue(newEmail, { timeout: 10000 });
+        await expect(page.locator('#profile-email')).toHaveValue(newEmail);
     });
 
     test('should update both username and email successfully', async ({ page }) => {
@@ -313,7 +288,7 @@ test.describe('User Profile Modal', () => {
                 : '';
 
             return errorText.includes('invalid email format') || hasTypeMismatch || validationMessage.includes('email');
-        }, { timeout: 10000 });
+        });
     });
 
     test('should show error for invalid username format', async ({ page }) => {
@@ -338,7 +313,7 @@ test.describe('User Profile Modal', () => {
         await page.waitForFunction(() => {
             const error = document.querySelector('.error-message');
             return error && error.textContent && error.textContent.includes('Invalid username');
-        }, { timeout: 10000 });
+        });
     });
 
     test('should show error when no fields are provided', async ({ page }) => {
@@ -377,7 +352,7 @@ test.describe('User Profile Modal', () => {
                 (emailInput instanceof HTMLInputElement && !!emailInput.validationMessage);
 
             return errorText.includes('at least one field') || hasNativeValidation;
-        }, { timeout: 10000 });
+        });
     });
 
     test('should have logout button in profile modal', async ({ page }) => {

@@ -26,9 +26,8 @@ async function closePopupRobust(page, closeButton) {
       const overlay = document.querySelector('.modal-overlay');
       return !overlay || window.getComputedStyle(overlay).display === 'none' || 
              overlay.style.display === 'none' || !overlay.offsetParent;
-    }, { timeout: 10000 });
+    });
   } catch (e) {
-    // Fallbacks if the close button click did not dismiss the modal.
     try {
       await page.keyboard.press('Escape');
     } catch (err) {}
@@ -42,7 +41,7 @@ async function closePopupRobust(page, closeButton) {
 
 // Helper to open first available goal popup
 async function openFirstAvailableGoalPopup(page) {
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   
   // Wait for goals to load
   await expect(page.locator('#goals-list')).toBeVisible();
@@ -69,15 +68,13 @@ async function openFirstAvailableGoalPopup(page) {
 }
 
 test.describe('Goals Functionality', () => {
-  // Set longer timeout for tests that might have slow loading
-  test.setTimeout(30000);
-
   test.beforeEach(async ({ page, authToken }) => {
     await setupTest({ page, authToken });
   });
 
   test('Goal popup images load correctly', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    // Wait for goals to render (populated via API fetch after auth)
+    await page.waitForSelector('.upcoming-goal, .completed-goal, .goal-header-main, #last-goal', { timeout: 10000 });
     
     // Look for goal-related elements using the patterns from edge cases test
     const goalSelectors = [
@@ -137,7 +134,7 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goal popup shows congratulations when user passes a goal by adding distance', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Close any existing popups first
     try {
@@ -238,7 +235,7 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goal popup opens for upcoming goals and shows correct content', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Wait for goals to load and find the first visible goal (upcoming or any goal)
     await expect(page.locator('#goals-list')).toBeVisible();
@@ -291,7 +288,7 @@ test.describe('Goals Functionality', () => {
         const popup = document.querySelector('.modal-overlay');
         return !popup || window.getComputedStyle(popup).display === 'none' || 
                popup.style.display === 'none' || !popup.offsetParent;
-      }, { timeout: 10000 });
+      });
       
       await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 5000 });
     }
@@ -327,7 +324,7 @@ test.describe('Goals Functionality', () => {
     const addButton = page.locator('text=Add');
     if (await addButton.isVisible({ timeout: 5000 })) {
       await addButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     }
     
     // Wait for goals to load
@@ -390,7 +387,8 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goal popup opens from header goals', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    // Wait for goals to render (populated via API fetch after auth)
+    await page.waitForSelector('#goals-list .upcoming-goal, #goals-list .completed-goal, .goal-header-main', { timeout: 10000 });
     
     // Check if there's already a header goal visible without adding distance
     const headerGoal = page.locator('.goal-header-main').first();
@@ -442,7 +440,7 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goal popup displays special milestone and description', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Check if there are upcoming goals available
     await expect(page.locator('#goals-list')).toBeVisible();
@@ -500,7 +498,7 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goal popup shows distance information correctly', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Test any available goal without adding distance first
     await expect(page.locator('#goals-list')).toBeVisible();
@@ -621,7 +619,7 @@ test.describe('Goals Functionality', () => {
       }
     });
 
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.locator('#goals-list')).toBeVisible();
     
     // Should have no image requests yet
@@ -699,7 +697,7 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goal popup does not show congratulations when opened manually', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for goals to load
     await expect(page.locator('#goals-list')).toBeVisible();
@@ -744,7 +742,7 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Only the highest passed goal shows when multiple goals are passed', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify page loaded with goals
     await expect(page.locator('#goals-list')).toBeVisible();
@@ -802,7 +800,7 @@ test.describe('Goals Functionality', () => {
   // Story 1.8: Next Goal Emphasis and Progress Bar Tests
   test.describe('Next Goal Visual Emphasis', () => {
     test('Next upcoming goal has .next-goal class and visual emphasis', async ({ page }) => {
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       
       // Wait for goals to load
       await expect(page.locator('#goals-list')).toBeVisible();
@@ -832,7 +830,7 @@ test.describe('Goals Functionality', () => {
     });
 
     test('Next goal displays progress bar with correct structure', async ({ page }) => {
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       
       // Wait for goals to load
       await expect(page.locator('#goals-list')).toBeVisible();
@@ -860,7 +858,7 @@ test.describe('Goals Functionality', () => {
     });
 
     test('Progress bar width reflects segment progress percentage', async ({ page }) => {
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       
       // Wait for goals to load
       await expect(page.locator('#goals-list')).toBeVisible();
@@ -914,7 +912,8 @@ test.describe('Goals Functionality', () => {
     });
 
     test('Progress bar handles edge case: first goal with no previous milestone', async ({ page }) => {
-      await page.waitForLoadState('networkidle');
+      // Wait for goals to render before checking progress elements
+      await page.waitForSelector('.upcoming-goal.next-goal', { timeout: 10000 });
       
       // Get current progress and goals
       const { totalDistance, goals } = await page.evaluate(async () => {
@@ -954,7 +953,7 @@ test.describe('Goals Functionality', () => {
       // Set mobile viewport (AC5)
       await page.setViewportSize({ width: 375, height: 667 }); // iPhone SE size
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       
       // Wait for goals to load
       await expect(page.locator('#goals-list')).toBeVisible();
