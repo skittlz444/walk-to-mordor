@@ -2,13 +2,9 @@
  * UserMarker – renders the user's current position marker on the Konva map.
  *
  * Uses Konva's imperative API (react-konva is incompatible with preact/compat).
- * The marker is a gold ring shape (fallback for the One Ring icon) that:
- *   - Maintains constant visual size via inverse scaling
- *   - Shows a tooltip on hover/tap with "Current Location: X km"
- *   - Animates smoothly to new positions along the path
- *
- * When the One Ring icon (public/img/one-ring.png) is available, it loads
- * as the marker image. Otherwise, a styled gold circle is used as fallback.
+ * The marker prefers the current user's avatar thumbnail when available and
+ * falls back to the existing gold ring treatment when no avatar is set or the
+ * thumbnail fails to load.
  */
 
 import Konva from 'konva';
@@ -38,8 +34,9 @@ const TOOLTIP_TEXT_COLOR = '#e0e0e0';
 /** Animation duration for position transitions in milliseconds */
 const ANIMATION_DURATION_MS = 400;
 
-/** Icon image path */
-const ICON_PATH = '/img/one-ring.png';
+function getAvatarThumbPath(avatarId: string): string {
+  return `/img/avatars/thumbs/${avatarId}.webp`;
+}
 
 export interface UserMarkerNodes {
   group: Konva.Group;
@@ -57,31 +54,13 @@ export interface UserMarkerNodes {
 }
 
 /**
- * Attempt to load the One Ring icon image.
- * Returns null if loading fails (fallback shapes are used instead).
- */
-function loadMarkerIcon(): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => {
-      console.warn(
-        `[UserMarker] Could not load icon at ${ICON_PATH}. Using fallback shape. ` +
-        'Add the One Ring icon to public/img/one-ring.png to use the custom icon.',
-      );
-      resolve(null);
-    };
-    img.src = ICON_PATH;
-  });
-}
-
-/**
  * Create the user position marker on a Konva layer.
  *
  * @param layer       The Konva layer to add the marker to.
  * @param position    Initial {x, y} position in map coordinates.
  * @param stageScale  Current zoom scale (for inverse scaling).
  * @param distanceMiles  User's current distance in miles (for tooltip).
+ * @param avatarId    Optional current-user avatar slug for thumbnail rendering.
  * @returns UserMarkerNodes with references and control methods.
  */
 export function createUserMarker(
@@ -89,8 +68,10 @@ export function createUserMarker(
   position: Point,
   stageScale: number,
   distanceMiles: number,
+  avatarId?: string | null,
 ): UserMarkerNodes {
   const scale = userMarkerScale(stageScale);
+  const destroyedRef = { current: false };
 
   // Main group positioned at the user's location
   const group = new Konva.Group({
@@ -135,24 +116,9 @@ export function createUserMarker(
   });
   group.add(innerRing);
 
-  // Try to load the icon image and replace the fallback
-  let markerImage: Konva.Image | null = null;
-  loadMarkerIcon().then((img) => {
-    if (img) {
-      markerCircle.visible(false);
-      innerRing.visible(false);
-      markerImage = new Konva.Image({
-        image: img,
-        x: -MARKER_HALF,
-        y: -MARKER_HALF,
-        width: MARKER_SIZE,
-        height: MARKER_SIZE,
-      });
-      // Insert before the halo so the image sits on top
-      group.add(markerImage);
-      layer.batchDraw();
-    }
-  });
+  let pendingImage: HTMLImageElement | null = null;
+  let avatarClipGroup: Konva.Group | null = null;
+  let avatarBorder: Konva.Circle | null = null;
 
   // Tooltip (hidden by default)
   const tooltip = new Konva.Label({
@@ -184,6 +150,50 @@ export function createUserMarker(
   });
   tooltip.add(tooltipText);
   group.add(tooltip);
+
+  if (avatarId) {
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    pendingImage = img;
+    img.onload = () => {
+      pendingImage = null;
+      if (destroyedRef.current) return;
+
+      markerCircle.visible(false);
+      innerRing.visible(false);
+
+      const avatarImage = new Konva.Image({
+        image: img,
+        x: -MARKER_HALF + 2,
+        y: -MARKER_HALF + 2,
+        width: MARKER_SIZE - 4,
+        height: MARKER_SIZE - 4,
+      });
+
+      avatarClipGroup = new Konva.Group({
+        clipFunc: (ctx: Konva.Context) => {
+          ctx.arc(0, 0, MARKER_HALF - 2, 0, Math.PI * 2, false);
+        },
+      });
+      avatarClipGroup.add(avatarImage);
+      group.add(avatarClipGroup);
+      avatarBorder = new Konva.Circle({
+        x: 0,
+        y: 0,
+        radius: MARKER_HALF,
+        stroke: RING_STROKE_COLOR,
+        strokeWidth: 2,
+        fill: 'transparent',
+      });
+      group.add(avatarBorder);
+      tooltip.moveToTop();
+      layer.batchDraw();
+    };
+    img.onerror = () => {
+      pendingImage = null;
+    };
+    img.src = getAvatarThumbPath(avatarId);
+  }
 
   // Interactivity: show tooltip on hover/tap
   group.on('mouseenter', () => {
@@ -303,6 +313,14 @@ export function createUserMarker(
     },
 
     destroy() {
+      destroyedRef.current = true;
+      if (pendingImage) {
+        pendingImage.onload = null;
+        pendingImage.onerror = null;
+        pendingImage = null;
+      }
+      avatarClipGroup = null;
+      avatarBorder = null;
       haloAnim.stop();
       group.destroy();
     },
