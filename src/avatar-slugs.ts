@@ -3,7 +3,7 @@
  *
  * Each slug maps to:
  *   - Full image:  /img/avatars/{slug}.webp
- *   - Thumbnail:   /img/avatars/thumbs/{slug}.webp  (32×32)
+ *   - Thumbnail:   /img/avatars/thumbs/{slug}.webp  (64×64)
  *
  * Avatar assets are repository-backed static files served from public/.
  * Do NOT add user-uploaded avatars or R2 storage — keep this pipeline.
