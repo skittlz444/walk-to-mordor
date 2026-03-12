@@ -64,9 +64,12 @@ Typical response fields:
   "email": "sam@example.com",
   "showFutureGoalsUnlocked": true,
   "defaultViewMap": false,
+  "avatarId": "gandalf-grey",
   "expiresAt": "2026-03-07T..."
 }
 ```
+
+`avatarId` is `null` when the user has not selected an avatar (initials fallback).
 
 ### `PUT /api/profile`
 
@@ -76,10 +79,25 @@ Updates profile properties (username/email/password fields as supported by handl
 
 Updates user preferences.
 
-Body:
+Body (all fields optional, at least one required):
 
 ```json
-{ "showFutureGoalsUnlocked": true, "defaultViewMap": false }
+{ "showFutureGoalsUnlocked": true, "defaultViewMap": false, "avatarId": "frodo" }
+```
+
+- `avatarId` must be a valid slug from `GET /api/avatars`, or `null` to clear.
+- Returns 400 with `"Invalid avatar_id"` for unknown slugs.
+
+### `GET /api/avatars`
+
+Returns the list of valid avatar slugs. Requires authentication.
+
+The response is sourced from `src/avatar-slugs.ts` and should stay aligned with the checked-in WebP assets under `public/img/avatars/` and `public/img/avatars/thumbs/`.
+
+Response:
+
+```json
+["aragorn", "arwen", "bilbo", "boromir", ...]
 ```
 
 ### `POST /api/password-reset-request`
@@ -238,6 +256,8 @@ Body:
 
 ### `POST /api/party/:id/invite-friend`
 
+> **Implementation note (Story 6.3):** The fellowship invite endpoints below through `POST /api/user/fellowship-invites/:inviteId/reject` are implemented. Self-invite is rejected with `400`. Duplicate pending invites return `400`; UNIQUE constraint race conditions return `409`.
+
 Invite a friend to a fellowship. The friend must accept to join.
 
 Auth: Required (must be active member of party).
@@ -297,6 +317,8 @@ Auth: Required (must be the invitee).
 
 ## Friends Endpoints
 
+> **Implementation note (Story 6.2):** The endpoints below through `DELETE /api/friends/:friendshipId` are implemented. `GET /api/friends/positions` and `GET /api/friends/:userId/profile` are planned for later stories.
+
 ### `GET /api/friends`
 
 Returns the current user's accepted friends list.
@@ -309,8 +331,7 @@ Response:
 {
   "friends": [
     {
-      "friendship_id": 1,
-      "user_id": 42,
+      "id": 1,
       "username": "samwise",
       "avatar_id": "samwise",
       "last_progressed": "2026-03-08"
@@ -319,11 +340,11 @@ Response:
 }
 ```
 
-`last_progressed` is the date of the friend's most recent progress entry (null if no walks logged).
+`id` is the friendship record ID (used for unfriending). `last_progressed` is the date of the friend's most recent progress entry (null if no walks logged). Computed in a single grouped SQL query to avoid N+1.
 
 ### `GET /api/friends/pending`
 
-Returns pending incoming friend requests.
+Returns pending incoming friend requests (where the current user is the addressee).
 
 Auth: Required.
 
@@ -331,10 +352,9 @@ Response:
 
 ```json
 {
-  "requests": [
+  "pending": [
     {
-      "friendship_id": 5,
-      "user_id": 99,
+      "id": 5,
       "username": "legolas",
       "avatar_id": null,
       "created_at": "2026-03-09T10:00:00Z"
@@ -343,6 +363,8 @@ Response:
   "count": 1
 }
 ```
+
+`id` is the friendship record ID (used for accept/reject). `count` equals `pending.length`.
 
 ### `GET /api/friends/search?q=<username>`
 
@@ -356,7 +378,7 @@ Response:
 {
   "results": [
     {
-      "user_id": 42,
+      "id": 42,
       "username": "samwise",
       "avatar_id": "samwise",
       "friendship_status": "accepted"
@@ -365,27 +387,29 @@ Response:
 }
 ```
 
-`friendship_status`: `null` (no relationship), `"pending"` (request exists), `"accepted"` (already friends). Excludes current user. Limit 10 results.
+`id` is the user's ID (used for sending a friend request). `friendship_status`: `null` (no relationship), `"pending"` (request exists), `"accepted"` (already friends). Excludes current user. Limit 10 results. Wildcards (`%`, `_`) are escaped in the LIKE query.
 
 ### `GET /api/friends/resolve/:friendCode`
 
-Resolve a friend code to a user preview. Used by the friend link landing page.
+Resolve a friend code to a user preview.
 
-Auth: Not required (public preview).
+Auth: Required.
 
 Response:
 
 ```json
 {
-  "user_id": 42,
+  "id": 42,
   "username": "samwise",
   "avatar_id": "samwise"
 }
 ```
 
-Errors: `404` (invalid friend code).
+Errors: `400` (invalid friend code format), `404` (unknown friend code).
 
 ### `GET /api/friends/positions`
+
+> **Not yet implemented — planned for a later Story 6.x.**
 
 Returns each friend's total distance for map position interpolation.
 
@@ -420,9 +444,15 @@ Body:
 { "user_id": 42 }
 ```
 
-Returns `201` with friendship record. Errors: `400` (already friends/pending, self-add), `404` (user not found).
+Response (`201`):
 
-Rate limit: max 20 outgoing pending requests at any time.
+```json
+{ "friendship_id": 1, "status": "pending" }
+```
+
+Errors: `400` (already friends/pending, self-add, invalid user_id), `404` (user not found), `429` (rate limit exceeded).
+
+Rate limit: max 20 outgoing pending requests at any time. Bidirectional duplicate check prevents reverse-direction duplicate rows.
 
 ### `POST /api/friends/request/code`
 
@@ -436,7 +466,13 @@ Body:
 { "friend_code": "Ab3xK9mZ" }
 ```
 
-Resolves code to user and creates pending friendship. Same validation and rate limits as `POST /api/friends/request`.
+Response (`201`):
+
+```json
+{ "friendship_id": 1, "status": "pending" }
+```
+
+Resolves code to user and creates pending friendship. Same validation and rate limits as `POST /api/friends/request`. Errors: `400` (invalid code format, self-add, duplicate), `404` (unknown code).
 
 ### `POST /api/friends/:friendshipId/accept`
 
@@ -444,11 +480,27 @@ Accept a pending friend request. Only the addressee can accept.
 
 Auth: Required.
 
+Response:
+
+```json
+{ "status": "accepted" }
+```
+
+Errors: `400` (not pending, invalid ID), `403` (not the addressee), `404` (friendship not found).
+
 ### `POST /api/friends/:friendshipId/reject`
 
 Reject a pending friend request. Deletes the friendship record. Only the addressee can reject.
 
 Auth: Required.
+
+Response:
+
+```json
+{ "status": "rejected" }
+```
+
+Errors: `400` (not pending, invalid ID), `403` (not the addressee), `404` (friendship not found).
 
 ### `DELETE /api/friends/:friendshipId`
 
@@ -456,9 +508,19 @@ Remove an existing friend (mutual unfriend). Deletes the friendship record. Eith
 
 Auth: Required.
 
+Response:
+
+```json
+{ "status": "removed" }
+```
+
+Errors: `400` (not accepted, invalid ID), `403` (not a party to the friendship), `404` (friendship not found).
+
 IDOR prevention: all friendship operations validate the current user is a party to the friendship record.
 
 ### `GET /api/friends/:userId/profile`
+
+> **Not yet implemented — planned for a later Story 6.x.**
 
 Returns a friend's profile details. Only accessible for accepted friends (returns 404 for non-friends — privacy enforcement).
 

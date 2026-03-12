@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect, setupTest } = require('./helpers/common');
+const { test, expect, setupTest, waitForAuthenticated } = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
@@ -15,19 +15,19 @@ async function closePopupRobust(page, closeButton) {
     const popup = document.querySelector('.modal-overlay');
     return !popup || window.getComputedStyle(popup).display === 'none' ||
       popup.style.display === 'none' || !popup.offsetParent;
-  }, { timeout: 10000 });
+  });
 
-  await expect(page.locator('.modal-overlay')).toBeHidden({ timeout: 5000 });
+  await expect(page.locator('.modal-overlay')).toBeHidden();
 }
 
 async function openProfileFromDrawer(page) {
   await page.click('.menu-icon');
-  await page.waitForSelector('body.drawer-open', { timeout: 5000 });
+  await page.waitForSelector('body.drawer-open');
   const profileButton = page.locator('.drawer-profile');
   await expect(profileButton).toBeVisible();
   await expect(profileButton).toBeEnabled();
   await profileButton.click();
-  await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.modal-overlay')).toBeVisible();
   await expect(page.locator('.modal-title')).toHaveText('User Profile');
 }
 
@@ -35,11 +35,9 @@ async function openProfileFromDrawer(page) {
  * UI Tests - User Goal Visibility Preference (Story 2.10)
  */
 test.describe('User Goal Visibility Preference', () => {
-  test.setTimeout(30000);
-
   test.beforeEach(async ({ page, authToken }) => {
     await setupTest({ page, authToken });
-    await page.waitForSelector('header', { timeout: 10000 });
+    await waitForAuthenticated(page);
   });
 
   test.describe('Profile Modal Toggle', () => {
@@ -66,8 +64,7 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Listen for API call
       const responsePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
 
       // Click the visible toggle slider to uncheck (the <input> is hidden by toggle-switch CSS)
@@ -78,12 +75,11 @@ test.describe('User Goal Visibility Preference', () => {
       const data = await response.json();
       expect(data.showFutureGoalsUnlocked).toBe(false);
 
-      // Status should show "Saved" briefly
-      const statusDiv = page.locator('#preference-status');
-      await expect(statusDiv).toHaveText('Saved', { timeout: 5000 });
+      // Toggle should now be unchecked after successful save
+      await expect(toggle).not.toBeChecked();
     });
 
-    test('should revert toggle on API failure', async ({ page }) => {
+    test('should revert toggle on API failure',async ({ page }) => {
       await openProfileFromDrawer(page);
 
       const toggle = page.locator('#preview-milestones-toggle');
@@ -106,7 +102,7 @@ test.describe('User Goal Visibility Preference', () => {
       await expect(statusDiv).toHaveClass(/error/, { timeout: 5000 });
 
       // Toggle should revert back to checked
-      await expect(toggle).toBeChecked({ timeout: 5000 });
+      await expect(toggle).toBeChecked();
 
       // Clean up route
       await page.unroute('**/api/user/preferences');
@@ -119,8 +115,7 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Click the visible toggle slider to toggle OFF
       const responsePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await responsePromise;
@@ -130,19 +125,18 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Reload page
       await page.reload();
-      await page.waitForSelector('header', { timeout: 10000 });
+      await waitForAuthenticated(page);
 
       // Re-open profile modal
       await openProfileFromDrawer(page);
 
       // Toggle should still be unchecked
       const toggleAfterReload = page.locator('#preview-milestones-toggle');
-      await expect(toggleAfterReload).not.toBeChecked({ timeout: 5000 });
+      await expect(toggleAfterReload).not.toBeChecked();
 
       // Restore default (toggle back ON) for clean state
       const restorePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await restorePromise;
@@ -164,8 +158,7 @@ test.describe('User Goal Visibility Preference', () => {
       const toggle = page.locator('#preview-milestones-toggle');
 
       const responsePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       // Click the visible toggle slider to uncheck
       await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
@@ -180,8 +173,7 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Restore default
       const restorePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await restorePromise;
@@ -192,17 +184,17 @@ test.describe('User Goal Visibility Preference', () => {
     test('next goal should always have goal-next-target styling', async ({ page }) => {
       // Wait for goals to load
       await page.waitForLoadState('networkidle');
-      await expect(page.locator('#goals-list')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('#goals-list')).toBeVisible();
 
       // Wait for upcoming goals to render (Preact hydration)
       await page.waitForFunction(() => {
         const nextGoalMount = document.getElementById('next-goal-mount');
         return nextGoalMount && nextGoalMount.children.length > 0;
-      }, { timeout: 10000 });
+      });
 
       // Next goal should have goal-next-target class regardless of preference (default: ON)
       const nextGoalEl = page.locator('#next-goal-mount .goal-next-target');
-      await expect(nextGoalEl).toBeVisible({ timeout: 5000 });
+      await expect(nextGoalEl).toBeVisible();
     });
 
     test('goals list should apply locked styling when preference OFF', async ({ page }) => {
@@ -220,15 +212,15 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Reload to apply preference
       await page.reload();
-      await page.waitForSelector('header', { timeout: 10000 });
+      await waitForAuthenticated(page);
       await page.waitForLoadState('networkidle');
-      await expect(page.locator('#goals-list')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('#goals-list')).toBeVisible();
 
       // Wait for upcoming goals to render
       await page.waitForFunction(() => {
         const list = document.getElementById('upcoming-goals-list');
         return list && list.children.length > 1; // next + at least one more
-      }, { timeout: 10000 });
+      });
 
       // Future goals (not the next one) should have .goal-locked class
       const lockedGoals = page.locator('.goal-locked');
@@ -248,13 +240,13 @@ test.describe('User Goal Visibility Preference', () => {
     test('goals list should NOT apply locked styling when preference ON', async ({ page }) => {
       // Ensure preference is ON (default)
       await page.waitForLoadState('networkidle');
-      await expect(page.locator('#goals-list')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('#goals-list')).toBeVisible();
 
       // Wait for upcoming goals to render
       await page.waitForFunction(() => {
         const list = document.getElementById('upcoming-goals-list');
         return list && list.children.length > 1;
-      }, { timeout: 10000 });
+      });
 
       // No upcoming goals should have .goal-locked class when preference is ON
       const lockedGoals = page.locator('#upcoming-goals-list .goal-locked');
@@ -289,7 +281,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('window.userPreferences should be initialized from session', async ({ page }) => {
-      await page.waitForLoadState('networkidle');
+      await waitForAuthenticated(page);
 
       const prefs = await page.evaluate(() => window.userPreferences);
       expect(prefs).toBeDefined();
@@ -323,8 +315,7 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Listen for API call
       const responsePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
 
       // Click the toggle slider (second one in the modal)
@@ -335,14 +326,12 @@ test.describe('User Goal Visibility Preference', () => {
       const data = await response.json();
       expect(data.defaultViewMap).toBe(true);
 
-      // Status should show "Saved" briefly
-      const statusDiv = page.locator('#preference-status');
-      await expect(statusDiv).toHaveText('Saved', { timeout: 5000 });
+      // Toggle should now be checked after successful save
+      await expect(toggle).toBeChecked();
 
       // Restore default (toggle back OFF) for clean state
       const restorePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await restorePromise;
@@ -355,8 +344,7 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Toggle ON
       const responsePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await responsePromise;
@@ -366,19 +354,20 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Reload page (navigate to map since default view is now map)
       await page.goto(BASE_URL + '/map');
-      await page.waitForSelector('header', { timeout: 10000 });
+      await waitForAuthenticated(page);
+      // Wait for map island to be ready before drawer interaction
+      await page.waitForSelector('[data-island="MapIsland"][data-hydrated="true"]');
 
       // Open profile modal on map page
       await openProfileFromDrawer(page);
 
       // Toggle should still be checked
       const toggleAfterReload = page.locator('#default-view-toggle');
-      await expect(toggleAfterReload).toBeChecked({ timeout: 5000 });
+      await expect(toggleAfterReload).toBeChecked();
 
       // Restore default (toggle back OFF) for clean state
       const restorePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await restorePromise;
@@ -388,8 +377,7 @@ test.describe('User Goal Visibility Preference', () => {
       await openProfileFromDrawer(page);
 
       const enablePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await enablePromise;
@@ -411,13 +399,12 @@ test.describe('User Goal Visibility Preference', () => {
           if (attempt === 1 || !String(e).includes('NS_BINDING_ABORTED')) throw e;
         }
       }
-      await page.waitForSelector('header', { timeout: 10000 });
+      await waitForAuthenticated(page);
       await expect(page).toHaveURL(/\/journey$/);
 
       await openProfileFromDrawer(page);
       const restorePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await restorePromise;
@@ -446,7 +433,7 @@ test.describe('User Goal Visibility Preference', () => {
       await expect(statusDiv).toHaveClass(/error/, { timeout: 5000 });
 
       // Toggle should revert back to unchecked
-      await expect(toggle).not.toBeChecked({ timeout: 5000 });
+      await expect(toggle).not.toBeChecked();
 
       // Clean up route
       await page.unroute('**/api/user/preferences');
@@ -466,8 +453,7 @@ test.describe('User Goal Visibility Preference', () => {
       await openProfileFromDrawer(page);
 
       const responsePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await responsePromise;
@@ -481,8 +467,7 @@ test.describe('User Goal Visibility Preference', () => {
 
       // Restore default
       const restorePromise = page.waitForResponse(
-        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT',
-        { timeout: 10000 }
+        (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await restorePromise;

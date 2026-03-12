@@ -49,7 +49,8 @@ async function waitForPopupOrSheet(page, timeout = 5000) {
  * Polls the Konva stage for markers on the marker layer.
  */
 async function waitForMapReady(page) {
-  await page.waitForSelector('.map-canvas-wrapper canvas', { timeout: 15000 });
+  await page.waitForSelector('[data-island="MapIsland"][data-hydrated="true"]');
+  await page.waitForSelector('.map-canvas-wrapper canvas');
   await page.waitForFunction(
     () => {
       const stages = window.Konva && window.Konva.stages;
@@ -64,7 +65,6 @@ async function waitForMapReady(page) {
       );
       return !!wpGroup;
     },
-    { timeout: 15000 },
   );
 }
 
@@ -246,7 +246,7 @@ test.describe('Waypoint Detail Popup - Functional Tests', () => {
 
       // GoalModal should appear, popup should close
       const modal = page.locator('.modal-overlay');
-      await expect(modal).toBeVisible({ timeout: 5000 });
+      await expect(modal).toBeVisible();
 
       const popup = page.locator('.waypoint-popup');
       await expect(popup).not.toBeVisible();

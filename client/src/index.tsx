@@ -11,6 +11,9 @@ import { PartyListIsland } from './islands/PartyListIsland';
 import { PartyDetailIsland } from './islands/PartyDetailIsland';
 import { PartyManageIsland } from './islands/PartyManageIsland';
 import { PartyJoinIsland } from './islands/PartyJoinIsland';
+import { FriendsListIsland } from './islands/FriendsListIsland';
+import { FriendAddIsland } from './islands/FriendAddIsland';
+import { FriendProfileIsland } from './islands/FriendProfileIsland';
 import { AdminDashboardIsland } from './islands/AdminDashboardIsland';
 import { AdminGoalsListIsland } from './islands/AdminGoalsListIsland';
 import { AdminGoalEditIsland } from './islands/AdminGoalEditIsland';
@@ -29,6 +32,9 @@ const autoHydratedIslands = {
   AdminUsersListIsland,
   AuthForms,
   DrawerIsland,
+  FriendAddIsland,
+  FriendProfileIsland,
+  FriendsListIsland,
   MapIsland,
   PartyListIsland,
   PartyDetailIsland,
@@ -47,6 +53,9 @@ const allIslands = {
   AuthForms,
   DistanceModal,
   DrawerIsland,
+  FriendAddIsland,
+  FriendProfileIsland,
+  FriendsListIsland,
   GoalModal,
   MapIsland,
   NextGoalCard,
@@ -106,6 +115,7 @@ function hydrateIslands() {
 
     // Render the island component into the target element
     render(h(IslandComponent, null), element);
+    element.setAttribute('data-hydrated', 'true');
 
     console.log(`✅ Hydrated island: ${islandName}`);
   });

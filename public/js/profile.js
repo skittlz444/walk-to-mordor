@@ -9,6 +9,8 @@ async function showProfileModal() {
   let currentEmail = '';
   let showFutureGoalsUnlocked = true;
   let defaultViewMap = false;
+  let currentAvatarId = null;
+  let availableAvatars = [];
   
   try {
     const response = await fetch('/api/session', {
@@ -21,9 +23,22 @@ async function showProfileModal() {
       currentEmail = data.email || '';
       showFutureGoalsUnlocked = typeof data.showFutureGoalsUnlocked === 'boolean' ? data.showFutureGoalsUnlocked : true;
       defaultViewMap = typeof data.defaultViewMap === 'boolean' ? data.defaultViewMap : false;
+      currentAvatarId = data.avatarId || null;
     }
   } catch (error) {
     console.error('Error fetching user info:', error);
+  }
+
+  // Fetch available avatars
+  try {
+    const avatarRes = await fetch('/api/avatars', {
+      headers: window.getAuthHeaders()
+    });
+    if (avatarRes.ok) {
+      availableAvatars = await avatarRes.json();
+    }
+  } catch (error) {
+    console.error('Error fetching avatars:', error);
   }
 
   // Helper function to escape HTML to prevent XSS
@@ -53,6 +68,22 @@ async function showProfileModal() {
             <label for="profile-email">Email:</label>
             <input type="email" id="profile-email" value="${escapeHtml(currentEmail)}" placeholder="Enter email" />
             <small class="field-hint">Valid email address</small>
+          </div>
+          <div class="form-group avatar-section">
+            <label>Avatar</label>
+            <div class="avatar-preview" id="avatar-preview">
+              ${currentAvatarId
+                ? `<img src="/img/avatars/${escapeHtml(currentAvatarId)}.webp" alt="${escapeHtml(currentUsername)}" width="128" height="128" />`
+                : `<div class="avatar-preview-initials" style="background-color: hsl(${((currentUsername || 'U').charCodeAt(0) * 137) % 360}, 50%, 35%)">${escapeHtml((currentUsername || 'U').charAt(0).toUpperCase())}</div>`
+              }
+            </div>
+            <div class="avatar-gallery" id="avatar-gallery" role="radiogroup" aria-label="Choose avatar">
+              ${availableAvatars.map(slug => `<button type="button" class="avatar-option${currentAvatarId === slug ? ' selected' : ''}" data-slug="${escapeHtml(slug)}" role="radio" aria-checked="${currentAvatarId === slug}" aria-label="${escapeHtml(slug)}"><img src="/img/avatars/${escapeHtml(slug)}.webp" alt="${escapeHtml(slug)}" width="64" height="64" loading="lazy" /></button>`).join('')}
+            </div>
+            <button type="button" class="avatar-reset-btn" id="avatar-reset-btn">
+              <i class="fas fa-undo" aria-hidden="true"></i> Use initials
+            </button>
+            <div id="avatar-status" class="preference-status"></div>
           </div>
           <div class="form-group toggle-group">
             <label for="preview-milestones-toggle" class="toggle-label">
@@ -96,6 +127,105 @@ async function showProfileModal() {
   document.getElementById('logout-modal-btn').addEventListener('click', handleLogoutFromModal);
   document.getElementById('cancel-profile-btn').addEventListener('click', closeProfileModal);
   document.getElementById('close-profile-modal').addEventListener('click', closeProfileModal);
+
+  // Avatar gallery handlers
+  async function saveAvatarChoice(slug) {
+    const statusDiv = document.getElementById('avatar-status');
+    statusDiv.textContent = 'Saving...';
+    statusDiv.className = 'preference-status saving';
+
+    try {
+      const response = await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...window.getAuthHeaders()
+        },
+        body: JSON.stringify({ avatarId: slug })
+      });
+
+      if (response.ok) {
+        currentAvatarId = slug;
+        statusDiv.textContent = 'Saved';
+        statusDiv.className = 'preference-status saved';
+        setTimeout(() => { statusDiv.textContent = ''; statusDiv.className = 'preference-status'; }, 1500);
+
+        // Update selection highlight
+        document.querySelectorAll('.avatar-option').forEach(btn => {
+          const isSelected = btn.dataset.slug === slug;
+          btn.classList.toggle('selected', isSelected);
+          btn.setAttribute('aria-checked', String(isSelected));
+        });
+
+        // Update preview
+        updateAvatarPreview(slug, currentUsername);
+
+        // Bridge to Preact islands
+        window.dispatchEvent(new CustomEvent('preferenceChanged', {
+          detail: { avatarId: slug }
+        }));
+      } else {
+        const data = await response.json();
+        statusDiv.textContent = data.error || 'Failed to save';
+        statusDiv.className = 'preference-status error';
+      }
+    } catch (error) {
+      console.error('Error saving avatar:', error);
+      statusDiv.textContent = 'Network error';
+      statusDiv.className = 'preference-status error';
+    }
+  }
+
+  function updateAvatarPreview(slug, username) {
+    const preview = document.getElementById('avatar-preview');
+    const displayName = username || 'U';
+    if (slug) {
+      preview.innerHTML = `<img src="/img/avatars/${escapeHtml(slug)}.webp" alt="${escapeHtml(displayName)}" width="128" height="128" />`;
+    } else {
+      const hue = (displayName.charCodeAt(0) * 137) % 360;
+      preview.innerHTML = `<div class="avatar-preview-initials" style="background-color: hsl(${hue}, 50%, 35%)">${escapeHtml(displayName.charAt(0).toUpperCase())}</div>`;
+    }
+  }
+
+  const gallery = document.getElementById('avatar-gallery');
+  if (gallery) {
+    gallery.addEventListener('click', function(e) {
+      const btn = e.target.closest('.avatar-option');
+      if (!btn) return;
+      const slug = btn.dataset.slug;
+      if (slug && slug !== currentAvatarId) {
+        saveAvatarChoice(slug);
+      }
+    });
+
+    // Keyboard navigation within the gallery
+    gallery.addEventListener('keydown', function(e) {
+      const buttons = Array.from(gallery.querySelectorAll('.avatar-option'));
+      const current = document.activeElement;
+      const idx = buttons.indexOf(current);
+      if (idx === -1) return;
+
+      let next = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        next = (idx + 1) % buttons.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        next = (idx - 1 + buttons.length) % buttons.length;
+      }
+      if (next >= 0) {
+        e.preventDefault();
+        buttons[next].focus();
+      }
+    });
+  }
+
+  const resetBtn = document.getElementById('avatar-reset-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function() {
+      if (currentAvatarId !== null) {
+        saveAvatarChoice(null);
+      }
+    });
+  }
 
   /**
    * Save a single preference toggle via the API.

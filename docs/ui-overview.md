@@ -90,7 +90,7 @@ Programmatic islands used by legacy scripts or targeted mounts:
 Primary modules in `public/js/`:
 
 - `main.js`: app bootstrap and shared state wiring
-- `profile.js`: profile and preference modal behavior
+- `profile.js`: profile and preference modal behavior; includes avatar gallery for selecting LOTR-themed avatars
 - `calendar.js`/`progress.js`: progress CRUD workflows
 - `goals.js`: goal list and modal orchestration
 - `validators.js`: shared frontend validation helpers

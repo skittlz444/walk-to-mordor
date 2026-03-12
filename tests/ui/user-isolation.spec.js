@@ -43,7 +43,7 @@ async function createAuthenticatedContext(browser, username) {
     });
     const page = await context.newPage();
     await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('domcontentloaded');
     
     // Close existing popups if any (similar to setupTest)
     try {
@@ -88,7 +88,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
             // Verify User 1 sees their own distance but not User 2's
             await page1.reload();
-            await page1.waitForLoadState('networkidle');
+            await page1.waitForLoadState('domcontentloaded');
             
             await expect(page1.locator('#total-distance-value')).toContainText(`${user1Distance}`);
 
@@ -100,7 +100,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
             // Verify User 2 sees their own distance but not User 1's
             await page2.reload();
-            await page2.waitForLoadState('networkidle');
+            await page2.waitForLoadState('domcontentloaded');
             
             await expect(page2.locator('#total-distance-value')).toContainText(`${user2Distance}`);
 
@@ -186,12 +186,12 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
             // Reload and wait for totals to update
             await page1.reload();
-            await page1.waitForLoadState('networkidle');
+            await page1.waitForLoadState('domcontentloaded');
             await page1.locator('#total-distance-value').waitFor({ state: 'visible', timeout: 5000 });
             await expect(page1.locator('#total-distance-value')).not.toHaveText('Loading...');
             
             await page2.reload();
-            await page2.waitForLoadState('networkidle');
+            await page2.waitForLoadState('domcontentloaded');
             await page2.locator('#total-distance-value').waitFor({ state: 'visible', timeout: 5000 });
             await expect(page2.locator('#total-distance-value')).not.toHaveText('Loading...');
             
@@ -238,7 +238,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             };
             
             await createTestEvent(page1, originalDistance, nextWeekDateInfo);
-            await page1.waitForLoadState('networkidle');
+            await page1.waitForLoadState('domcontentloaded');
             
             // User 2 attempts to modify User 1's entry via API
             // (Direct API call since UI doesn't show other users' data)
@@ -258,7 +258,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
             // Verify User 1's entry is unchanged
             await page1.reload();
-            await page1.waitForLoadState('networkidle');
+            await page1.waitForLoadState('domcontentloaded');
 
             await expect(page1.locator('#total-distance-value')).toContainText(`${originalDistance}`);
 
@@ -309,14 +309,14 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             };
             
             await createTestEvent(page1, user1Distance, nextWeekDateInfo);
-            await page1.waitForLoadState('networkidle');
+            await page1.waitForLoadState('domcontentloaded');
             
             await createTestEvent(page2, user2Distance, nextWeekDateInfo);
-            await page2.waitForLoadState('networkidle');
+            await page2.waitForLoadState('domcontentloaded');
             
             // Both should succeed without conflicts
             await page1.reload();
-            await page1.waitForLoadState('networkidle');
+            await page1.waitForLoadState('domcontentloaded');
             await expect(page1.locator('#total-distance-value')).toContainText(`${user1Distance}`);
 
             const user1Progress = await getCalendarProgress(context1, authToken1);
@@ -325,7 +325,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             expect(Number(user1Entry.title)).toBe(user1Distance);
             
             await page2.reload();
-            await page2.waitForLoadState('networkidle');
+            await page2.waitForLoadState('domcontentloaded');
             await expect(page2.locator('#total-distance-value')).toContainText(`${user2Distance}`);
 
             const user2Progress = await getCalendarProgress(context2, authToken2);

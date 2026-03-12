@@ -5,7 +5,6 @@ const { test, expect } = require('@playwright/test');
  * UI Tests - Password Reset Functionality
  */
 test.describe('Password Reset', () => {
-    test.setTimeout(30000);
 
     test('should display password reset request page', async ({ page }) => {
         await page.goto('/password-reset');
@@ -44,7 +43,7 @@ test.describe('Password Reset', () => {
         
         // Wait for error message
         const errorDiv = page.locator('#reset-error');
-        await expect(errorDiv).toBeVisible({ timeout: 5000 });
+        await expect(errorDiv).toBeVisible();
         const errorText = await errorDiv.textContent();
         expect(errorText).toContain('email');
     });
@@ -75,7 +74,7 @@ test.describe('Password Reset', () => {
         
         // Wait for success message
         const successDiv = page.locator('.success-message');
-        await expect(successDiv).toBeVisible({ timeout: 5000 });
+        await expect(successDiv).toBeVisible();
         const successText = await successDiv.textContent();
         expect(successText).toContain('password reset link');
     });
@@ -107,7 +106,7 @@ test.describe('Password Reset', () => {
         
         // Wait for error message about missing token
         const errorDiv = page.locator('#reset-error');
-        await expect(errorDiv).toBeVisible({ timeout: 5000 });
+        await expect(errorDiv).toBeVisible();
         const errorText = await errorDiv.textContent();
         expect(errorText).toContain('Invalid or missing reset token');
     });
@@ -142,7 +141,7 @@ test.describe('Password Reset', () => {
         
         // Wait for error message
         const errorDiv = page.locator('#reset-error');
-        await expect(errorDiv).toBeVisible({ timeout: 5000 });
+        await expect(errorDiv).toBeVisible();
         const errorText = await errorDiv.textContent();
         expect(errorText).toContain('Invalid password reset token');
     });
@@ -156,7 +155,7 @@ test.describe('Password Reset', () => {
         
         // Wait for error message
         const errorDiv = page.locator('#reset-error');
-        await expect(errorDiv).toBeVisible({ timeout: 5000 });
+        await expect(errorDiv).toBeVisible();
         const errorText = await errorDiv.textContent();
         expect(errorText).toContain('Password');
     });

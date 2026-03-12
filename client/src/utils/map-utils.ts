@@ -405,3 +405,6 @@ export function slicePathByPixelDistance(
 
 /** Conversion factor from miles to kilometres. */
 export const MILES_TO_KM = 1.60934;
+
+/** Conversion factor from kilometres to miles. */
+export const KM_TO_MILES = 0.621371;

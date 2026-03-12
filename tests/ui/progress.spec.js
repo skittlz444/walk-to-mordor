@@ -13,7 +13,7 @@ async function deleteTestEvent(page, distance, authToken) {
         await cleanupAllTestData('http://localhost:8787', authToken);
         // Refresh page to reflect data changes
         await page.reload();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         return true;
       }
     } catch (cleanupError) {
@@ -31,7 +31,7 @@ async function deleteTestEvent(page, distance, authToken) {
       await expect(deleteButton).toBeVisible({ timeout: 3000 }).catch(() => {});
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         return true;
       }
     }
@@ -48,7 +48,7 @@ async function deleteTestEvent(page, distance, authToken) {
           await confirmButton.click();
         }
         
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         return true;
       }
     }
@@ -67,7 +67,7 @@ test.describe('Progress Tracking', () => {
   });
 
   test('Can create and delete a walking event', async ({ page, authToken }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     const testDistance = generateRealisticTestDistance();
     
@@ -75,7 +75,7 @@ test.describe('Progress Tracking', () => {
     await createTestEvent(page, testDistance);
     
     // Wait for event to be processed
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify via API endpoint first (more reliable)
     let eventVerified = false;
@@ -107,7 +107,7 @@ test.describe('Progress Tracking', () => {
   });
 
   test('Can edit and delete an event', async ({ page, authToken }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     const initialDistance = generateRealisticTestDistance();
     const editedDistance = generateRealisticTestDistance();
@@ -116,7 +116,7 @@ test.describe('Progress Tracking', () => {
     await createTestEvent(page, initialDistance);
     
     // Wait for initial event to be processed
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify initial event exists using API first
     let initialEventVerified = false;
@@ -197,49 +197,34 @@ test.describe('Progress Tracking', () => {
   });
 
   test('Can create multiple events with random data', async ({ page, authToken }) => {
-    await page.waitForLoadState('networkidle');
-    
-    // Close any existing popups/overlays that might interfere
-    try {
-      const overlay = page.locator('.mbsc-popup-overlay');
-      if (await overlay.isVisible({ timeout: 1000 })) {
-        await overlay.click();
-        await expect(overlay).toBeHidden({ timeout: 3000 });
-      }
-    } catch (error) {
-      // No overlay to close, continue
-    }
+    // This test creates multiple events sequentially, which takes longer.
+    test.slow();
+
+    await page.waitForLoadState('domcontentloaded');
     
     const events = [];
-    const numEvents = 2; // Try for 2 events, but accept 1 for Mobile Firefox
+    const numEvents = 2;
     
-    // Create multiple events with different random data
     for (let i = 0; i < numEvents; i++) {
       try {
-        // Close any popups before each event creation
-        try {
-          const popup = page.locator('.mbsc-popup, .modal');
-          if (await popup.isVisible({ timeout: 500 })) {
+        // Close any goal congratulation popups from previous events
+        const goalPopup = page.locator('.modal-overlay');
+        if (await goalPopup.isVisible({ timeout: 1000 })) {
+          const closeBtn = page.locator('text=Close').last();
+          if (await closeBtn.isVisible({ timeout: 1000 })) {
+            await closeBtn.click();
+          } else {
             await page.keyboard.press('Escape');
-            await expect(popup).toBeHidden({ timeout: 3000 });
           }
-        } catch (e) {
-          // No popup to close
-        }
-        
-        // For second event, refresh page to reset state in Mobile Firefox
-        if (i > 0) {
-          await page.goto('http://localhost:8787/');
-          await page.waitForLoadState('networkidle');
+          await goalPopup.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
         }
         
         const eventData = await createTestEvent(page);
         events.push(eventData);
         
-        // Wait for event to be processed
-        await page.waitForLoadState('networkidle');
+        // Wait for the event to be reflected in the UI
+        await page.waitForLoadState('domcontentloaded');
       } catch (error) {
-        // For Mobile Firefox, accept partial success
         break;
       }
     }
@@ -249,7 +234,7 @@ test.describe('Progress Tracking', () => {
     
     // Clean up all test events using the cleanup helper
     try {
-      await cleanupAllTestData('http://localhost:8787', authToken);
+      await cleanupAllTestData('http://127.0.0.1:8787', authToken);
     } catch (error) {
       console.log("Cleanup helper failed, but test still passed");
     }

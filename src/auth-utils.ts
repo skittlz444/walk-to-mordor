@@ -179,3 +179,75 @@ export function getEmailConfirmationExpiry(): string {
 export function isEmailConfirmationTokenExpired(expiresAt: string): boolean {
   return new Date(expiresAt) < new Date();
 }
+
+/**
+ * Generate a cryptographically secure 8-character alphanumeric code.
+ * Uses crypto.getRandomValues() for non-enumerable codes.
+ * Shared by friend-code and invite-code generation.
+ */
+export function generateAlphanumericCode(): string {
+  const length = 8;
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  // Generate more random bytes than needed to account for rejection
+  const bufferSize = length * 2; // Extra to handle rejections
+  const values = new Uint8Array(bufferSize);
+  crypto.getRandomValues(values);
+  let code = '';
+  let idx = 0;
+  while (code.length < length) {
+    if (idx >= values.length) {
+      // Need more random bytes
+      crypto.getRandomValues(values);
+      idx = 0;
+    }
+    // Rejection sampling: reject values that cause modulo bias
+    if (values[idx] < 256 - (256 % charset.length)) {
+      code += charset[values[idx] % charset.length];
+    }
+    idx++;
+  }
+  return code;
+}
+
+/**
+ * Generate a unique friend code for a user.
+ * Retries up to maxRetries times on uniqueness collisions.
+ */
+export async function generateUniqueFriendCode(
+  db: { prepare: (sql: string) => { bind: (...args: unknown[]) => { first: () => Promise<unknown> } } },
+  maxRetries = 10
+): Promise<string> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const code = generateAlphanumericCode();
+    const existing = await db.prepare(
+      'SELECT id FROM users WHERE friend_code = ?'
+    ).bind(code).first();
+    if (!existing) {
+      return code;
+    }
+  }
+  throw new Error('Failed to generate unique friend code after maximum retries');
+}
+
+/**
+ * Backfill friend_code for all users who don't have one.
+ * Uses crypto-strength generation with uniqueness verification.
+ * Returns the number of users updated.
+ */
+export async function backfillFriendCodes(
+  db: { prepare: (sql: string) => { bind: (...args: unknown[]) => { run: () => Promise<unknown>; all: () => Promise<{ results: Array<{ id: number }> }>; first: () => Promise<unknown> } } }
+): Promise<number> {
+  const { results: usersWithoutCode } = await db.prepare(
+    'SELECT id FROM users WHERE friend_code IS NULL'
+  ).bind().all();
+
+  let updated = 0;
+  for (const user of usersWithoutCode) {
+    const code = await generateUniqueFriendCode(db);
+    await db.prepare(
+      'UPDATE users SET friend_code = ? WHERE id = ? AND friend_code IS NULL'
+    ).bind(code, user.id).run();
+    updated++;
+  }
+  return updated;
+}

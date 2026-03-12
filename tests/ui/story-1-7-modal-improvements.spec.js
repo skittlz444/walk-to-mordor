@@ -12,7 +12,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
   });
 
   test('Modal displays km suffix next to input', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Click on any calendar date to open the modal
     const testDateInfo = generateRandomTestDate();
@@ -20,7 +20,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     await cell.click({ timeout: 10000 });
     
     // Wait for modal to appear
-    await page.waitForSelector('#distance-input', { timeout: 5000 });
+    await page.waitForSelector('#distance-input');
     
     // Verify km suffix is visible
     const kmSuffix = page.locator('.km-suffix');
@@ -29,7 +29,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
   });
 
   test('Quick entry +1 km button increments distance', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Open modal
     const testDateInfo = generateRandomTestDate();
@@ -38,7 +38,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     
     // Wait for modal
     const distanceInput = page.locator('#distance-input');
-    await distanceInput.waitFor({ state: 'visible', timeout: 5000 });
+    await distanceInput.waitFor({ state: 'visible' });
     
     // Click +1 km button
     const quickAdd1 = page.locator('#quick-add-1');
@@ -57,7 +57,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
   });
 
   test('Quick entry +5 km button increments distance', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Open modal
     const testDateInfo = generateRandomTestDate();
@@ -66,7 +66,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     
     // Wait for modal
     const distanceInput = page.locator('#distance-input');
-    await distanceInput.waitFor({ state: 'visible', timeout: 5000 });
+    await distanceInput.waitFor({ state: 'visible' });
     
     // Click +5 km button
     const quickAdd5 = page.locator('#quick-add-5');
@@ -79,7 +79,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
   });
 
   test('Quick entry buttons work with existing values', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Open modal
     const testDateInfo = generateRandomTestDate();
@@ -88,7 +88,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     
     // Wait for modal
     const distanceInput = page.locator('#distance-input');
-    await distanceInput.waitFor({ state: 'visible', timeout: 5000 });
+    await distanceInput.waitFor({ state: 'visible' });
     
     // Manually enter a value
     await distanceInput.fill('3.5');
@@ -103,7 +103,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
   });
 
   test('Reset button clears distance to 0.00', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Open modal
     const testDateInfo = generateRandomTestDate();
@@ -112,7 +112,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     
     // Wait for modal
     const distanceInput = page.locator('#distance-input');
-    await distanceInput.waitFor({ state: 'visible', timeout: 5000 });
+    await distanceInput.waitFor({ state: 'visible' });
     
     // Add some distance
     await page.locator('#quick-add-5').click();
@@ -136,7 +136,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
   });
 
   test('Modal buttons have proper styling (auth-style buttons)', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Open modal
     const testDateInfo = generateRandomTestDate();
@@ -144,7 +144,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     await cell.click({ timeout: 10000 });
     
     // Wait for modal
-    await page.waitForSelector('#save-btn', { timeout: 5000 });
+    await page.waitForSelector('#save-btn');
     
     // Verify primary button (Add/Save) has correct styling
     const saveBtn = page.locator('#save-btn');
@@ -163,7 +163,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
   });
 
   test('Modal buttons meet touch target size requirements (44x44 min)', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Open modal
     const testDateInfo = generateRandomTestDate();
@@ -171,7 +171,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     await cell.click({ timeout: 10000 });
     
     // Wait for modal
-    await page.waitForSelector('#save-btn', { timeout: 5000 });
+    await page.waitForSelector('#save-btn');
     
     // Check button sizes
     const buttons = [

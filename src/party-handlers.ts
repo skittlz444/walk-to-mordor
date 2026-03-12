@@ -1,5 +1,6 @@
 // Party (Fellowship) API handlers
 import { validateSession } from "./auth-handlers";
+import { generateAlphanumericCode } from "./auth-utils";
 import { calculateTotalDistance } from "./goals-handlers";
 import { createErrorResponse, createSuccessResponse } from "./validators";
 
@@ -48,14 +49,7 @@ interface PartyMemberRow {
  * Uses crypto.getRandomValues() for non-enumerable codes.
  */
 export function generateInviteCode(): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const values = new Uint8Array(8);
-  crypto.getRandomValues(values);
-  let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += charset[values[i] % charset.length];
-  }
-  return code;
+  return generateAlphanumericCode();
 }
 
 /**
@@ -443,6 +437,7 @@ interface ActiveMemberDistanceRow {
   distance_at_join: number;
   total_distance: number;
   joined_at: string;
+  avatar_id: string | null;
 }
 
 /** Row shape for departed member with kept contributions */
@@ -452,6 +447,7 @@ interface DepartedMemberRow {
   status: string;
   contribution_at_departure: number | null;
   joined_at: string;
+  avatar_id: string | null;
 }
 
 /** Row shape for activity feed entries */
@@ -461,6 +457,7 @@ interface ActivityLogRow {
   distance: number;
   date: string;
   logged_at: string;
+  avatar_id: string | null;
 }
 
 /**
@@ -502,6 +499,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
     // Get active members with their total distances
     const { results: activeMembers } = await env.DB.prepare(
       `SELECT pm.user_id, u.username as display_name, pm.distance_at_join, pm.joined_at,
+              u.avatar_id,
               COALESCE((SELECT SUM(p.distance) FROM progress p WHERE p.user_id = pm.user_id), 0) as total_distance
        FROM party_members pm
        JOIN users u ON pm.user_id = u.id
@@ -517,6 +515,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
       joined_at: string;
       status: string;
       color: number;
+      avatar_id: string | null;
     }> = [];
 
     let totalDistance = 0;
@@ -536,12 +535,14 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
         joined_at: member.joined_at,
         status: 'active',
         color: member.user_id % COLOR_PALETTE_SIZE,
+        avatar_id: member.avatar_id ?? null,
       });
     }
 
     // Handle departed members with kept contributions
     const { results: departedMembers } = await env.DB.prepare(
-      `SELECT pm.user_id, u.username as display_name, pm.status, pm.contribution_at_departure, pm.joined_at
+      `SELECT pm.user_id, u.username as display_name, pm.status, pm.contribution_at_departure, pm.joined_at,
+              u.avatar_id
        FROM party_members pm
        JOIN users u ON pm.user_id = u.id
        WHERE pm.party_id = ? AND pm.status IN ('left', 'kicked') AND pm.distance_kept = 1
@@ -558,6 +559,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
         joined_at: departed.joined_at,
         status: departed.status,
         color: departed.user_id % COLOR_PALETTE_SIZE,
+        avatar_id: departed.avatar_id ?? null,
       });
     }
 
@@ -702,6 +704,10 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
         stmts.push(
           env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
         );
+        // Invalidate pending fellowship invites for the dissolved party
+        stmts.push(
+          env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
+        );
       }
     } else {
       // Non-leader leaving: check if any active members remain after this departure
@@ -712,6 +718,10 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
       if (!remainingCount || remainingCount.count === 0) {
         stmts.push(
           env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+        );
+        // Invalidate pending fellowship invites for the dissolved party
+        stmts.push(
+          env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
         );
       }
     }
@@ -806,6 +816,10 @@ export async function handleKickMember(
     if (!remainingCount || remainingCount.count === 0) {
       stmts.push(
         env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+      );
+      // Invalidate pending fellowship invites for the dissolved party
+      stmts.push(
+        env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
       );
     }
 
@@ -1027,7 +1041,7 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
     // Get last 10 activity entries (active members only)
     const { results: activities } = await env.DB.prepare(
       `SELECT ppl.logged_by_user_id as user_id, u.username as display_name,
-              ppl.distance, ppl.date, ppl.logged_at
+              ppl.distance, ppl.date, ppl.logged_at, u.avatar_id
        FROM party_progress_log ppl
        JOIN users u ON ppl.logged_by_user_id = u.id
        JOIN party_members pm ON pm.party_id = ppl.party_id AND pm.user_id = ppl.logged_by_user_id

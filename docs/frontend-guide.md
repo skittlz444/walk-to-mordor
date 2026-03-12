@@ -126,3 +126,17 @@ The Social Panel is built directly inside `MapIsland` (not a separate island). I
 ### Avatar
 
 The `Avatar` component (`client/src/components/Avatar.tsx`) renders a user's avatar consistently across all surfaces. Props: `avatarId`, `username`, `size`. When `avatarId` is set, renders the predefined image from `/img/avatars/`. When NULL, renders an initials circle with a deterministic background color seeded from the username.
+
+Avatar asset conventions:
+
+- Canonical slug inventory lives in `src/avatar-slugs.ts` (`VALID_AVATAR_SLUGS`). Do not duplicate the full slug list in docs.
+- Full-size assets live in `public/img/avatars/{slug}.webp`.
+- Thumbnail assets live in `public/img/avatars/thumbs/{slug}.webp` and are used for compact surfaces like map friend markers.
+- Avatar additions/removals should keep the checked-in assets and `VALID_AVATAR_SLUGS` in sync.
+
+Avatar selection/editing flow:
+
+- The selection UI currently lives in the legacy profile modal in `public/js/profile.js`.
+- The picker fetches the valid slug list from `GET /api/avatars`.
+- Avatar updates are persisted through `PUT /api/user/preferences` via the `avatarId` field.
+- Display surfaces should keep using the shared `Avatar` component rather than introducing local inline avatar rendering patterns.

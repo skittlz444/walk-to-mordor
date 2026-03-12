@@ -1,37 +1,71 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { Avatar } from '../components/Avatar';
 
 interface SessionData {
   isAdmin?: boolean;
+  avatarId?: string | null;
+  username?: string;
 }
 
 export function DrawerIsland() {
   const [isOpen, setIsOpen] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [avatarId, setAvatarId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string>('');
+  const [pendingFriendsCount, setPendingFriendsCount] = useState(0);
+  const [pendingInvitesCount, setPendingInvitesCount] = useState(0);
   const drawerRef = useRef<HTMLElement | null>(null);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
-    // Fetch admin status from session API
+    // Fetch session status first; only fire badge fetches on success
     const token = localStorage.getItem('sessionToken');
     if (!token) return;
+    const authHeaders = { Authorization: `Bearer ${token}` };
     fetch('/api/session', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeaders,
     })
       .then((res) => {
         if (res.ok) return res.json() as Promise<SessionData>;
         return null;
       })
       .then((data: SessionData | null) => {
-        if (data && data.isAdmin === true) {
+        if (!data) return; // Session invalid — skip badge fetches
+        if (data.isAdmin === true) {
           setIsAdmin(true);
         }
+        if (data.username) {
+          setUsername(data.username);
+        }
+        setAvatarId(data.avatarId ?? null);
+        // Badge fetches only after confirmed valid session (avoids 401s)
+        fetch('/api/friends/pending', { headers: authHeaders })
+          .then((res) => res.ok ? res.json() as Promise<{ count: number }> : null)
+          .then((d) => { if (d && d.count > 0) setPendingFriendsCount(d.count); })
+          .catch(() => { /* non-critical */ });
+        fetch('/api/user/fellowship-invites', { headers: authHeaders })
+          .then((res) => res.ok ? res.json() as Promise<{ count: number }> : null)
+          .then((d) => { if (d && d.count > 0) setPendingInvitesCount(d.count); })
+          .catch(() => { /* non-critical */ });
       })
       .catch(() => {
         // Silently ignore — non-critical for drawer rendering
       });
+  }, []);
+
+  // Listen for avatar changes from the legacy profile modal
+  useEffect(() => {
+    function handlePreferenceChanged(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail && typeof detail.avatarId !== 'undefined') {
+        setAvatarId(detail.avatarId);
+      }
+    }
+    window.addEventListener('preferenceChanged', handlePreferenceChanged);
+    return () => window.removeEventListener('preferenceChanged', handlePreferenceChanged);
   }, []);
 
   useEffect(() => {
@@ -143,7 +177,10 @@ export function DrawerIsland() {
       <div className="drawer-backdrop" aria-hidden="true" onClick={closeDrawer}></div>
       <aside id="navigation-drawer" className="side-drawer" aria-hidden={isOpen ? 'false' : 'true'} ref={drawerRef}>
         <div className="drawer-header">
-          <span className="drawer-title">Navigation</span>
+          <div className="drawer-header-left">
+            {username && <Avatar username={username} avatarId={avatarId} size={32} />}
+            <span className="drawer-title">Navigation</span>
+          </div>
           <button
             type="button"
             className="drawer-close"
@@ -157,7 +194,14 @@ export function DrawerIsland() {
         <nav className="drawer-nav">
           <a className="drawer-link" href="/journey" onClick={closeDrawer}>Journey</a>
           <a className="drawer-link" href="/map" onClick={closeDrawer}>Map</a>
-          <a className="drawer-link" href="/party" onClick={closeDrawer}>Fellowships</a>
+          <a className="drawer-link" href="/party" onClick={closeDrawer}>
+            Fellowships
+            {pendingInvitesCount > 0 && <span className="drawer-badge">{pendingInvitesCount}</span>}
+          </a>
+          <a className="drawer-link" href="/friends" onClick={closeDrawer}>
+            Friends
+            {pendingFriendsCount > 0 && <span className="drawer-badge">{pendingFriendsCount}</span>}
+          </a>
           {isAdmin && <a className="drawer-link" href="/admin" onClick={closeDrawer}>Admin</a>}
           <button className="drawer-link drawer-profile" type="button" onClick={handleProfileClick}>Profile</button>
         </nav>

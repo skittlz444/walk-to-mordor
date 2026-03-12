@@ -14,9 +14,15 @@ import {
   createWaypointMarkers,
   type WaypointMarkerNodes,
 } from '../components/map/WaypointMarkers';
+import {
+  createFriendMarkers,
+  type FriendMarkerNodes,
+  type FriendMarkerData,
+} from '../components/map/FriendMarkers';
+import { FriendMiniCard } from '../components/map/FriendMiniCard';
 import { WaypointPopupContainer } from '../components/map/WaypointPopupContainer';
 import { GoalModal } from './GoalModal';
-import { getUserPosition, MILES_TO_KM, type Point } from '../utils/map-utils';
+import { getUserPosition, MILES_TO_KM, KM_TO_MILES, type Point } from '../utils/map-utils';
 import {
   getScreenPosition,
   getOptimalPopupPosition,
@@ -62,7 +68,6 @@ const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
 const GOALS_API_URL = '/api/goals';
 const SESSION_API_URL = '/api/session';
-const KM_TO_MILES = 0.621371;
 const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
@@ -258,6 +263,7 @@ export function MapIsland() {
   const isUserPanning = useRef(false);
   const panAnimRef = useRef<Konva.Animation | null>(null);
   const memberPathsRef = useRef<MemberPathNodes | null>(null);
+  const friendMarkerRef = useRef<FriendMarkerNodes | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -279,8 +285,20 @@ export function MapIsland() {
   const measuredPopupSize = useSignal<{ width: number; height: number } | null>(null);
   const isMobile = useSignal(false);
   const expandGoal = useSignal<Goal | null>(null);
+  const showSocialPanel = useSignal(false);
+
+  // Friend marker state
+  const showFriendsOnMap = useSignal(
+    typeof window !== 'undefined' && localStorage.getItem('wtm_friends_on_map') === 'true'
+  );
+  const friendPositions = useSignal<FriendMarkerData[]>([]);
+  const friendPositionsFetchedAt = useSignal(0);
+  const selectedFriend = useSignal<FriendMarkerData | null>(null);
+  const friendPopupPosition = useSignal<{ x: number; y: number } | null>(null);
+
+  /** Cache TTL for friend positions: 5 minutes */
+  const FRIEND_CACHE_TTL = 5 * 60 * 1000;
   const partyMilestoneGoal = useSignal<Goal | null>(null);
-  const showPartyPanel = useSignal(false);
 
   const partyViewActive = useComputed(() => isPartyView.value);
 
@@ -290,6 +308,8 @@ export function MapIsland() {
     selectedCluster.value = [];
     popupPosition.value = null;
     measuredPopupSize.value = null;
+    selectedFriend.value = null;
+    friendPopupPosition.value = null;
   }, []);
 
   /** Open the full goal detail modal for a waypoint. */
@@ -521,6 +541,20 @@ export function MapIsland() {
     if (memberPathsRef.current) {
       updateMemberPaths(memberPathsRef.current, currentScale.value);
       pathLayerRef.current?.batchDraw();
+    }
+
+    // Update friend marker scale + visibility on zoom/pan
+    if (friendMarkerRef.current) {
+      friendMarkerRef.current.setScale(currentScale.value);
+      const stagePos = position.value;
+      const scale = currentScale.value;
+      const { width: vw, height: vh } = stageSize.value;
+      friendMarkerRef.current.updateVisibility({
+        x: -stagePos.x / scale,
+        y: -stagePos.y / scale,
+        width: vw / scale,
+        height: vh / scale,
+      });
     }
   }, [updateTiles]);
 
@@ -817,6 +851,8 @@ export function MapIsland() {
       centerOnPosition(newPos, currentScale.value, true);
     }
 
+    showSocialPanel.value = false;
+
     // Check for newly passed milestones when switching to a party view
     if (
       progress &&
@@ -837,8 +873,94 @@ export function MapIsland() {
       }
     }
 
-    showPartyPanel.value = false;
+    showSocialPanel.value = false;
   }, [drawMemberPaths, centerOnPosition]);
+
+  /** Fetch friend positions from the API and update the cache. */
+  const fetchFriendPositions = useCallback(async (): Promise<FriendMarkerData[]> => {
+    try {
+      const token = localStorage.getItem('sessionToken');
+      if (!token) return [];
+      const res = await fetch('/api/friends/positions', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = await res.json() as { friends: FriendMarkerData[] };
+      friendPositions.value = data.friends;
+      friendPositionsFetchedAt.value = Date.now();
+      return data.friends;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  /** Handle friend marker click/tap — show mini-card popup. */
+  const handleFriendSelect = useCallback((friend: FriendMarkerData) => {
+    // Close any existing waypoint popup
+    selectedWaypoint.value = null;
+    selectedCluster.value = [];
+    popupPosition.value = null;
+    measuredPopupSize.value = null;
+
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const distanceMiles = friend.total_distance * KM_TO_MILES;
+    const mapPos = getUserPosition(fellowshipPath, distanceMiles);
+    const screenPos = getScreenPosition(mapPos, position.value, currentScale.value);
+
+    // Use getOptimalPopupPosition for smart placement
+    const popupSize = { width: 220, height: 100 };
+    const viewport = stageSize.value;
+    const optimal = getOptimalPopupPosition(screenPos, popupSize, viewport);
+
+    selectedFriend.value = friend;
+    friendPopupPosition.value = { x: optimal.x, y: optimal.y };
+  }, []);
+
+  /** Enable or disable friend markers on the map. */
+  const handleFriendsToggle = useCallback(async (enabled: boolean) => {
+    showFriendsOnMap.value = enabled;
+    localStorage.setItem('wtm_friends_on_map', String(enabled));
+
+    if (enabled) {
+      // Check cache freshness
+      const isFresh = Date.now() - friendPositionsFetchedAt.value < FRIEND_CACHE_TTL;
+      const friends = isFresh ? friendPositions.value : await fetchFriendPositions();
+
+      if (friends.length > 0 && stageRef.current && markerLayerRef.current) {
+        if (!friendMarkerRef.current) {
+          friendMarkerRef.current = createFriendMarkers(
+            stageRef.current,
+            markerLayerRef.current,
+            handleFriendSelect,
+          );
+        }
+        friendMarkerRef.current.update(friends, fellowshipPath, currentScale.value);
+
+        // Apply frustum culling
+        const stagePos = position.value;
+        const scale = currentScale.value;
+        const { width: vw, height: vh } = stageSize.value;
+        friendMarkerRef.current.updateVisibility({
+          x: -stagePos.x / scale,
+          y: -stagePos.y / scale,
+          width: vw / scale,
+          height: vh / scale,
+        });
+      }
+    } else {
+      // Destroy friend markers
+      if (friendMarkerRef.current) {
+        friendMarkerRef.current.destroy();
+        friendMarkerRef.current = null;
+      }
+      selectedFriend.value = null;
+      friendPopupPosition.value = null;
+      friendPositions.value = [];
+      friendPositionsFetchedAt.value = 0;
+    }
+  }, [fetchFriendPositions, handleFriendSelect]);
 
   // Fetch user parties on mount
   useEffect(() => {
@@ -953,6 +1075,20 @@ export function MapIsland() {
       if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
         updateWaypointVisibility();
       }
+
+      // Update friend marker visibility after drag
+      if (friendMarkerRef.current) {
+        const stagePos = position.value;
+        const scale = currentScale.value;
+        const { width: vw, height: vh } = stageSize.value;
+        friendMarkerRef.current.updateVisibility({
+          x: -stagePos.x / scale,
+          y: -stagePos.y / scale,
+          width: vw / scale,
+          height: vh / scale,
+        });
+      }
+
       isUserPanning.current = false;
     });
 
@@ -1175,6 +1311,8 @@ export function MapIsland() {
                       selectedWaypoint.value = wp;
                       selectedCluster.value = cluster ?? [];
                       popupPosition.value = { x: popupPos.x, y: popupPos.y };
+                      selectedFriend.value = null;
+                      friendPopupPosition.value = null;
                     }
                   }, stage.getLayers()[0]);
                   panAnimRef.current = anim;
@@ -1190,6 +1328,8 @@ export function MapIsland() {
                 selectedWaypoint.value = wp;
                 selectedCluster.value = cluster ?? [];
                 popupPosition.value = { x: popupPos.x, y: popupPos.y };
+                selectedFriend.value = null;
+                friendPopupPosition.value = null;
               }
             },
           );
@@ -1208,6 +1348,11 @@ export function MapIsland() {
         (window as Window & { updateMapDistance?: (d: number) => void }).updateMapDistance = (newDistKm: number) => {
           updateUserDistance(newDistKm * KM_TO_MILES);
         };
+
+        // If friends toggle was persisted as ON, load friend markers
+        if (showFriendsOnMap.value) {
+          handleFriendsToggle(true);
+        }
       })
       .catch(() => {
         error.value = true;
@@ -1336,6 +1481,12 @@ export function MapIsland() {
         waypointMarkersRef.current.destroy();
         waypointMarkersRef.current = null;
       }
+      if (friendMarkerRef.current) {
+        friendMarkerRef.current.destroy();
+        friendMarkerRef.current = null;
+      }
+      friendPositions.value = [];
+      friendPositionsFetchedAt.value = 0;
       allWaypointsRef.current = [];
       allGoalsRef.current = [];
       stage.destroy();
@@ -1391,35 +1542,62 @@ export function MapIsland() {
           </button>
           <button
             type="button"
-            className={`map-party-toggle${partyViewActive.value ? ' active' : ''}`}
-            aria-label="Toggle party view"
-            title="Party view"
-            onClick={() => { showPartyPanel.value = !showPartyPanel.value; }}
+            className={`map-social-toggle${(partyViewActive.value || showSocialPanel.value) ? ' active' : ''}`}
+            aria-label="Toggle social panel"
+            title="Social"
+            onClick={() => { showSocialPanel.value = !showSocialPanel.value; }}
           >
             <i className="fas fa-users" aria-hidden="true"></i>
           </button>
         </div>
       )}
-      {/* Party selection panel (opens from party toggle button) */}
-      {showPartyPanel.value && !loading.value && (
-        <div className="map-party-panel">
-          <button
-            type="button"
-            className={`map-party-option${selectedView.value === 'personal' ? ' selected' : ''}`}
-            onClick={() => handlePartyViewChange('personal')}
-          >
-            My Journey
-          </button>
-          {userParties.value.map(party => (
-            <button
-              key={party.id}
-              type="button"
-              className={`map-party-option${selectedView.value === party.id ? ' selected' : ''}`}
-              onClick={() => handlePartyViewChange(party.id)}
-            >
-              {party.name}
-            </button>
-          ))}
+      {/* Social panel (replaces party panel — contains View As + Friends on Map) */}
+      {showSocialPanel.value && !loading.value && (
+        <div className="map-social-panel">
+          {/* View As section — only renders when user belongs to at least one fellowship.
+             Hidden in test/demo when the auth state has no parties. */}
+          {userParties.value.length > 0 && (
+            <div className="social-panel-section">
+              <h4>View As</h4>
+              <button
+                type="button"
+                className={`map-party-option${selectedView.value === 'personal' ? ' selected' : ''}`}
+                onClick={() => handlePartyViewChange('personal')}
+              >
+                My Journey
+              </button>
+              {userParties.value.map(party => (
+                <button
+                  key={party.id}
+                  type="button"
+                  className={`map-party-option${selectedView.value === party.id ? ' selected' : ''}`}
+                  onClick={() => handlePartyViewChange(party.id)}
+                >
+                  {party.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Friends on Map section — always visible */}
+          <div className="social-panel-section">
+            <h4>Friends on Map</h4>
+            <div className="friends-toggle-row">
+              <span>Show friends</span>
+              <label className="friends-toggle" aria-label="Toggle friends on map">
+                <input
+                  type="checkbox"
+                  checked={showFriendsOnMap.value}
+                  onChange={(e) => {
+                    handleFriendsToggle((e.target as HTMLInputElement).checked);
+                  }}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+            {showFriendsOnMap.value && friendPositions.value.length === 0 && (
+              <p className="friends-hint">Add friends to see them on the map</p>
+            )}
+          </div>
         </div>
       )}
       {/* Party legend (visible when party view is active) */}
@@ -1439,6 +1617,17 @@ export function MapIsland() {
         isMobile={isMobile}
         onDesktopPopupSizeChange={handleDesktopPopupSizeChange}
       />
+      {/* Friend mini-card popup (HTML overlay, outside Konva canvas) */}
+      {selectedFriend.value && friendPopupPosition.value && (
+        <FriendMiniCard
+          friend={selectedFriend.value}
+          position={friendPopupPosition.value}
+          onClose={() => {
+            selectedFriend.value = null;
+            friendPopupPosition.value = null;
+          }}
+        />
+      )}
       {/* Full goal detail modal (opened from popup expand button) */}
       {expandGoal.value && (
         <GoalModal

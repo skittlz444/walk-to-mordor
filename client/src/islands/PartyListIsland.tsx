@@ -17,6 +17,16 @@ interface PreviewData {
   leave_distance_behavior: string;
 }
 
+interface FellowshipInvite {
+  id: number;
+  party_id: number;
+  party_name: string;
+  member_count: number;
+  total_distance: number;
+  inviter_username: string;
+  created_at: string;
+}
+
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('sessionToken');
   return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
@@ -24,11 +34,13 @@ function getAuthHeaders(): Record<string, string> {
 
 export function PartyListIsland() {
   const [parties, setParties] = useState<Party[]>([]);
+  const [invites, setInvites] = useState<FellowshipInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [showDissolved, setShowDissolved] = useState(false);
+  const [inviteActionId, setInviteActionId] = useState<number | null>(null);
 
   // Create form state
   const [createName, setCreateName] = useState('');
@@ -49,7 +61,11 @@ export function PartyListIsland() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/user/parties?include_dissolved=true', { headers: getAuthHeaders() });
+      const headers = getAuthHeaders();
+      const [res, invitesRes] = await Promise.all([
+        fetch('/api/user/parties?include_dissolved=true', { headers }),
+        fetch('/api/user/fellowship-invites', { headers }),
+      ]);
       if (!res.ok) {
         if (res.status === 401) {
           window.location.href = '/login';
@@ -59,6 +75,11 @@ export function PartyListIsland() {
       }
       const data = await res.json();
       setParties(data.parties ?? []);
+
+      if (invitesRes.ok) {
+        const invitesData = await invitesRes.json() as { invites: FellowshipInvite[]; count: number };
+        setInvites(invitesData.invites ?? []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load fellowships');
     } finally {
@@ -71,7 +92,46 @@ export function PartyListIsland() {
   const activeParties = parties.filter(p => p.dissolved_at === null);
   const dissolvedParties = parties.filter(p => p.dissolved_at !== null);
 
-  const handleCreate = async (e: Event) => {
+  const handleAcceptInvite = async (inviteId: number) => {
+    setInviteActionId(inviteId);
+    try {
+      const res = await fetch(`/api/user/fellowship-invites/${inviteId}/accept`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error: string };
+        throw new Error(data.error || 'Failed to accept invite');
+      }
+      setSuccessMsg('Fellowship invite accepted!');
+      await fetchParties();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to accept invite');
+    } finally {
+      setInviteActionId(null);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: number) => {
+    setInviteActionId(inviteId);
+    try {
+      const res = await fetch(`/api/user/fellowship-invites/${inviteId}/reject`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error: string };
+        throw new Error(data.error || 'Failed to decline invite');
+      }
+      setInvites(prev => prev.filter(i => i.id !== inviteId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to decline invite');
+    } finally {
+      setInviteActionId(null);
+    }
+  };
+
+  const handleCreate= async (e: Event) => {
     e.preventDefault();
     if (!createName.trim()) return;
     setCreating(true);
@@ -172,6 +232,40 @@ export function PartyListIsland() {
             aria-label="Dismiss"
           >×</button>
         </div>
+      )}
+
+      {/* Pending Fellowship Invites */}
+      {invites.length > 0 && (
+        <>
+          <h2>Pending Invites</h2>
+          {invites.map(invite => (
+            <div key={invite.id} className="party-card friend-invite-card">
+              <div className="party-list-item__name">{invite.party_name}</div>
+              <div className="friend-invite-card__detail">
+                {invite.member_count} {invite.member_count === 1 ? 'member' : 'members'} · {invite.total_distance.toFixed(2)} km total
+              </div>
+              <div className="friend-invite-card__detail">
+                Invited by: {invite.inviter_username}
+              </div>
+              <div className="friend-invite-actions">
+                <button
+                  className="party-btn party-btn--primary party-btn--small"
+                  onClick={() => handleAcceptInvite(invite.id)}
+                  disabled={inviteActionId === invite.id}
+                >
+                  {inviteActionId === invite.id ? <i className="fas fa-spinner fa-spin" aria-hidden="true"></i> : 'Accept'}
+                </button>
+                <button
+                  className="party-btn party-btn--danger party-btn--small"
+                  onClick={() => handleDeclineInvite(invite.id)}
+                  disabled={inviteActionId === invite.id}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </>
       )}
 
       <h2>Your Fellowships</h2>

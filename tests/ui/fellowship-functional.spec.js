@@ -36,6 +36,7 @@ async function loginAs(page, token, url = '/journey') {
   await page.goto(`${BASE_URL}/login`);
   await page.evaluate((t) => localStorage.setItem('sessionToken', t), token);
   await page.goto(`${BASE_URL}${url}`);
+  await page.waitForSelector('body.authenticated', { timeout: 15000 });
 }
 
 /**
@@ -100,7 +101,7 @@ test.describe('Story 3-7: Fellowships Pages', () => {
   test('Party list page loads with empty state or content', async ({ page, skittlz1Token }) => {
     await loginAs(page, skittlz1Token, '/party');
     // Island mount should be visible
-    await expect(page.locator('[data-island="PartyListIsland"]')).toBeVisible({ timeout: 5000 });
+    await page.waitForSelector('[data-island="PartyListIsland"][data-hydrated="true"]');
     // Should show the "Your Fellowships" heading (always present once loaded)
     await expect(page.locator('h2', { hasText: 'Your Fellowships' })).toBeVisible({ timeout: 8000 });
   });

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
+import { Avatar } from '../components/Avatar';
 
 interface PartyMember {
   user_id: number;
@@ -6,6 +7,7 @@ interface PartyMember {
   contribution: number;
   status: string;
   color: number;
+  avatar_id: string | null;
 }
 
 interface PartyInfo {
@@ -281,7 +283,8 @@ export function PartyManageIsland() {
         ) : (
           otherMembers.map(member => (
             <div key={member.user_id} className="party-kick-row">
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Avatar username={member.display_name} avatarId={member.avatar_id} size={24} />
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{member.display_name}</span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: '0.5em' }}>
                   {member.contribution.toFixed(2)} km

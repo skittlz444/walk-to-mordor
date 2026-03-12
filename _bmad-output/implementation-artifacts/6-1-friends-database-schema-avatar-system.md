@@ -1,6 +1,6 @@
 # Story 6.1: Friends Database Schema & Avatar System
 
-Status: ready-for-dev
+Status: review
 Issue: #299
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
@@ -57,43 +57,43 @@ so that **later API and UI stories can build friend discovery, profile identity,
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create the social identity migration** (AC: #1, #2)
-  - [ ] Add `migrations/0122_create_friendships_and_social_identity.sql` using the next valid sequence after `0121_create_admin_audit_log.sql`.
-  - [ ] Create `friendships` with the required columns, foreign keys, CHECK constraints, uniqueness rule, and indexes.
-  - [ ] Add `avatar_id` to `users`.
-  - [ ] Add `friend_code` to `users` using a SQLite-safe additive approach.
-  - [ ] Enforce uniqueness for `friend_code` with a unique index after the column exists.
+- [x] **Task 1: Create the social identity migration** (AC: #1, #2)
+  - [x] Add `migrations/0122_create_friendships_and_social_identity.sql` using the next valid sequence after `0121_create_admin_audit_log.sql`.
+  - [x] Create `friendships` with the required columns, foreign keys, CHECK constraints, uniqueness rule, and indexes.
+  - [x] Add `avatar_id` to `users`.
+  - [x] Add `friend_code` to `users` using a SQLite-safe additive approach.
+  - [x] Enforce uniqueness for `friend_code` with a unique index after the column exists.
 
-- [ ] **Task 2: Add secure friend-code generation utilities** (AC: #3)
-  - [ ] Add a reusable helper for 8-character alphanumeric code generation using `crypto.getRandomValues`.
-  - [ ] Keep the behavior aligned with the existing fellowship invite-code approach in `src/party-handlers.ts`, but avoid duplicating logic inline across handlers.
-  - [ ] Add retry logic for uniqueness collisions.
+- [x] **Task 2: Add secure friend-code generation utilities** (AC: #3)
+  - [x] Add a reusable helper for 8-character alphanumeric code generation using `crypto.getRandomValues`.
+  - [x] Keep the behavior aligned with the existing fellowship invite-code approach in `src/party-handlers.ts`, but avoid duplicating logic inline across handlers.
+  - [x] Add retry logic for uniqueness collisions.
 
-- [ ] **Task 3: Update user-creation flows to populate `friend_code`** (AC: #3, #6)
-  - [ ] Update `handleRegister` in `src/auth-handlers.ts` so every newly created real user gets a unique `friend_code`.
-  - [ ] Update test/mock user creation paths in `src/auth-handlers.ts` that currently insert users during `ALLOW_TEST_AUTH=true` flows so they also satisfy the new schema expectations.
-  - [ ] Keep first-user bootstrap behavior intact.
+- [x] **Task 3: Update user-creation flows to populate `friend_code`** (AC: #3, #6)
+  - [x] Update `handleRegister` in `src/auth-handlers.ts` so every newly created real user gets a unique `friend_code`.
+  - [x] Update test/mock user creation paths in `src/auth-handlers.ts` that currently insert users during `ALLOW_TEST_AUTH=true` flows so they also satisfy the new schema expectations.
+  - [x] Keep first-user bootstrap behavior intact.
 
-- [ ] **Task 4: Backfill existing users safely** (AC: #3)
-  - [ ] Implement a one-time backfill path for users whose `friend_code` is `NULL` at rollout time.
-  - [ ] Ensure the backfill uses the same crypto-strength generator as new registrations.
-  - [ ] Verify uniqueness before finalizing each generated code.
-  - [ ] Document how the backfill is run locally and remotely if it cannot be expressed as pure SQL without weakening the security requirement.
+- [x] **Task 4: Backfill existing users safely** (AC: #3)
+  - [x] Implement a one-time backfill path for users whose `friend_code` is `NULL` at rollout time.
+  - [x] Ensure the backfill uses the same crypto-strength generator as new registrations.
+  - [x] Verify uniqueness before finalizing each generated code.
+  - [x] Document how the backfill is run locally and remotely if it cannot be expressed as pure SQL without weakening the security requirement.
 
-- [ ] **Task 5: Prepare avatar assets and slug inventory** (AC: #4)
-  - [ ] Add the predefined avatar WebP assets in `public/img/avatars/`.
-  - [ ] Add the 32x32 thumbnail variants in `public/img/avatars/thumbs/`.
-  - [ ] Ensure slug naming is stable and kebab-case.
-  - [ ] Add a lightweight slug inventory or other reusable source of truth if needed for future server-side validation.
+- [x] **Task 5: Prepare avatar assets and slug inventory** (AC: #4)
+  - [x] Add the predefined avatar WebP assets in `public/img/avatars/`.
+  - [x] Add the 32x32 thumbnail variants in `public/img/avatars/thumbs/`.
+  - [x] Ensure slug naming is stable and kebab-case.
+  - [x] Add a lightweight slug inventory or other reusable source of truth if needed for future server-side validation.
 
-- [ ] **Task 6: Update documentation** (AC: #5)
-  - [ ] Update `docs/data-models.md` table descriptions and diagram content for `users` and `friendships`.
-  - [ ] Keep the documentation aligned with the actual migration and code, not just the future-looking social docs.
+- [x] **Task 6: Update documentation** (AC: #5)
+  - [x] Update `docs/data-models.md` table descriptions and diagram content for `users` and `friendships`.
+  - [x] Keep the documentation aligned with the actual migration and code, not just the future-looking social docs.
 
-- [ ] **Task 7: Add backend tests** (AC: #1, #2, #3, #6)
-  - [ ] Extend `tests/api/auth-utils.test.ts` with coverage for the new friend-code generator.
-  - [ ] Extend `tests/api/auth-handlers.test.ts` for registration and mock-auth user creation with `friend_code` generation and schema compatibility.
-  - [ ] Add regression coverage for any helper or backfill behavior introduced in this story.
+- [x] **Task 7: Add backend tests** (AC: #1, #2, #3, #6)
+  - [x] Extend `tests/api/auth-utils.test.ts` with coverage for the new friend-code generator.
+  - [x] Extend `tests/api/auth-handlers.test.ts` for registration and mock-auth user creation with `friend_code` generation and schema compatibility.
+  - [x] Add regression coverage for any helper or backfill behavior introduced in this story.
 
 ## Dev Notes
 
@@ -167,18 +167,36 @@ The acceptance criteria require cryptographically random backfill for **existing
 
 ### Agent Model Used
 
-GPT-5.4
+Claude Sonnet 4 (via Copilot CLI)
 
 ### Debug Log References
 
 - Story created from Epic 6 planning artifact plus current codebase validation.
+- All 7 tasks implemented in a single session. Full test suite: 26 suites, 825 tests passing, ~91.4% coverage.
 
 ### Completion Notes List
 
 - Epic 6 was present in `_bmad-output/planning-artifacts/epics.md` but missing from `_bmad-output/implementation-artifacts/sprint-status.yaml`; the tracker has been aligned as part of this story-creation pass.
 - Social docs already describe several future routes and islands that are not yet implemented. This story intentionally scopes work to schema, secure identifiers, and static avatar assets.
-- The backfill strategy for cryptographically random `friend_code` values needs to be implemented carefully because pure SQL migration logic is not sufficient by itself.
+- The backfill strategy for cryptographically random `friend_code` values is implemented as a Worker-side utility (`backfillFriendCodes` in `src/auth-utils.ts`) that uses the same `generateUniqueFriendCode` helper as registration. Run via: `import { backfillFriendCodes } from './auth-utils'; await backfillFriendCodes(env.DB);`
+- `generateInviteCode` in `party-handlers.ts` was refactored to delegate to the shared `generateAlphanumericCode` utility, eliminating duplicated crypto logic.
+- Placeholder WebP assets (minimal RIFF stubs) are checked in for all 22 avatar slugs. Replace with real watercolour-style artwork before shipping the avatar picker UI.
+- **Code-review fix (CR-1 CRITICAL):** Both mock auth INSERT statements in `auth-handlers.ts` now include `email_verified = 1` so test users aren't blocked by email verification.
+- **Code-review fix (CR-2 HIGH):** `generateAlphanumericCode` in `auth-utils.ts` now uses rejection sampling to eliminate modulo bias (`256 % 62 != 0`).
+- **Code-review fix (CR-3 MEDIUM):** Migration `0122` updated to use a partial unique index on `friend_code` (`WHERE friend_code IS NOT NULL`) to avoid SQLite treating multiple NULLs as duplicates.
+- The `CHECK(status IN ('pending', 'accepted'))` constraint on `friendships` was added to the migration and documented in `data-models.md`.
 
 ### File List
 
-- _bmad-output/implementation-artifacts/6-1-friends-database-schema-avatar-system.md
+- `_bmad-output/implementation-artifacts/6-1-friends-database-schema-avatar-system.md` (updated: status, tasks, dev record)
+- `migrations/0122_create_friendships_and_social_identity.sql` (new: friendships table, avatar_id + friend_code on users)
+- `src/auth-utils.ts` (modified: added generateAlphanumericCode, generateUniqueFriendCode, backfillFriendCodes)
+- `src/auth-handlers.ts` (modified: import generateUniqueFriendCode, updated handleRegister + both mock auth paths)
+- `src/party-handlers.ts` (modified: import generateAlphanumericCode, refactored generateInviteCode to delegate)
+- `src/avatar-slugs.ts` (new: VALID_AVATAR_SLUGS constant, AvatarSlug type, isValidAvatarSlug validator)
+- `public/img/avatars/*.webp` (new: 22 placeholder avatar images)
+- `public/img/avatars/thumbs/*.webp` (new: 22 placeholder thumbnail images)
+- `docs/data-models.md` (modified: updated avatar_id/friend_code descriptions, added CHECK constraint docs)
+- `tests/api/auth-utils.test.ts` (modified: added tests for generateAlphanumericCode, generateUniqueFriendCode, backfillFriendCodes)
+- `tests/api/auth-handlers.test.ts` (modified: updated mock, added friend_code generation tests for register + mock auth)
+- `tests/api/avatar-slugs.test.ts` (new: avatar slug inventory validation, asset file existence checks)

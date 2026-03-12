@@ -16,8 +16,8 @@ Stores user credentials and profile status.
 - `show_future_goals_unlocked`: INTEGER (0 or 1, default 1 — controls whether future goals display as unlocked/visible or locked/hidden)
 - `default_view_map`: INTEGER (0 or 1, default 0 — user landing preference: journey or map)
 - `is_admin`: INTEGER (0 or 1, default 0 — admin role flag; can only be set via direct D1 database access, e.g. `UPDATE users SET is_admin = 1 WHERE username = '<admin_username>';`)
-- `avatar_id`: TEXT (default NULL — slug referencing a predefined LOTR-themed avatar image in `public/img/avatars/`, e.g. `gandalf-grey`, `samwise`. When NULL, UI renders initials circle.)
-- `friend_code`: TEXT UNIQUE (8-char alphanumeric, cryptographically random — personal shareable code for friend link discovery. Generated on account creation; existing users backfilled via migration.)
+- `avatar_id`: TEXT (default NULL — slug referencing a predefined LOTR-themed avatar image in `public/img/avatars/`, e.g. `gandalf-grey`, `samwise`. When NULL, UI renders initials circle. Valid slugs are defined in `src/avatar-slugs.ts`.)
+- `friend_code`: TEXT UNIQUE (8-char alphanumeric, cryptographically random — personal shareable code for friend link discovery. Generated on account creation; existing users backfilled via Worker-side utility in `src/auth-utils.ts`.)
 - `created_at`: DATETIME
 - `updated_at`: DATETIME
 
@@ -145,6 +145,7 @@ Mutual friend relationships between users. One row per user pair. Status transit
 - `updated_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
 - `UNIQUE(requester_id, addressee_id)` — one relationship record per ordered user pair
 - `CHECK(requester_id != addressee_id)` — cannot friend yourself
+- `CHECK(status IN ('pending', 'accepted'))` — enforces valid status values
 
 > **Invariant:** The `UNIQUE(requester_id, addressee_id)` constraint only prevents duplicate rows in the same direction. The application layer **must** check both `(requester_id, addressee_id)` and `(addressee_id, requester_id)` before inserting to prevent reverse-direction duplicate rows. This bidirectional check is enforced in the friend request handler.
 
@@ -163,13 +164,14 @@ Friend-based fellowship invitations. A friend can be invited to a party; they mu
 - `invitee_id`: INTEGER NOT NULL (FK -> users.id, ON DELETE CASCADE) — the friend being invited
 - `status`: TEXT NOT NULL DEFAULT 'pending' — `'pending'`, `'accepted'`, or `'rejected'`
 - `created_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
-- Duplicate-pending prevention: the application layer must check for an existing `pending` invite for the same `(party_id, invitee_id)` pair before inserting. Rejected rows are retained but do not block future re-invites. A `UNIQUE(party_id, invitee_id)` constraint is **not** used because it would prevent re-invites when rejected rows exist. Instead, use an app-level check or a SQLite-compatible partial strategy (e.g., delete the rejected row before re-inserting, or use `CREATE UNIQUE INDEX ... WHERE status = 'pending'` if D1 supports partial indexes).
+- Duplicate-pending prevention: a SQLite partial unique index `CREATE UNIQUE INDEX idx_fellowship_invites_pending ON fellowship_invites(party_id, invitee_id) WHERE status = 'pending'` prevents concurrent duplicate pending invites. The application layer also checks for an existing `pending` invite before inserting for a friendlier error message. Rejected rows are retained but do not block future re-invites.
 
-> **Invariant:** `inviter_id` must be an active member of `party_id` at invite time. `invitee_id` must have an accepted friendship with `inviter_id`. These are enforced at the application layer.
+> **Invariant:** `inviter_id` must be an active member of `party_id` at invite time. `invitee_id` must have an accepted friendship with `inviter_id`. These are enforced at the application layer. Pending invites are invalidated (set to `'rejected'`) when a party is dissolved.
 
 **Indexes:**
-- `idx_fellowship_invites_invitee` on `invitee_id` — for pending invite badge queries
-- `idx_fellowship_invites_party` on `party_id`
+- `idx_fellowship_invites_pending` partial unique on `(party_id, invitee_id) WHERE status = 'pending'` — prevents duplicate pending invites while allowing re-invites after rejection
+- `idx_fellowship_invites_invitee` on `(invitee_id, status)` — for pending invite badge/list queries
+- `idx_fellowship_invites_party` on `(party_id, status)` — for party-focused cleanup queries
 
 ## Entity Relationship Diagram (Mermaid)
 

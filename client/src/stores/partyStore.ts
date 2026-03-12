@@ -29,6 +29,7 @@ export interface PartyMember {
   contribution: number;
   status: string;
   color: number;
+  avatar_id: string | null;
 }
 
 export interface PartyProgress {
