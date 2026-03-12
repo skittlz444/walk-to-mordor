@@ -1,6 +1,6 @@
 # Frontend Guide
 
-Last updated: 2026-03-09
+Last updated: 2026-03-12
 
 ## Purpose
 
@@ -120,6 +120,11 @@ The `FriendAddIsland` component (`client/src/islands/FriendAddIsland.tsx`) rende
 The Social Panel is built directly inside `MapIsland` (not a separate island). It replaces the fellowship-only selector on the Map page. Two independent sections:
 - **View As**: Personal + fellowship list (preserves existing `PartySelector` behavior)
 - **Friends on Map**: Toggle to show/hide friend avatars at their journey positions. Friend avatars render as 32px circular images (thumbnails from `public/img/avatars/thumbs/`), tappable for a mini-card with username, distance, and profile link.
+
+Map marker avatar behavior:
+
+- The current-user marker also reads `avatarId` from the authenticated session and prefers the matching thumbnail from `public/img/avatars/thumbs/`.
+- If no avatar is selected, or the thumbnail fails to load, the player marker stays on the existing gold ring fallback without changing tooltip, zoom scaling, or movement behavior.
 
 ## Reusable Components
 
