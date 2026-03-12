@@ -164,15 +164,15 @@ export function createUserMarker(
 
       const avatarImage = new Konva.Image({
         image: img,
-        x: -MARKER_HALF + 4,
-        y: -MARKER_HALF + 4,
-        width: MARKER_SIZE - 8,
-        height: MARKER_SIZE - 8,
+        x: -MARKER_HALF + 2,
+        y: -MARKER_HALF + 2,
+        width: MARKER_SIZE - 4,
+        height: MARKER_SIZE - 4,
       });
 
       avatarClipGroup = new Konva.Group({
         clipFunc: (ctx: Konva.Context) => {
-          ctx.arc(0, 0, MARKER_HALF - 4, 0, Math.PI * 2, false);
+          ctx.arc(0, 0, MARKER_HALF - 2, 0, Math.PI * 2, false);
         },
       });
       avatarClipGroup.add(avatarImage);
@@ -180,7 +180,7 @@ export function createUserMarker(
       avatarBorder = new Konva.Circle({
         x: 0,
         y: 0,
-        radius: MARKER_HALF - 2,
+        radius: MARKER_HALF,
         stroke: RING_STROKE_COLOR,
         strokeWidth: 2,
         fill: 'transparent',
