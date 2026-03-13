@@ -22,6 +22,10 @@ if (requested.length > 0) {
 }
 const projects = requested.length > 0 ? requested : ALL_PROJECTS;
 
+// On Windows, npx is a .cmd script which requires shell: true to resolve.
+// When shell: true is used, arguments with spaces must be quoted.
+const isWindows = process.platform === 'win32';
+
 let failed = 0;
 let passed = 0;
 
@@ -30,13 +34,16 @@ for (const project of projects) {
   console.log(`Running: ${project}`);
   console.log('='.repeat(60));
 
+  const projectArg = isWindows ? `--project="${project}"` : `--project=${project}`;
   try {
-    execFileSync('npx', ['playwright', 'test', `--project=${project}`, '--reporter=line'], {
+    execFileSync('npx', ['playwright', 'test', projectArg, '--reporter=line'], {
       stdio: 'inherit',
       cwd: process.cwd(),
+      shell: isWindows,
     });
     passed++;
-  } catch {
+  } catch (error) {
+    console.error(`\nError running ${project}:`, error.status != null ? `exit code ${error.status}` : error.message);
     failed++;
   }
 }

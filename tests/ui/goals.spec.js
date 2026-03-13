@@ -23,16 +23,23 @@ async function closePopupRobust(page, closeButton) {
   // Wait for popup to actually close - Firefox sometimes has timing issues
   try {
     await page.waitForFunction(() => {
-      const overlay = document.querySelector('.modal-overlay');
-      return !overlay || window.getComputedStyle(overlay).display === 'none' || 
-             overlay.style.display === 'none' || !overlay.offsetParent;
-    });
+      const overlays = document.querySelectorAll('.modal-overlay');
+      return overlays.length === 0 || Array.from(overlays).every(overlay =>
+        window.getComputedStyle(overlay).display === 'none' || 
+        overlay.style.display === 'none' || !overlay.offsetParent
+      );
+    }, { timeout: 5000 });
   } catch (e) {
+    // If overlays are still visible, try additional close strategies
     try {
       await page.keyboard.press('Escape');
     } catch (err) {}
+    // Try clicking any remaining visible Close buttons
     try {
-      await popup.click({ position: { x: 5, y: 5 }, force: true });
+      const visibleClose = page.locator('text=Close').last();
+      if (await visibleClose.isVisible({ timeout: 1000 })) {
+        await visibleClose.click({ force: true });
+      }
     } catch (err) {}
   }
   
