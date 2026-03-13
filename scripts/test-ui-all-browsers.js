@@ -7,7 +7,7 @@
  *   node scripts/test-ui-all-browsers.js            # run all 4 browsers
  *   node scripts/test-ui-all-browsers.js chromium    # run specific browser(s)
  */
-const { execFileSync } = require('child_process');
+const { execSync } = require('child_process');
 
 const ALL_PROJECTS = ['chromium', 'firefox', 'Mobile Chrome', 'Mobile Firefox'];
 
@@ -31,12 +31,13 @@ for (const project of projects) {
   console.log('='.repeat(60));
 
   try {
-    execFileSync('npx', ['playwright', 'test', `--project=${project}`, '--reporter=line'], {
+    execSync(`npx playwright test --project="${project}" --reporter=line`, {
       stdio: 'inherit',
       cwd: process.cwd(),
     });
     passed++;
-  } catch {
+  } catch (error) {
+    console.error(`\nError running ${project}:`, error.message);
     failed++;
   }
 }
