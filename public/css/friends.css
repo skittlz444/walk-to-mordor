@@ -288,32 +288,7 @@
   margin-bottom: 0.75rem;
 }
 
-/* ─── Inline member friend action ─── */
-.friend-member-action {
-  font-size: 0.7rem;
-  white-space: nowrap;
-}
-
-.friend-member-action button {
-  background: none;
-  border: 1px solid var(--accent-teal);
-  color: var(--accent-teal);
-  border-radius: 4px;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.7rem;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.friend-member-action button:hover {
-  background: var(--accent-teal);
-  color: var(--text-primary);
-}
-
-.friend-member-action--label {
-  color: var(--text-muted);
-  font-size: 0.7rem;
-}
+/* ─── Member friend action (used in PartyDetailIsland via party.css) ─── */
 
 /* ─── Invite Section on PartyListIsland ─── */
 .friend-invite-card {
