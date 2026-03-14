@@ -341,27 +341,29 @@ export function PartyDetailIsland() {
                     Joined {new Date(member.joined_at).toLocaleDateString()}
                   </span>
                 </div>
-                <span className="party-member-contribution">{member.contribution.toFixed(2)} km</span>
-                {!isCurrentUser && member.status === 'active' && (
-                  <span className="friend-member-action">
-                    {friendIds.has(member.user_id) ? (
-                      <span className="friend-member-action--label">Friends ✓</span>
-                    ) : pendingFriendIds.has(member.user_id) ? (
-                      <span className="friend-member-action--label">Pending</span>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleSendFriendRequest(member.user_id); }}
-                        disabled={sendingFriendRequest === member.user_id}
-                        title={`Add ${member.display_name} as friend`}
-                      >
-                        {sendingFriendRequest === member.user_id
-                          ? <i className="fas fa-spinner fa-spin" aria-hidden="true"></i>
-                          : <><i className="fas fa-user-plus" aria-hidden="true"></i> Add</>
-                        }
-                      </button>
-                    )}
-                  </span>
-                )}
+                <div className="party-member-right">
+                  <span className="party-member-contribution">{member.contribution.toFixed(2)} km</span>
+                  {!isCurrentUser && member.status === 'active' && (
+                    <span className="friend-member-action">
+                      {friendIds.has(member.user_id) ? (
+                        <span className="friend-member-action--label">Friends ✓</span>
+                      ) : pendingFriendIds.has(member.user_id) ? (
+                        <span className="friend-member-action--label">Pending</span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSendFriendRequest(member.user_id); }}
+                          disabled={sendingFriendRequest === member.user_id}
+                          title={`Add ${member.display_name} as friend`}
+                        >
+                          {sendingFriendRequest === member.user_id
+                            ? <i className="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                            : <><i className="fas fa-user-plus" aria-hidden="true"></i> Add</>
+                          }
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </div>
               </li>
               );
             })}
