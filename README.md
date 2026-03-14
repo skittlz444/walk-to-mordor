@@ -6,7 +6,7 @@
 
 **Walk to Mordor** is a fitness tracking Progressive Web App (PWA) inspired by J.R.R. Tolkien's *The Lord of the Rings*. This application gamifies your daily walking or running routine by mapping your exercise distances to the epic journey from Bag End to Mount Doom and back again.
 
-Track your real-world exercise progress as you virtually follow in the footsteps of Frodo and Sam on their legendary quest. Every kilometer you walk in real life advances you along the 6,425 km (3,991 mile) round trip from the Shire to Mordor, complete with 190 milestone markers from the books.
+Track your real-world exercise progress as you virtually follow in the footsteps of Frodo and Sam on their legendary quest. Every kilometer you walk in real life advances you along the 6,425 km (3,991 mile) round trip from the Shire to Mordor, complete with 191 milestone markers from the books.
 
 ## Features
 
@@ -21,7 +21,7 @@ Track your real-world exercise progress as you virtually follow in the footsteps
 
 ### 🗺️ Interactive Journey Map
 - Konva.js-powered tiled map of Middle-earth with 6 zoom levels
-- 190 story milestones from Bag End through Rivendell, Moria, Lothlórien, to Mount Doom and back
+- 191 story milestones from Bag End through Rivendell, Moria, Lothlórien, to Mount Doom and back
 - User avatar marker at your current position on the journey
 - Friend avatar markers showing where your friends are on the map
 
@@ -136,58 +136,3 @@ Full documentation is in [`docs/`](docs/index.md):
 - [Source Tree](docs/source-tree-analysis.md) — Annotated file map
 - [UI Overview](docs/ui-overview.md) — SSR shells, islands, legacy JS
 - [Frontend Guide](docs/frontend-guide.md) — Building and extending islands
-- **Run Day**: Mondays only
-- **Run Time**: 6:00 AM Singapore Time (Asia/Singapore)
-- **Frequency**: Weekly
-
-#### NPM Dependencies
-Dependabot monitors and updates all npm packages with smart grouping:
-
-- **Development Dependencies Group**: Minor and patch updates for devDependencies (Jest, Playwright, TypeScript, etc.) are grouped together into a single PR to reduce noise
-- **Production Dependencies Group**: Minor and patch updates for production dependencies (like @cloudflare/kv-asset-handler) are grouped separately
-- **Major Updates**: Major version updates are NOT grouped and handled individually for careful review since they may include breaking changes
-
-**Configuration**:
-- Maximum 10 open PRs at a time
-- PRs are labeled with `dependencies` and `npm`
-- Commits use conventional format: `chore(deps)` or `chore(deps-dev)`
-- All PRs target the `dev` branch
-
-#### GitHub Actions
-Dependabot also monitors GitHub Actions for updates:
-
-- All GitHub Actions updates are grouped together in a single PR
-- Keeps workflows current with the latest action versions
-- Maximum 5 open PRs at a time
-- PRs are labeled with `dependencies` and `github-actions`
-- Commits use conventional format: `chore(deps)`
-
-#### Benefits
-- **Reduced PR Volume**: Grouping similar updates means fewer PRs to review
-- **Security**: Automatic security updates for vulnerable dependencies
-- **Consistency**: All dependency updates follow the same commit message format
-- **Controlled Updates**: PR limits prevent overwhelming the review queue
-- **Focused Review**: Separate groups for dev/prod/major changes allow appropriate review attention
-
-#### Manual Dependency Updates
-If you need to manually update dependencies:
-
-```bash
-# Check for outdated packages
-npm outdated
-
-# Update a specific package
-npm update package-name
-
-# Update all packages (respecting semver)
-npm update
-
-# Major version updates (review breaking changes first)
-npm install package-name@latest
-```
-
-Always run tests after updating dependencies:
-```bash
-npm run test:coverage  # Verify unit tests pass
-npm run check          # Verify TypeScript and Wrangler config
-```
