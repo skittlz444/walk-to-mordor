@@ -1,6 +1,6 @@
 # Story 6.6: Map Social Panel & Friends on Map
 
-Status: dev-complete
+Status: done
 Issue: #304
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->

@@ -1,305 +1,138 @@
 # Walk to Mordor 🧙‍♂️
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
-
-![Walk to Mordor App Preview](https://github.com/user-attachments/assets/42f0fa4c-2d85-49be-a641-fd134ee55d5a)
+![Interactive Map](screenshots/map-hero.png)
 
 ## Project Description
 
 **Walk to Mordor** is a fitness tracking Progressive Web App (PWA) inspired by J.R.R. Tolkien's *The Lord of the Rings*. This application gamifies your daily walking or running routine by mapping your exercise distances to the epic journey from Bag End to Mount Doom and back again.
 
-Track your real-world exercise progress as you virtually follow in the footsteps of Frodo and Sam on their legendary quest. Every kilometer you walk in real life advances you along the 6,425 km (3,991 mile) round trip from the Shire to Mordor, complete with 191+ milestone markers from the books.
-
-### Project Goals
-
-- **Gamify Fitness**: Transform daily exercise into an epic adventure through Middle-earth
-- **Long-term Motivation**: Provide a meaningful, story-driven goal that takes months or years to complete
-- **Literary Connection**: Create an immersive experience that connects physical activity with beloved literature
-- **Progress Visualization**: Offer clear milestones and progress tracking to maintain motivation
-- **Accessibility**: Provide a modern, responsive web application that works on all devices
-
-### What It Does
-
-🚶‍♂️ **Daily Progress Tracking**: Log your daily walking/running distances through an intuitive calendar interface
-
-📍 **Literary Milestones**: Unlock 191+ story locations from Bag End to Mount Doom with rich descriptions from the books
-
-📊 **Visual Progress**: See your cumulative distance and track how far you've traveled on the epic journey
-
-🏆 **Achievement System**: Reach major story milestones like crossing the Brandywine River, arriving at Rivendell, or entering Mordor
-
-📱 **Progressive Web App**: Install on your phone or desktop for offline access and native app-like experience
-
-🎯 **Goal Management**: View upcoming milestones and track your progress toward major story events
-
-The complete journey covers **6,425 kilometers (3,991 miles)** - a substantial fitness goal that provides months or years of motivation while reliving one of literature's greatest adventures.
-
-## API Error Handling Features
-
-The API now includes comprehensive error handling for all endpoints:
-
-### Date Format Validation
-- **Format**: Strictly validates `YYYY-MM-DD` format (e.g., `2024-01-15`)
-- **Date Validation**: Ensures dates are real (handles leap years, month lengths, etc.)
-- **Range Validation**: Year must be between 1000-9999
-- **Error Response**: Returns specific error messages for invalid date formats
-
-### Input Validation
-- **Required Fields**: Validates all required fields are present
-- **Distance Values**: Must be non-negative numbers with upper limit (< 1 billion)
-- **JSON Parsing**: Handles malformed JSON with descriptive error messages
-- **Empty Requests**: Rejects empty request bodies
-- **Object Structure**: Ensures request body is a valid JSON object
-- **HTTP Methods**: Validates allowed methods per endpoint (405 Method Not Allowed)
-
-### Database Error Handling
-- **Duplicate Entries**: POST returns 409 when entry already exists (with unique constraint)
-- **Missing Entries**: PUT/DELETE return 404 when entry doesn't exist
-- **Database Failures**: All database operations wrapped in try-catch with fallbacks
-- **Transaction Safety**: Proper error responses for constraint violations
-
-### Enhanced Error Messages
-- **Specific Validation**: Different error messages for different validation failures
-  - Invalid numbers vs negative numbers vs too large numbers
-  - Missing fields vs invalid format vs malformed JSON
-- **Helpful Context**: Error messages include examples and expected formats
-- **HTTP Status Codes**: Proper status codes for different error types
-
-### HTTP Status Codes
-- `200`: Successful operations
-- `201`: Successfully created new entry
-- `400`: Invalid request data (validation errors)
-- `404`: Entry not found (PUT/DELETE operations)
-- `405`: Method not allowed
-- `409`: Conflict (duplicate entry on POST)
-- `500`: Internal server errors
-
-### Response Format
-All API responses return JSON with consistent structure:
-```json
-{
-  "message": "Success message",
-  "date": "2024-01-15",
-  "distance": 42.5
-}
-```
-
-Error responses:
-```json
-{
-  "error": "Descriptive error message"
-}
-```
-
-### Test Coverage
-- 218+ comprehensive test cases across unit and UI testing
-- 96%+ code coverage with automated validation
-- Automated accessibility testing (WCAG validation)
-- Valid edge cases (zero values, decimals, large numbers)
-- Invalid input validation (malformed JSON, wrong types, out of range)
-- HTTP method validation and database error conditions
-- Automatic test data cleanup and user isolation via Mock Auth
+Track your real-world exercise progress as you virtually follow in the footsteps of Frodo and Sam on their legendary quest. Every kilometer you walk in real life advances you along the 6,425 km (3,991 mile) round trip from the Shire to Mordor, complete with 191 milestone markers from the books.
 
 ## Features
 
+### 🔐 Account & Authentication
+- Register with email, verify via confirmation link, log in with session-based auth
+- Password reset via email, profile management, LOTR-themed avatar selection (57 avatars)
+
 ### 📅 Daily Progress Tracking
-- **Calendar Interface**: Log daily walking/running distances with an intuitive calendar
-- **Flexible Input**: Enter distances in kilometers with decimal precision (e.g., 5.25 km)
-- **Edit & Delete**: Modify or remove entries as needed
-- **Cumulative Tracking**: Automatic calculation of total distance traveled
-- **Simple Access**: No login required - immediate access to start tracking
+- Calendar interface for logging daily walking/running distances (km with decimal precision)
+- Edit and delete entries; cumulative distance auto-calculated
+- Milestone unlock notifications when you reach story locations
 
 ### 🗺️ Interactive Journey Map
-- **191+ Story Milestones**: From Bag End through Rivendell, Moria, Lothlórien, to Mount Doom and back
-- **Rich Descriptions**: Each milestone includes detailed descriptions from Tolkien's writings
-- **Progress Visualization**: See exactly where you are on the journey and what's coming next
-- **Achievement System**: Unlock major story locations as you progress
+- Konva.js-powered tiled map of Middle-earth with 6 zoom levels
+- 191 story milestones from Bag End through Rivendell, Moria, Lothlórien, to Mount Doom and back
+- User avatar marker at your current position on the journey
+- Friend avatar markers showing where your friends are on the map
 
-### 🏆 Milestone Goals
-The journey includes major checkpoints from the books:
-- **Bag End to Rivendell**: 458 km (Challenge 1)
-- **Rivendell to Lothlórien**: 684 km (Challenge 2) 
-- **Through Moria and beyond**: Multiple story arcs
-- **Mount Doom**: The ultimate destination at 1,779 km
-- **Return Journey**: Complete the round trip back to Bag End (6,425 km total)
+### ⚔️ Fellowships
+- Create and join walking parties (fellowships) with invite codes
+- Track combined party progress and individual member contributions
+- Activity feed, leadership management, and configurable distance modes
+- Invite friends directly to your fellowship
+
+### 👥 Friends
+- Add friends via username search or shareable friend codes
+- View friend profiles with walking stats and shared fellowships
+- Pending request management with badge notifications
+
+### 🛡️ Admin Dashboard
+- System statistics, user management (verify, reset password, toggle admin, delete)
+- Goal management with image browser (create, edit, search, sort)
+- Community metrics: leaderboard with date filters, 30-day activity timeline
 
 ### 📱 Progressive Web App
-- **Offline Support**: Works without internet connection once installed
-- **Mobile Optimized**: Responsive design for phones, tablets, and desktop
-- **App Installation**: Install directly to your device's home screen
-- **Service Worker**: Automatic updates and background sync
+- Offline support via service worker with versioned caching
+- Mobile-optimized responsive design
+- Install to home screen on any device
 
-### 🛡️ Robust Architecture
-- **Error Handling**: Comprehensive validation for all user inputs
-- **Data Safety**: Automatic backups and conflict resolution
-- **Performance**: Serverless architecture with global edge distribution
-- **Testing**: 90+ automated tests ensuring reliability
+## Screenshots
 
-## How to Use
+| Journey Dashboard | Goal Detail |
+|---|---|
+| ![Journey](screenshots/journey-view.png) | ![Goal Modal](screenshots/goal-modal-view.png) |
 
-### 🚀 Getting Started
-1. **Open the App**: Navigate to the application URL - no login required
-2. **Start Tracking**: Click on any date in the calendar to log your daily walking distance
-3. **View Progress**: See your total distance at the top of the screen
-4. **Explore Milestones**: Click on upcoming goals to read about the next story locations
-5. **Stay Motivated**: Watch your progress advance through Middle-earth's most famous locations
-6. **Track Long-term**: The complete journey provides months or years of fitness motivation
-
-Whether you're a casual walker aiming for 2-3 km per day or a dedicated runner covering 10+ km daily, the journey scales to your fitness level while providing consistent motivation through Tolkien's beloved story.
+| Fellowships | Friends |
+|---|---|
+| ![Fellowships](screenshots/fellowships-view.png) | ![Friends](screenshots/friends-view.png) |
 
 ## Technology Stack
 
-Built with modern web technologies for performance, reliability, and scalability:
-
 - **Runtime**: Cloudflare Workers (serverless edge computing)
-- **Database**: Cloudflare D1 (SQLite-based serverless SQL)
-- **Frontend**: Progressive Web App with offline capabilities
-- **Testing**: Jest (unit), Supertest (API), Playwright (E2E browser testing)
-- **Deployment**: Automated CI/CD with GitHub Actions
+- **Database**: Cloudflare D1 (SQLite-based)
+- **Frontend**: Islands Architecture — SSR shells + Preact hydration + legacy vanilla JS
+- **Map**: Konva.js with tiled zoom, Preact Signals state management
+- **Build**: Vite (client), Wrangler (worker)
+- **Testing**: Jest (API, 1000+ tests), Vitest (client islands, 490+ tests), Playwright (E2E, 230+ browser tests)
+- **Language**: TypeScript (strict mode)
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or pnpm package manager
+- Node.js 18+
+- pnpm (recommended) or npm
 - Cloudflare account (for deployment)
 
-### Local Development Setup
+### Local Development
 
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+```bash
+# Install dependencies
+npm install
 
-2. **Initialize local database**:
-   ```bash
-   npx wrangler d1 migrations apply DB --local
-   ```
-   This creates the local SQLite database with progress tracking tables and 191+ story milestones.
+# Start dev server (builds client, seeds local D1, starts Wrangler)
+npm run dev
+```
 
-3. **Start development server**:
-   ```bash
-   npm run dev
-   ```
-   The app will be available at `http://localhost:8787/wtm/`
+The app will be available at `http://localhost:8787/`.
 
-4. **Run tests** (optional):
-   ```bash
-   npm test               # Fast unit tests (3 seconds)
-   npm run test:ui        # Complete E2E UI tests (requires running server)
-   npm run test:coverage  # Unit tests with coverage report
-   ```
+### Running Tests
+
+```bash
+npm test                    # Jest API/unit tests
+npm run test:client         # Vitest client island tests
+npm run test:ui             # Playwright E2E (chromium)
+npm run test:ui:all         # Playwright all browsers
+npm run test:coverage       # Jest with coverage
+npm run test:client:coverage # Vitest with coverage
+```
 
 ### Production Deployment
 
-1. **Create Cloudflare D1 database**:
-   ```bash
-   npx wrangler d1 create walk-to-mordor-db
-   ```
-   Update the `database_id` in `wrangler.json` with the returned database ID.
-
-2. **Initialize production database**:
-   ```bash
-   npx wrangler d1 migrations apply DB --remote
-   ```
-
-3. **Configure Email Routing** (for password reset functionality):
-   - Enable Cloudflare Email Routing on your domain
-   - Verify destination email addresses
-   - See [EMAIL_SETUP.md](docs/EMAIL_SETUP.md) for detailed configuration instructions
-
-4. **Deploy to Cloudflare Workers**:
-   ```bash
-   npm run deploy
-   ```
-   This automatically updates the service worker cache version and deploys the application.
-
-## Build Process
-
-The project includes an automated build process that updates the service worker cache name with the current build timestamp. This ensures that each deployment gets a fresh cache and prevents cache conflicts between versions.
-
-### Build Commands
-
-- **`npm run build`** - Updates service worker cache version to current timestamp
-- **`npm run deploy`** - Runs build process and deploys to Cloudflare
-- **`npm run build:sw`** - Manually update service worker cache version
-- **`npm run build:sw:reset`** - Reset service worker to development placeholder
-
-### Cache Versioning
-
-The service worker cache name uses the format: `walk-to-mordor-YYYYMMDD-HHMMSS`
-
-Example: `walk-to-mordor-20250907-162757`
-
-This ensures:
-- Fresh cache for each deployment
-- No conflicts between development and production
-- Automatic cache invalidation on updates
-- Better cache management across versions
-
-## Testing & CI/CD
-
-The project includes comprehensive GitHub Actions workflows for automated testing on pull requests. The PR workflow includes unit tests, API integration tests, and UI end-to-end tests to ensure code quality and reliability.
-
-## Dependency Management
-
-### Automated Dependency Updates with Dependabot
-
-This project uses GitHub's Dependabot to automatically keep dependencies up-to-date with the following configuration:
-
-#### Schedule
-- **Run Day**: Mondays only
-- **Run Time**: 6:00 AM Singapore Time (Asia/Singapore)
-- **Frequency**: Weekly
-
-#### NPM Dependencies
-Dependabot monitors and updates all npm packages with smart grouping:
-
-- **Development Dependencies Group**: Minor and patch updates for devDependencies (Jest, Playwright, TypeScript, etc.) are grouped together into a single PR to reduce noise
-- **Production Dependencies Group**: Minor and patch updates for production dependencies (like @cloudflare/kv-asset-handler) are grouped separately
-- **Major Updates**: Major version updates are NOT grouped and handled individually for careful review since they may include breaking changes
-
-**Configuration**:
-- Maximum 10 open PRs at a time
-- PRs are labeled with `dependencies` and `npm`
-- Commits use conventional format: `chore(deps)` or `chore(deps-dev)`
-- All PRs target the `dev` branch
-
-#### GitHub Actions
-Dependabot also monitors GitHub Actions for updates:
-
-- All GitHub Actions updates are grouped together in a single PR
-- Keeps workflows current with the latest action versions
-- Maximum 5 open PRs at a time
-- PRs are labeled with `dependencies` and `github-actions`
-- Commits use conventional format: `chore(deps)`
-
-#### Benefits
-- **Reduced PR Volume**: Grouping similar updates means fewer PRs to review
-- **Security**: Automatic security updates for vulnerable dependencies
-- **Consistency**: All dependency updates follow the same commit message format
-- **Controlled Updates**: PR limits prevent overwhelming the review queue
-- **Focused Review**: Separate groups for dev/prod/major changes allow appropriate review attention
-
-#### Manual Dependency Updates
-If you need to manually update dependencies:
-
 ```bash
-# Check for outdated packages
-npm outdated
+# Create D1 database (first time)
+npx wrangler d1 create walk-to-mordor-db
+# Update database_id in wrangler.json
 
-# Update a specific package
-npm update package-name
-
-# Update all packages (respecting semver)
-npm update
-
-# Major version updates (review breaking changes first)
-npm install package-name@latest
+# Deploy (runs migrations + builds + deploys)
+npm run deploy
 ```
 
-Always run tests after updating dependencies:
-```bash
-npm run test:coverage  # Verify unit tests pass
-npm run check          # Verify TypeScript and Wrangler config
-```
+The `deploy` script automatically:
+1. Applies D1 migrations to remote (predeploy hook)
+2. Builds client islands via Vite
+3. Updates service worker cache version
+4. Generates image manifest
+5. Deploys Worker to Cloudflare
+
+## Build Commands
+
+| Command | Purpose |
+|---|---|
+| `npm run build` | Full build: client + SW cache + image manifest |
+| `npm run build:client` | Vite build of Preact islands |
+| `npm run build:manifest` | Generate image-manifest.json |
+| `npm run build:sw` | Stamp service worker cache version |
+| `npm run optimize:images` | Optimize goal images + rebuild manifest |
+| `npm run tile:map` | Generate map tile pyramid |
+
+## Documentation
+
+Full documentation is in [`docs/`](docs/index.md):
+
+- [Architecture](docs/architecture.md) — System shape, routes, auth model
+- [API Reference](docs/api-reference.md) — All HTTP endpoints and contracts
+- [Admin API Reference](docs/api-reference-admin.md) — Admin endpoints (goals, users, metrics)
+- [Data Models](docs/data-models.md) — D1 schema and relationships
+- [Source Tree](docs/source-tree-analysis.md) — Annotated file map
+- [UI Overview](docs/ui-overview.md) — SSR shells, islands, legacy JS
+- [Frontend Guide](docs/frontend-guide.md) — Building and extending islands

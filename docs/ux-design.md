@@ -386,12 +386,13 @@ Two visual states based on completion:
 
 This document establishes the baseline for Walk to Mordor's current UX. The following topics should be addressed in separate design workshops:
 
-1. ~~**Map Visualization (Phase 2)**~~ - ✅ Implemented (Epic 3)
-2. ~~**Fellowship Features (Phase 3)**~~ - ✅ Implemented (Epic 4)
-3. **Friends & Social Identity (Phase 3)** - Avatar system, friend discovery, social map panel
-4. **Races (Phase 3)** - Competitive gameplay UX patterns
-5. **Onboarding Flow** - New user first-run experience
-6. **Dark Mode Refinement** - Formalized theme system with potential light mode
+1. ~~**Map Visualization (Phase 2)**~~ - ✅ Implemented
+2. ~~**Fellowship Features (Phase 3)**~~ - ✅ Implemented
+3. ~~**Friends & Social Identity (Phase 3)**~~ - ✅ Implemented
+4. **Onboarding Flow** - New user first-run experience
+5. **Dark Mode Refinement** - Formalized theme system with potential light mode
+
+> Race UX exploration has been removed from the active roadmap along with Epic 5.
 
 ---
 

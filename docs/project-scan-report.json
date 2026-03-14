@@ -1,1 +1,63 @@
-{"workflow_version":"1.2.0","timestamps":{"started":"2026-03-06T00:00:00Z","last_updated":"2026-03-06T00:00:00Z"},"mode":"full_rescan","scan_level":"exhaustive","project_root":".","project_knowledge":"docs","completed_steps":[{"step":"step_1","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"Classified as monolith web Worker app with single docs set"},{"step":"step_2","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"Existing documentation inventory captured and refreshed in place"},{"step":"step_3","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"Technology stack verified from package.json, wrangler.json, and route/render code"},{"step":"step_4","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"API/data/UI analysis completed from src, client/src, public/js, and migrations"},{"step":"step_5","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"Source tree analysis generated"},{"step":"step_6","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"Development/test/deployment commands documented"},{"step":"step_8","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"Architecture documentation regenerated"},{"step":"step_9","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"Supporting docs updated: project summary, API, UI, frontend guide, data models, index"},{"step":"step_10","status":"completed","timestamp":"2026-03-06T00:00:00Z","summary":"Master index updated with current docs map"}],"current_step":"complete","project_types":[{"part_id":"app","project_type_id":"web","display_name":"Web App"}],"findings":{"project_classification":"Monolith Cloudflare Worker web application with hybrid SSR + islands frontend","technology_stack":"TypeScript, Cloudflare Workers, D1 SQLite, Preact Signals, Konva, Jest/Vitest/Playwright","documentation_scope":"Docs updated in place for architecture, API, data, UI, frontend workflow, and source tree"},"outputs_generated":["index.md","project-summary.md","architecture.md","api-reference.md","ui-overview.md","frontend-guide.md","data-models.md","source-tree-analysis.md","project-scan-report.json"],"resume_instructions":"Full rescan complete; rerun document-project workflow for next incremental documentation refresh."}
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-03-14T00:00:00Z",
+    "last_updated": "2026-03-14T23:59:00Z",
+    "completed": "2026-03-14T23:59:00Z"
+  },
+  "mode": "full_rescan",
+  "scan_level": "exhaustive",
+  "project_root": ".",
+  "project_knowledge": "docs",
+  "completed_steps": [
+    "step_1_classify",
+    "step_2_inventory",
+    "step_3_tech_stack",
+    "step_4_critical_scans",
+    "step_5_source_tree",
+    "step_6_dev_workflow",
+    "step_8_update_docs",
+    "step_9_supporting_docs",
+    "step_10_master_index",
+    "step_11_validate",
+    "step_12_finalize"
+  ],
+  "current_step": "complete",
+  "project_types": [
+    {
+      "part_id": "app",
+      "project_type_id": "web",
+      "display_name": "Web App — Islands Architecture on CF Worker Monolith"
+    }
+  ],
+  "findings": {
+    "tech_stack": "TypeScript 5.9.3, CF Workers (wrangler 4.71.0), D1 SQLite, Preact 10.28.4, @preact/signals 2.8.2, Konva 10.2.0, Vite 7.3.1, Jest 30.2.0, Vitest 4.0.17, Playwright 1.58.2, pnpm 10.31.0",
+    "api_routes": "17 page routes, ~65+ API endpoints (auth, progress, goals, friends, party, fellowship-invites, admin)",
+    "tables": "11 tables: users, sessions, progress, goals, password_reset_tokens, email_confirmation_tokens, parties, party_members, party_progress_log, admin_audit_log, friendships, fellowship_invites",
+    "islands": "16 auto-hydrated + 5 programmatic = 21 total islands",
+    "migrations": "123 (0001–0123)",
+    "test_suites": "Jest 28 files, Client Vitest 33 files, Playwright 19 specs"
+  },
+  "docs_updated": [
+    "docs/source-tree-analysis.md",
+    "docs/project-summary.md",
+    "docs/api-reference.md",
+    "docs/api-reference-admin.md",
+    "docs/ui-overview.md",
+    "docs/architecture.md",
+    "docs/index.md",
+    "README.md"
+  ],
+  "outputs_generated": [
+    "project-scan-report.json",
+    "source-tree-analysis.md",
+    "project-summary.md",
+    "api-reference.md",
+    "api-reference-admin.md",
+    "ui-overview.md",
+    "architecture.md",
+    "index.md",
+    "README.md"
+  ],
+  "resume_instructions": "Complete. Full exhaustive rescan finished 2026-03-14."
+}

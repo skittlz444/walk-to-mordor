@@ -1,6 +1,6 @@
 # Story 6.1: Friends Database Schema & Avatar System
 
-Status: review
+Status: done
 Issue: #299
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->

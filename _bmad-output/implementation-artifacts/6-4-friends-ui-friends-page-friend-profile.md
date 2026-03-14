@@ -1,6 +1,6 @@
 # Story 6.4: Friends UI — Friends Page & Friend Profile
 
-Status: review
+Status: done
 Issue: #302
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->

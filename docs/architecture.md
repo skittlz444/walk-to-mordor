@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-03-09
+Last updated: 2026-03-14
 
 ## System Shape
 
@@ -35,6 +35,7 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `POST /api/password-reset`
 - `GET /api/auth/confirm-email`
 - `POST /api/auth/resend-confirmation`
+- `GET /api/avatars`
 
 - Progress and goals:
 - `GET|POST|PUT|DELETE /api/calendar-progress`
@@ -80,6 +81,14 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
   - `GET /api/admin/goals/:id` — single goal full details
   - `PUT /api/admin/goals/:id` — update goal fields (title, distance, description, special, image_id) with audit logging
   - `GET /api/admin/images` — image asset inventory cross-referencing manifest vs goal assignments
+  - `GET /api/admin/users` — paginated, searchable user list with distance and fellowship data
+  - `PUT /api/admin/users/:id/verify` — manually verify user email
+  - `PUT /api/admin/users/:id/reset` — trigger password reset email
+  - `PUT /api/admin/users/:id/admin` — toggle admin access (self-protection prevents self-removal)
+  - `DELETE /api/admin/users/:id` — hard-delete user (requires username confirmation)
+  - `GET /api/admin/metrics` — community-wide summary statistics
+  - `GET /api/admin/metrics/leaderboard` — per-user distance totals with optional date filter
+  - `GET /api/admin/metrics/timeline` — 30-day daily activity chart
 
 ### Page Routes
 
@@ -95,6 +104,8 @@ Walk to Mordor runs as a single Cloudflare Worker monolith.
 - `/admin/goals` admin goals list (`src/renderAdminGoalsPage.ts`) — requires admin auth; includes `AdminGoalsListIsland`
 - `/admin/goals/new` admin add goal (`src/renderAdminGoalAddPage.ts`) — requires admin auth; includes `AdminGoalAddIsland` with form, distance preview, duplicate check
 - `/admin/goals/:id` admin goal edit (`src/renderAdminGoalEditPage.ts`) — requires admin auth; includes `AdminGoalEditIsland` with form, markdown preview, save
+- `/admin/users` admin users list (`src/renderAdminUsersPage.ts`) — requires admin auth; includes `AdminUsersListIsland`
+- `/admin/metrics` admin metrics (`src/renderAdminMetricsPage.ts`) — requires admin auth; includes `AdminMetricsIsland`
 
 ## Frontend Architecture
 
