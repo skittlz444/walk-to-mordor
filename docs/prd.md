@@ -100,7 +100,7 @@ The current live version serves as the MVP core. The immediate focus is resolvin
     *   *Technical Note:* This is a frontend-heavy feature involving SVG/Canvas work and does not require complex backend changes, making it a logical next step before multiplayer.
 
 ### Phase 3: The Fellowship (Multiplayer)
-*Focus: Adding social and competitive layers on top of the solid solo foundation.*
+*Focus: Adding social layers on top of the solid solo foundation.*
 *   **Party Management:** Create/Invite/View/Leave Party features (#139). Users can belong to multiple parties simultaneously.
 *   **Party Settings:** Party leaders configure distance calculation mode (cumulative/incremental) and member leave behavior (keep/remove contributed distance) at creation time. After creation, leaders may update the party name and leave behavior, but the distance calculation mode is immutable.
 *   **Shared Progress:** Combined distance tracking with per-member color-coded contribution segments visible on Journey and Map pages.
@@ -111,7 +111,7 @@ The current live version serves as the MVP core. The immediate focus is resolvin
 *   **Personalization:** Users can select a predefined LOTR-themed avatar as their profile image from a curated gallery.
 *   **Friends & Social Identity:** Mutual friend relationships via username search or shareable friend link. Friends list with username, avatar, and "last progressed" date. Friend profile pages showing total distance and fellowships (highlighting shared ones). Friends visible on the Map as avatars at their journey position (toggle in a unified Social panel). Friend requests display a badge count on the Friends nav link.
 *   **Fellowship Invites via Friends:** Users can invite friends to a Fellowship (acceptance required). Pending fellowship invites display a badge count on the Fellowships nav link. Invites can be accepted/rejected from the Fellowships list with basic details shown. "Add Friend" shortcut available on Fellowship member lists.
-*   **Races:** Challenge functionality between users/parties (leverages Friends foundation for discovery, privacy, and identity).
+*   **Races:** Removed from the active roadmap. The app's social layer now includes fellowships, friends, avatars, and friend-based invites, but competitive race functionality is no longer planned as an active Phase 3 deliverable.
 *   *Requirement:* This phase introduces complex database relations and potential privacy refactoring.
 
 ### Phase 4: Expansion (Content Scale)

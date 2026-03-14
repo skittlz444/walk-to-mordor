@@ -1,6 +1,6 @@
 # UI Overview
 
-Last updated: 2026-03-09
+Last updated: 2026-03-14
 
 ## Rendering Pattern
 
@@ -52,9 +52,12 @@ Rendered by:
 
 - `src/renderAdminPage.ts` -> `AdminDashboardIsland` (dashboard shell with sidebar nav, breadcrumbs, stat cards)
 - `src/renderAdminGoalsPage.ts` -> `AdminGoalsListIsland` (paginated goals table with search, sort, row-click navigation)
+- `src/renderAdminGoalAddPage.ts` -> `AdminGoalAddIsland` (goal creation form with distance preview, duplicate check)
 - `src/renderAdminGoalEditPage.ts` -> `AdminGoalEditIsland` (goal edit form with markdown preview, validation, save/back actions)
+- `src/renderAdminUsersPage.ts` -> `AdminUsersListIsland` (paginated users table with search, verify/reset/admin toggle/delete actions)
+- `src/renderAdminMetricsPage.ts` -> `AdminMetricsIsland` (community metrics: summary cards, leaderboard with date filter, 30-day timeline chart)
 
-Admin pages use `/css/admin.css` for layout and card styles. Admin nav includes links to Dashboard, Goals (active on goals pages), Users (disabled), Metrics (disabled), and a "Back to Site" link to `/journey`.
+Admin pages use `/css/admin.css` for layout and card styles. Admin nav includes links to Dashboard, Goals, Users, Metrics (all active), and a "Back to Site" link to `/journey`.
 
 ## Island Inventory
 
@@ -63,13 +66,16 @@ Registered in `client/src/index.tsx`.
 Auto-hydrated islands:
 
 - `AdminDashboardIsland`
+- `AdminGoalAddIsland`
 - `AdminGoalEditIsland`
 - `AdminGoalsListIsland`
+- `AdminMetricsIsland`
+- `AdminUsersListIsland`
 - `AuthForms`
 - `DrawerIsland`
-- `FriendsListIsland`
-- `FriendProfileIsland`
 - `FriendAddIsland`
+- `FriendProfileIsland`
+- `FriendsListIsland`
 - `MapIsland`
 - `PartyListIsland`
 - `PartyDetailIsland`

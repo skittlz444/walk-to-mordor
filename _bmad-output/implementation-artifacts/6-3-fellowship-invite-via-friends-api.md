@@ -1,6 +1,6 @@
 # Story 6.3: Fellowship Invite via Friends API
 
-Status: review
+Status: done
 Issue: #301
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->

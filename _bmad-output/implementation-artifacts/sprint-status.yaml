@@ -9,6 +9,7 @@
 #   - backlog: Epic not yet started
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
+#   - cancelled: Epic intentionally removed from the active roadmap
 #
 # Epic Status Transitions:
 #   - backlog → in-progress: Automatically when first story is created (via create-story)
@@ -20,10 +21,12 @@
 #   - in-progress: Developer actively working on implementation
 #   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
+#   - cancelled: Story intentionally removed from the active roadmap
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
+#   - n/a: Not applicable because the epic was cancelled before implementation
 #
 # WORKFLOW NOTES:
 # ===============
@@ -99,23 +102,23 @@ development_status:
   # ============================================
   # EPIC 5: Races (Competitive Events) (#154)
   # ============================================
-  epic-5: backlog
-  5-1-race-database-schema: backlog
-  5-2-race-management-api-admin: backlog
-  5-3-race-join-leave-api: backlog
-  5-4-race-leaderboard-api: backlog
-  5-5-race-ui-discovery-join: backlog
-  5-6-race-ui-leaderboard-progress: backlog
-  epic-5-retrospective: optional
+  epic-5: cancelled
+  5-1-race-database-schema: cancelled
+  5-2-race-management-api-admin: cancelled
+  5-3-race-join-leave-api: cancelled
+  5-4-race-leaderboard-api: cancelled
+  5-5-race-ui-discovery-join: cancelled
+  5-6-race-ui-leaderboard-progress: cancelled
+  epic-5-retrospective: n/a
 
   # ============================================
   # EPIC 6: Friends & Social Identity (TBD)
   # ============================================
-  epic-6: in-progress
-  6-1-friends-database-schema-avatar-system: ready-for-dev
-  6-2-friend-request-api: ready-for-dev
-  6-3-fellowship-invite-via-friends-api: ready-for-dev
-  6-4-friends-ui-friends-page-friend-profile: ready-for-dev
-  6-5-avatar-ui-avatar-selection: ready-for-dev
-  6-6-map-social-panel-friends-on-map: ready-for-dev
-  epic-6-retrospective: optional
+  epic-6: done
+  6-1-friends-database-schema-avatar-system: done
+  6-2-friend-request-api: done
+  6-3-fellowship-invite-via-friends-api: done
+  6-4-friends-ui-friends-page-friend-profile: done
+  6-5-avatar-ui-avatar-selection: done
+  6-6-map-social-panel-friends-on-map: done
+  epic-6-retrospective: done

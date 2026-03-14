@@ -235,26 +235,19 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ### Epic 5: Races (Competitive Events) (Issue #154)
 
-**Goal:** Time-limited competitive events where users can join races and compete for progress within a specific timeframe.
+**Status:** Cancelled
 
-**FRs Covered:** Race feature set from Issue #139
+**Cancellation Note (2026-03-14):**
+Race functionality is no longer part of the active product roadmap. Epic 5 is retained here only as a historical planning reference. It must not be used for sprint planning, story creation, or implementation sequencing.
 
-**Tech:** New `races` table with start_date, end_date, and leaderboard tracking
-
-**Alignment Notes (2026-03-09):**
-- Stories 5.1, 5.3–5.6 should leverage the Friends layer (Epic 6) for discovery, privacy, and identity once available.
-- Entrant model decision can reference friendships for "invite friends to race" flow.
-- Race leaderboard identity uses `username` + `avatar_id` from the avatar system (Epic 6, Story 6.1).
-- Privacy/visibility rules for race discovery and standings should build on the friend relationship model.
-- See [Epic 5 Architecture Alignment Review](../implementation-artifacts/epic-5-architecture-alignment-2026-03-09.md) for the full gap analysis.
-
-**Status:** New feature, requires Epic 6 (Friends) alignment before story execution
+**Reason:**
+Product direction has changed. Competitive races are no longer being pursued as an active feature area, even though prerequisite social and identity work was completed in Epic 6.
 
 ---
 
 ### Epic 6: Friends & Social Identity
 
-**Goal:** Mutual friend relationships, predefined LOTR-themed avatars, friend-based fellowship invitations, and friend visibility on the Map — providing a relational/social layer that simplifies Race design.
+**Goal:** Mutual friend relationships, predefined LOTR-themed avatars, friend-based fellowship invitations, and friend visibility on the Map — providing a coherent relational/social layer for the app.
 
 **FRs Covered:** FR_FRIEND_01–FR_FRIEND_10, FR_PARTY_14–FR_PARTY_17
 
@@ -1136,116 +1129,7 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 
 ### Epic 5: Races (Competitive Events)
 
-#### Story 5.1: Race Database Schema (Issue #185)
-
-**Priority:** P0 (Blocker)
-
-**Description:** Create database tables for time-limited race events.
-
-**Acceptance Criteria:**
-- [ ] Create `races` table: id, name, description, start_date, end_date, created_by, created_at, status (upcoming/active/completed)
-- [ ] Create `race_participants` table: id, race_id, user_id, joined_at, distance_at_start (baseline)
-- [ ] Add indexes for active race queries
-- [ ] Create migration file
-- [ ] Document schema in `docs/data-models.md`
-
-**Technical Notes:**
-- `distance_at_start` captures user's total distance when they join, so race progress = current total - distance_at_start
-
-**Dependencies:** None
-
----
-
-#### Story 5.2: Race Management API (Admin) (Issue #186)
-
-**Priority:** P1
-
-**Description:** Admin API endpoints for creating and managing races.
-
-**Acceptance Criteria:**
-- [ ] POST `/api/admin/races` - Create new race (name, description, start_date, end_date)
-- [ ] PUT `/api/admin/races/:id` - Update race details
-- [ ] DELETE `/api/admin/races/:id` - Cancel/delete race (only if not started)
-- [ ] GET `/api/admin/races` - List all races with participant counts
-- [ ] Validation: end_date > start_date, dates in future for new races
-- [ ] Only admins can access these endpoints
-
-**Dependencies:** Story 5.1, Story 4.1
-
----
-
-#### Story 5.3: Race Join & Leave API (Issue #187)
-
-**Priority:** P1
-
-**Description:** API endpoints for users to join and leave races.
-
-**Acceptance Criteria:**
-- [ ] GET `/api/races` - List upcoming and active races
-- [ ] GET `/api/races/:id` - Get race details and current standings
-- [ ] POST `/api/races/:id/join` - Join race (record distance_at_start)
-- [ ] POST `/api/races/:id/leave` - Leave race (before it ends)
-- [ ] Validation: Can only join before race ends
-- [ ] Validation: Cannot join same race twice
-- [ ] Return 404 for invalid race IDs
-
-**Dependencies:** Story 5.1
-
----
-
-#### Story 5.4: Race Leaderboard API (Issue #188)
-
-**Priority:** P1
-
-**Description:** API endpoint for race standings and leaderboard.
-
-**Acceptance Criteria:**
-- [ ] GET `/api/races/:id/leaderboard` - Get ranked participant list
-- [ ] Calculate race progress: participant's current total - distance_at_start
-- [ ] Return: rank, user display name, race_distance, last_activity_date
-- [ ] Sort by race_distance descending
-- [ ] Indicate current user's position
-- [ ] Cache leaderboard for 5 minutes
-
-**Dependencies:** Story 5.3
-
----
-
-#### Story 5.5: Race UI - Discovery & Join (Issue #189)
-
-**Priority:** P2
-
-**Description:** User interface to browse and join available races.
-
-**Acceptance Criteria:**
-- [ ] Create `/races` route
-- [ ] List upcoming and active races with: name, dates, participant count
-- [ ] Race card shows: time remaining (countdown for active)
-- [ ] "Join Race" button for races user hasn't joined
-- [ ] "View Standings" button for joined races
-- [ ] Filter: Upcoming / Active / Past tabs
-
-**Dependencies:** Story 5.3
-
----
-
-#### Story 5.6: Race UI - Leaderboard & Progress (Issue #190)
-
-**Priority:** P2
-
-**Description:** User interface to view race standings and personal progress.
-
-**Acceptance Criteria:**
-- [ ] Create `/races/:id` route
-- [ ] Show race details: name, description, date range, status
-- [ ] Display leaderboard table: rank, name, distance, trend (up/down)
-- [ ] Highlight current user's row
-- [ ] Show user's race progress: "You've walked X km in this race"
-- [ ] Progress bar toward a race goal (if defined)
-- [ ] Auto-refresh leaderboard every 60 seconds
-- [ ] Post-race: Show final standings, winner highlight
-
-**Dependencies:** Story 5.5
+This epic has been cancelled and is retained only as a historical planning reference. Stories 5.1-5.6 are not active backlog items and must not be used for implementation sequencing.
 
 ---
 
@@ -1470,9 +1354,8 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 | Epic 2: Interactive Map | #151 | 8 | P1-P2 |
 | Epic 3: Fellowship | #152 | 10 | P0-P3 |
 | Epic 4: Admin Portal | #153 | 6 | P0-P2 |
-| Epic 5: Races | #154 | 6 | P0-P2 |
 | Epic 6: Friends & Social Identity | TBD | 6 | P0-P2 |
-| **Total** | | **45** | |
+| **Total Active Stories** | | **39** | |
 
 ### Recommended Implementation Order
 
@@ -1481,5 +1364,5 @@ This document provides the complete epic and story breakdown for walk-to-mordor,
 3. **Epic 3** (#152) - Core Fellowship features
 4. **Epic 4** (#153) - Admin portal after Fellowship stabilization and architecture alignment
 5. **Epic 6** (TBD) - Friends & Social Identity, can run in parallel with or after Epic 4
-6. **Epic 5** (#154) - Races, leverages Fellowship + Friends + Admin patterns; requires Epic 6 alignment
+6. No active successor epic is currently planned after Epic 6
 

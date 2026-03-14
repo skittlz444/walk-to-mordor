@@ -26,6 +26,8 @@ The current product surface includes:
 - Map: `/map`.
 - Auth pages: `/login`, `/password-reset`, `/reset-password`.
 - Fellowship pages: `/party`, `/party/:id`, `/party/:id/manage`, `/party/join/:inviteCode`.
+- Friends pages: `/friends`, `/friends/add/:friendCode`, `/friends/:id`.
+- Admin pages: `/admin`, `/admin/goals`, `/admin/goals/new`, `/admin/goals/:id`, `/admin/users`, `/admin/metrics`.
 
 Note: legacy `/wtm` aliases are deprecated and should not be reintroduced.
 

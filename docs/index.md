@@ -1,6 +1,6 @@
 # Walk to Mordor Documentation
 
-Last updated: 2026-03-06
+Last updated: 2026-03-14
 
 ## Core Docs
 
@@ -9,6 +9,7 @@ Last updated: 2026-03-06
 - [Source Tree Analysis](source-tree-analysis.md) - Annotated folder map and entry points.
 - [Data Models](data-models.md) - D1 schema, relationships, and migration status.
 - [API Reference](api-reference.md) - HTTP routes, auth requirements, and payload contracts.
+- [Admin API Reference](api-reference-admin.md) - Admin dashboard, goals, users, and metrics endpoints.
 
 ## Frontend Docs
 
@@ -20,6 +21,7 @@ Last updated: 2026-03-06
 ## Operations Docs
 
 - [Asset Workflow](asset-workflow.md) - Goal image optimization and `image_id` workflow.
+- [Admin Image Workflow](admin-image-workflow.md) - Admin goal image management and asset pipeline.
 - [Email Setup](email-setup.md) - Resend and email delivery setup.
 - [Email Testing](email-testing.md) - End-to-end email flow validation.
 
