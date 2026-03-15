@@ -1,16 +1,25 @@
 /**
  * ActivityFeed – Displays recent party activity with auto-refresh.
- * Highlights current user's entries and formats dates relatively.
+ * Shows walk logs and messages in a unified feed with filtering and message input.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 
+type ActivityType = 'walk' | 'message';
+type FilterType = 'all' | 'walk' | 'message';
+
 interface ActivityItem {
+  type: ActivityType;
   user_id: number;
   display_name: string;
-  distance: number;
-  date: string;
-  logged_at: string;
+  avatar_id?: string | null;
+  created_at: string;
+  distance?: number | null;
+  date?: string | null;
+  content?: string | null;
+  message_id?: number | null;
+  // Legacy fields for backward compatibility
+  logged_at?: string;
 }
 
 interface ActivityFeedProps {
@@ -26,9 +35,10 @@ interface FeedState {
 }
 
 const REFRESH_INTERVAL_MS = 60_000;
-const MAX_ITEMS = 10;
+const MAX_ITEMS = 20;
+const MAX_MESSAGE_LENGTH = 200;
 
-function formatRelativeDate(dateStr: string): string {
+export function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   if (isNaN(date.getTime())) return 'Unknown date';
 
@@ -49,16 +59,64 @@ function formatRelativeDate(dateStr: string): string {
   return `${month} ${day}, ${date.getFullYear()}`;
 }
 
+function formatRelativeTime(isoStr: string): string {
+  const date = new Date(isoStr);
+  if (isNaN(date.getTime())) return '';
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  const month = date.toLocaleString('en-US', { month: 'short' });
+  const day = date.getDate();
+  if (date.getFullYear() === now.getFullYear()) {
+    return `${month} ${day}`;
+  }
+  return `${month} ${day}, ${date.getFullYear()}`;
+}
+
 function isValidActivity(item: unknown): item is ActivityItem {
   if (typeof item !== 'object' || item === null) return false;
   const obj = item as Record<string, unknown>;
-  return (
-    typeof obj.user_id === 'number' &&
-    typeof obj.display_name === 'string' &&
-    typeof obj.distance === 'number' &&
-    typeof obj.date === 'string' &&
-    typeof obj.logged_at === 'string'
-  );
+
+  // Must have basic fields
+  if (typeof obj.user_id !== 'number' || typeof obj.display_name !== 'string') return false;
+
+  // Unified format (has type field)
+  if (typeof obj.type === 'string') {
+    if (obj.type === 'walk') {
+      return typeof obj.distance === 'number' && typeof obj.date === 'string';
+    }
+    if (obj.type === 'message') {
+      return typeof obj.content === 'string';
+    }
+    return false;
+  }
+
+  // Legacy format (walk-only, no type field)
+  if (typeof obj.distance === 'number' && typeof obj.date === 'string') {
+    return true;
+  }
+
+  return false;
+}
+
+function normalizeActivity(item: ActivityItem): ActivityItem {
+  // If item already has a type, return as-is
+  if (item.type) return item;
+  // Legacy format: treat as walk
+  return {
+    ...item,
+    type: 'walk',
+    created_at: item.created_at ?? item.logged_at ?? '',
+  };
 }
 
 export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
@@ -68,7 +126,15 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
     error: null,
     forbidden: false,
   });
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [messageText, setMessageText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const filterRef = useRef<FilterType>(filter);
+
+  // Keep ref in sync so fetchActivities always uses current filter
+  useEffect(() => { filterRef.current = filter; }, [filter]);
 
   const fetchActivities = useCallback(async () => {
     try {
@@ -79,7 +145,8 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
-      const res = await fetch(`/api/party/${partyId}/activity`, {
+      const typeParam = filterRef.current !== 'all' ? `?type=${filterRef.current}` : '';
+      const res = await fetch(`/api/party/${partyId}/activity${typeParam}`, {
         headers,
       });
 
@@ -103,7 +170,7 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
 
       const data = (await res.json()) as { activities: unknown[] };
       const valid = Array.isArray(data.activities)
-        ? (data.activities.filter(isValidActivity) as ActivityItem[])
+        ? (data.activities.filter(isValidActivity).map(normalizeActivity) as ActivityItem[])
         : [];
       setState({
         activities: valid.slice(0, MAX_ITEMS),
@@ -147,6 +214,55 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
     };
   }, [fetchActivities]);
 
+  // Re-fetch when filter changes
+  useEffect(() => {
+    void fetchActivities();
+  }, [filter, fetchActivities]);
+
+  const handleSendMessage = async () => {
+    const trimmed = messageText.trim();
+    if (!trimmed || trimmed.length > MAX_MESSAGE_LENGTH || sending) return;
+
+    setSending(true);
+    setSendError(null);
+
+    try {
+      const token = localStorage.getItem('sessionToken');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`/api/party/${partyId}/messages`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ content: trimmed }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? `Failed to send message (${res.status})`);
+      }
+
+      setMessageText('');
+      // Refresh the feed to show the new message
+      void fetchActivities();
+    } catch (err: unknown) {
+      setSendError(err instanceof Error ? err.message : 'Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void handleSendMessage();
+    }
+  };
+
   if (state.loading) {
     return (
       <div className="party-activity-feed party-activity-feed--loading">
@@ -183,31 +299,100 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
     );
   }
 
-  if (state.activities.length === 0) {
-    return (
-      <div className="party-activity-feed party-activity-feed--empty">
-        <i className="fas fa-stream" aria-hidden="true" />
-        <span>No recent activity</span>
-      </div>
-    );
-  }
+  const charCount = messageText.trim().length;
+  const isOverLimit = charCount > MAX_MESSAGE_LENGTH;
 
   return (
-    <ul className="party-activity-feed" aria-label="Recent activity">
-      {state.activities.map((item, index) => {
-        const isOwn = item.user_id === currentUserId;
-        const className = `party-activity-item${isOwn ? ' party-activity-item--own' : ''}`;
-        const label = isOwn ? 'You' : item.display_name;
-        const dateLabel = formatRelativeDate(item.date);
+    <div className="party-activity-container">
+      {/* Message Input */}
+      <div className="party-message-form">
+        <textarea
+          className="party-message-input"
+          placeholder="Send a message to your fellowship…"
+          value={messageText}
+          onInput={(e) => setMessageText((e.target as HTMLTextAreaElement).value)}
+          onKeyDown={handleKeyDown}
+          maxLength={MAX_MESSAGE_LENGTH + 10}
+          rows={2}
+          disabled={sending}
+          aria-label="Fellowship message"
+        />
+        <div className="party-message-form__footer">
+          <span className={`party-message-char-count${isOverLimit ? ' party-message-char-count--over' : ''}`}>
+            {charCount}/{MAX_MESSAGE_LENGTH}
+          </span>
+          <button
+            className="party-btn party-btn--primary party-btn--small"
+            onClick={() => void handleSendMessage()}
+            disabled={sending || charCount === 0 || isOverLimit}
+          >
+            {sending ? <i className="fas fa-spinner fa-spin" aria-hidden="true" /> : <i className="fas fa-paper-plane" aria-hidden="true" />}
+            {' '}Send
+          </button>
+        </div>
+        {sendError && (
+          <div className="party-message-error">{sendError}</div>
+        )}
+      </div>
 
-        return (
-          <li key={`${item.logged_at}-${item.user_id}-${index}`} className={className}>
-            <span className="party-activity-item__text">
-              {label} walked {item.distance.toFixed(2)} km on {dateLabel}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
+      {/* Filter */}
+      <div className="party-activity-filter">
+        <label htmlFor="activity-filter" className="party-activity-filter__label">
+          <i className="fas fa-filter" aria-hidden="true" /> Filter:
+        </label>
+        <select
+          id="activity-filter"
+          className="party-activity-filter__select"
+          value={filter}
+          onChange={(e) => setFilter((e.target as HTMLSelectElement).value as FilterType)}
+        >
+          <option value="all">All Activity</option>
+          <option value="walk">Walks Only</option>
+          <option value="message">Messages Only</option>
+        </select>
+      </div>
+
+      {/* Feed Items */}
+      {state.activities.length === 0 ? (
+        <div className="party-activity-feed party-activity-feed--empty">
+          <i className="fas fa-stream" aria-hidden="true" />
+          <span>No recent activity</span>
+        </div>
+      ) : (
+        <ul className="party-activity-feed" aria-label="Recent activity">
+          {state.activities.map((item, index) => {
+            const isOwn = item.user_id === currentUserId;
+            const isMessage = item.type === 'message';
+            const itemClass = [
+              'party-activity-item',
+              isOwn ? 'party-activity-item--own' : '',
+              isMessage ? 'party-activity-item--message' : '',
+            ].filter(Boolean).join(' ');
+            const label = isOwn ? 'You' : item.display_name;
+            const key = isMessage
+              ? `msg-${item.message_id ?? index}`
+              : `walk-${item.created_at}-${item.user_id}-${index}`;
+
+            return (
+              <li key={key} className={itemClass}>
+                {isMessage ? (
+                  <div className="party-activity-item__message">
+                    <span className="party-activity-item__message-header">
+                      <strong>{label}</strong>
+                      <span className="party-activity-item__time">{formatRelativeTime(item.created_at)}</span>
+                    </span>
+                    <span className="party-activity-item__message-content">{item.content}</span>
+                  </div>
+                ) : (
+                  <span className="party-activity-item__text">
+                    {label} walked {(item.distance ?? 0).toFixed(2)} km on {formatRelativeDate(item.date ?? '')}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
