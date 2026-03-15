@@ -99,7 +99,7 @@ jobs:
 
       - name: Post Coverage Comment
         if: always()
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: coverage-report
           path: coverage-comment.md
