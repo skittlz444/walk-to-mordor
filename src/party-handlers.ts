@@ -460,6 +460,28 @@ interface ActivityLogRow {
   avatar_id: string | null;
 }
 
+/** Row shape for party message entries */
+interface PartyMessageRow {
+  id: number;
+  party_id: number;
+  user_id: number;
+  content: string;
+  created_at: string;
+}
+
+/** Unified activity feed item with type discriminator */
+interface UnifiedActivityRow {
+  type: string;
+  user_id: number;
+  display_name: string;
+  avatar_id: string | null;
+  created_at: string;
+  distance: number | null;
+  date: string | null;
+  content: string | null;
+  message_id: number | null;
+}
+
 /**
  * GET /api/party/:id/progress — Get combined party progress.
  *
@@ -1009,7 +1031,8 @@ export async function handleTransferLeadership(
 /**
  * GET /api/party/:id/activity — Get recent party activity feed.
  *
- * Returns the last 10 entries from party_progress_log for the given party.
+ * Returns the last 20 entries from a unified feed of walk logs and messages.
+ * Query parameter: ?type=all|walk|message (default: all)
  * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
  */
 export async function handlePartyActivity(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
@@ -1038,21 +1061,169 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
       return createErrorResponse('You are not an active member of this party', 403);
     }
 
-    // Get last 10 activity entries (active members only)
-    const { results: activities } = await env.DB.prepare(
-      `SELECT ppl.logged_by_user_id as user_id, u.username as display_name,
-              ppl.distance, ppl.date, ppl.logged_at, u.avatar_id
-       FROM party_progress_log ppl
-       JOIN users u ON ppl.logged_by_user_id = u.id
-       JOIN party_members pm ON pm.party_id = ppl.party_id AND pm.user_id = ppl.logged_by_user_id
-       WHERE ppl.party_id = ? AND pm.status = 'active'
-       ORDER BY ppl.logged_at DESC
-       LIMIT 10`
-    ).bind(partyId).all<ActivityLogRow>();
+    // Parse filter type
+    const url = new URL(request.url);
+    const filterType = url.searchParams.get('type') ?? 'all';
+    if (!['all', 'walk', 'message'].includes(filterType)) {
+      return createErrorResponse('Invalid type filter. Must be all, walk, or message', 400);
+    }
+
+    let activities: UnifiedActivityRow[];
+
+    if (filterType === 'walk') {
+      const { results } = await env.DB.prepare(
+        `SELECT 'walk' as type, ppl.logged_by_user_id as user_id, u.username as display_name,
+                u.avatar_id, ppl.logged_at as created_at,
+                ppl.distance, ppl.date, NULL as content, NULL as message_id
+         FROM party_progress_log ppl
+         JOIN users u ON ppl.logged_by_user_id = u.id
+         JOIN party_members pm ON pm.party_id = ppl.party_id AND pm.user_id = ppl.logged_by_user_id
+         WHERE ppl.party_id = ? AND pm.status = 'active'
+         ORDER BY ppl.logged_at DESC
+         LIMIT 20`
+      ).bind(partyId).all<UnifiedActivityRow>();
+      activities = results;
+    } else if (filterType === 'message') {
+      const { results } = await env.DB.prepare(
+        `SELECT 'message' as type, pmsg.user_id, u.username as display_name,
+                u.avatar_id, pmsg.created_at,
+                NULL as distance, NULL as date, pmsg.content, pmsg.id as message_id
+         FROM party_messages pmsg
+         JOIN users u ON pmsg.user_id = u.id
+         JOIN party_members pm ON pm.party_id = pmsg.party_id AND pm.user_id = pmsg.user_id
+         WHERE pmsg.party_id = ? AND pm.status = 'active'
+         ORDER BY pmsg.created_at DESC
+         LIMIT 20`
+      ).bind(partyId).all<UnifiedActivityRow>();
+      activities = results;
+    } else {
+      // 'all' — union both types
+      const { results } = await env.DB.prepare(
+        `SELECT * FROM (
+           SELECT 'walk' as type, ppl.logged_by_user_id as user_id, u.username as display_name,
+                  u.avatar_id, ppl.logged_at as created_at,
+                  ppl.distance, ppl.date, NULL as content, NULL as message_id
+           FROM party_progress_log ppl
+           JOIN users u ON ppl.logged_by_user_id = u.id
+           JOIN party_members pm ON pm.party_id = ppl.party_id AND pm.user_id = ppl.logged_by_user_id
+           WHERE ppl.party_id = ? AND pm.status = 'active'
+           UNION ALL
+           SELECT 'message' as type, pmsg.user_id, u.username as display_name,
+                  u.avatar_id, pmsg.created_at,
+                  NULL as distance, NULL as date, pmsg.content, pmsg.id as message_id
+           FROM party_messages pmsg
+           JOIN users u ON pmsg.user_id = u.id
+           JOIN party_members pm ON pm.party_id = pmsg.party_id AND pm.user_id = pmsg.user_id
+           WHERE pmsg.party_id = ? AND pm.status = 'active'
+         ) combined
+         ORDER BY created_at DESC
+         LIMIT 20`
+      ).bind(partyId, partyId).all<UnifiedActivityRow>();
+      activities = results;
+    }
 
     return createSuccessResponse({ activities });
   } catch (error: unknown) {
     console.error('Database error during party activity retrieval:', error);
     return createErrorResponse('Internal server error while retrieving party activity', 500);
+  }
+}
+
+/** Maximum message length */
+const MAX_MESSAGE_LENGTH = 200;
+
+/**
+ * POST /api/party/:id/messages — Send a message to the party activity feed.
+ *
+ * Request body: { content: string }
+ * Content must be 1–200 characters after trimming.
+ * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
+ */
+export async function handleSendPartyMessage(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, env);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Parse body
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json() as Record<string, unknown>;
+    } catch {
+      return createErrorResponse('Invalid JSON body', 400);
+    }
+
+    // Validate content
+    if (typeof body.content !== 'string') {
+      return createErrorResponse('Message content is required', 400);
+    }
+    const content = body.content.trim();
+    if (content.length === 0) {
+      return createErrorResponse('Message content cannot be empty', 400);
+    }
+    if (content.length > MAX_MESSAGE_LENGTH) {
+      return createErrorResponse(`Message content must be ${MAX_MESSAGE_LENGTH} characters or less`, 400);
+    }
+
+    // Check party exists and is not dissolved
+    const party = await env.DB.prepare(
+      'SELECT id, dissolved_at FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'dissolved_at'>>();
+
+    if (!party || party.dissolved_at !== null) {
+      return createErrorResponse('Party not found', 404);
+    }
+
+    // Verify requesting user is an active member
+    const membership = await env.DB.prepare(
+      'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
+    ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id'>>();
+
+    if (!membership) {
+      return createErrorResponse('You are not an active member of this party', 403);
+    }
+
+    // Insert message
+    const result = await env.DB.prepare(
+      'INSERT INTO party_messages (party_id, user_id, content) VALUES (?, ?, ?)'
+    ).bind(partyId, userId, content).run();
+
+    // Fetch the created message to return it
+    const messageId = result.meta.last_row_id;
+    const message = await env.DB.prepare(
+      `SELECT pm.id, pm.party_id, pm.user_id, pm.content, pm.created_at, u.username as display_name, u.avatar_id
+       FROM party_messages pm
+       JOIN users u ON pm.user_id = u.id
+       WHERE pm.id = ?`
+    ).bind(messageId).first<{
+      id: number;
+      party_id: number;
+      user_id: number;
+      content: string;
+      created_at: string;
+      display_name: string;
+      avatar_id: string | null;
+    }>();
+
+    if (!message) {
+      return createErrorResponse('Failed to retrieve created message', 500);
+    }
+
+    return createSuccessResponse({
+      message: {
+        id: message.id,
+        type: 'message',
+        user_id: message.user_id,
+        display_name: message.display_name,
+        avatar_id: message.avatar_id,
+        content: message.content,
+        created_at: message.created_at,
+      },
+    }, 201);
+  } catch (error: unknown) {
+    console.error('Database error during party message creation:', error);
+    return createErrorResponse('Internal server error while sending message', 500);
   }
 }

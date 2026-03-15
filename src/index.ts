@@ -36,7 +36,7 @@ import {
   validateAdminSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
-import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleSendPartyMessage, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile, handleFriendPositions } from "./friends-handlers";
 import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from "./fellowship-invite-handlers";
 import { renderPartyListPage } from "./renderPartyListPage";
@@ -362,6 +362,20 @@ export default {
           return createErrorResponse('Invalid party ID', 400);
         }
         return handlePartyActivity(request, env, partyId);
+      }
+
+      // POST /api/party/:id/messages — send a message to party feed
+      const messagesParams = matchRoute(url.pathname, '/api/party/:id/messages');
+      if (messagesParams && method === "POST") {
+        const partyId = Number.parseInt(messagesParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== messagesParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleSendPartyMessage(request, env, partyId);
       }
 
       // POST /api/party/:id/leave — leave party

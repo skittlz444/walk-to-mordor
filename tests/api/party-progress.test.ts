@@ -12,7 +12,7 @@ jest.mock('../../src/goals-handlers');
 
 describe('Party Progress API (Story 3.4)', () => {
   let mockEnv: { DB: Record<string, jest.Mock> };
-  let mockRequest: { headers: { get: jest.Mock } };
+  let mockRequest: { headers: { get: jest.Mock }; url: string };
 
   // Reusable chainable mock builder
   function createChainableMock(overrides?: {
@@ -41,6 +41,7 @@ describe('Party Progress API (Story 3.4)', () => {
 
     mockRequest = {
       headers: { get: jest.fn() },
+      url: 'https://example.com/api/party/1/activity',
     };
   });
 
