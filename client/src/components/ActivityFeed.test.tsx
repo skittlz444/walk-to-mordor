@@ -200,12 +200,16 @@ describe('ActivityFeed', () => {
     });
 
     const items = container.querySelectorAll('.party-activity-item');
+    // Relative dates: no "on" prefix
     expect(items[0].textContent).toContain('Today');
+    expect(items[0].textContent).not.toContain('on Today');
     expect(items[1].textContent).toContain('Yesterday');
+    expect(items[1].textContent).not.toContain('on Yesterday');
+    // Absolute dates: "on" prefix retained
     // 2024-03-15 => "Mar 15" (same year check depends on current year, but 2024 is past)
-    expect(items[2].textContent).toContain('Mar 15');
+    expect(items[2].textContent).toContain('on Mar 15');
     // 2023-06-05 => "Jun 5, 2023"
-    expect(items[3].textContent).toContain('Jun 5, 2023');
+    expect(items[3].textContent).toContain('on Jun 5, 2023');
   });
 
   it('sets up auto-refresh interval with 60000ms', async () => {
