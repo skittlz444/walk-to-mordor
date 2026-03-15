@@ -1192,6 +1192,9 @@ export async function handleSendPartyMessage(request: Request, env: { DB: D1Data
 
     // Fetch the created message to return it
     const messageId = result.meta.last_row_id;
+    if (!messageId) {
+      return createErrorResponse('Failed to create message', 500);
+    }
     const message = await env.DB.prepare(
       `SELECT pm.id, pm.party_id, pm.user_id, pm.content, pm.created_at, u.username as display_name, u.avatar_id
        FROM party_messages pm

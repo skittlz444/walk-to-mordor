@@ -38,7 +38,7 @@ const REFRESH_INTERVAL_MS = 60_000;
 const MAX_ITEMS = 20;
 const MAX_MESSAGE_LENGTH = 200;
 
-export function formatRelativeDate(dateStr: string): string {
+function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   if (isNaN(date.getTime())) return 'Unknown date';
 
@@ -312,7 +312,7 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
           value={messageText}
           onInput={(e) => setMessageText((e.target as HTMLTextAreaElement).value)}
           onKeyDown={handleKeyDown}
-          maxLength={MAX_MESSAGE_LENGTH + 10}
+          maxLength={MAX_MESSAGE_LENGTH}
           rows={2}
           disabled={sending}
           aria-label="Fellowship message"
