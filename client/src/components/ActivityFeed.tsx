@@ -203,7 +203,8 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
         return (
           <li key={`${item.logged_at}-${item.user_id}-${index}`} className={className}>
             <span className="party-activity-item__text">
-              {label} walked {item.distance.toFixed(2)} km on {dateLabel}
+              {label} walked {item.distance.toFixed(2)} km{' '}
+              {dateLabel === 'Today' || dateLabel === 'Yesterday' ? dateLabel : `on ${dateLabel}`}
             </span>
           </li>
         );
