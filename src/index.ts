@@ -375,7 +375,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleSendPartyMessage(request, env, partyId);
+        return handleSendPartyMessage(request, env, partyId, body);
       }
 
       // POST /api/party/:id/leave — leave party
@@ -765,6 +765,9 @@ function getAllowedMethods(pathname: string): string[] {
       }
       if (matchRoute(pathname, '/api/party/:id/activity')) {
         return ['GET'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/messages')) {
+        return ['POST'];
       }
       if (matchRoute(pathname, '/api/party/:id/leave')) {
         return ['POST'];

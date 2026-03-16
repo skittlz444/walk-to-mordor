@@ -1078,26 +1078,30 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
       ).bind(partyId).all<UnifiedActivityRow>();
       activities = results;
     } else {
-      // 'all' — union both types
+      // 'all' — union both types, each pre-limited for efficiency
       const { results } = await env.DB.prepare(
         `SELECT * FROM (
-           SELECT 'walk' as type, ppl.logged_by_user_id as user_id, u.username as display_name,
-                  u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', ppl.logged_at) as created_at,
-                  ppl.distance, ppl.date, NULL as content, NULL as message_id
-           FROM party_progress_log ppl
-           JOIN users u ON ppl.logged_by_user_id = u.id
-           JOIN party_members pm ON pm.party_id = ppl.party_id AND pm.user_id = ppl.logged_by_user_id
-           WHERE ppl.party_id = ? AND pm.status = 'active'
-           ORDER BY ppl.logged_at DESC LIMIT 20
+           SELECT * FROM (
+             SELECT 'walk' as type, ppl.logged_by_user_id as user_id, u.username as display_name,
+                    u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', ppl.logged_at) as created_at,
+                    ppl.distance, ppl.date, NULL as content, NULL as message_id
+             FROM party_progress_log ppl
+             JOIN users u ON ppl.logged_by_user_id = u.id
+             JOIN party_members pm ON pm.party_id = ppl.party_id AND pm.user_id = ppl.logged_by_user_id
+             WHERE ppl.party_id = ? AND pm.status = 'active'
+             ORDER BY ppl.logged_at DESC LIMIT 20
+           )
            UNION ALL
-           SELECT 'message' as type, pmsg.user_id, u.username as display_name,
-                  u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', pmsg.created_at) as created_at,
-                  NULL as distance, NULL as date, pmsg.content, pmsg.id as message_id
-           FROM party_messages pmsg
-           JOIN users u ON pmsg.user_id = u.id
-           JOIN party_members pm ON pm.party_id = pmsg.party_id AND pm.user_id = pmsg.user_id
-           WHERE pmsg.party_id = ? AND pm.status = 'active'
-           ORDER BY pmsg.created_at DESC LIMIT 20
+           SELECT * FROM (
+             SELECT 'message' as type, pmsg.user_id, u.username as display_name,
+                    u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', pmsg.created_at) as created_at,
+                    NULL as distance, NULL as date, pmsg.content, pmsg.id as message_id
+             FROM party_messages pmsg
+             JOIN users u ON pmsg.user_id = u.id
+             JOIN party_members pm ON pm.party_id = pmsg.party_id AND pm.user_id = pmsg.user_id
+             WHERE pmsg.party_id = ? AND pm.status = 'active'
+             ORDER BY pmsg.created_at DESC LIMIT 20
+           )
          ) combined
          ORDER BY created_at DESC
          LIMIT 20`
@@ -1122,7 +1126,7 @@ const MAX_MESSAGE_LENGTH = 200;
  * Content must be 1–200 characters after trimming.
  * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
  */
-export async function handleSendPartyMessage(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
+export async function handleSendPartyMessage(request: Request, env: { DB: D1Database }, partyId: number, body?: Record<string, unknown>): Promise<Response> {
   const sessionValidation = await validateSession(request, env);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
@@ -1130,19 +1134,23 @@ export async function handleSendPartyMessage(request: Request, env: { DB: D1Data
   const userId = sessionValidation.userId;
 
   try {
-    // Parse body
-    let body: Record<string, unknown>;
-    try {
-      body = await request.json() as Record<string, unknown>;
-    } catch {
-      return createErrorResponse('Invalid JSON body', 400);
+    // Use pre-parsed body if available, otherwise parse from request
+    let parsedBody: Record<string, unknown>;
+    if (body) {
+      parsedBody = body;
+    } else {
+      try {
+        parsedBody = await request.json() as Record<string, unknown>;
+      } catch {
+        return createErrorResponse('Invalid JSON body', 400);
+      }
     }
 
     // Validate content
-    if (typeof body.content !== 'string') {
+    if (typeof parsedBody.content !== 'string') {
       return createErrorResponse('Message content is required', 400);
     }
-    const content = body.content.trim();
+    const content = parsedBody.content.trim();
     if (content.length === 0) {
       return createErrorResponse('Message content cannot be empty', 400);
     }
