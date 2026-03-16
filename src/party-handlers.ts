@@ -450,28 +450,9 @@ interface DepartedMemberRow {
   avatar_id: string | null;
 }
 
-/** Row shape for activity feed entries */
-interface ActivityLogRow {
-  user_id: number;
-  display_name: string;
-  distance: number;
-  date: string;
-  logged_at: string;
-  avatar_id: string | null;
-}
-
-/** Row shape for party message entries */
-interface PartyMessageRow {
-  id: number;
-  party_id: number;
-  user_id: number;
-  content: string;
-  created_at: string;
-}
-
 /** Unified activity feed item with type discriminator */
 interface UnifiedActivityRow {
-  type: string;
+  type: 'walk' | 'message';
   user_id: number;
   display_name: string;
   avatar_id: string | null;
@@ -1073,7 +1054,7 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
     if (filterType === 'walk') {
       const { results } = await env.DB.prepare(
         `SELECT 'walk' as type, ppl.logged_by_user_id as user_id, u.username as display_name,
-                u.avatar_id, ppl.logged_at as created_at,
+                u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', ppl.logged_at) as created_at,
                 ppl.distance, ppl.date, NULL as content, NULL as message_id
          FROM party_progress_log ppl
          JOIN users u ON ppl.logged_by_user_id = u.id
@@ -1086,7 +1067,7 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
     } else if (filterType === 'message') {
       const { results } = await env.DB.prepare(
         `SELECT 'message' as type, pmsg.user_id, u.username as display_name,
-                u.avatar_id, pmsg.created_at,
+                u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', pmsg.created_at) as created_at,
                 NULL as distance, NULL as date, pmsg.content, pmsg.id as message_id
          FROM party_messages pmsg
          JOIN users u ON pmsg.user_id = u.id
@@ -1101,20 +1082,22 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
       const { results } = await env.DB.prepare(
         `SELECT * FROM (
            SELECT 'walk' as type, ppl.logged_by_user_id as user_id, u.username as display_name,
-                  u.avatar_id, ppl.logged_at as created_at,
+                  u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', ppl.logged_at) as created_at,
                   ppl.distance, ppl.date, NULL as content, NULL as message_id
            FROM party_progress_log ppl
            JOIN users u ON ppl.logged_by_user_id = u.id
            JOIN party_members pm ON pm.party_id = ppl.party_id AND pm.user_id = ppl.logged_by_user_id
            WHERE ppl.party_id = ? AND pm.status = 'active'
+           ORDER BY ppl.logged_at DESC LIMIT 20
            UNION ALL
            SELECT 'message' as type, pmsg.user_id, u.username as display_name,
-                  u.avatar_id, pmsg.created_at,
+                  u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', pmsg.created_at) as created_at,
                   NULL as distance, NULL as date, pmsg.content, pmsg.id as message_id
            FROM party_messages pmsg
            JOIN users u ON pmsg.user_id = u.id
            JOIN party_members pm ON pm.party_id = pmsg.party_id AND pm.user_id = pmsg.user_id
            WHERE pmsg.party_id = ? AND pm.status = 'active'
+           ORDER BY pmsg.created_at DESC LIMIT 20
          ) combined
          ORDER BY created_at DESC
          LIMIT 20`

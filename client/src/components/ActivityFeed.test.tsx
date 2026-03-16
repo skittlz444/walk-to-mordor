@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/preact';
+import { render, waitFor, fireEvent } from '@testing-library/preact';
 import { ActivityFeed } from './ActivityFeed';
 
 const mockFetch = vi.fn();
@@ -410,9 +410,7 @@ describe('ActivityFeed', () => {
   });
 
   it('sends message on form submit', async () => {
-    let fetchCallCount = 0;
     mockFetch.mockImplementation(async (url: string, opts?: RequestInit) => {
-      fetchCallCount++;
       if (opts?.method === 'POST' && typeof url === 'string' && url.includes('/messages')) {
         return {
           ok: true,
@@ -443,17 +441,31 @@ describe('ActivityFeed', () => {
     });
 
     const textarea = container.querySelector('.party-message-input') as HTMLTextAreaElement;
-    // Simulate typing a message
-    const inputEvent = new Event('input', { bubbles: true });
-    Object.defineProperty(inputEvent, 'target', { value: { value: 'Hello fellowship!' } });
-    textarea.value = 'Hello fellowship!';
-    textarea.dispatchEvent(inputEvent);
+    // Type a message using fireEvent
+    fireEvent.input(textarea, { target: { value: 'Hello fellowship!' } });
 
     await waitFor(() => {
       const sendBtn = container.querySelector('.party-message-form__footer .party-btn') as HTMLButtonElement;
-      // The button should become enabled after text is typed
-      // (depends on how the component handles input events)
-      expect(sendBtn).toBeTruthy();
+      expect(sendBtn.disabled).toBe(false);
+    });
+
+    const sendBtn = container.querySelector('.party-message-form__footer .party-btn') as HTMLButtonElement;
+    fireEvent.click(sendBtn);
+
+    await waitFor(() => {
+      // Assert POST was called with correct body
+      const postCall = mockFetch.mock.calls.find(
+        (call: unknown[]) => call[1] && (call[1] as RequestInit).method === 'POST'
+      );
+      expect(postCall).toBeTruthy();
+      expect(postCall![0]).toContain('/messages');
+      expect(JSON.parse((postCall![1] as RequestInit).body as string)).toEqual({ content: 'Hello fellowship!' });
+    });
+
+    // Assert textarea is cleared after successful send
+    await waitFor(() => {
+      const ta = container.querySelector('.party-message-input') as HTMLTextAreaElement;
+      expect(ta.value).toBe('');
     });
   });
 

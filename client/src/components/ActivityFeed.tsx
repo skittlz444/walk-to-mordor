@@ -8,6 +8,21 @@ import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 type ActivityType = 'walk' | 'message';
 type FilterType = 'all' | 'walk' | 'message';
 
+/** Raw activity item from API (may be legacy format without type) */
+interface RawActivityItem {
+  type?: ActivityType;
+  user_id: number;
+  display_name: string;
+  avatar_id?: string | null;
+  created_at?: string;
+  distance?: number | null;
+  date?: string | null;
+  content?: string | null;
+  message_id?: number | null;
+  logged_at?: string;
+}
+
+/** Validated/normalized activity item */
 interface ActivityItem {
   type: ActivityType;
   user_id: number;
@@ -18,8 +33,6 @@ interface ActivityItem {
   date?: string | null;
   content?: string | null;
   message_id?: number | null;
-  // Legacy fields for backward compatibility
-  logged_at?: string;
 }
 
 interface ActivityFeedProps {
@@ -60,7 +73,12 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 function formatRelativeTime(isoStr: string): string {
-  const date = new Date(isoStr);
+  // Handle D1/SQLite format (YYYY-MM-DD HH:MM:SS) by normalizing to ISO-8601
+  let normalized = isoStr;
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(isoStr)) {
+    normalized = isoStr.replace(' ', 'T') + 'Z';
+  }
+  const date = new Date(normalized);
   if (isNaN(date.getTime())) return '';
 
   const now = new Date();
@@ -82,7 +100,7 @@ function formatRelativeTime(isoStr: string): string {
   return `${month} ${day}, ${date.getFullYear()}`;
 }
 
-function isValidActivity(item: unknown): item is ActivityItem {
+function isValidActivity(item: unknown): item is RawActivityItem {
   if (typeof item !== 'object' || item === null) return false;
   const obj = item as Record<string, unknown>;
 
@@ -108,15 +126,13 @@ function isValidActivity(item: unknown): item is ActivityItem {
   return false;
 }
 
-function normalizeActivity(item: ActivityItem): ActivityItem {
-  // If item already has a type, return as-is
-  if (item.type) return item;
+function normalizeActivity(item: RawActivityItem): ActivityItem {
+  const created_at = item.created_at ?? item.logged_at ?? '';
+  if (item.type) {
+    return { ...item, type: item.type, created_at };
+  }
   // Legacy format: treat as walk
-  return {
-    ...item,
-    type: 'walk',
-    created_at: item.created_at ?? item.logged_at ?? '',
-  };
+  return { ...item, type: 'walk', created_at };
 }
 
 export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
@@ -170,7 +186,7 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
 
       const data = (await res.json()) as { activities: unknown[] };
       const valid = Array.isArray(data.activities)
-        ? (data.activities.filter(isValidActivity).map(normalizeActivity) as ActivityItem[])
+        ? data.activities.filter(isValidActivity).map(normalizeActivity)
         : [];
       setState({
         activities: valid.slice(0, MAX_ITEMS),
