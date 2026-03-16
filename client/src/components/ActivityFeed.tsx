@@ -399,11 +399,16 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
                     </span>
                     <span className="party-activity-item__message-content">{item.content}</span>
                   </div>
-                ) : (
-                  <span className="party-activity-item__text">
-                    {label} walked {(item.distance ?? 0).toFixed(2)} km on {formatRelativeDate(item.date ?? '')}
-                  </span>
-                )}
+                ) : (() => {
+                  const dateLabel = formatRelativeDate(item.date ?? '');
+                  const isRelative = dateLabel === 'Today' || dateLabel === 'Yesterday';
+                  return (
+                    <span className="party-activity-item__text">
+                      {label} walked {(item.distance ?? 0).toFixed(2)} km{' '}
+                      {isRelative ? dateLabel : `on ${dateLabel}`}
+                    </span>
+                  );
+                })()}
               </li>
             );
           })}
