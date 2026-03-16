@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor, fireEvent } from '@testing-library/preact';
 import { ActivityFeed } from './ActivityFeed';
+import { getMemberColor, PALETTE_SIZE } from '../utils/party-colors';
 
 const mockFetch = vi.fn();
 
@@ -488,5 +489,72 @@ describe('ActivityFeed', () => {
 
     const label = container.querySelector('.party-activity-filter__label');
     expect(label!.textContent).toContain('Filter');
+  });
+
+  it('applies user colour to message sender name', async () => {
+    const userId = 10;
+    const activities = [
+      makeMessage({ user_id: userId, display_name: 'Frodo', content: 'Keep walking!' }),
+    ];
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ activities }),
+    });
+
+    const { container } = render(<ActivityFeed partyId={1} currentUserId={99} />);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('.party-activity-item--message')).toHaveLength(1);
+    });
+
+    const nameEl = container.querySelector('.party-activity-item__message-header strong') as HTMLElement;
+    expect(nameEl).toBeTruthy();
+    expect(nameEl.style.color).toBe(getMemberColor(userId % PALETTE_SIZE));
+  });
+
+  it('applies user colour to walk item name', async () => {
+    const userId = 20;
+    const activities = [
+      makeWalkActivity({ user_id: userId, display_name: 'Sam', distance: 3.0, date: todayStr() }),
+    ];
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ activities }),
+    });
+
+    const { container } = render(<ActivityFeed partyId={1} currentUserId={99} />);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('.party-activity-item')).toHaveLength(1);
+    });
+
+    const nameEl = container.querySelector('.party-activity-item__text span') as HTMLElement;
+    expect(nameEl).toBeTruthy();
+    expect(nameEl.style.color).toBe(getMemberColor(userId % PALETTE_SIZE));
+  });
+
+  it('applies own user colour to own message name (You)', async () => {
+    const userId = 42;
+    const activities = [
+      makeMessage({ user_id: userId, display_name: 'Frodo', content: 'My message' }),
+    ];
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ activities }),
+    });
+
+    const { container } = render(<ActivityFeed partyId={1} currentUserId={userId} />);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('.party-activity-item--message')).toHaveLength(1);
+    });
+
+    const nameEl = container.querySelector('.party-activity-item__message-header strong') as HTMLElement;
+    expect(nameEl).toBeTruthy();
+    expect(nameEl.textContent).toBe('You');
+    expect(nameEl.style.color).toBe(getMemberColor(userId % PALETTE_SIZE));
   });
 });
