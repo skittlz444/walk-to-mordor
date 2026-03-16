@@ -491,7 +491,7 @@ describe('ActivityFeed', () => {
     expect(label!.textContent).toContain('Filter');
   });
 
-  it('applies user colour to message sender name', async () => {
+  it('applies user colour as left border on message items', async () => {
     const userId = 10;
     const activities = [
       makeMessage({ user_id: userId, display_name: 'Frodo', content: 'Keep walking!' }),
@@ -508,12 +508,15 @@ describe('ActivityFeed', () => {
       expect(container.querySelectorAll('.party-activity-item--message')).toHaveLength(1);
     });
 
+    const li = container.querySelector('.party-activity-item--message') as HTMLElement;
+    expect(li).toBeTruthy();
+    expect(li.style.borderLeftColor).toBe(getMemberColor(userId % PALETTE_SIZE));
+    // Name should NOT have inline color
     const nameEl = container.querySelector('.party-activity-item__message-header strong') as HTMLElement;
-    expect(nameEl).toBeTruthy();
-    expect(nameEl.style.color).toBe(getMemberColor(userId % PALETTE_SIZE));
+    expect(nameEl.style.color).toBeFalsy();
   });
 
-  it('applies user colour to walk item name', async () => {
+  it('does not apply user colour to walk items', async () => {
     const userId = 20;
     const activities = [
       makeWalkActivity({ user_id: userId, display_name: 'Sam', distance: 3.0, date: todayStr() }),
@@ -530,12 +533,14 @@ describe('ActivityFeed', () => {
       expect(container.querySelectorAll('.party-activity-item')).toHaveLength(1);
     });
 
-    const nameEl = container.querySelector('.party-activity-item__text span') as HTMLElement;
-    expect(nameEl).toBeTruthy();
-    expect(nameEl.style.color).toBe(getMemberColor(userId % PALETTE_SIZE));
+    const li = container.querySelector('.party-activity-item') as HTMLElement;
+    expect(li.style.borderLeftColor).toBeFalsy();
+    // Name text should NOT be wrapped in a colored span
+    const text = container.querySelector('.party-activity-item__text') as HTMLElement;
+    expect(text.querySelector('span[style]')).toBeNull();
   });
 
-  it('applies own user colour to own message name (You)', async () => {
+  it('applies own user colour as left border on own message items (You)', async () => {
     const userId = 42;
     const activities = [
       makeMessage({ user_id: userId, display_name: 'Frodo', content: 'My message' }),
@@ -552,9 +557,11 @@ describe('ActivityFeed', () => {
       expect(container.querySelectorAll('.party-activity-item--message')).toHaveLength(1);
     });
 
+    const li = container.querySelector('.party-activity-item--message') as HTMLElement;
+    expect(li).toBeTruthy();
+    expect(li.style.borderLeftColor).toBe(getMemberColor(userId % PALETTE_SIZE));
     const nameEl = container.querySelector('.party-activity-item__message-header strong') as HTMLElement;
-    expect(nameEl).toBeTruthy();
     expect(nameEl.textContent).toBe('You');
-    expect(nameEl.style.color).toBe(getMemberColor(userId % PALETTE_SIZE));
+    expect(nameEl.style.color).toBeFalsy();
   });
 });

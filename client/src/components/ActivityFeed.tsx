@@ -389,14 +389,14 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
             const key = isMessage
               ? `msg-${item.message_id ?? index}`
               : `walk-${item.created_at}-${item.user_id}-${index}`;
-            const userColor = getMemberColor(item.user_id % PALETTE_SIZE);
+            const userColor = isMessage ? getMemberColor(item.user_id % PALETTE_SIZE) : undefined;
 
             return (
-              <li key={key} className={itemClass}>
+              <li key={key} className={itemClass} style={userColor ? { borderLeftColor: userColor } : undefined}>
                 {isMessage ? (
                   <div className="party-activity-item__message">
                     <span className="party-activity-item__message-header">
-                      <strong style={{ color: userColor }}>{label}</strong>
+                      <strong>{label}</strong>
                       <span className="party-activity-item__time">{formatRelativeTime(item.created_at)}</span>
                     </span>
                     <span className="party-activity-item__message-content">{item.content}</span>
@@ -406,7 +406,7 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
                   const isRelative = dateLabel === 'Today' || dateLabel === 'Yesterday';
                   return (
                     <span className="party-activity-item__text">
-                      <span style={{ color: userColor }}>{label}</span>{' '}walked {(item.distance ?? 0).toFixed(2)} km{' '}
+                      {label} walked {(item.distance ?? 0).toFixed(2)} km{' '}
                       {isRelative ? dateLabel : `on ${dateLabel}`}
                     </span>
                   );
