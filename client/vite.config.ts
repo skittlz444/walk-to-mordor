@@ -13,7 +13,7 @@ export default defineConfig({
   build: {
     outDir: '../public/js/client',
     emptyOutDir: true,
-    rollupOptions: {
+    rolldownOptions: {
       input: './src/index.tsx',
       output: {
         entryFileNames: 'islands.js',
