@@ -1,6 +1,7 @@
 import {
   handlePartyProgress,
   handlePartyActivity,
+  handleSendPartyMessage,
 } from '../../src/party-handlers';
 import { syncPartyProgressLog } from '../../src/progress-handlers';
 import { validateSession } from '../../src/auth-handlers';
@@ -12,7 +13,7 @@ jest.mock('../../src/goals-handlers');
 
 describe('Party Progress API (Story 3.4)', () => {
   let mockEnv: { DB: Record<string, jest.Mock> };
-  let mockRequest: { headers: { get: jest.Mock } };
+  let mockRequest: { headers: { get: jest.Mock }; url: string };
 
   // Reusable chainable mock builder
   function createChainableMock(overrides?: {
@@ -41,6 +42,7 @@ describe('Party Progress API (Story 3.4)', () => {
 
     mockRequest = {
       headers: { get: jest.fn() },
+      url: 'https://example.com/api/party/1/activity',
     };
   });
 
@@ -810,6 +812,283 @@ describe('Party Progress API (Story 3.4)', () => {
         expect.any(Error)
       );
       consoleSpy.mockRestore();
+    });
+  });
+
+  // ─── handlePartyActivity filters ──────────────────────────────────
+
+  describe('handlePartyActivity filters', () => {
+    it('should accept type=walk filter', async () => {
+      const walkRequest = {
+        headers: { get: jest.fn() },
+        url: 'https://example.com/api/party/1/activity?type=walk',
+      };
+      // Party exists
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: null }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10 }),
+      }));
+      // Walk query
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({ results: [] }),
+      }));
+
+      const response = await handlePartyActivity(walkRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.activities).toEqual([]);
+    });
+
+    it('should accept type=message filter', async () => {
+      const msgRequest = {
+        headers: { get: jest.fn() },
+        url: 'https://example.com/api/party/1/activity?type=message',
+      };
+      // Party exists
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: null }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10 }),
+      }));
+      // Message query
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        all: jest.fn().mockResolvedValue({ results: [] }),
+      }));
+
+      const response = await handlePartyActivity(msgRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(200);
+    });
+
+    it('should return 400 for invalid type filter', async () => {
+      const badRequest = {
+        headers: { get: jest.fn() },
+        url: 'https://example.com/api/party/1/activity?type=invalid',
+      };
+      // Party exists
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: null }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10 }),
+      }));
+
+      const response = await handlePartyActivity(badRequest as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('Invalid type filter');
+    });
+  });
+
+  // ─── handleSendPartyMessage ───────────────────────────────────────
+
+  describe('handleSendPartyMessage', () => {
+    function createMessageRequest(body: Record<string, unknown>) {
+      return {
+        headers: { get: jest.fn() },
+        url: 'https://example.com/api/party/1/messages',
+        json: jest.fn().mockResolvedValue(body),
+      };
+    }
+
+    it('should return 401 if session is invalid', async () => {
+      (validateSession as jest.Mock).mockResolvedValue({
+        valid: false,
+        error: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        }),
+      });
+
+      const request = createMessageRequest({ content: 'Hello' });
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(401);
+    });
+
+    it('should return 400 if content is missing', async () => {
+      const request = createMessageRequest({});
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('content is required');
+    });
+
+    it('should return 400 if content is empty after trimming', async () => {
+      const request = createMessageRequest({ content: '   ' });
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('cannot be empty');
+    });
+
+    it('should return 400 if content exceeds 200 characters', async () => {
+      const request = createMessageRequest({ content: 'a'.repeat(201) });
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('200 characters or less');
+    });
+
+    it('should return 404 if party not found', async () => {
+      const request = createMessageRequest({ content: 'Hello' });
+      // Party lookup returns null
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
+
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 999);
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 404 if party is dissolved', async () => {
+      const request = createMessageRequest({ content: 'Hello' });
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: '2026-01-01T00:00:00Z' }),
+      }));
+
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 403 if user is not an active member', async () => {
+      const request = createMessageRequest({ content: 'Hello' });
+      // Party exists
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: null }),
+      }));
+      // Membership check returns null
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue(null),
+      }));
+
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(403);
+    });
+
+    it('should successfully create a message and return 201', async () => {
+      const request = createMessageRequest({ content: 'Hello fellowship!' });
+      // Party exists
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: null }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10 }),
+      }));
+      // Insert message
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        run: jest.fn().mockResolvedValue({ meta: { last_row_id: 42, changes: 1 } }),
+      }));
+      // Fetch created message
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({
+          id: 42,
+          party_id: 1,
+          user_id: 1,
+          content: 'Hello fellowship!',
+          created_at: '2026-03-15T10:00:00Z',
+          display_name: 'Frodo',
+          avatar_id: null,
+        }),
+      }));
+
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(201);
+      const data = await response.json();
+      expect(data.message).toEqual({
+        id: 42,
+        type: 'message',
+        user_id: 1,
+        display_name: 'Frodo',
+        avatar_id: null,
+        content: 'Hello fellowship!',
+        created_at: '2026-03-15T10:00:00Z',
+      });
+    });
+
+    it('should trim content before saving', async () => {
+      const request = createMessageRequest({ content: '  Hello!  ' });
+      // Party exists
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: null }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10 }),
+      }));
+      // Insert message
+      const runMock = jest.fn().mockResolvedValue({ meta: { last_row_id: 43, changes: 1 } });
+      const bindMock = jest.fn(() => ({ run: runMock, all: jest.fn(), first: jest.fn() }));
+      mockEnv.DB.prepare.mockReturnValueOnce({ bind: bindMock, run: runMock, all: jest.fn(), first: jest.fn() });
+      // Fetch created message
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({
+          id: 43, party_id: 1, user_id: 1, content: 'Hello!',
+          created_at: '2026-03-15T10:00:00Z', display_name: 'Frodo', avatar_id: null,
+        }),
+      }));
+
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(201);
+
+      // Verify trimmed content was passed to bind
+      expect(bindMock).toHaveBeenCalledWith(1, 1, 'Hello!');
+    });
+
+    it('should return 500 on database error', async () => {
+      const request = createMessageRequest({ content: 'Hello' });
+      mockEnv.DB.prepare.mockImplementation(() => {
+        throw new Error('DB connection failed');
+      });
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(500);
+      consoleSpy.mockRestore();
+    });
+
+    it('should accept exactly 200 characters', async () => {
+      const request = createMessageRequest({ content: 'a'.repeat(200) });
+      // Party exists
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 1, dissolved_at: null }),
+      }));
+      // Membership check
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({ id: 10 }),
+      }));
+      // Insert message
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        run: jest.fn().mockResolvedValue({ meta: { last_row_id: 44, changes: 1 } }),
+      }));
+      // Fetch created message
+      mockEnv.DB.prepare.mockReturnValueOnce(createChainableMock({
+        first: jest.fn().mockResolvedValue({
+          id: 44, party_id: 1, user_id: 1, content: 'a'.repeat(200),
+          created_at: '2026-03-15T10:00:00Z', display_name: 'Frodo', avatar_id: null,
+        }),
+      }));
+
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(201);
+    });
+
+    it('should return 400 for invalid JSON body', async () => {
+      const request = {
+        headers: { get: jest.fn() },
+        url: 'https://example.com/api/party/1/messages',
+        json: jest.fn().mockRejectedValue(new SyntaxError('Unexpected token')),
+      };
+
+      const response = await handleSendPartyMessage(request as unknown as Request, mockEnv as unknown as { DB: D1Database }, 1);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('Invalid JSON');
     });
   });
 });

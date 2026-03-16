@@ -496,6 +496,131 @@
   background: color-mix(in srgb, var(--primary) 8%, var(--bg-dark-alt));
 }
 
+.party-activity-item--message {
+  border-left-color: var(--accent-teal, #38b2ac);
+}
+
+.party-activity-item--message.party-activity-item--own {
+  border-left-color: var(--accent-blue);
+}
+
+.party-activity-item__message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.party-activity-item__message-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.party-activity-item__message-header strong {
+  color: var(--text-primary);
+}
+
+.party-activity-item__time {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.party-activity-item__message-content {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Activity Container */
+.party-activity-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Message Input Form */
+.party-message-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.party-message-input {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-gray);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 2.5rem;
+  max-height: 6rem;
+}
+
+.party-message-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.party-message-input::placeholder {
+  color: var(--text-muted);
+}
+
+.party-message-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.party-message-char-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.party-message-char-count--over {
+  color: var(--status-error);
+  font-weight: 600;
+}
+
+.party-message-error {
+  font-size: 0.8rem;
+  color: var(--status-error);
+  padding: 0.25rem 0;
+}
+
+/* Activity Filter */
+.party-activity-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.party-activity-filter__label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.party-activity-filter__select {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-gray);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.party-activity-filter__select:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
 /* ============================================================================
    Management Page
    ============================================================================ */
