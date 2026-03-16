@@ -76,9 +76,9 @@
   },
   "dependencies": {
     "@preact/signals": "^2.8.2",
-    "dompurify": "^3.3.2",
-    "konva": "^10.2.0",
+    "dompurify": "^3.3.3",
+    "konva": "^10.2.1",
     "marked": "^17.0.4",
-    "preact": "^10.28.4"
+    "preact": "^10.29.0"
   }
 }
