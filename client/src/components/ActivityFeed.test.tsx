@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor, fireEvent } from '@testing-library/preact';
 import { ActivityFeed } from './ActivityFeed';
-import { getMemberColor, PALETTE_SIZE } from '../utils/party-colors';
+import { getMemberColor } from '../utils/party-colors';
 
 const mockFetch = vi.fn();
 
@@ -510,7 +510,7 @@ describe('ActivityFeed', () => {
 
     const li = container.querySelector('.party-activity-item--message') as HTMLElement;
     expect(li).toBeTruthy();
-    expect(li.style.borderLeftColor).toBe(getMemberColor(userId % PALETTE_SIZE));
+    expect(li.style.borderLeftColor).toBe(getMemberColor(userId));
     // Name should NOT have inline color
     const nameEl = container.querySelector('.party-activity-item__message-header strong') as HTMLElement;
     expect(nameEl.style.color).toBeFalsy();
@@ -559,7 +559,7 @@ describe('ActivityFeed', () => {
 
     const li = container.querySelector('.party-activity-item--message') as HTMLElement;
     expect(li).toBeTruthy();
-    expect(li.style.borderLeftColor).toBe(getMemberColor(userId % PALETTE_SIZE));
+    expect(li.style.borderLeftColor).toBe(getMemberColor(userId));
     const nameEl = container.querySelector('.party-activity-item__message-header strong') as HTMLElement;
     expect(nameEl.textContent).toBe('You');
     expect(nameEl.style.color).toBeFalsy();
