@@ -126,7 +126,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should dispatch preferenceChanged event when toggled', async ({ page }) => {
-      // Set up event listener before navigating to profile
+      // Navigate to profile page, then set up event listener
       await navigateToProfile(page);
 
       await page.evaluate(() => {
@@ -417,7 +417,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should dispatch preferenceChanged event with defaultViewMap when toggled', async ({ page }) => {
-      // Navigate to profile and set up event listener
+      // Navigate to profile page, then set up event listener for toggle action
       await navigateToProfile(page);
 
       await page.evaluate(() => {
