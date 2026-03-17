@@ -3,32 +3,20 @@ const { test, expect, setupTest, waitForAuthenticated } = require('./helpers/com
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
-// Helper to properly close popup with Firefox compatibility
-async function closePopupRobust(page, closeButton) {
-  try {
-    await closeButton.click({ timeout: 2000 });
-  } catch (e) {
-    await closeButton.click({ force: true });
-  }
-
-  await page.waitForFunction(() => {
-    const popup = document.querySelector('.modal-overlay');
-    return !popup || window.getComputedStyle(popup).display === 'none' ||
-      popup.style.display === 'none' || !popup.offsetParent;
-  });
-
-  await expect(page.locator('.modal-overlay')).toBeHidden();
-}
-
-async function openProfileFromDrawer(page) {
+async function openProfilePage(page) {
   await page.click('.menu-icon');
   await page.waitForSelector('body.drawer-open');
-  const profileButton = page.locator('.drawer-profile');
-  await expect(profileButton).toBeVisible();
-  await expect(profileButton).toBeEnabled();
-  await profileButton.click();
-  await expect(page.locator('.modal-overlay')).toBeVisible();
-  await expect(page.locator('.modal-title')).toHaveText('User Profile');
+  const profileLink = page.locator('.drawer-profile');
+  await expect(profileLink).toBeVisible();
+  await profileLink.click();
+  await page.waitForURL('**/profile');
+  await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+}
+
+async function navigateToProfile(page) {
+  await page.goto(BASE_URL + '/profile');
+  await waitForAuthenticated(page);
+  await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
 }
 
 /**
@@ -40,9 +28,9 @@ test.describe('User Goal Visibility Preference', () => {
     await waitForAuthenticated(page);
   });
 
-  test.describe('Profile Modal Toggle', () => {
-    test('should display preview milestones toggle in profile modal', async ({ page }) => {
-      await openProfileFromDrawer(page);
+  test.describe('Profile Page Toggle', () => {
+    test('should display preview milestones toggle on profile page', async ({ page }) => {
+      await navigateToProfile(page);
 
       // Toggle switch container should be visible (the <input> itself is hidden by toggle-switch CSS)
       const toggleSwitch = page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-switch');
@@ -57,7 +45,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should toggle preference and persist via API', async ({ page }) => {
-      await openProfileFromDrawer(page);
+      await navigateToProfile(page);
 
       const toggle = page.locator('#preview-milestones-toggle');
       await expect(toggle).toBeChecked();
@@ -80,7 +68,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should revert toggle on API failure',async ({ page }) => {
-      await openProfileFromDrawer(page);
+      await navigateToProfile(page);
 
       const toggle = page.locator('#preview-milestones-toggle');
       await expect(toggle).toBeChecked();
@@ -109,7 +97,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should persist preference across page reload', async ({ page }) => {
-      await openProfileFromDrawer(page);
+      await navigateToProfile(page);
 
       const toggle = page.locator('#preview-milestones-toggle');
 
@@ -120,15 +108,10 @@ test.describe('User Goal Visibility Preference', () => {
       await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await responsePromise;
 
-      // Close modal
-      await closePopupRobust(page, page.locator('#close-profile-modal'));
-
-      // Reload page
+      // Reload profile page
       await page.reload();
       await waitForAuthenticated(page);
-
-      // Re-open profile modal
-      await openProfileFromDrawer(page);
+      await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
 
       // Toggle should still be unchecked
       const toggleAfterReload = page.locator('#preview-milestones-toggle');
@@ -143,7 +126,9 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should dispatch preferenceChanged event when toggled', async ({ page }) => {
-      // Set up event listener before opening modal
+      // Set up event listener before navigating to profile
+      await navigateToProfile(page);
+
       await page.evaluate(() => {
         window.__preferenceEventFired = false;
         window.__preferenceEventDetail = null;
@@ -152,8 +137,6 @@ test.describe('User Goal Visibility Preference', () => {
           window.__preferenceEventDetail = e.detail;
         });
       });
-
-      await openProfileFromDrawer(page);
 
       const toggle = page.locator('#preview-milestones-toggle');
 
@@ -291,8 +274,8 @@ test.describe('User Goal Visibility Preference', () => {
   });
 
   test.describe('Default View Toggle', () => {
-    test('should display default view toggle in profile modal', async ({ page }) => {
-      await openProfileFromDrawer(page);
+    test('should display default view toggle on profile page', async ({ page }) => {
+      await navigateToProfile(page);
 
       // Toggle switch container should be visible
       const toggleSwitches = page.locator('.toggle-switch');
@@ -308,7 +291,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should toggle default view preference and persist via API', async ({ page }) => {
-      await openProfileFromDrawer(page);
+      await navigateToProfile(page);
 
       const toggle = page.locator('#default-view-toggle');
       await expect(toggle).not.toBeChecked();
@@ -318,7 +301,7 @@ test.describe('User Goal Visibility Preference', () => {
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
 
-      // Click the toggle slider (second one in the modal)
+      // Click the toggle slider
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
 
       const response = await responsePromise;
@@ -338,7 +321,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should persist default view preference across navigation', async ({ page }) => {
-      await openProfileFromDrawer(page);
+      await navigateToProfile(page);
 
       const toggle = page.locator('#default-view-toggle');
 
@@ -349,21 +332,17 @@ test.describe('User Goal Visibility Preference', () => {
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await responsePromise;
 
-      // Close modal
-      await closePopupRobust(page, page.locator('#close-profile-modal'));
-
-      // Reload page (navigate to map since default view is now map)
+      // Navigate to map page
       await page.goto(BASE_URL + '/map');
       await waitForAuthenticated(page);
-      // Wait for map island to be ready before drawer interaction
       await page.waitForSelector('[data-island="MapIsland"][data-hydrated="true"]');
 
-      // Open profile modal on map page
-      await openProfileFromDrawer(page);
+      // Navigate back to profile page
+      await navigateToProfile(page);
 
       // Toggle should still be checked
-      const toggleAfterReload = page.locator('#default-view-toggle');
-      await expect(toggleAfterReload).toBeChecked();
+      const toggleAfterNav = page.locator('#default-view-toggle');
+      await expect(toggleAfterNav).toBeChecked();
 
       // Restore default (toggle back OFF) for clean state
       const restorePromise = page.waitForResponse(
@@ -374,15 +353,13 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('root should follow preference while /journey remains directly accessible', async ({ page }) => {
-      await openProfileFromDrawer(page);
+      await navigateToProfile(page);
 
       const enablePromise = page.waitForResponse(
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
       await page.locator('.toggle-group:has(#default-view-toggle) .toggle-slider').click();
       await enablePromise;
-
-      await closePopupRobust(page, page.locator('#close-profile-modal'));
 
       // Root should apply default-map preference.
       await page.goto(BASE_URL + '/');
@@ -402,7 +379,7 @@ test.describe('User Goal Visibility Preference', () => {
       await waitForAuthenticated(page);
       await expect(page).toHaveURL(/\/journey$/);
 
-      await openProfileFromDrawer(page);
+      await navigateToProfile(page);
       const restorePromise = page.waitForResponse(
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'
       );
@@ -411,7 +388,7 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should revert default view toggle on API failure', async ({ page }) => {
-      await openProfileFromDrawer(page);
+      await navigateToProfile(page);
 
       const toggle = page.locator('#default-view-toggle');
       await expect(toggle).not.toBeChecked();
@@ -440,7 +417,9 @@ test.describe('User Goal Visibility Preference', () => {
     });
 
     test('should dispatch preferenceChanged event with defaultViewMap when toggled', async ({ page }) => {
-      // Set up event listener before opening modal
+      // Navigate to profile and set up event listener
+      await navigateToProfile(page);
+
       await page.evaluate(() => {
         window.__preferenceEventFired = false;
         window.__preferenceEventDetail = null;
@@ -449,8 +428,6 @@ test.describe('User Goal Visibility Preference', () => {
           window.__preferenceEventDetail = e.detail;
         });
       });
-
-      await openProfileFromDrawer(page);
 
       const responsePromise = page.waitForResponse(
         (response) => response.url().includes('/api/user/preferences') && response.request().method() === 'PUT'

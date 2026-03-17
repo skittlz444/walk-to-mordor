@@ -31,6 +31,7 @@ jest.mock('../../src/renderPartyJoinPage');
 jest.mock('../../src/renderFriendsPage');
 jest.mock('../../src/renderFriendAddPage');
 jest.mock('../../src/renderFriendProfilePage');
+jest.mock('../../src/renderProfilePage');
 jest.mock('../../src/renderAdminPage');
 jest.mock('../../src/renderAdminGoalsPage');
 jest.mock('../../src/renderAdminGoalEditPage');
@@ -50,6 +51,7 @@ import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
 import { renderFriendsPage } from '../../src/renderFriendsPage';
 import { renderFriendAddPage } from '../../src/renderFriendAddPage';
 import { renderFriendProfilePage } from '../../src/renderFriendProfilePage';
+import { renderProfilePage } from '../../src/renderProfilePage';
 import { renderAdminPage } from '../../src/renderAdminPage';
 import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
 import { renderAdminGoalAddPage } from '../../src/renderAdminGoalAddPage';
@@ -90,6 +92,7 @@ const mockRenderPartyJoinPage = jest.mocked(renderPartyJoinPage);
 const mockRenderFriendsPage = jest.mocked(renderFriendsPage);
 const mockRenderFriendAddPage = jest.mocked(renderFriendAddPage);
 const mockRenderFriendProfilePage = jest.mocked(renderFriendProfilePage);
+const mockRenderProfilePage = jest.mocked(renderProfilePage);
 const mockRenderAdminPage = jest.mocked(renderAdminPage);
 const mockRenderAdminGoalsPage = jest.mocked(renderAdminGoalsPage);
 const mockRenderAdminGoalAddPage = jest.mocked(renderAdminGoalAddPage);
@@ -942,6 +945,16 @@ describe('Cloudflare Worker Index', () => {
     // /friends/add/:friendCode should match, NOT /friends/:id
     expect(mockRenderFriendAddPage).toHaveBeenCalled();
     expect(mockRenderFriendProfilePage).not.toHaveBeenCalled();
+  });
+
+  // Profile page routing test
+  it('should render profile page for /profile route', async () => {
+    const request = createRequest('https://example.com/profile');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockRenderProfilePage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
   });
 
   // Friend profile API route tests

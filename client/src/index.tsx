@@ -20,6 +20,7 @@ import { AdminGoalEditIsland } from './islands/AdminGoalEditIsland';
 import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
 import { AdminUsersListIsland } from './islands/AdminUsersListIsland';
 import { AdminMetricsIsland } from './islands/AdminMetricsIsland';
+import { ProfileIsland } from './islands/ProfileIsland';
 import * as partyStore from './stores/partyStore';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
@@ -36,6 +37,7 @@ const autoHydratedIslands = {
   FriendProfileIsland,
   FriendsListIsland,
   MapIsland,
+  ProfileIsland,
   PartyListIsland,
   PartyDetailIsland,
   PartyManageIsland,
@@ -59,6 +61,7 @@ const allIslands = {
   GoalModal,
   MapIsland,
   NextGoalCard,
+  ProfileIsland,
   PartyDetailIsland,
   PartyJoinIsland,
   PartyListIsland,

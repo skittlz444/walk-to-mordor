@@ -50,10 +50,10 @@ test.describe('Map Shell (Authenticated)', () => {
     await page.waitForSelector('body.drawer-open');
     const profileButton = page.locator('.drawer-profile');
     await expect(profileButton).toBeVisible();
-    await expect(profileButton).toBeEnabled();
     await profileButton.click();
 
-    await expect(page.locator('.modal-overlay')).toBeVisible();
+    await page.waitForURL('**/profile');
+    await expect(page.locator('.profile-page')).toBeVisible();
   });
 
   test('drawer opens and closes via backdrop and escape', async ({ page }) => {

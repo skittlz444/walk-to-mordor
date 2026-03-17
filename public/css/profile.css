@@ -1,4 +1,51 @@
-/* Profile modal styles */
+/* Profile page styles */
+
+/* Profile page layout */
+.profile-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.profile-page-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.profile-card {
+  background: var(--bg-surface, #1a1a2e);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.profile-card-body {
+  padding: 1.5rem;
+}
+
+.profile-card-footer {
+  border-top: 1px solid var(--border-gray, #333);
+}
+
+.profile-footer-btns {
+  display: flex;
+  width: 100%;
+  gap: 0;
+}
+
+.profile-footer-btns button {
+  flex: 1 1 0;
+  margin: 0;
+  border-radius: 0;
+  font-size: 1.08em;
+  min-height: 2.5em;
+  width: 100%;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: none;
+  font-weight: 400;
+}
 
 /* Field hints */
 .field-hint {

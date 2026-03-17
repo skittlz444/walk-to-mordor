@@ -1,30 +1,6 @@
 // @ts-check
 const { test, expect, setupTest, waitForAuthenticated } = require('./helpers/common');
 
-// Helper to properly close popup with Firefox compatibility
-async function closePopupRobust(page, closeButton) {
-  // Use force:true to bypass overlay interception issues if needed, but try standard first
-  try {
-      await closeButton.click({ timeout: 2000 });
-  } catch (e) {
-      await closeButton.click({ force: true });
-  }
-  
-  // Wait for popup to actually close
-  await page.waitForFunction(() => {
-    const popup = document.querySelector('.modal-overlay');
-    return !popup || window.getComputedStyle(popup).display === 'none' || 
-           popup.style.display === 'none' || !popup.offsetParent;
-  });
-  
-  await expect(page.locator('.modal-overlay')).toBeHidden();
-}
-
-async function waitForProfileSave(page) {
-    // Wait for modal to close after save
-    await expect(page.locator('.modal-overlay')).toBeHidden();
-}
-
 async function waitForProfileFormReady(page) {
     await page.waitForFunction(() => {
         const usernameInput = document.querySelector('#profile-username');
@@ -80,19 +56,27 @@ async function setFieldValueRobust(page, selector, value) {
 }
 
 /**
- * UI Tests - Profile Modal Functionality
+ * UI Tests - Profile Page Functionality
  */
-test.describe('User Profile Modal', () => {
+test.describe('User Profile Page', () => {
     const menuSelector = '.menu-icon';
     const profileDrawerSelector = '.drawer-profile';
 
     async function openProfileFromDrawer(page) {
         await page.click(menuSelector);
         await page.waitForSelector('body.drawer-open');
-        const profileButton = page.locator(profileDrawerSelector);
-        await expect(profileButton).toBeVisible();
-        await expect(profileButton).toBeEnabled();
-        await profileButton.click();
+        const profileLink = page.locator(profileDrawerSelector);
+        await expect(profileLink).toBeVisible();
+        await profileLink.click();
+        // Wait for navigation to /profile and island hydration
+        await page.waitForURL('**/profile');
+        await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+    }
+
+    async function navigateToProfile(page) {
+        await page.goto('/profile');
+        await waitForAuthenticated(page);
+        await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
     }
 
     test.beforeEach(async ({ page, authToken }) => {
@@ -107,13 +91,12 @@ test.describe('User Profile Modal', () => {
         await expect(menuBtn).toHaveAttribute('aria-label', 'Open Navigation');
     });
 
-    test('should open profile modal when clicking Profile button', async ({ page }) => {
-        // Open Profile from drawer
+    test('should navigate to profile page when clicking Profile link in drawer', async ({ page }) => {
+        // Navigate to profile from drawer
         await openProfileFromDrawer(page);
 
-        // Verify modal is displayed
-        await expect(page.locator('.modal-overlay')).toBeVisible();
-        await expect(page.locator('.modal-title')).toHaveText('User Profile');
+        // Verify profile page is displayed
+        await expect(page.locator('.profile-page')).toBeVisible();
 
         // Verify form fields are present
         await expect(page.locator('#profile-username')).toBeVisible();
@@ -122,47 +105,19 @@ test.describe('User Profile Modal', () => {
         // Verify buttons are present
         await expect(page.locator('#save-profile-btn')).toHaveText('Save Changes');
         await expect(page.locator('#logout-modal-btn')).toHaveText('Logout');
-        await expect(page.locator('#cancel-profile-btn')).toHaveText('Cancel');
+        await expect(page.locator('#cancel-profile-btn')).toHaveText('Back');
     });
 
-    test('should close modal when clicking Cancel button', async ({ page }) => {
-        // Open modal
+    test('should navigate back when clicking Back button', async ({ page }) => {
+        // Navigate to profile page
         await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        await expect(page.locator('.profile-page')).toBeVisible();
 
-        // Click Cancel using robust closing
-        const cancelBtn = page.locator('#cancel-profile-btn');
-        await closePopupRobust(page, cancelBtn);
-    });
+        // Click Back button
+        await page.click('#cancel-profile-btn');
 
-    test('should close modal when clicking close (X) button', async ({ page }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
-
-        // Click close button using robust closing
-        const closeBtn = page.locator('#close-profile-modal');
-        await closePopupRobust(page, closeBtn);
-    });
-
-    test('should close modal when clicking overlay background', async ({ page }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
-
-        // Click on overlay (not on the dialog)
-        // force: true ensures we click even if playwight thinks it's being intercepted (which is ironic here as we ARE the interceptor)
-        await page.click('.modal-overlay', { position: { x: 5, y: 5 }, force: true });
-
-        // Verify modal is closed
-        await expect(page.locator('.modal-overlay')).not.toBeVisible();
-        
-        // Robust wait for Firefox
-        await page.waitForFunction(() => {
-          const popup = document.querySelector('.modal-overlay');
-          return !popup || window.getComputedStyle(popup).display === 'none' || 
-                 popup.style.display === 'none' || !popup.offsetParent;
-        });
+        // Should navigate back (not on profile page anymore)
+        await page.waitForURL(url => !url.pathname.includes('/profile'), { timeout: 5000 });
     });
 
     test('should display current username and email in form fields', async ({ page, authToken }) => {
@@ -170,9 +125,9 @@ test.describe('User Profile Modal', () => {
         const username = authToken.replace('TEST_MOCK_TOKEN_', '');
         const expectedEmail = `${username}@example.com`;
 
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        // Navigate to profile
+        await navigateToProfile(page);
+        await waitForProfileFormReady(page);
 
         // Verify current values
         const usernameValue = await page.inputValue('#profile-username');
@@ -182,13 +137,12 @@ test.describe('User Profile Modal', () => {
         expect(emailValue).toBe(expectedEmail);
     });
 
-    test('should update username successfully', async ({ page, authToken }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+    test('should update username successfully', async ({ page }) => {
+        // Navigate to profile
+        await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
-        // Update username (keeping same email)
+        // Update username
         const newUsername = uniqueUsername('updusr');
         await setFieldValueRobust(page, '#profile-username', newUsername);
 
@@ -199,39 +153,40 @@ test.describe('User Profile Modal', () => {
         expect(saveResponse).not.toBeNull();
         expect(saveResponse.status()).toBe(200);
 
-        await waitForProfileSave(page);
+        // Verify success message appears
+        await page.waitForFunction(() => {
+            const success = document.querySelector('#profile-success');
+            return success && success.textContent && success.textContent.includes('Profile updated');
+        });
     });
 
     test('should update email successfully', async ({ page }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        // Navigate to profile
+        await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
-        // Update email (keeping same username)
+        // Update email
         const newEmail = uniqueEmail('newemail');
         await page.locator('#profile-email').fill(newEmail);
         await expect(page.locator('#profile-email')).toHaveValue(newEmail);
 
-        // Listen for the PUT response BEFORE clicking save (inherits 30s test timeout)
         const responsePromise = page.waitForResponse(
             resp => resp.url().includes('/api/profile') && resp.request().method() === 'PUT');
         await page.click('#save-profile-btn');
         const response = await responsePromise;
         expect(response.status()).toBe(200);
 
-        await waitForProfileSave(page);
-
-        // Reopen modal to verify update
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        // Reload profile page to verify update persisted
+        await page.reload();
+        await waitForAuthenticated(page);
+        await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+        await waitForProfileFormReady(page);
         await expect(page.locator('#profile-email')).toHaveValue(newEmail);
     });
 
     test('should update both username and email successfully', async ({ page }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        // Navigate to profile
+        await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
         let saved = false;
@@ -254,16 +209,19 @@ test.describe('User Profile Modal', () => {
 
         expect(saved).toBe(true);
 
-        await waitForProfileSave(page);
+        // Verify success message
+        await page.waitForFunction(() => {
+            const success = document.querySelector('#profile-success');
+            return success && success.textContent && success.textContent.includes('Profile updated');
+        });
     });
 
     test('should show error for invalid email format', async ({ page }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        // Navigate to profile
+        await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
-        // Enter invalid email using robust setter to ensure value sticks across browsers
+        // Enter invalid email
         await setFieldValueRobust(page, '#profile-email', 'invalid-email');
 
         const saveResponsePromise = waitForProfilePutResponse(page);
@@ -275,7 +233,7 @@ test.describe('User Profile Modal', () => {
         }
 
         await page.waitForFunction(() => {
-            const error = document.querySelector('.error-message');
+            const error = document.querySelector('#profile-error');
             const errorText = (error?.textContent || '').toLowerCase();
 
             const emailInput = document.querySelector('#profile-email');
@@ -292,15 +250,13 @@ test.describe('User Profile Modal', () => {
     });
 
     test('should show error for invalid username format', async ({ page }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        // Navigate to profile
+        await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
         // Enter invalid username (too short)
         await page.fill('#profile-username', 'ab');
 
-        // Save changes and wait for API response
         const saveResponsePromise = waitForProfilePutResponse(page);
         await page.click('#save-profile-btn');
 
@@ -309,17 +265,15 @@ test.describe('User Profile Modal', () => {
             expect(saveResponse.status()).toBe(400);
         }
 
-        // Wait for error message to appear after server validation
         await page.waitForFunction(() => {
-            const error = document.querySelector('.error-message');
+            const error = document.querySelector('#profile-error');
             return error && error.textContent && error.textContent.includes('Invalid username');
         });
     });
 
     test('should show error when no fields are provided', async ({ page }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+        // Navigate to profile
+        await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
         // Clear both fields
@@ -332,7 +286,6 @@ test.describe('User Profile Modal', () => {
         const saveResponse = await saveResponsePromise;
 
         if (saveResponse && saveResponse.status() === 200) {
-            await waitForProfileSave(page);
             return;
         }
 
@@ -341,7 +294,7 @@ test.describe('User Profile Modal', () => {
         }
 
         await page.waitForFunction(() => {
-            const error = document.querySelector('.error-message');
+            const error = document.querySelector('#profile-error');
             const errorText = (error?.textContent || '').toLowerCase();
 
             const usernameInput = document.querySelector('#profile-username');
@@ -355,10 +308,9 @@ test.describe('User Profile Modal', () => {
         });
     });
 
-    test('should have logout button in profile modal', async ({ page }) => {
-        // Open modal
-        await openProfileFromDrawer(page);
-        await expect(page.locator('.modal-overlay')).toBeVisible();
+    test('should have logout button on profile page', async ({ page }) => {
+        // Navigate to profile
+        await navigateToProfile(page);
 
         // Verify logout button exists
         const logoutBtn = page.locator('#logout-modal-btn');
