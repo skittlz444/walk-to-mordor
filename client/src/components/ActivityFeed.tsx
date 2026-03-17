@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
+import { getMemberColor } from '../utils/party-colors';
 
 type ActivityType = 'walk' | 'message';
 type FilterType = 'all' | 'walk' | 'message';
@@ -388,9 +389,10 @@ export function ActivityFeed({ partyId, currentUserId }: ActivityFeedProps) {
             const key = isMessage
               ? `msg-${item.message_id ?? index}`
               : `walk-${item.created_at}-${item.user_id}-${index}`;
+            const userColor = isMessage ? getMemberColor(item.user_id) : undefined;
 
             return (
-              <li key={key} className={itemClass}>
+              <li key={key} className={itemClass} style={userColor ? { borderLeftColor: userColor } : undefined}>
                 {isMessage ? (
                   <div className="party-activity-item__message">
                     <span className="party-activity-item__message-header">
