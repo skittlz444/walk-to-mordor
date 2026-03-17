@@ -105,7 +105,7 @@ Each `src/render*.ts` file produces an SSR shell mounting one or more islands. K
 
 ## Legacy JS Interop
 
-Legacy vanilla JS lives in `public/js/`. Key modules: `main.js` (bootstrap), `profile.js` (preferences/avatar), `calendar.js`/`progress.js` (CRUD), `goals.js` (goal list), `validators.js` (shared validation).
+Legacy vanilla JS lives in `public/js/`. Key modules: `main.js` (bootstrap), `calendar.js`/`progress.js` (CRUD), `goals.js` (goal list), `validators.js` (shared validation). Profile/preferences is now a Preact island at `/profile` (`ProfileIsland`).
 
 ### Bridge Globals
 

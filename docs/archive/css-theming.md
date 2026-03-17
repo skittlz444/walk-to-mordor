@@ -36,7 +36,7 @@ Variables are grouped by category: backgrounds (`--bg-*`), accents (`--accent-*`
 | `public/css/calendar.css` | Calendar component |
 | `public/css/progress.css` | Progress tracking and modals |
 | `public/css/goals.css` | Goals display and interactions |
-| `public/css/profile.css` | Profile modal |
+| `public/css/profile.css` | Profile page |
 | `public/css/auth.css` | Authentication pages (light theme) |
 | `public/css/party.css` | Fellowship/party pages |
 | `public/css/friends.css` | Friends feature |

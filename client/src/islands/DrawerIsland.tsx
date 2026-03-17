@@ -56,7 +56,7 @@ export function DrawerIsland() {
       });
   }, []);
 
-  // Listen for avatar changes from the legacy profile modal
+  // Listen for avatar changes from the profile page
   useEffect(() => {
     function handlePreferenceChanged(e: Event) {
       const detail = (e as CustomEvent).detail;
