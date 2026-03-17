@@ -53,6 +53,7 @@ test.describe('Map Shell (Authenticated)', () => {
     await profileButton.click();
 
     await page.waitForURL('**/profile');
+    await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
     await expect(page.locator('.profile-page')).toBeVisible();
   });
 

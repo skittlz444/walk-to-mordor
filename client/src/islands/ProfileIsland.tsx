@@ -14,12 +14,6 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 export function ProfileIsland() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
@@ -144,6 +138,12 @@ export function ProfileIsland() {
           try {
             localStorage.setItem('defaultViewMap', newValue ? 'true' : 'false');
           } catch { /* localStorage may be unavailable */ }
+        }
+
+        // Update window.userPreferences so legacy JS (e.g. goals.js) stays in sync
+        const prefs = (window as typeof window & { userPreferences?: Record<string, unknown> }).userPreferences;
+        if (prefs) {
+          prefs[preferenceKey] = newValue;
         }
 
         window.dispatchEvent(new CustomEvent('preferenceChanged', {
@@ -295,7 +295,7 @@ export function ProfileIsland() {
                   }}
                 >
                   <img
-                    src={`/img/avatars/${escapeHtml(slug)}.webp`}
+                    src={`/img/avatars/${encodeURIComponent(slug)}.webp`}
                     alt={slug}
                     width={64}
                     height={64}

@@ -294,6 +294,30 @@ describe('ProfileIsland', () => {
       });
     });
 
+    it('updates window.userPreferences on successful preference save', async () => {
+      (window as any).userPreferences = { showFutureGoalsUnlocked: true, defaultViewMap: false };
+      mockSessionAndAvatars({ showFutureGoalsUnlocked: true });
+      const { container } = render(<ProfileIsland />);
+
+      await waitFor(() => {
+        expect(container.querySelector('#preview-milestones-toggle')).toBeTruthy();
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+
+      const toggle = container.querySelector('#preview-milestones-toggle') as HTMLInputElement;
+      fireEvent.change(toggle, { target: { checked: false } });
+
+      await waitFor(() => {
+        expect((window as any).userPreferences.showFutureGoalsUnlocked).toBe(false);
+      });
+
+      delete (window as any).userPreferences;
+    });
+
     it('saves default view toggle change', async () => {
       mockSessionAndAvatars({ defaultViewMap: false });
       const { container } = render(<ProfileIsland />);

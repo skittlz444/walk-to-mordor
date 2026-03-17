@@ -3,16 +3,6 @@ const { test, expect, setupTest, waitForAuthenticated } = require('./helpers/com
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
-async function openProfilePage(page) {
-  await page.click('.menu-icon');
-  await page.waitForSelector('body.drawer-open');
-  const profileLink = page.locator('.drawer-profile');
-  await expect(profileLink).toBeVisible();
-  await profileLink.click();
-  await page.waitForURL('**/profile');
-  await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
-}
-
 async function navigateToProfile(page) {
   await page.goto(BASE_URL + '/profile');
   await waitForAuthenticated(page);
