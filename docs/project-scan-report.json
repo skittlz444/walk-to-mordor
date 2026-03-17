@@ -2,8 +2,8 @@
   "workflow_version": "1.2.0",
   "timestamps": {
     "started": "2026-03-14T00:00:00Z",
-    "last_updated": "2026-03-14T23:59:00Z",
-    "completed": "2026-03-14T23:59:00Z"
+    "last_updated": "2026-03-16T00:00:00Z",
+    "completed": "2026-03-16T00:00:00Z"
   },
   "mode": "full_rescan",
   "scan_level": "exhaustive",
@@ -31,12 +31,12 @@
     }
   ],
   "findings": {
-    "tech_stack": "TypeScript 5.9.3, CF Workers (wrangler 4.71.0), D1 SQLite, Preact 10.28.4, @preact/signals 2.8.2, Konva 10.2.0, Vite 7.3.1, Jest 30.2.0, Vitest 4.0.17, Playwright 1.58.2, pnpm 10.31.0",
-    "api_routes": "17 page routes, ~65+ API endpoints (auth, progress, goals, friends, party, fellowship-invites, admin)",
-    "tables": "11 tables: users, sessions, progress, goals, password_reset_tokens, email_confirmation_tokens, parties, party_members, party_progress_log, admin_audit_log, friendships, fellowship_invites",
-    "islands": "16 auto-hydrated + 5 programmatic = 21 total islands",
-    "migrations": "123 (0001–0123)",
-    "test_suites": "Jest 28 files, Client Vitest 33 files, Playwright 19 specs"
+    "tech_stack": "TypeScript 5.9.3, CF Workers (wrangler 4.73.0), D1 SQLite, Preact 10.29.0, @preact/signals 2.8.2, Konva 10.2.1, Vite 8.0.0, Jest 30.3.0, Vitest 4.0.17, Playwright 1.58.2, pnpm 10.31.0",
+    "api_routes": "20 page routes, ~80+ API endpoints (auth, progress, goals, friends, fellowship-invites, party, party-messaging, admin)",
+    "tables": "13 tables: users, sessions, progress, goals, password_reset_tokens, email_confirmation_tokens, parties, party_members, party_progress_log, admin_audit_log, friendships, fellowship_invites, party_messages",
+    "islands": "19 auto-hydrated + 5 programmatic = 24 total islands",
+    "migrations": "124 (0001–0124)",
+    "test_suites": "Jest 28 files, Client Vitest 34 files, Playwright 19 specs"
   },
   "docs_updated": [
     "docs/source-tree-analysis.md",
@@ -45,8 +45,8 @@
     "docs/api-reference-admin.md",
     "docs/ui-overview.md",
     "docs/architecture.md",
-    "docs/index.md",
-    "README.md"
+    "docs/data-models.md",
+    "docs/index.md"
   ],
   "outputs_generated": [
     "project-scan-report.json",
@@ -56,8 +56,8 @@
     "api-reference-admin.md",
     "ui-overview.md",
     "architecture.md",
-    "index.md",
-    "README.md"
+    "data-models.md",
+    "index.md"
   ],
-  "resume_instructions": "Complete. Full exhaustive rescan finished 2026-03-14."
+  "resume_instructions": "Complete. Incremental update for friends system, fellowship messaging, avatar system, Vite 8, and dependency bumps (2026-03-16)."
 }

@@ -1,179 +1,78 @@
+---
+name: data-models
+description: D1 SQLite schema overview, table relationships, key constraints, and migration conventions.
+---
+
 # Data Models (D1 SQLite)
 
-The application uses a relational schema stored in Cloudflare D1.
+> Last updated: 2026-03-17 · Migrations: 0001–0124 · Full DDL: `migrations/`
 
 ## Tables
 
-### `users`
-Stores user credentials and profile status.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `username`: TEXT UNIQUE
-- `email`: TEXT UNIQUE
-- `password_hash`: TEXT
-- `salt`: TEXT
-- `approved`: INTEGER (0 or 1, for manual approval flows — legacy, superseded by email verification)
-- `email_verified`: INTEGER (0 or 1, default 0 — account inactive until verified via confirmation email)
-- `show_future_goals_unlocked`: INTEGER (0 or 1, default 1 — controls whether future goals display as unlocked/visible or locked/hidden)
-- `default_view_map`: INTEGER (0 or 1, default 0 — user landing preference: journey or map)
-- `is_admin`: INTEGER (0 or 1, default 0 — admin role flag; can only be set via direct D1 database access, e.g. `UPDATE users SET is_admin = 1 WHERE username = '<admin_username>';`)
-- `avatar_id`: TEXT (default NULL — slug referencing a predefined LOTR-themed avatar image in `public/img/avatars/`, e.g. `gandalf-grey`, `samwise`. When NULL, UI renders initials circle. Valid slugs are defined in `src/avatar-slugs.ts`.)
-- `friend_code`: TEXT UNIQUE (8-char alphanumeric, cryptographically random — personal shareable code for friend link discovery. Generated on account creation; existing users backfilled via Worker-side utility in `src/auth-utils.ts`.)
-- `created_at`: DATETIME
-- `updated_at`: DATETIME
+| Table | Purpose | Key Migration |
+|---|---|---|
+| `users` | Credentials, profile flags, avatar, friend code | 0006, 0008 |
+| `sessions` | Active user sessions (token-based) | 0008 |
+| `progress` | Daily walking logs (one entry per user per date) | 0002 |
+| `goals` | Milestones on the Shire-to-Mordor route (managed via admin UI) | 0003 |
+| `password_reset_tokens` | Temporary tokens for password reset flow | 0010 |
+| `email_confirmation_tokens` | Email verification tokens (24h expiry, 3 resends/hr) | 0008 |
+| `parties` | Fellowship groups with configurable distance modes | 0020+ |
+| `party_members` | User–party membership with join/departure tracking | 0020+ |
+| `party_progress_log` | Audit trail / activity feed for party walks | 0020+ |
+| `admin_audit_log` | Append-only admin action log (never deleted) | 0020+ |
+| `friendships` | Mutual friend relationships (pending → accepted) | 0020+ |
+| `fellowship_invites` | Friend-based party invitations | 0020+ |
+| `party_messages` | Fellowship chat messages for unified activity feed | 0124 |
 
-### `sessions`
-Manages active user sessions.
-- `id`: TEXT PRIMARY KEY (Session Token)
-- `user_id`: INTEGER (FK -> users.id)
-- `expires_at`: DATETIME
-- `created_at`: DATETIME
+## Key Constraints & Invariants
 
-### `progress`
-Stores daily walking logs. A composite unique constraint ensures one entry per user per date.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `date`: DATE
-- `distance`: REAL (in km)
-- `user_id`: INTEGER (FK -> users.id)
-- `UNIQUE(date, user_id)`
+These are rules the schema enforces or that the application layer must uphold — not discoverable from DDL alone.
 
-### `goals`
-Static milestones for the journey. 171 milestones spanning the Shire-to-Mordor route, plus intermediary goals to ensure no narrative gap exceeds ~70 km.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `distance`: REAL (Threshold distance in km to reach goal)
-- `title`: TEXT (Milestone name/description)
-- `description`: TEXT (Rich narrative description of the milestone)
-- `special`: TEXT (Optional special event text)
-- `image_id`: TEXT (Slug referencing WebP assets in `public/img/highres/` and `public/img/thumbs/`, e.g. `woody-end`)
+### users
+- `is_admin` toggled via admin UI (`PUT /api/admin/users/:id/admin`). Admins cannot revoke their own admin status.
+- `avatar_id` must be NULL or a valid slug from `src/avatar-slugs.ts` (validated by `isValidAvatarSlug` on PUT).
+- `friend_code`: 8-char cryptographically random; backfill logic in `src/auth-utils.ts`.
 
-### `password_reset_tokens`
-Temporary tokens for password reset flow.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `user_id`: INTEGER (FK -> users.id)
-- `token`: TEXT UNIQUE
-- `expires_at`: DATETIME
-- `used`: INTEGER (0 or 1)
-- `created_at`: DATETIME
+### parties
+- `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.
+- `leave_distance_behavior` (`keep` | `remove`): leader-updatable.
+- `dissolved_at` set when all members depart — dissolved parties cannot be rejoined.
 
-### `email_confirmation_tokens`
-Temporary tokens for email verification during registration. Tokens expire after 24 hours. Rate-limited to 3 resend attempts per hour per user.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `user_id`: INTEGER (FK -> users.id) ON DELETE CASCADE
-- `token`: TEXT UNIQUE
-- `expires_at`: DATETIME
-- `created_at`: DATETIME
+### party_members
+- **Leader invariant:** `role = 'leader'` must match `parties.leader_id`. Leader transfers must update both atomically in a transaction.
+- `distance_at_join` captures cumulative distance at join — required for `incremental` mode calculation.
+- `distance_kept` and `contribution_at_departure` are frozen at departure to preserve correct progress reads even if `leave_distance_behavior` changes later.
+- Re-join reactivates the existing row (no new insert).
 
-**Indexes:**
-- `idx_email_confirmation_tokens_user_id` on `user_id`
-- `idx_email_confirmation_tokens_token` on `token`
-- `idx_email_confirmation_tokens_expires` on `expires_at`
+### friendships
+- `UNIQUE(requester_id, addressee_id)` only prevents one-direction duplicates. **Application layer must check both directions** before inserting (enforced in friend request handler).
+- `CHECK(requester_id != addressee_id)` — no self-friending.
 
-### `parties`
-Fellowship groups. `distance_mode` and `leave_distance_behavior` govern party-level progress calculation rules.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `name`: TEXT NOT NULL
-- `leader_id`: INTEGER NOT NULL (FK -> users.id, `ON DELETE CASCADE`)
-- `created_at`: DATETIME
-- `invite_code`: TEXT UNIQUE NOT NULL
-- `distance_mode`: TEXT NOT NULL DEFAULT 'incremental' — `'incremental'` (only distance since join counts) or `'cumulative'` (all-time totals summed). Set at creation, immutable.
-- `leave_distance_behavior`: TEXT NOT NULL DEFAULT 'keep' — `'keep'` or `'remove'`. Determines whether a departed member's contribution is retained. Leader-updatable.
-- `dissolved_at`: DATETIME DEFAULT NULL — set when all members have departed. Dissolved parties cannot be rejoined.
+### fellowship_invites
+- Partial unique index `(party_id, invitee_id) WHERE status = 'pending'` prevents duplicate pending invites while allowing re-invites after rejection.
+- `inviter_id` must be an active party member; `invitee_id` must be an accepted friend — enforced at application layer.
+- Pending invites invalidated (set to `'rejected'`) on party dissolution.
 
-**Indexes:**
-- `idx_parties_leader_id` on `leader_id`
-- _(implicit via UNIQUE constraint)_ on `invite_code`
+## Foreign Key Cascade Decisions
 
-### `party_members`
-Membership records for each user–party pair. One row per (party_id, user_id). Re-join reactivates the existing row.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `party_id`: INTEGER (FK -> parties.id, `ON DELETE CASCADE`)
-- `user_id`: INTEGER (FK -> users.id, `ON DELETE CASCADE`)
-- `joined_at`: DATETIME
-- `distance_at_join`: REAL NOT NULL DEFAULT 0 — user's total cumulative distance at the exact moment of joining. Required for `incremental` mode calculation.
-- `role`: TEXT NOT NULL DEFAULT 'member' — `'leader'` or `'member'`
-- `status`: TEXT NOT NULL DEFAULT 'active' — `'active'`, `'left'` (voluntary departure), or `'kicked'` (leader-initiated)
-- `last_viewed_distance`: REAL NOT NULL DEFAULT 0 — party's total distance as of user's last view; used to trigger milestone modals on party switch
-- `departed_at`: DATETIME DEFAULT NULL — set when status changes to `'left'` or `'kicked'`; NULL for active members
-- `distance_kept`: INTEGER DEFAULT NULL — NULL for active members; `1` (true) or `0` (false) locked at departure to record whether the member's contribution was kept or removed. Captures kick-specific override so progress reads remain correct even if `leave_distance_behavior` changes later.
-- `contribution_at_departure`: REAL DEFAULT NULL — computed once at leave/kick time using the party's `distance_mode`; used for fast progress reads of departed members without repeated historical range queries
-- `UNIQUE(party_id, user_id)`
+| FK | Behavior | Rationale |
+|---|---|---|
+| `party_*` tables → `parties.id` | CASCADE | Deleting a party removes all related data |
+| `parties.leader_id` → `users.id` | CASCADE | Leader deletion cascades to party |
+| `email_confirmation_tokens.user_id` | CASCADE | Cleanup on user deletion |
+| `admin_audit_log.admin_user_id` | **No cascade** | Audit records must survive user deletion |
+| All other user FKs | CASCADE | Standard cleanup |
 
-> **Invariant:** `role = 'leader'` in `party_members` must always match `parties.leader_id` for the same party. Leader transfers (Story 3.5) must update both columns atomically inside a transaction to prevent inconsistency.
+## Migration Conventions
 
-**Indexes:**
-- `idx_party_members_user_id` on `user_id` — efficient multi-party membership lookups
-- `idx_party_members_status` on `status`
-- `idx_party_members_party_id_status` on `(party_id, status)` — composite covering index for active-members-of-party queries (also covers `party_id`-only lookups)
+- Path: `migrations/NNNN_descriptive_name.sql` (zero-padded 4-digit sequence).
+- Each migration is a single DDL or data-manipulation operation.
+- Schema changes go in migrations; application logic stays in TypeScript.
+- Goal description updates use dedicated migrations (see `0011`–`0019` series).
+- Deploy: `npx wrangler d1 migrations apply walk-to-mordor-db`.
 
-### `party_progress_log`
-Audit trail and activity feed for party walks. An entry is created for each active party a user belongs to when they log a walk.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `party_id`: INTEGER (FK -> parties.id, `ON DELETE CASCADE`)
-- `logged_by_user_id`: INTEGER (FK -> users.id, `ON DELETE CASCADE`)
-- `distance`: REAL NOT NULL — distance logged in this walk entry (km)
-- `date`: DATE NOT NULL — correlates with the `progress` table entry date
-- `logged_at`: DATETIME DEFAULT CURRENT_TIMESTAMP — for activity feed ordering and contribution auditing
-- `UNIQUE(party_id, logged_by_user_id, date)` — prevents duplicate log entries (mirrors `progress` table's own uniqueness guard)
-
-**Indexes:**
-- `idx_party_progress_log_party_id_logged_at` on `(party_id, logged_at)` — composite for activity feed queries
-- `idx_party_progress_log_user_id` on `logged_by_user_id`
-- `idx_party_progress_log_date` on `date`
-
-### `admin_audit_log`
-Append-only log of admin actions for accountability. Entries are never deleted by the application.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `admin_user_id`: INTEGER NOT NULL (FK -> users.id)
-- `action`: TEXT NOT NULL (e.g., 'update_goal', 'delete_goal', 'view_dashboard')
-- `target_type`: TEXT (optional, e.g., 'goal', 'user')
-- `target_id`: INTEGER (optional, FK to relevant entity)
-- `details`: TEXT (optional, JSON string with action-specific data, e.g., `{"field":"title","old":"X","new":"Y"}`)
-- `ip_address`: TEXT (optional, from `CF-Connecting-IP` header)
-- `success`: INTEGER NOT NULL DEFAULT 1 (1 = success, 0 = failure)
-- `created_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
-
-**Indexes:**
-- `idx_admin_audit_admin_user` on `admin_user_id`
-- `idx_admin_audit_created` on `created_at`
-
-### `friendships`
-Mutual friend relationships between users. One row per user pair. Status transitions: pending → accepted (or deleted on reject/unfriend).
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `requester_id`: INTEGER NOT NULL (FK -> users.id, ON DELETE CASCADE) — the user who sent the friend request
-- `addressee_id`: INTEGER NOT NULL (FK -> users.id, ON DELETE CASCADE) — the user who received the request
-- `status`: TEXT NOT NULL DEFAULT 'pending' — `'pending'` or `'accepted'`
-- `created_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
-- `updated_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
-- `UNIQUE(requester_id, addressee_id)` — one relationship record per ordered user pair
-- `CHECK(requester_id != addressee_id)` — cannot friend yourself
-- `CHECK(status IN ('pending', 'accepted'))` — enforces valid status values
-
-> **Invariant:** The `UNIQUE(requester_id, addressee_id)` constraint only prevents duplicate rows in the same direction. The application layer **must** check both `(requester_id, addressee_id)` and `(addressee_id, requester_id)` before inserting to prevent reverse-direction duplicate rows. This bidirectional check is enforced in the friend request handler.
-
-> **Query pattern:** To find all friends of user A, query `WHERE (requester_id = A OR addressee_id = A) AND status = 'accepted'`. To find pending incoming requests for user A, query `WHERE addressee_id = A AND status = 'pending'`.
-
-**Indexes:**
-- `idx_friendships_requester` on `requester_id`
-- `idx_friendships_addressee` on `addressee_id`
-- `idx_friendships_status` on `status`
-
-### `fellowship_invites`
-Friend-based fellowship invitations. A friend can be invited to a party; they must accept to join.
-- `id`: INTEGER PRIMARY KEY AUTOINCREMENT
-- `party_id`: INTEGER NOT NULL (FK -> parties.id, ON DELETE CASCADE)
-- `inviter_id`: INTEGER NOT NULL (FK -> users.id, ON DELETE CASCADE) — the party member who sent the invite
-- `invitee_id`: INTEGER NOT NULL (FK -> users.id, ON DELETE CASCADE) — the friend being invited
-- `status`: TEXT NOT NULL DEFAULT 'pending' — `'pending'`, `'accepted'`, or `'rejected'`
-- `created_at`: DATETIME DEFAULT CURRENT_TIMESTAMP
-- Duplicate-pending prevention: a SQLite partial unique index `CREATE UNIQUE INDEX idx_fellowship_invites_pending ON fellowship_invites(party_id, invitee_id) WHERE status = 'pending'` prevents concurrent duplicate pending invites. The application layer also checks for an existing `pending` invite before inserting for a friendlier error message. Rejected rows are retained but do not block future re-invites.
-
-> **Invariant:** `inviter_id` must be an active member of `party_id` at invite time. `invitee_id` must have an accepted friendship with `inviter_id`. These are enforced at the application layer. Pending invites are invalidated (set to `'rejected'`) when a party is dissolved.
-
-**Indexes:**
-- `idx_fellowship_invites_pending` partial unique on `(party_id, invitee_id) WHERE status = 'pending'` — prevents duplicate pending invites while allowing re-invites after rejection
-- `idx_fellowship_invites_invitee` on `(invitee_id, status)` — for pending invite badge/list queries
-- `idx_fellowship_invites_party` on `(party_id, status)` — for party-focused cleanup queries
-
-## Entity Relationship Diagram (Mermaid)
+## Entity Relationship Diagram
 
 ```mermaid
 erDiagram
@@ -187,120 +86,9 @@ erDiagram
     users ||--o{ admin_audit_log : "audits"
     users ||--o{ friendships : "requests/receives"
     users ||--o{ fellowship_invites : "invites/receives"
+    users ||--o{ party_messages : "sends"
     parties ||--o{ party_members : "has"
     parties ||--o{ party_progress_log : "receives"
     parties ||--o{ fellowship_invites : "has"
-
-    users {
-        int id PK
-        string username
-        string email
-        string password_hash
-        string salt
-        int email_verified
-        int show_future_goals_unlocked
-        int is_admin
-        string avatar_id
-        string friend_code
-    }
-    
-    sessions {
-        string id PK
-        int user_id FK
-        datetime expires_at
-    }
-    
-    progress {
-        int id PK
-        date date
-        float distance
-        int user_id FK
-    }
-    
-    goals {
-        int id PK
-        float distance
-        string title
-        string description
-        string image_id
-    }
-
-    password_reset_tokens {
-        int id PK
-        int user_id FK
-        string token
-        datetime expires_at
-        int used
-    }
-
-    email_confirmation_tokens {
-        int id PK
-        int user_id FK
-        string token
-        datetime expires_at
-    }
-
-    parties {
-        int id PK
-        string name
-        int leader_id FK
-        datetime created_at
-        string invite_code
-        string distance_mode
-        string leave_distance_behavior
-        datetime dissolved_at
-    }
-
-    party_members {
-        int id PK
-        int party_id FK
-        int user_id FK
-        datetime joined_at
-        real distance_at_join
-        string role
-        string status
-        real last_viewed_distance
-        datetime departed_at
-        int distance_kept
-        real contribution_at_departure
-    }
-
-    party_progress_log {
-        int id PK
-        int party_id FK
-        int logged_by_user_id FK
-        real distance
-        date date
-        datetime logged_at
-    }
-
-    admin_audit_log {
-        int id PK
-        int admin_user_id FK
-        string action
-        string target_type
-        int target_id
-        string details
-        string ip_address
-        int success
-        datetime created_at
-    }
-
-    friendships {
-        int id PK
-        int requester_id FK
-        int addressee_id FK
-        string status
-        datetime created_at
-        datetime updated_at
-    }
-
-    fellowship_invites {
-        int id PK
-        int party_id FK
-        int inviter_id FK
-        int invitee_id FK
-        string status
-        datetime created_at
-    }
+    parties ||--o{ party_messages : "has"
 ```
