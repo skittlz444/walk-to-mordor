@@ -1,551 +1,158 @@
+---
+name: api-reference
+description: Complete HTTP API route reference including public, authenticated, and admin endpoints with auth requirements.
+---
+
 # API Reference
 
-Last updated: 2026-03-14
-
-Base URL is the same Worker origin as the web app.
-
-## Authentication Contract
-
-Protected endpoints require:
-
-- Header: `Authorization: Bearer <sessionToken>`
-
-Behavior:
-
-- Missing/invalid bearer header returns `401`.
-- Session ownership and active membership checks return `403` where applicable.
-- Unknown API paths return `404`.
-- Method mismatch returns `405` and an `Allow` header.
-
-Test-only auth mode:
-
-- When Worker var `ALLOW_TEST_AUTH=true`, tokens prefixed with `TEST_MOCK_TOKEN_` are accepted in tests.
-
-## Auth and Profile Endpoints
-
-### `POST /api/register`
-
-Creates a user and triggers confirmation email flow.
-
-Body:
-
-```json
-{ "username": "samwise", "email": "sam@example.com", "password": "..." }
-```
-
-### `POST /api/login`
-
-Authenticates a user and returns session token payload consumed by the client.
-
-### `POST /api/logout`
-
-Invalidates current session.
-
-**Request body:**
-
-```json
-{
-  "sessionId": "<session-token>"
-}
-```
-
-Returns `400` if `sessionId` is missing from the body.
-
-### `GET /api/session`
-
-Returns current session user context.
-
-Typical response fields:
-
-```json
-{
-  "userId": 1,
-  "username": "samwise",
-  "email": "sam@example.com",
-  "showFutureGoalsUnlocked": true,
-  "defaultViewMap": false,
-  "avatarId": "gandalf-grey",
-  "expiresAt": "2026-03-07T..."
-}
-```
-
-`avatarId` is `null` when the user has not selected an avatar (initials fallback).
-
-### `PUT /api/profile`
-
-Updates profile properties (username/email/password fields as supported by handler validation).
-
-### `PUT /api/user/preferences`
-
-Updates user preferences.
-
-Body (all fields optional, at least one required):
-
-```json
-{ "showFutureGoalsUnlocked": true, "defaultViewMap": false, "avatarId": "frodo" }
-```
-
-- `avatarId` must be a valid slug from `GET /api/avatars`, or `null` to clear.
-- Returns 400 with `"Invalid avatar_id"` for unknown slugs.
-
-### `GET /api/avatars`
-
-Returns the list of valid avatar slugs. Requires authentication.
-
-The response is sourced from `src/avatar-slugs.ts` and should stay aligned with the checked-in WebP assets under `public/img/avatars/` and `public/img/avatars/thumbs/`.
-
-Response:
-
-```json
-["aragorn", "arwen", "bilbo", "boromir", ...]
-```
-
-### `POST /api/password-reset-request`
-
-Requests password reset email.
-
-### `POST /api/password-reset`
-
-Completes reset using token.
-
-### `GET /api/auth/confirm-email`
-
-Confirms email with query token.
-
-### `POST /api/auth/resend-confirmation`
-
-Resends confirmation email.
-
-## Progress and Goal Endpoints
-
-### `GET /api/calendar-progress`
-
-Returns current user's logged distance entries.
-
-### `POST /api/calendar-progress`
-
-Creates a progress entry.
-
-Body:
-
-```json
-{ "date": "2026-03-06", "distance": 7.5 }
-```
-
-### `PUT /api/calendar-progress`
-
-Updates an existing progress entry.
-
-Body:
-
-```json
-{ "id": 42, "date": "2026-03-06", "distance": 8.0 }
-```
-
-### `DELETE /api/calendar-progress`
-
-Deletes an entry.
-
-Body:
-
-```json
-{ "id": 42 }
-```
-
-### `GET /api/total-distance`
-
-Returns calculated cumulative distance.
-
-```json
-{ "totalDistance": 123.45 }
-```
-
-### `GET /api/goals`
-
-Returns milestone goals, including optional imagery metadata (`image_id`).
-
-## Fellowship (Party) Endpoints
-
-### `POST /api/party`
-
-Creates a new party.
-
-Body:
-
-```json
-{
-  "name": "The Nine Walkers",
-  "distance_mode": "incremental",
-  "leave_distance_behavior": "keep"
-}
-```
-
-Returns `201` with party metadata and `invite_code`.
-
-### `GET /api/user/parties`
-
-Returns current active party memberships.
-
-Optional query:
-
-- `include_dissolved=true`
-
-### `GET /api/party/join/:inviteCode`
-
-Public preview of an invite target (no auth required).
-
-Returns party summary, including `member_count`, `distance_mode`, `leave_distance_behavior`.
-
-### `POST /api/party/join/:inviteCode`
-
-Joins or rejoins a party.
-
-### `POST /api/party/:id/invite`
-
-Leader-only invite code regeneration.
-
-### `GET /api/party/:id/progress`
-
-Returns aggregated party progress including:
-
-- `total_distance`
-- `user_total_distance`
-- `calculated_position`
-- `next_position`
-- `members[]` contributions and status
-- `newly_passed_milestones[]`
-
-### `GET /api/party/:id/activity`
-
-Returns recent party activity feed (up to last 10 entries).
-
-### `POST /api/party/:id/leave`
-
-Marks member as left and applies leave-distance policy.
-
-### `POST /api/party/:id/kick/:userId`
-
-Leader-only member removal.
-
-Optional body override:
-
-```json
-{ "removeDistance": true }
-```
-
-### `PUT /api/party/:id/settings`
-
-Leader-only updates for mutable party settings.
-
-Body fields:
-
-- `name`
-- `leave_distance_behavior`
-
-`distance_mode` is immutable and rejected if provided.
-
-### `POST /api/party/:id/transfer-leadership`
-
-Leader-only transfer.
-
-Body:
-
-```json
-{ "new_leader_id": 123 }
-```
-
-### `POST /api/party/:id/invite-friend`
-
-> **Implementation note (Story 6.3):** The fellowship invite endpoints below through `POST /api/user/fellowship-invites/:inviteId/reject` are implemented. Self-invite is rejected with `400`. Duplicate pending invites return `400`; UNIQUE constraint race conditions return `409`.
-
-Invite a friend to a fellowship. The friend must accept to join.
-
-Auth: Required (must be active member of party).
-
-Body:
-
-```json
-{ "user_id": 456 }
-```
-
-Validates:
-- Inviter is active member of party
-- Invitee is an accepted friend of inviter
-- Invitee is not already an active member
-- Party is not dissolved
-
-Returns `201` with invite details.
-
-Errors: `400` (already member, not friends, dissolved), `403` (not a member), `404` (user/party not found).
-
-### `GET /api/user/fellowship-invites`
-
-Returns pending incoming fellowship invites for the current user.
-
-Auth: Required.
-
-Response:
-
-```json
-{
-  "invites": [
-    {
-      "id": 1,
-      "party_id": 10,
-      "party_name": "The Nine Walkers",
-      "member_count": 5,
-      "total_distance": 1234.5,
-      "inviter_username": "aragorn",
-      "created_at": "2026-03-09T12:00:00Z"
-    }
-  ],
-  "count": 1
-}
-```
-
-### `POST /api/user/fellowship-invites/:inviteId/accept`
-
-Accept a fellowship invite. Joins the party (same join logic as invite-code flow).
-
-Auth: Required (must be the invitee).
-
-### `POST /api/user/fellowship-invites/:inviteId/reject`
-
-Reject a fellowship invite. Marks invite as rejected.
-
-Auth: Required (must be the invitee).
+Last updated: 2026-03-17
+
+## Conventions
+
+- All request/response bodies are JSON. Protected endpoints require `Authorization: Bearer <sessionToken>`.
+- Missing/invalid token → `401`. Ownership/membership violations → `403`. Unknown path → `404`. Method mismatch → `405` with `Allow` header.
+- Test mode: when `ALLOW_TEST_AUTH=true`, tokens prefixed `TEST_MOCK_TOKEN_` are accepted.
+
+## Handler File Map
+
+| Domain | File |
+|---|---|
+| Auth & Profile | `src/auth-handlers.ts` |
+| Progress | `src/progress-handlers.ts` |
+| Goals | `src/goals-handlers.ts` |
+| Party (Fellowship) | `src/party-handlers.ts` |
+| Fellowship Invites | `src/fellowship-invite-handlers.ts` |
+| Friends | `src/friends-handlers.ts` |
+| Admin | `src/admin-handlers.ts` |
+| Route wiring | `src/index.ts` |
+
+## Auth & Profile Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/api/register` | No | Creates user, triggers confirmation email |
+| POST | `/api/login` | No | Returns session token |
+| POST | `/api/logout` | Yes | Body requires `sessionId`; missing → `400` |
+| GET | `/api/session` | Yes | camelCase fields: `userId`, `username`, `email`, `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId`, `expiresAt` |
+| PUT | `/api/profile` | Yes | Updates username/email/password |
+| PUT | `/api/user/preferences` | Yes | Body: any of `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId` (at least one) |
+| GET | `/api/avatars` | Yes | Valid slugs from `src/avatar-slugs.ts` |
+| POST | `/api/password-reset-request` | No | Sends reset email |
+| POST | `/api/password-reset` | No | Completes reset via token |
+| GET | `/api/auth/confirm-email` | No | Query param `token` |
+| POST | `/api/auth/resend-confirmation` | No | Resends confirmation email |
+
+- `avatarId` in preferences must be a valid slug or `null`. Invalid → `400 "Invalid avatar_id"`.
+- Session response uses **camelCase** — differs from other endpoints that use snake_case.
+
+## Progress Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/calendar-progress` | Yes | User's logged distance entries |
+| POST | `/api/calendar-progress` | Yes | Body: `{ date, distance }` |
+| PUT | `/api/calendar-progress` | Yes | Body: `{ id, date, distance }` |
+| DELETE | `/api/calendar-progress` | Yes | Body: `{ id }` |
+| GET | `/api/total-distance` | Yes | Returns `{ totalDistance }` |
+
+## Goal Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/goals` | Yes | Milestone goals with `image_id` metadata |
+
+## Party (Fellowship) Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/api/party` | Yes | Body: `{ name, distance_mode, leave_distance_behavior }`. Returns `201` with `invite_code` |
+| GET | `/api/user/parties` | Yes | Query: `include_dissolved=true` optional |
+| GET | `/api/party/join/:inviteCode` | **No** | Public invite preview |
+| POST | `/api/party/join/:inviteCode` | Yes | Joins or rejoins a party |
+| POST | `/api/party/:id/invite` | Yes | Leader-only invite code regeneration |
+| GET | `/api/party/:id/progress` | Yes | Aggregated progress, member contributions, milestones |
+| GET | `/api/party/:id/activity` | Yes | Unified feed. Query: `type=all|walk|message` (default `all`). Max 20 entries |
+| POST | `/api/party/:id/messages` | Yes | Body: `{ content }` (1–200 chars after trim). Returns `201` |
+| POST | `/api/party/:id/leave` | Yes | Applies leave-distance policy |
+| POST | `/api/party/:id/kick/:userId` | Yes | Leader-only. Optional: `{ removeDistance: true }` |
+| PUT | `/api/party/:id/settings` | Yes | Leader-only. Mutable: `name`, `leave_distance_behavior` |
+| POST | `/api/party/:id/transfer-leadership` | Yes | Leader-only. Body: `{ new_leader_id }` |
+
+- `distance_mode` is **immutable** after creation — rejected if sent to `PUT settings`.
+- Activity and messages require active membership (`403` if not a member).
+
+## Fellowship Invite Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/api/party/:id/invite-friend` | Yes | Body: `{ user_id }`. Must be accepted friend. Self-invite → `400`; duplicate → `400`; race → `409` |
+| GET | `/api/user/fellowship-invites` | Yes | Pending incoming invites |
+| POST | `/api/user/fellowship-invites/:inviteId/accept` | Yes | Must be invitee |
+| POST | `/api/user/fellowship-invites/:inviteId/reject` | Yes | Must be invitee |
 
 ## Friends Endpoints
 
-### `GET /api/friends`
-
-Returns the current user's accepted friends list.
-
-Auth: Required.
-
-Response:
-
-```json
-{
-  "friends": [
-    {
-      "id": 1,
-      "username": "samwise",
-      "avatar_id": "samwise",
-      "last_progressed": "2026-03-08"
-    }
-  ]
-}
-```
-
-`id` is the friendship record ID (used for unfriending). `last_progressed` is the date of the friend's most recent progress entry (null if no walks logged). Computed in a single grouped SQL query to avoid N+1.
-
-### `GET /api/friends/pending`
-
-Returns pending incoming friend requests (where the current user is the addressee).
-
-Auth: Required.
-
-Response:
-
-```json
-{
-  "pending": [
-    {
-      "id": 5,
-      "username": "legolas",
-      "avatar_id": null,
-      "created_at": "2026-03-09T10:00:00Z"
-    }
-  ],
-  "count": 1
-}
-```
-
-`id` is the friendship record ID (used for accept/reject). `count` equals `pending.length`.
-
-### `GET /api/friends/search?q=<username>`
-
-Search users by username prefix. Minimum 3 characters.
-
-Auth: Required.
-
-Response:
-
-```json
-{
-  "results": [
-    {
-      "id": 42,
-      "username": "samwise",
-      "avatar_id": "samwise",
-      "friendship_status": "accepted"
-    }
-  ]
-}
-```
-
-`id` is the user's ID (used for sending a friend request). `friendship_status`: `null` (no relationship), `"pending"` (request exists), `"accepted"` (already friends). Excludes current user. Limit 10 results. Wildcards (`%`, `_`) are escaped in the LIKE query.
-
-### `GET /api/friends/resolve/:friendCode`
-
-Resolve a friend code to a user preview.
-
-Auth: Public (no auth required).
-
-Response:
-
-```json
-{
-  "id": 42,
-  "username": "samwise",
-  "avatar_id": "samwise"
-}
-```
-
-Errors: `400` (invalid friend code format), `404` (unknown friend code).
-
-### `GET /api/friends/positions`
-
-Returns each friend's total distance for map position interpolation.
-
-Auth: Required.
-
-Response:
-
-```json
-{
-  "friends": [
-    {
-      "user_id": 42,
-      "username": "samwise",
-      "avatar_id": "samwise",
-      "total_distance": 245.5
-    }
-  ]
-}
-```
-
-Only returns accepted friends. Position interpolation is performed client-side using existing path coordinate utilities. Recommended client cache: 5 minutes.
-
-### `POST /api/friends/request`
-
-Send a friend request by user ID.
-
-Auth: Required.
-
-Body:
-
-```json
-{ "user_id": 42 }
-```
-
-Response (`201`):
-
-```json
-{ "friendship_id": 1, "status": "pending" }
-```
-
-Errors: `400` (already friends/pending, self-add, invalid user_id), `404` (user not found), `429` (rate limit exceeded).
-
-Rate limit: max 20 outgoing pending requests at any time. Bidirectional duplicate check prevents reverse-direction duplicate rows.
-
-### `POST /api/friends/request/code`
-
-Send a friend request via friend code.
-
-Auth: Required.
-
-Body:
-
-```json
-{ "friend_code": "Ab3xK9mZ" }
-```
-
-Response (`201`):
-
-```json
-{ "friendship_id": 1, "status": "pending" }
-```
-
-Resolves code to user and creates pending friendship. Same validation and rate limits as `POST /api/friends/request`. Errors: `400` (invalid code format, self-add, duplicate), `404` (unknown code).
-
-### `POST /api/friends/:friendshipId/accept`
-
-Accept a pending friend request. Only the addressee can accept.
-
-Auth: Required.
-
-Response:
-
-```json
-{ "status": "accepted" }
-```
-
-Errors: `400` (not pending, invalid ID), `403` (not the addressee), `404` (friendship not found).
-
-### `POST /api/friends/:friendshipId/reject`
-
-Reject a pending friend request. Deletes the friendship record. Only the addressee can reject.
-
-Auth: Required.
-
-Response:
-
-```json
-{ "status": "rejected" }
-```
-
-Errors: `400` (not pending, invalid ID), `403` (not the addressee), `404` (friendship not found).
-
-### `DELETE /api/friends/:friendshipId`
-
-Remove an existing friend (mutual unfriend). Deletes the friendship record. Either party can remove.
-
-Auth: Required.
-
-Response:
-
-```json
-{ "status": "removed" }
-```
-
-Errors: `400` (not accepted, invalid ID), `403` (not a party to the friendship), `404` (friendship not found).
-
-IDOR prevention: all friendship operations validate the current user is a party to the friendship record.
-
-### `GET /api/friends/:userId/profile`
-
-Returns a friend's profile details. Only accessible for accepted friends (returns 404 for non-friends — privacy enforcement, same error for non-existent users to prevent enumeration).
-
-Auth: Required.
-
-Response:
-
-```json
-{
-  "username": "samwise",
-  "avatar_id": "samwise",
-  "total_distance": 245.5,
-  "member_since": "2026-01-15T00:00:00Z",
-  "current_goal_title": "Rivendell",
-  "fellowships": [
-    { "id": 1, "name": "The Fellowship", "is_shared": true },
-    { "id": 5, "name": "Hobbits Only", "is_shared": false }
-  ]
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `total_distance` | number | Sum of all progress entries (km) |
-| `member_since` | string | User's `created_at` timestamp |
-| `current_goal_title` | string | Next unlocked goal title (first goal whose distance exceeds the friend's total) |
-| `fellowships` | array | Non-dissolved parties the friend is an active member of |
-| `is_shared` | boolean | Whether the current user is also an active member of that party |
-
-Errors: `400` (malformed userId), `401` (unauthenticated), `404` (not friends or user not found).
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/friends` | Yes | Accepted friends with `last_progressed` date |
+| GET | `/api/friends/pending` | Yes | Incoming pending requests |
+| GET | `/api/friends/search?q=<username>` | Yes | Min 3 chars, limit 10, wildcards escaped |
+| GET | `/api/friends/resolve/:friendCode` | **No** | Public — resolves friend code to user preview |
+| GET | `/api/friends/positions` | Yes | Each friend's `total_distance` for map. Client cache: 5 min |
+| POST | `/api/friends/request` | Yes | Body: `{ user_id }`. Max 20 pending outgoing. Bidirectional duplicate check |
+| POST | `/api/friends/request/code` | Yes | Body: `{ friend_code }`. Same validation as `/request` |
+| POST | `/api/friends/:friendshipId/accept` | Yes | Addressee only |
+| POST | `/api/friends/:friendshipId/reject` | Yes | Addressee only. Deletes record |
+| DELETE | `/api/friends/:friendshipId` | Yes | Mutual unfriend. Either party can remove |
+| GET | `/api/friends/:userId/profile` | Yes | Accepted friends only. Returns `404` for non-friends (prevents enumeration) |
+
+- **IDOR prevention**: all friendship operations validate current user is a party to the record.
+- `friendship_status` in search: `null` (none), `"pending"`, or `"accepted"`.
+- Friend profile `fellowships[].is_shared` indicates mutual party membership.
 
 ## Admin Endpoints
 
-Admin API endpoints are documented separately in [api-reference-admin.md](api-reference-admin.md).
+All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Every mutating action is audit-logged via `logAdminAction`.
+
+**Audit action strings:** `update_goal`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
+
+### Dashboard & Metrics
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/admin/dashboard` | Live system stats (no caching). Counts verified users, total distance, active parties, goals |
+| GET | `/api/admin/metrics` | Community summary: total distance, active walkers (7-day window), milestones unlocked |
+| GET | `/api/admin/metrics/leaderboard` | Per-user distance. Optional `start`/`end` (`YYYY-MM-DD`, must be paired or both absent). Ordered `distance_km DESC` |
+| GET | `/api/admin/metrics/timeline` | Fixed 30-day daily chart. Always 30 points, ascending. No params |
+
+### Goal Management
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/admin/goals` | Paginated + searchable. Params: `page`, `pageSize` (max 100), `search`, `order` (asc/desc by distance) |
+| GET | `/api/admin/goals/:id` | Single goal detail |
+| POST | `/api/admin/goals` | Create. Accepts `distance_miles` — stored as `miles × 1.60934` km |
+| PUT | `/api/admin/goals/:id` | Update. All fields validated server-side |
+
+- `image_id` must match `/^[a-z0-9]+(-[a-z0-9]+)*$/` or be null/empty. References static assets in `public/img/`.
+- POST uses `distance_miles` (converted to km); PUT uses `distance` (already km).
+- Empty `special` and `image_id` strings normalized to `null`. Goal IDs must be positive integers.
+
+### Image Inventory
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/admin/images` | Cross-references build-time manifest vs goal `image_id`. Returns `orphaned`/`missing` slugs. `503` if manifest unavailable (`npm run build:manifest`) |
+
+### User Management
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/admin/users` | Paginated + searchable. `search` matches username, email, active fellowship names. Ordered `created_at DESC` |
+| PUT | `/api/admin/users/:id/verify` | Manually verify email. Idempotent |
+| PUT | `/api/admin/users/:id/reset` | Send password reset email. On email failure: token deleted, logged, returns `502` |
+| PUT | `/api/admin/users/:id/admin` | Toggle `is_admin`. Cannot remove own admin access |
+| DELETE | `/api/admin/users/:id` | **Hard-delete. Irreversible.** Cascades via FK. Body: `{ "confirmation": "<exact username>" }`. Cannot self-delete |
+
+- `last_active_date` is null if user has no progress. `fellowship_names` contains only active parties.
+- `pageSize` clamped to 1–100 server-side. Leaderboard date params must both be present or both absent.
