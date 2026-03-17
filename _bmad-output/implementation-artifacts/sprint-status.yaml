@@ -1,5 +1,7 @@
-# generated: 2026-02-09
+# generated: 2026-03-17
+# last_updated: 2026-03-17T23:30:00Z
 # project: walk-to-mordor
+# project_key: NOKEY
 # tracking_system: file-system
 # story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
@@ -35,8 +37,10 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-02-09
+generated: 2026-03-17
+last_updated: 2026-03-17
 project: walk-to-mordor
+project_key: NOKEY
 tracking_system: file-system
 story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
@@ -112,7 +116,7 @@ development_status:
   epic-5-retrospective: n/a
 
   # ============================================
-  # EPIC 6: Friends & Social Identity (TBD)
+  # EPIC 6: Friends & Social Identity
   # ============================================
   epic-6: done
   6-1-friends-database-schema-avatar-system: done
@@ -122,3 +126,109 @@ development_status:
   6-5-avatar-ui-avatar-selection: done
   6-6-map-social-panel-friends-on-map: done
   epic-6-retrospective: done
+
+  # ============================================
+  # EPIC 7: Developer Experience & Quality Guardrails (Phase 4)
+  # ============================================
+  epic-7: in-progress
+  7-1-eslint-configuration-legacy-deprecation-rules: ready-for-dev
+  7-2-unified-vite-wrangler-dev-pipeline: ready-for-dev
+  7-3-asset-count-ci-dashboard: ready-for-dev
+  epic-7-retrospective: optional
+
+  # ============================================
+  # EPIC 8: Architecture & Performance Foundation (Phase 5)
+  # ============================================
+  epic-8: in-progress
+  8-1-unified-preact-signal-global-store: ready-for-dev
+  8-2-d1-read-replica-wrapper: ready-for-dev
+  8-3-service-worker-swr-api-caching: ready-for-dev
+  epic-8-retrospective: optional
+
+  # ============================================
+  # EPIC 9: Journey UX Enhancement (Phase 6)
+  # ============================================
+  epic-9: backlog
+  9-1-locked-milestone-card-previews: backlog
+  9-2-persistent-journey-progress-bar: backlog
+  epic-9-retrospective: optional
+
+  # ============================================
+  # EPIC 10: Stats, Insights & Offline Writing (Phase 7)
+  # Dependency: Story 10.4 depends on Epic 8 Story 8.3
+  # ============================================
+  epic-10: backlog
+  10-1-the-palantir-weekly-insight-orb: backlog
+  10-2-walk-streak-heatmap-calendar: backlog
+  10-3-walk-to-mordor-wrapped-year-end-review: backlog
+  10-4-offline-write-queue-with-d1-sync: backlog
+  epic-10-retrospective: optional
+
+  # ============================================
+  # EPIC 11: Push Notifications & Re-engagement (Phase 8)
+  # ============================================
+  epic-11: backlog
+  11-1-web-push-api-infrastructure: backlog
+  11-2-one-more-mile-daily-push-notification: backlog
+  11-3-gandalfs-absence-arc-narrative-re-engagement: backlog
+  11-4-the-dead-marshes-inactive-friends-on-map: backlog
+  epic-11-retrospective: optional
+
+  # ============================================
+  # EPIC 12: Events & Challenges (Phase 9)
+  # ============================================
+  epic-12: backlog
+  12-1-event-engine-schema-api: backlog
+  12-2-nazgul-pursuit-events-personal-challenges: backlog
+  12-3-community-milestones-global-challenges: backlog
+  epic-12-retrospective: optional
+
+  # ============================================
+  # EPIC 13: AI-Powered Narration (Phase 10)
+  # ============================================
+  epic-13: backlog
+  13-1-workers-ai-integration-narration-engine: backlog
+  13-2-journey-narration-ui: backlog
+  epic-13-retrospective: optional
+
+  # ============================================
+  # EPIC 14: Distance Lending — Shadowfax Express (Phase 11)
+  # ============================================
+  epic-14: backlog
+  14-1-shadowfax-express-schema-api: backlog
+  14-2-distance-lending-ui: backlog
+  epic-14-retrospective: optional
+
+  # ============================================
+  # EPIC 15: Cross-Fellowship Alliances (Phase 12)
+  # Dependency: Epic 12 (Event engine required)
+  # ============================================
+  epic-15: backlog
+  15-1-alliance-system-schema-api: backlog
+  15-2-alliance-ui-mega-challenge-integration: backlog
+  epic-15-retrospective: optional
+
+  # ============================================
+  # EPIC 16: Milestone Content — Campfire Stories & Lore (Phase 13)
+  # ============================================
+  epic-16: backlog
+  16-1-milestone-content-schema-admin-management: backlog
+  16-2-campfire-stories-poetry-display: backlog
+  16-3-appendices-deep-dives: backlog
+  epic-16-retrospective: optional
+
+  # ============================================
+  # EPIC 17: Milestone Content — Field Guide (Phase 14)
+  # ============================================
+  epic-17: backlog
+  17-1-field-guide-content-schema-admin: backlog
+  17-2-field-guide-discovery-ui: backlog
+  epic-17-retrospective: optional
+
+  # ============================================
+  # EPIC 18: Milestone Content — Milestone Journals (Phase 15)
+  # ============================================
+  epic-18: backlog
+  18-1-journal-schema-api: backlog
+  18-2-journal-ui-friend-visibility: backlog
+  epic-18-retrospective: optional
