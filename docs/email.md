@@ -10,7 +10,7 @@ description: Email delivery configuration, template patterns, and testing strate
 ## Architecture
 
 - **Provider**: Resend (standard `fetch()` API — no `mimetext` or `cloudflare:email` dependency).
-- **Pattern**: All send functions return `{ success, error?, messageId? }`. Callers check `success`; errors are logged and surfaced as user-friendly messages. Never throw from email functions.
+- **Pattern**: The core `sendEmail()` returns `{ success, error?, messageId? }`. Higher-level wrappers (`sendPasswordResetEmail`, `sendConfirmationEmail`) return `{ success, error? }`. Callers check `success`; errors are logged and surfaced as user-friendly messages. Never throw from email functions.
 
 ## Code Locations
 
@@ -18,7 +18,7 @@ description: Email delivery configuration, template patterns, and testing strate
 |---|---|
 | Send helpers & Resend API call | `src/email-utils.ts` |
 | HTML + plain-text templates | `src/email-templates.ts` |
-| Email-related tests | `src/__tests__/email-*` |
+| Email-related tests | `tests/api/email-utils.test.ts`, `tests/api/email-templates.test.ts` |
 
 ## Configuration
 

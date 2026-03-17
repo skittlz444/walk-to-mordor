@@ -54,7 +54,9 @@ Any `<div data-island="IslandName">` is discovered and hydrated on page load. Pr
 Legacy vanilla JS mounts islands into DOM containers at runtime — used for modals and inline components (e.g., `DistanceModal`, `GoalModal`, `NextGoalCard`).
 
 ```js
-window.__islands.render('DistanceModal', containerEl, { ...props });
+const { render, h } = window.preact;
+const { DistanceModal } = window.preactIslands;
+render(h(DistanceModal, { ...props }), containerEl);
 ```
 
 ## Creating a New Island

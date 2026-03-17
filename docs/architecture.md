@@ -16,7 +16,7 @@ Feature domains:
 - Personal progress (daily logging, calendar history, milestone unlocking)
 - Interactive map (`/map` with friend markers and hover mini-cards)
 - Fellowship system (parties, invites, messaging, unified activity feed)
-- Friends (search, requests, profiles, blocking)
+- Friends (search, requests, profiles)
 - Avatar system (40+ selectable avatars with slug validation)
 - Admin dashboard (goals CRUD, user management, metrics)
 

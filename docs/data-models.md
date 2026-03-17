@@ -30,7 +30,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 These are rules the schema enforces or that the application layer must uphold — not discoverable from DDL alone.
 
 ### users
-- `is_admin` toggled via admin UI (`POST /api/admin/users/:id/toggle-admin`). Admins cannot revoke their own admin status.
+- `is_admin` toggled via admin UI (`PUT /api/admin/users/:id/admin`). Admins cannot revoke their own admin status.
 - `avatar_id` must be NULL or a valid slug from `src/avatar-slugs.ts` (validated by `isValidAvatarSlug` on PUT).
 - `friend_code`: 8-char cryptographically random; backfill logic in `src/auth-utils.ts`.
 
