@@ -1348,9 +1348,20 @@ export function MapIsland() {
           writeLastOpenedDistanceMiles(localStorage, distMiles);
         }
 
-        // Expose updateUserDistance on window for external callers
+        // Expose distance update hook on window for external callers.
+        // When a fellowship view is active, a personal walk save should refresh
+        // the displayed fellowship progress instead of jumping the marker/path
+        // back to the user's personal distance.
         (window as Window & { updateMapDistance?: (d: number) => void }).updateMapDistance = (newDistKm: number) => {
-          updateUserDistance(newDistKm * KM_TO_MILES);
+          const newDistMiles = newDistKm * KM_TO_MILES;
+          personalDistanceRef.current = newDistMiles;
+
+          if (selectedView.value === 'personal') {
+            updateUserDistance(newDistMiles);
+            return;
+          }
+
+          void handlePartyViewChange(selectedView.value);
         };
 
         // If friends toggle was persisted as ON, load friend markers
