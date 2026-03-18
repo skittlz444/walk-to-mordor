@@ -49,6 +49,7 @@
   "scripts": {
     "cf-typegen": "wrangler types",
     "check": "tsc && wrangler deploy --dry-run",
+    "check:assets": "node .github/scripts/check-asset-count.js",
     "build": "npm run build:client && node public/js/update-cache-version.js && npm run build:manifest",
     "build:manifest": "node scripts/generate-image-manifest.js",
     "build:client": "cd client && vite build",

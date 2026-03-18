@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check Asset Count
+        run: node .github/scripts/check-asset-count.js
+
       - name: Build Client
         run: npm run build:client
         
