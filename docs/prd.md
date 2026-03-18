@@ -21,8 +21,8 @@ Walk to Mordor is a gamified fitness tracking PWA that maps daily walking/runnin
 - **Immersion**: Reads milestone descriptions.
 - **Accessibility**: Log a walk in under 30 seconds on mobile.
 - **Fellowship Engagement**: > 40% of active users join at least one party.
-- **Re-engagement**: > 50% of 3-day-inactive users return within 7 days of a nudge (Phase 5).
-- **Content Discovery**: > 60% of users who reach a milestone read the unlocked content (Phases 10–12).
+- **Re-engagement**: > 50% of 3-day-inactive users return within 7 days of a nudge (Phase 8).
+- **Content Discovery**: > 60% of users who reach a milestone read the unlocked content (Phases 13–15).
 
 ### Business Success (Personal Project)
 - **Stability**: Zero maintenance "pagers" — system runs itself.
@@ -33,12 +33,12 @@ Walk to Mordor is a gamified fitness tracking PWA that maps daily walking/runnin
 - **Test Coverage**: >90% (backend & UI).
 - **Performance**: <1s TTI on 4G networks.
 - **Isolation**: 100% data isolation between users; Fellowship features introduce controlled sharing.
-- **Asset Budget**: Workers Assets file count < 15k (warn) / < 20k (hard limit).
+- **Asset Budget**: Workers Assets file count < 15k (warn) / < 18k (CI fail) / < 20k (platform hard limit).
 - **Offline Read**: Cached UI shell + SWR JSON available when offline.
 
 ### Definitions
 - **Active user**: Logged at least 1 walk in the trailing 30 days.
-- **Reads content**: Navigated to milestone detail view (click-through from milestone notification or card).
+- **Reads content**: Opened GoalModal for a milestone (via milestone card click, map waypoint marker, or push notification).
 
 ## User Personas
 
@@ -126,7 +126,7 @@ Shipped social layer scope decisions:
 
 ### Phase 4+: Expanded Roadmap
 
-The following phases replace the original Phase 4. Each phase builds on prior phases; content phases (10–12) can run in parallel with any phase after Phase 7 ships the milestone card UI.
+The following phases replace the original Phase 4. Each phase builds on prior phases; content phases (13–15) can run in parallel with any phase after Phase 7 ships the milestone card UI.
 
 #### Phase 4: Developer Foundation
 *Improve daily DX and establish guardrails before feature work.*
