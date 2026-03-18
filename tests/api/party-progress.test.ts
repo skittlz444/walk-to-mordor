@@ -507,8 +507,8 @@ describe('Party Progress API (Story 3.4)', () => {
       const data = await response.json();
 
       expect(data.newly_passed_milestones).toEqual([
-        { id: 6, title: 'Ford of Bruinen', distance: 60 },
-        { id: 8, title: 'Weathertop', distance: 90 },
+        { id: 6, title: 'Ford of Bruinen', distance: 60, description: null, image_id: null, special: null },
+        { id: 8, title: 'Weathertop', distance: 90, description: null, image_id: null, special: null },
       ]);
     });
 

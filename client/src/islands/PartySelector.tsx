@@ -33,7 +33,7 @@ export interface PartySelectorProps {
   /** Callback when view changes. Receives party progress or null for personal. */
   onViewChange?: (selection: PartySelection, progress: PartyProgress | null) => void;
   /** Callback for newly passed milestones */
-  onNewMilestones?: (milestones: Array<{ id: number; title: string; distance: number }>) => void;
+  onNewMilestones?: (milestones: Array<{ id: number; title: string; distance: number; description?: string | null; image_id?: string | null; special?: string | null }>) => void;
 }
 
 export function PartySelector({ variant = 'journey', onViewChange, onNewMilestones }: PartySelectorProps) {

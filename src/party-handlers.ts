@@ -581,7 +581,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
 
     // Get newly passed milestones (between previous last_viewed_distance and current total)
     const { results: newlyPassedMilestones } = await env.DB.prepare(
-      'SELECT id, title, distance FROM goals WHERE distance > ? AND distance <= ? ORDER BY distance ASC'
+      'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance > ? AND distance <= ? ORDER BY distance ASC'
     ).bind(previousViewedDistance, totalDistance).all<GoalRow>();
 
     // Update last_viewed_distance for the requesting user
@@ -611,6 +611,9 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
         id: m.id,
         title: m.title,
         distance: m.distance,
+        description: m.description ?? null,
+        image_id: m.image_id ?? null,
+        special: m.special ?? null,
       })),
     });
   } catch (error: unknown) {
