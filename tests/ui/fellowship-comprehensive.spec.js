@@ -106,6 +106,32 @@ async function getUserParties(request, token) {
   return await res.json();
 }
 
+async function waitForMapReady(page) {
+  await page.waitForSelector('[data-island="MapIsland"][data-hydrated="true"]', { timeout: 10000 });
+  await page.waitForFunction(() => {
+    const stages = window.Konva?.stages;
+    return stages && stages.length > 0;
+  }, { timeout: 10000 });
+}
+
+async function getCurrentLocationTooltipText(page) {
+  return await page.evaluate(() => {
+    const stages = window.Konva?.stages ?? [];
+
+    for (const stage of stages) {
+      const texts = Array.from(stage.find('Text'));
+      for (const node of texts) {
+        const text = typeof node.text === 'function' ? node.text() : '';
+        if (typeof text === 'string' && text.startsWith('Current Location:')) {
+          return text;
+        }
+      }
+    }
+
+    return null;
+  });
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // STORY 3-7: Fellowship Pages — Comprehensive Tests
 // ═════════════════════════════════════════════════════════════════════════════
@@ -937,21 +963,37 @@ test.describe('Story 3-6: Party Selector on Map Page', () => {
     // Navigate directly to map page
     await loginAs(page, leader1Token, '/map');
 
-    // Wait for the MapIsland to hydrate (Preact renders children into the mount point)
-    await page.waitForFunction(() => {
-      const el = document.querySelector('[data-island="MapIsland"]');
-      return el && el.children.length > 0;
-    }, { timeout: 10000 });
-
-    // Wait for map to fully initialize (Konva stage created = loading complete)
-    await page.waitForFunction(() => {
-      const stages = window.Konva?.stages;
-      return stages && stages.length > 0;
-    }, { timeout: 10000 });
+    await waitForMapReady(page);
 
     // Social toggle button on map (renders when loading is complete)
     const toggleBtn = page.locator('.map-social-toggle');
     await expect(toggleBtn).toBeVisible({ timeout: 10000 });
+  });
+
+  test('Walk saves keep fellowship-selected marker on fellowship progress', async ({ page, request, leader1Token, member1Token }) => {
+    const party = await createFellowship(request, leader1Token, 'Comp Map Distance Party');
+    await joinFellowship(request, member1Token, party.invite_code);
+    await logDistance(request, leader1Token, '2026-02-20', 305);
+    await logDistance(request, member1Token, '2026-02-20', 400);
+
+    await loginAs(page, leader1Token, '/map');
+    await waitForMapReady(page);
+
+    await page.locator('.map-social-toggle').click();
+    const partyOption = page.locator('.map-party-option', { hasText: 'Comp Map Distance Party' });
+    await expect(partyOption).toBeVisible({ timeout: 10000 });
+    await partyOption.click();
+
+    await expect.poll(async () => await getCurrentLocationTooltipText(page), { timeout: 15000 }).toBe('Current Location: 705 km');
+    await expect.poll(async () => await page.evaluate(() => localStorage.getItem('wtm_party_view')), { timeout: 15000 }).toBe(String(party.id));
+
+    await logDistance(request, leader1Token, '2026-02-20', 308);
+    await page.evaluate(() => {
+      window.updateMapDistance?.(308);
+    });
+
+    await expect.poll(async () => await getCurrentLocationTooltipText(page), { timeout: 15000 }).toBe('Current Location: 708 km');
+    await expect.poll(async () => await page.evaluate(() => localStorage.getItem('wtm_party_view')), { timeout: 15000 }).toBe(String(party.id));
   });
 });
 

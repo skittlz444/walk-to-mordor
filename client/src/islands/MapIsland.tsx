@@ -804,20 +804,25 @@ export function MapIsland() {
   const handlePartyViewChange = useCallback(async (selection: PartySelection) => {
     const progress = await selectView(selection);
 
+    // Re-read the effective selection from the store after selectView resolves.
+    // On 403/404, fetchPartyProgress resets selectedView to 'personal'.
+    // On transient errors, selectedView still holds the original party ID.
+    const effectiveSelection = selectedView.value;
+
     // Guard against stale responses: discard if the user moved to a different
     // selection while this request was in flight.
-    // Exception: a null progress when selection is a party ID means selectView
-    // fell back to 'personal' due to a 403/404 — that is intentional and must
-    // be processed, not discarded.
-    const isFallback = progress === null && typeof selection === 'number';
-    if (!isFallback && selection !== selectedView.value) {
+    // Allow 'personal' through: a 403/404 fallback intentionally reset the view
+    // and that transition must be processed.
+    if (effectiveSelection !== 'personal' && effectiveSelection !== selection) {
       return;
     }
 
-    // Determine the effective selection after selectView resolves.
-    // selectView may fall back to 'personal' on 403/404, so re-read the store.
-    const effectiveSelection: PartySelection =
-      progress === null ? 'personal' : selectedView.value;
+    // If progress is null but the store still shows a party selection, a
+    // transient fetch error occurred (not a 403/404 fallback) — keep the
+    // current map state unchanged rather than jumping to personal view.
+    if (progress === null && effectiveSelection !== 'personal') {
+      return;
+    }
 
     drawMemberPaths(effectiveSelection === 'personal' ? null : progress);
 
@@ -1351,9 +1356,20 @@ export function MapIsland() {
           writeLastOpenedDistanceMiles(localStorage, distMiles);
         }
 
-        // Expose updateUserDistance on window for external callers
+        // Expose distance update hook on window for external callers.
+        // When a fellowship view is active, a personal walk save should refresh
+        // the displayed fellowship progress instead of jumping the marker/path
+        // back to the user's personal distance.
         (window as Window & { updateMapDistance?: (d: number) => void }).updateMapDistance = (newDistKm: number) => {
-          updateUserDistance(newDistKm * KM_TO_MILES);
+          const newDistMiles = newDistKm * KM_TO_MILES;
+          personalDistanceRef.current = newDistMiles;
+
+          if (selectedView.value === 'personal') {
+            updateUserDistance(newDistMiles);
+            return;
+          }
+
+          void handlePartyViewChange(selectedView.value);
         };
 
         // If friends toggle was persisted as ON, load friend markers
