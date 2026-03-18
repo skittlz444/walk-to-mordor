@@ -27,6 +27,9 @@ const path = require('path');
 const WARN_THRESHOLD = 15000;
 const FAIL_THRESHOLD = 18000;
 
+// Deterministic number formatting (avoid locale-dependent toLocaleString)
+const fmtNum = (n) => new Intl.NumberFormat('en-US').format(n);
+
 /**
  * Recursively count all files under a directory.
  * Uses lstatSync to avoid following symlinks.
@@ -135,18 +138,18 @@ function buildMarkdownSummary(total, breakdown, status, targetDir) {
   const statusLabel = status === 'pass' ? 'Pass' : status === 'warn' ? 'Warning' : 'Fail';
 
   let md = `## 📦 Asset Count: ${statusEmoji} ${statusLabel}\n\n`;
-  md += `**Total files in \`${targetDir}/\`:** ${total.toLocaleString()}\n\n`;
+  md += `**Total files in \`${targetDir}/\`:** ${fmtNum(total)}\n\n`;
   md += `| Threshold | Value | Status |\n`;
   md += `|-----------|-------|--------|\n`;
-  md += `| Warning | ${WARN_THRESHOLD.toLocaleString()} | ${total >= WARN_THRESHOLD ? '⚠️ Exceeded' : '✅ OK'} |\n`;
-  md += `| Failure | ${FAIL_THRESHOLD.toLocaleString()} | ${total >= FAIL_THRESHOLD ? '❌ Exceeded' : '✅ OK'} |\n\n`;
+  md += `| Warning | ${fmtNum(WARN_THRESHOLD)} | ${total >= WARN_THRESHOLD ? '⚠️ Exceeded' : '✅ OK'} |\n`;
+  md += `| Failure | ${fmtNum(FAIL_THRESHOLD)} | ${total >= FAIL_THRESHOLD ? '❌ Exceeded' : '✅ OK'} |\n\n`;
 
   if (breakdown.length > 0) {
     md += `### Breakdown by Directory\n\n`;
     md += `| Directory | Files |\n`;
     md += `|-----------|-------|\n`;
     for (const { name, count } of breakdown) {
-      md += `| \`${name}\` | ${count.toLocaleString()} |\n`;
+      md += `| \`${name}\` | ${fmtNum(count)} |\n`;
     }
     md += '\n';
   }
@@ -171,16 +174,16 @@ function buildTerminalOutput(total, breakdown, status, targetDir) {
   let output = `\n📦 Asset Count Check: ${statusEmoji} ${statusLabel}\n`;
   output += `${'─'.repeat(45)}\n`;
   output += `Directory: ${targetDir}/\n`;
-  output += `Total files: ${total.toLocaleString()}\n`;
-  output += `Warn threshold: ${WARN_THRESHOLD.toLocaleString()}\n`;
-  output += `Fail threshold: ${FAIL_THRESHOLD.toLocaleString()}\n`;
+  output += `Total files: ${fmtNum(total)}\n`;
+  output += `Warn threshold: ${fmtNum(WARN_THRESHOLD)}\n`;
+  output += `Fail threshold: ${fmtNum(FAIL_THRESHOLD)}\n`;
   output += `${'─'.repeat(45)}\n`;
 
   if (breakdown.length > 0) {
     output += `\nBreakdown:\n`;
     const maxNameLen = Math.max(...breakdown.map((b) => b.name.length));
     for (const { name, count } of breakdown) {
-      output += `  ${name.padEnd(maxNameLen + 2)} ${count.toLocaleString()}\n`;
+      output += `  ${name.padEnd(maxNameLen + 2)} ${fmtNum(count)}\n`;
     }
   }
 
@@ -202,6 +205,11 @@ function main() {
     process.exit(1);
   }
 
+  if (!fs.statSync(resolvedDir).isDirectory()) {
+    console.error(`❌ Path is not a directory: ${resolvedDir}`);
+    process.exit(1);
+  }
+
   const { breakdown, total } = getBreakdown(resolvedDir);
   const status = classify(total);
   const isCI = !!process.env.GITHUB_STEP_SUMMARY;
@@ -213,13 +221,13 @@ function main() {
 
     // Emit workflow annotations
     if (status === 'warn') {
-      console.log(`::warning::Asset count (${total.toLocaleString()}) approaching limit. Warn threshold: ${WARN_THRESHOLD.toLocaleString()}, Fail threshold: ${FAIL_THRESHOLD.toLocaleString()}`);
+      console.log(`::warning::Asset count (${fmtNum(total)}) approaching limit. Warn threshold: ${fmtNum(WARN_THRESHOLD)}, Fail threshold: ${fmtNum(FAIL_THRESHOLD)}`);
     } else if (status === 'fail') {
-      console.log(`::error::Asset count (${total.toLocaleString()}) exceeds fail threshold of ${FAIL_THRESHOLD.toLocaleString()}! Reduce asset count before deploying.`);
+      console.log(`::error::Asset count (${fmtNum(total)}) exceeds fail threshold of ${fmtNum(FAIL_THRESHOLD)}! Reduce asset count before deploying.`);
     }
 
     // Also print summary to CI log
-    console.log(`📦 Asset count: ${total.toLocaleString()} files in ${targetDir}/ [${status.toUpperCase()}]`);
+    console.log(`📦 Asset count: ${fmtNum(total)} files in ${targetDir}/ [${status.toUpperCase()}]`);
   } else {
     // Local output
     const output = buildTerminalOutput(total, breakdown, status, targetDir);

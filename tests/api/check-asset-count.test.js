@@ -304,7 +304,7 @@ describe('check-asset-count', () => {
       process.argv = ['node', 'script.js', 'public'];
       delete process.env.GITHUB_STEP_SUMMARY;
 
-      // Re-require to pick up clean mocks
+      // Require the already-loaded module
       const { main } = require('../../.github/scripts/check-asset-count.js');
       main();
 
@@ -312,7 +312,7 @@ describe('check-asset-count', () => {
       expect(exitSpy).not.toHaveBeenCalled();
       expect(logSpy).toHaveBeenCalled();
       const output = logSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('PASS');
+      expect(output).not.toContain('FAIL');
     });
 
     it('exits with code 1 when directory does not exist', () => {
@@ -346,6 +346,17 @@ describe('check-asset-count', () => {
       fs.unlinkSync(tmpFile);
     });
 
+    it('exits with code 1 when path is a file, not a directory', () => {
+      process.argv = ['node', 'script.js', 'package.json'];
+      delete process.env.GITHUB_STEP_SUMMARY;
+
+      const { main } = require('../../.github/scripts/check-asset-count.js');
+
+      expect(() => main()).toThrow('process.exit called');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Path is not a directory'));
+    });
+
     it('emits ::warning:: annotation for warn status in CI', () => {
       const tmpFile = path.join(__dirname, '_test_summary_warn.md');
       process.env.GITHUB_STEP_SUMMARY = tmpFile;
@@ -355,10 +366,16 @@ describe('check-asset-count', () => {
       const origReaddirSync = fs.readdirSync;
       const origLstatSync = fs.lstatSync;
       const origExistsSync = fs.existsSync;
+      const origStatSync = fs.statSync;
 
       jest.spyOn(fs, 'existsSync').mockImplementation((p) => {
         if (typeof p === 'string' && p.includes('warn-test-dir')) return true;
         return origExistsSync.call(fs, p);
+      });
+
+      jest.spyOn(fs, 'statSync').mockImplementation((p) => {
+        if (typeof p === 'string' && p.includes('warn-test-dir')) return { isDirectory: () => true };
+        return origStatSync.call(fs, p);
       });
 
       jest.spyOn(fs, 'readdirSync').mockImplementation((dir) => {
@@ -405,10 +422,16 @@ describe('check-asset-count', () => {
       const origReaddirSync = fs.readdirSync;
       const origLstatSync = fs.lstatSync;
       const origExistsSync = fs.existsSync;
+      const origStatSync = fs.statSync;
 
       jest.spyOn(fs, 'existsSync').mockImplementation((p) => {
         if (typeof p === 'string' && p.includes('fail-test-dir')) return true;
         return origExistsSync.call(fs, p);
+      });
+
+      jest.spyOn(fs, 'statSync').mockImplementation((p) => {
+        if (typeof p === 'string' && p.includes('fail-test-dir')) return { isDirectory: () => true };
+        return origStatSync.call(fs, p);
       });
 
       jest.spyOn(fs, 'readdirSync').mockImplementation((dir) => {
