@@ -163,7 +163,7 @@ export function AuthForms() {
         } else {
             error.value = data.error || 'Failed to resend';
         }
-    } catch (err) {
+    } catch (_err) {
         error.value = 'Network error';
     } finally {
         isLoading.value = false;
@@ -189,7 +189,7 @@ export function AuthForms() {
         } else {
             error.value = data.error || 'Request failed';
         }
-    } catch (err) {
+    } catch (_err) {
         error.value = 'Network error';
     } finally {
         isLoading.value = false;

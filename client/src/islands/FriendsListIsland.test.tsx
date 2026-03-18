@@ -7,7 +7,7 @@ const mockFetch = vi.fn();
 
 // Mock navigator
 const mockClipboard = { writeText: vi.fn() };
-const mockShare = vi.fn();
+const _mockShare = vi.fn();
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -46,7 +46,9 @@ afterEach(() => {
 });
 
 function mockFriendsAndPending(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test fixture accepts loose shapes
   friends: any[] = [],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test fixture accepts loose shapes
   pending: any[] = [],
   friendCode: string | null = 'ABCD1234'
 ) {
@@ -231,7 +233,7 @@ describe('FriendsListIsland', () => {
         { id: 10, username: 'pippin', avatar_id: null, created_at: '2026-02-20T00:00:00Z' },
       ]);
 
-      const { container, getByText } = render(<FriendsListIsland />);
+      const { getByText } = render(<FriendsListIsland />);
 
       await waitFor(() => {
         expect(getByText('Accept')).toBeTruthy();
@@ -257,7 +259,7 @@ describe('FriendsListIsland', () => {
         { id: 10, username: 'pippin', avatar_id: null, created_at: '2026-02-20T00:00:00Z' },
       ]);
 
-      const { container, getByText } = render(<FriendsListIsland />);
+      const { getByText } = render(<FriendsListIsland />);
 
       await waitFor(() => {
         expect(getByText('Reject')).toBeTruthy();

@@ -69,7 +69,7 @@ Track your real-world exercise progress as you virtually follow in the footsteps
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - pnpm (recommended) or npm
 - Cloudflare account (for deployment)
 

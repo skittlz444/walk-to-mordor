@@ -145,7 +145,7 @@ describe('FriendAddIsland', () => {
         json: () => Promise.resolve({ id: 42, username: 'legolas', avatar_id: null }),
       });
 
-      const { container, getByText } = render(<FriendAddIsland />);
+      const { getByText } = render(<FriendAddIsland />);
 
       await waitFor(() => {
         expect(getByText('Send Friend Request')).toBeTruthy();
@@ -353,7 +353,7 @@ describe('FriendAddIsland', () => {
         json: () => Promise.resolve({ id: 42, username: 'legolas', avatar_id: null }),
       });
 
-      const { container, getByText } = render(<FriendAddIsland />);
+      const { getByText } = render(<FriendAddIsland />);
 
       await waitFor(() => {
         expect(getByText('Log in to Add Friend')).toBeTruthy();

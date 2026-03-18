@@ -35,7 +35,7 @@ export function isValidDateFormat(dateString: string): boolean {
 }
 
 // Helper function to validate distance value
-export function isValidDistance(value: any): boolean {
+export function isValidDistance(value: unknown): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string' && value.trim() === '') return false;
   
@@ -44,7 +44,7 @@ export function isValidDistance(value: any): boolean {
 }
 
 // Helper function to safely parse JSON
-export async function safeJsonParse(request: Request): Promise<{success: boolean, data?: any, error?: string}> {
+export async function safeJsonParse(request: Request): Promise<{success: boolean, data?: unknown, error?: string}> {
   try {
     const text = await request.text();
     if (!text || text.trim() === '') {
@@ -59,7 +59,7 @@ export async function safeJsonParse(request: Request): Promise<{success: boolean
     }
     
     return { success: true, data };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: 'Invalid JSON format' };
   }
 }
@@ -87,7 +87,7 @@ export function createErrorResponse(error: string, status: number = 400) {
 }
 
 // Helper function to create success response
-export function createSuccessResponse(data: any, status: number = 200) {
+export function createSuccessResponse(data: unknown, status: number = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "content-type": "application/json" }
