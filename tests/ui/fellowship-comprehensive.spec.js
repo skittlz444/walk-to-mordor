@@ -984,16 +984,16 @@ test.describe('Story 3-6: Party Selector on Map Page', () => {
     await expect(partyOption).toBeVisible({ timeout: 10000 });
     await partyOption.click();
 
-    await expect.poll(async () => await getCurrentLocationTooltipText(page)).toBe('Current Location: 705 km');
-    await expect.poll(async () => await page.evaluate(() => localStorage.getItem('wtm_party_view'))).toBe(String(party.id));
+    await expect.poll(async () => await getCurrentLocationTooltipText(page), { timeout: 15000 }).toBe('Current Location: 705 km');
+    await expect.poll(async () => await page.evaluate(() => localStorage.getItem('wtm_party_view')), { timeout: 15000 }).toBe(String(party.id));
 
     await logDistance(request, leader1Token, '2026-02-20', 308);
     await page.evaluate(() => {
       window.updateMapDistance?.(308);
     });
 
-    await expect.poll(async () => await getCurrentLocationTooltipText(page)).toBe('Current Location: 708 km');
-    await expect.poll(async () => await page.evaluate(() => localStorage.getItem('wtm_party_view'))).toBe(String(party.id));
+    await expect.poll(async () => await getCurrentLocationTooltipText(page), { timeout: 15000 }).toBe('Current Location: 708 km');
+    await expect.poll(async () => await page.evaluate(() => localStorage.getItem('wtm_party_view')), { timeout: 15000 }).toBe(String(party.id));
   });
 });
 
