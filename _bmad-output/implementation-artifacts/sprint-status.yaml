@@ -130,11 +130,11 @@ development_status:
   # ============================================
   # EPIC 7: Developer Experience & Quality Guardrails (Phase 4)
   # ============================================
-  epic-7: in-progress
-  7-1-eslint-configuration-legacy-deprecation-rules: ready-for-dev
-  7-2-unified-vite-wrangler-dev-pipeline: ready-for-dev
-  7-3-asset-count-ci-dashboard: ready-for-dev
-  epic-7-retrospective: optional
+  epic-7: done
+  7-1-eslint-configuration-legacy-deprecation-rules: done
+  7-2-unified-vite-wrangler-dev-pipeline: done
+  7-3-asset-count-ci-dashboard: done
+  epic-7-retrospective: done
 
   # ============================================
   # EPIC 8: Architecture & Performance Foundation (Phase 5)
