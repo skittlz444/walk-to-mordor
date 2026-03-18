@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Legacy handler signatures use `any` for Env and body params; typed Env/body interfaces planned for a dedicated refactoring story */
 // Authentication API handlers
 import {
   generateSalt,

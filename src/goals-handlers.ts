@@ -1,6 +1,7 @@
 // Goals API handlers
 import { validateSession } from "./auth-handlers";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- legacy Env typing; to be refactored
 export async function handleGoalsGet(request: Request, env: any) {
   // Validate session
   const sessionValidation = await validateSession(request, env);
@@ -14,7 +15,7 @@ export async function handleGoalsGet(request: Request, env: any) {
     return new Response(JSON.stringify(results), {
       headers: { "content-type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database error during SELECT (goals):', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error while retrieving goals' 
@@ -25,6 +26,7 @@ export async function handleGoalsGet(request: Request, env: any) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- legacy Env typing; to be refactored
 export async function calculateTotalDistance(env: any, userId: number): Promise<number> {
   const { results } = await env.DB.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
   return Number(

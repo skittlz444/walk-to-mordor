@@ -3,12 +3,8 @@ import { renderHomePage } from "./renderHomePage";
 import { renderAuthPage } from "./renderAuthPage";
 import { renderPasswordResetRequestPage, renderPasswordResetPage } from "./renderPasswordResetPage";
 import { 
-  isValidDateFormat, 
-  isValidDistance, 
   safeJsonParse, 
-  isValidMethod, 
   createErrorResponse, 
-  createSuccessResponse 
 } from "./validators";
 import { 
   handleProgressPost, 
@@ -95,6 +91,7 @@ export default {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
     const method = request.method;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic parsed JSON body; specific type depends on each route handler
     let body: any = undefined;
 
     // Only serve static assets for GET/HEAD requests
@@ -530,6 +527,7 @@ export default {
           return new Response(JSON.stringify({ totalDistance }), {
             headers: { "content-type": "application/json" },
           });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- catch-all error handler
         } catch (error: any) {
           console.error('Database error during total distance calculation:', error);
           return new Response(JSON.stringify({ 

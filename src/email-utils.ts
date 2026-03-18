@@ -111,7 +111,7 @@ export async function sendEmail(
       messageId: successResult.id
     };
 
-  } catch (error: any) {
+  } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any -- catch-all error handler
     console.error('Error sending email via Resend:', error);
     return {
       success: false,

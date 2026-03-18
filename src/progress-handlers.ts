@@ -1,10 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Legacy handler signatures use `any` for Env and body params; typed interfaces planned for a dedicated refactoring story */
 // Progress API handlers
 import { 
   isValidDateFormat, 
   isValidDistance, 
-  safeJsonParse, 
-  createErrorResponse, 
-  createSuccessResponse 
 } from "./validators";
 import { validateSession } from "./auth-handlers";
 

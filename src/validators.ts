@@ -35,6 +35,7 @@ export function isValidDateFormat(dateString: string): boolean {
 }
 
 // Helper function to validate distance value
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts unknown input types for validation
 export function isValidDistance(value: any): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string' && value.trim() === '') return false;
@@ -44,6 +45,7 @@ export function isValidDistance(value: any): boolean {
 }
 
 // Helper function to safely parse JSON
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic JSON parse result
 export async function safeJsonParse(request: Request): Promise<{success: boolean, data?: any, error?: string}> {
   try {
     const text = await request.text();
@@ -59,7 +61,7 @@ export async function safeJsonParse(request: Request): Promise<{success: boolean
     }
     
     return { success: true, data };
-  } catch (error) {
+  } catch (_error) {
     return { success: false, error: 'Invalid JSON format' };
   }
 }
@@ -87,6 +89,7 @@ export function createErrorResponse(error: string, status: number = 400) {
 }
 
 // Helper function to create success response
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any serialisable data
 export function createSuccessResponse(data: any, status: number = 200) {
   return new Response(JSON.stringify(data), {
     status,
