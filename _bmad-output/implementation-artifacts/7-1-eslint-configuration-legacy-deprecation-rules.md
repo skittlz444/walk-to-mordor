@@ -202,7 +202,7 @@ Claude Opus 4.6
 - The story scope is configuration only — no application code changes beyond potential inline `eslint-disable` comments for justified exceptions.
 - Used `eslint.config.mjs` (ESM) since root `package.json` has no `"type": "module"`.
 - Installed ESLint v10.0.3, @typescript-eslint v8.57.1, globals v17.4.0.
-- `npm run lint` exits with code 0: 0 errors, 13 warnings (9 legacy deprecation + 4 consistent-type-imports).
+- `npm run lint` exits with code 0: 0 errors, 13 warnings (9 legacy deprecation warnings via `no-restricted-syntax` on `public/js/*.js` + 4 `@typescript-eslint/consistent-type-imports` warnings in `src/`).
 - All 1042 existing tests pass with no regressions. 16 new ESLint config tests added.
 - File-level `eslint-disable` comments added to `auth-handlers.ts` and `progress-handlers.ts` (heavy `any` usage — needs dedicated typing story).
 - Unused imports removed from `src/index.ts` and `src/progress-handlers.ts` as safe cleanup.

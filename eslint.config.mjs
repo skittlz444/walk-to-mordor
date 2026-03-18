@@ -14,7 +14,7 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsparser from "@typescript-eslint/parser";
 import globals from "globals";
 
-/** @type {import("eslint").Linter.Config[]} */
+/** @type {import("eslint").Linter.Config[]} — In ESLint v10+, Linter.Config is the flat config type */
 export default [
   // ── Global ignores ────────────────────────────────────────────────────
   {
@@ -42,7 +42,7 @@ export default [
         sourceType: "module",
       },
       globals: {
-        ...globals.node,
+        ...globals.serviceworker,
       },
     },
     plugins: {

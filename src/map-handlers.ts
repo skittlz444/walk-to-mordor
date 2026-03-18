@@ -16,8 +16,7 @@ function renderMapPage() {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- legacy Env typing; to be refactored
-export async function handleMapPage(_request: Request, _env: any): Promise<Response> {
+export async function handleMapPage(_request: Request, _env: Env): Promise<Response> {
   return new Response(renderMapPage(), {
     headers: {
       'content-type': 'text/html',

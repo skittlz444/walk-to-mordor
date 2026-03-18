@@ -2,6 +2,9 @@
   "name": "walk-to-mordor",
   "description": "Cloudflare's native serverless SQL database.",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/skittlz444/walk-to-mordor.git"

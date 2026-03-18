@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Legacy handler signatures use `any` for Env and body params; typed interfaces planned for a dedicated refactoring story */
 // Progress API handlers
 import { 
   isValidDateFormat, 
@@ -58,7 +57,7 @@ export async function syncPartyProgressLog(
   }
 }
 
-export async function handleProgressPost(request: Request, env: any, body: any) {
+export async function handleProgressPost(request: Request, env: Env, body: Record<string, unknown>) {
   // Validate session
   const sessionValidation = await validateSession(request, env);
   if (!sessionValidation.valid) {
@@ -87,7 +86,7 @@ export async function handleProgressPost(request: Request, env: any, body: any) 
   }
 
   // Validate date format
-  if (!isValidDateFormat(start)) {
+  if (typeof start !== 'string' || !isValidDateFormat(start)) {
     return new Response(JSON.stringify({ 
       error: 'Invalid date format. Expected format: YYYY-MM-DD (e.g., 2024-01-15)' 
     }), { 
@@ -149,13 +148,15 @@ export async function handleProgressPost(request: Request, env: any, body: any) 
       status: 201,
       headers: { "content-type": "application/json" }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Handle database errors
     console.error('Database error during INSERT:', error);
-    if (error.message?.includes('UNIQUE constraint failed') || 
-        error.message?.includes('UNIQUE constraint') ||
-        error.cause?.message?.includes('UNIQUE constraint') ||
-        error.toString().includes('UNIQUE constraint')) {
+    const message = error instanceof Error ? error.message : String(error);
+    const causeMessage = error instanceof Error && error.cause instanceof Error ? error.cause.message : '';
+    if (message.includes('UNIQUE constraint failed') || 
+        message.includes('UNIQUE constraint') ||
+        causeMessage.includes('UNIQUE constraint') ||
+        String(error).includes('UNIQUE constraint')) {
       return new Response(JSON.stringify({ 
         error: 'An entry for this date already exists. Use PUT to update instead.' 
       }), { 
@@ -173,7 +174,7 @@ export async function handleProgressPost(request: Request, env: any, body: any) 
   }
 }
 
-export async function handleProgressPut(request: Request, env: any, body: any) {
+export async function handleProgressPut(request: Request, env: Env, body: Record<string, unknown>) {
   // Validate session
   const sessionValidation = await validateSession(request, env);
   if (!sessionValidation.valid) {
@@ -203,7 +204,7 @@ export async function handleProgressPut(request: Request, env: any, body: any) {
   }
 
   // Validate date format
-  if (!isValidDateFormat(start)) {
+  if (typeof start !== 'string' || !isValidDateFormat(start)) {
     return new Response(JSON.stringify({ 
       error: 'Invalid date format. Expected format: YYYY-MM-DD (e.g., 2024-01-15)' 
     }), { 
@@ -249,7 +250,7 @@ export async function handleProgressPut(request: Request, env: any, body: any) {
       status: 200,
       headers: { "content-type": "application/json" }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database error during UPDATE:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error while updating entry' 
@@ -260,7 +261,7 @@ export async function handleProgressPut(request: Request, env: any, body: any) {
   }
 }
 
-export async function handleProgressDelete(request: Request, env: any, body: any) {
+export async function handleProgressDelete(request: Request, env: Env, body: Record<string, unknown>) {
   // Validate session
   const sessionValidation = await validateSession(request, env);
   if (!sessionValidation.valid) {
@@ -281,7 +282,7 @@ export async function handleProgressDelete(request: Request, env: any, body: any
   }
 
   // Validate date format
-  if (!isValidDateFormat(start)) {
+  if (typeof start !== 'string' || !isValidDateFormat(start)) {
     return new Response(JSON.stringify({ 
       error: 'Invalid date format. Expected format: YYYY-MM-DD (e.g., 2024-01-15)' 
     }), { 
@@ -314,7 +315,7 @@ export async function handleProgressDelete(request: Request, env: any, body: any
       status: 200,
       headers: { "content-type": "application/json" }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database error during DELETE:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error while deleting entry' 
@@ -325,7 +326,7 @@ export async function handleProgressDelete(request: Request, env: any, body: any
   }
 }
 
-export async function handleProgressGet(request: Request, env: any) {
+export async function handleProgressGet(request: Request, env: Env) {
   // Validate session
   const sessionValidation = await validateSession(request, env);
   if (!sessionValidation.valid) {
@@ -342,7 +343,7 @@ export async function handleProgressGet(request: Request, env: any) {
     return new Response(JSON.stringify(calendarData), {
       headers: { "content-type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database error during SELECT (calendar-progress):', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error while retrieving calendar progress' 

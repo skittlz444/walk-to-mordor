@@ -6,8 +6,10 @@
  */
 const { execSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..', '..');
+const ESLINT_BIN = path.join('.', 'node_modules', '.bin', 'eslint');
 
 /**
  * Get resolved ESLint config for a file path via --print-config.
@@ -15,7 +17,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
  */
 function configFor(relPath) {
   const out = execSync(
-    `npx eslint --print-config ${relPath}`,
+    `${ESLINT_BIN} --print-config ${relPath}`,
     { cwd: ROOT, encoding: 'utf-8', timeout: 30000 }
   );
   return JSON.parse(out);
@@ -24,7 +26,7 @@ function configFor(relPath) {
 /** Run eslint on the whole project and return { exitCode, errorCount, warningCount } */
 function lintAll() {
   try {
-    const out = execSync('npx eslint . --format json', {
+    const out = execSync(`${ESLINT_BIN} . --format json`, {
       cwd: ROOT,
       encoding: 'utf-8',
       timeout: 60000,
@@ -166,21 +168,46 @@ describe('public/sw.js service worker scope', () => {
 
 // ── Global ignores ────────────────────────────────────────────────────
 describe('global ignores', () => {
-  // --print-config on ignored files prints "undefined" rather than JSON
-  function isIgnored(relPath) {
-    try {
-      const out = execSync(`npx eslint --print-config ${relPath}`, {
-        cwd: ROOT,
-        encoding: 'utf-8',
-        timeout: 15000,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-      // ESLint prints "undefined" (literally) for globally ignored files
-      return out.trim() === 'undefined';
-    } catch {
-      // An error also indicates the file is not lintable (ignored)
-      return true;
+  // Create temporary fixture files so --print-config tests real ignore patterns,
+  // not "file not found" errors masquerading as ignored.
+  const fixtures = [
+    'public/js/client/islands.js',
+    'coverage/lcov.info',
+    '_bmad-output/foo.js',
+  ];
+
+  beforeAll(() => {
+    for (const f of fixtures) {
+      const abs = path.join(ROOT, f);
+      fs.mkdirSync(path.dirname(abs), { recursive: true });
+      if (!fs.existsSync(abs)) {
+        fs.writeFileSync(abs, '// fixture\n');
+      }
     }
+  });
+
+  afterAll(() => {
+    for (const f of fixtures) {
+      const abs = path.join(ROOT, f);
+      try { fs.unlinkSync(abs); } catch { /* may not exist */ }
+    }
+  });
+
+  // --print-config on ignored files prints "undefined" rather than JSON.
+  // We verify the file exists first so a missing file doesn't false-positive.
+  function isIgnored(relPath) {
+    const abs = path.join(ROOT, relPath);
+    if (!fs.existsSync(abs)) {
+      throw new Error(`Fixture file missing: ${relPath}`);
+    }
+    const out = execSync(`${ESLINT_BIN} --print-config ${relPath}`, {
+      cwd: ROOT,
+      encoding: 'utf-8',
+      timeout: 15000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    // ESLint prints "undefined" (literally) for globally ignored files
+    return out.trim() === 'undefined';
   }
 
   it('ignores public/js/client/ (Vite build output)', () => {
