@@ -1,6 +1,6 @@
 # Story 7.3: Asset Count CI Dashboard
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
