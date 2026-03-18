@@ -7,6 +7,8 @@ async function navigateToProfile(page) {
   await page.goto(BASE_URL + '/profile');
   await waitForAuthenticated(page);
   await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+  // Wait for loading state to complete (toggle switches render after API data loads)
+  await page.waitForSelector('.profile-page', { timeout: 10000 });
 }
 
 /**
@@ -267,10 +269,9 @@ test.describe('User Goal Visibility Preference', () => {
     test('should display default view toggle on profile page', async ({ page }) => {
       await navigateToProfile(page);
 
-      // Toggle switch container should be visible
+      // Toggle switch container should be visible (use auto-retrying assertion)
       const toggleSwitches = page.locator('.toggle-switch');
-      const count = await toggleSwitches.count();
-      expect(count).toBeGreaterThanOrEqual(2);
+      await expect(toggleSwitches).toHaveCount(2, { timeout: 10000 });
 
       // Label should be present
       await expect(page.locator('label[for="default-view-toggle"]')).toContainText('Default to map view');
