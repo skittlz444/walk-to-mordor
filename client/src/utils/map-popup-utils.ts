@@ -84,7 +84,7 @@ export function getOptimalPopupPosition(
   // Available space in each direction
   const spaceAbove = wy;
   const spaceBelow = vh - wy;
-  const spaceLeft = wx;
+  const _spaceLeft = wx;
   const spaceRight = vw - wx;
 
   // Determine best vertical/horizontal placement

@@ -16,7 +16,7 @@ function renderMapPage() {
   });
 }
 
-export async function handleMapPage(request: Request, env: any): Promise<Response> {
+export async function handleMapPage(_request: Request, _env: Env): Promise<Response> {
   return new Response(renderMapPage(), {
     headers: {
       'content-type': 'text/html',

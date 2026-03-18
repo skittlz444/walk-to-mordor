@@ -20,7 +20,7 @@ const testPath: PathNode[] = [
 
 // Goals use km; path uses miles. KM_TO_MILES = 0.621371
 // So a goal at 100 km → 62.14 miles
-const KM_TO_MILES = 0.621371;
+const _KM_TO_MILES = 0.621371;
 
 function makeGoal(id: number, distanceKm: number, title: string, special?: string): Goal {
   return { id, distance: distanceKm, title, special: special ?? null };

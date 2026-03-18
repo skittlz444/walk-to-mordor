@@ -1,7 +1,7 @@
 // Goals API handlers
 import { validateSession } from "./auth-handlers";
 
-export async function handleGoalsGet(request: Request, env: any) {
+export async function handleGoalsGet(request: Request, env: Env) {
   // Validate session
   const sessionValidation = await validateSession(request, env);
   if (!sessionValidation.valid) {
@@ -14,7 +14,7 @@ export async function handleGoalsGet(request: Request, env: any) {
     return new Response(JSON.stringify(results), {
       headers: { "content-type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Database error during SELECT (goals):', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error while retrieving goals' 
@@ -25,7 +25,7 @@ export async function handleGoalsGet(request: Request, env: any) {
   }
 }
 
-export async function calculateTotalDistance(env: any, userId: number): Promise<number> {
+export async function calculateTotalDistance(env: { DB: D1Database }, userId: number): Promise<number> {
   const { results } = await env.DB.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
   return Number(
     (results as Array<{ distance: number }>).reduce(

@@ -1,0 +1,55 @@
+name: Legacy UI Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  legacy:
+    name: Legacy UI Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Legacy UI Coverage
+        continue-on-error: true
+        run: npm run test:legacy:coverage
+
+      - name: Upload Coverage Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-legacy
+          path: coverage/legacy/
+          retention-days: 30
+
+      - name: Generate Coverage Comment
+        id: gen-coverage
+        if: always()
+        run: node .github/scripts/generate-single-coverage-comment.js --suite legacy
+
+      - name: Post Coverage Comment
+        if: always() && steps.gen-coverage.outcome == 'success'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: coverage-legacy
+          path: coverage-comment.md

@@ -3,12 +3,8 @@ import { renderHomePage } from "./renderHomePage";
 import { renderAuthPage } from "./renderAuthPage";
 import { renderPasswordResetRequestPage, renderPasswordResetPage } from "./renderPasswordResetPage";
 import { 
-  isValidDateFormat, 
-  isValidDistance, 
   safeJsonParse, 
-  isValidMethod, 
   createErrorResponse, 
-  createSuccessResponse 
 } from "./validators";
 import { 
   handleProgressPost, 
@@ -95,7 +91,7 @@ export default {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
     const method = request.method;
-    let body: any = undefined;
+    let body: Record<string, unknown> | undefined;
 
     // Only serve static assets for GET/HEAD requests
     if (method === "GET" || method === "HEAD") {
@@ -136,7 +132,7 @@ export default {
           headers: { "content-type": "application/json" }
         });
       }
-      body = parseResult.data;
+      body = parseResult.data as Record<string, unknown>;
     }
 
     // API endpoints
@@ -259,7 +255,7 @@ export default {
 
       // Party (Fellowship) endpoints
       if (url.pathname === "/api/party" && method === "POST") {
-        return handleCreateParty(request, env, body);
+        return handleCreateParty(request, env, body!);
       }
 
       // GET /api/user/parties — list user's party memberships (auth required)
@@ -334,7 +330,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleInviteFriend(request, env, partyId, body);
+        return handleInviteFriend(request, env, partyId, body!);
       }
 
       // GET /api/party/:id/progress — party progress calculation
@@ -376,7 +372,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleSendPartyMessage(request, env, partyId, body);
+        return handleSendPartyMessage(request, env, partyId, body!);
       }
 
       // POST /api/party/:id/leave — leave party
@@ -412,7 +408,7 @@ export default {
         ) {
           return createErrorResponse('Invalid user ID', 400);
         }
-        return handleKickMember(request, env, partyId, targetUserId, body);
+        return handleKickMember(request, env, partyId, targetUserId, body!);
       }
 
       // PUT /api/party/:id/settings — update party settings (leader only)
@@ -426,7 +422,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleUpdatePartySettings(request, env, partyId, body);
+        return handleUpdatePartySettings(request, env, partyId, body!);
       }
 
       // POST /api/party/:id/transfer-leadership — transfer leadership (leader only)
@@ -440,7 +436,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleTransferLeadership(request, env, partyId, body);
+        return handleTransferLeadership(request, env, partyId, body!);
       }
 
       // Friends (Social) endpoints — exact routes first, then parameterized
@@ -454,10 +450,10 @@ export default {
         return handleSearchUsers(request, env);
       }
       if (url.pathname === "/api/friends/request" && method === "POST") {
-        return handleFriendRequest(request, env, body);
+        return handleFriendRequest(request, env, body!);
       }
       if (url.pathname === "/api/friends/request/code" && method === "POST") {
-        return handleFriendRequestByCode(request, env, body);
+        return handleFriendRequestByCode(request, env, body!);
       }
       if (url.pathname === "/api/friends/positions" && method === "GET") {
         return handleFriendPositions(request, env);
@@ -509,11 +505,11 @@ export default {
 
       // CRUD for calendar events
       if (url.pathname === "/api/calendar-progress" && method === "POST") {
-        return handleProgressPost(request, env, body);
+        return handleProgressPost(request, env, body!);
       } else if (url.pathname === "/api/calendar-progress" && method === "PUT") {
-        return handleProgressPut(request, env, body);
+        return handleProgressPut(request, env, body!);
       } else if (url.pathname === "/api/calendar-progress" && method === "DELETE") {
-        return handleProgressDelete(request, env, body);
+        return handleProgressDelete(request, env, body!);
       } else if (url.pathname === "/api/calendar-progress") {
         return handleProgressGet(request, env);
       } else if (url.pathname === "/api/goals") {
@@ -530,7 +526,7 @@ export default {
           return new Response(JSON.stringify({ totalDistance }), {
             headers: { "content-type": "application/json" },
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Database error during total distance calculation:', error);
           return new Response(JSON.stringify({ 
             error: 'Internal server error while calculating total distance' 

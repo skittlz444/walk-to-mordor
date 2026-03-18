@@ -36,6 +36,8 @@ client/src/
 | `npm run dev:client` | Watch mode rebuilds |
 | `npm run dev` | Full local app (worker + client watch + local D1 migrations) |
 | `npm run build` | Production build (client + service worker cache version update) |
+| `npm run lint` | Run ESLint across all configured scopes |
+| `npm run lint:fix` | Run ESLint with auto-fix for fixable rules |
 | `npm run test:client` | Client unit tests (Vitest, happy-dom) |
 | `npm run test:client:coverage` | Client coverage |
 | `npm run test:ui` | UI tests (Chromium, Playwright) |
@@ -162,6 +164,37 @@ Never remove these without migrating all dependent legacy code. Prefer signals a
 - Badge counts on Fellowships and Friends for pending invites/requests
 - Home route (`/`) performs auth-aware redirect based on session preferences
 - **Route precedence**: Static routes before dynamic — `/party/join/:inviteCode` before `/party/:id`; `/friends/add/:friendCode` before `/friends/:id`
+
+## Linting
+
+The project uses **ESLint v9+** with flat config (`eslint.config.mjs`) targeting three directory scopes:
+
+### Three-Scope Strategy
+
+| Scope | Files | Rules |
+|---|---|---|
+| **Strict TypeScript** | `src/**/*.ts` | `no-explicit-any` (error), `no-unused-vars` (error), `consistent-type-imports` (warn) |
+| **Strict TypeScript + JSX** | `client/src/**/*.{ts,tsx}` | Same rules with JSX/Preact support |
+| **Legacy JS (deprecated)** | `public/js/*.js`, `public/sw.js` | Relaxed — deprecation warning only |
+
+### Why `public/js/client/` is Excluded
+
+`public/js/client/` contains **Vite build output** (`islands.js`, CSS chunks). It is globally ignored because linting generated code produces hundreds of false positives. Never add this directory to lint scope.
+
+### Legacy Deprecation
+
+Every file in `public/js/` emits a **warning** (not error):
+
+> _"Legacy JS: New code should be added to client/src/ (Preact islands). Do not expand legacy modules."_
+
+This fires automatically via a `no-restricted-syntax` rule on the `Program` AST node. Existing legacy code is not required to be fixed — the warning exists as a guardrail against expanding legacy modules. To suppress the warning for a justified change, add `/* eslint-disable no-restricted-syntax */` at the top of the file with a comment explaining why.
+
+### Commands
+
+```bash
+npm run lint          # Check all scopes (exit 0 = no errors; warnings allowed)
+npm run lint:fix      # Auto-fix fixable issues (e.g., import type suggestions)
+```
 
 ## Testing Conventions
 

@@ -1,96 +1,80 @@
-# GitHub Actions Workflows for PR Testing
+# GitHub Actions Workflows
 
-This directory contains GitHub Actions workflows that automatically run comprehensive tests on pull requests.
+This directory contains GitHub Actions workflows that automatically run on pull requests.
 
 ## Workflows Overview
 
-### `pr-tests.yml` - PR Testing Workflow
+All test workflows run **in parallel** on every PR, providing fast, targeted feedback.
 
-**Trigger**: Automatically runs on:
-- PR creation, updates, and synchronization (targeting any branch)
+### `test-backend.yml` — Backend Tests
 
-**Jobs**:
-- **Unit Tests & Coverage** - Fast feedback with unit tests and code coverage
-- **API Integration Tests** - Tests API endpoints using local Cloudflare Workers dev server
-- **UI End-to-End Tests** - Browser testing with Playwright
-- **All Tests Complete** - Final validation that all tests passed
+- **Suite**: Jest unit tests (`npm run test:coverage`)
+- **Coverage**: Posts sticky PR comment (`coverage-backend` header)
+- **Results**: Publishes `Backend Tests` check via junit XML
 
-**Features**:
-- ✅ Runs unit tests first for fast feedback
-- ✅ Generates and uploads code coverage reports
-- ✅ Sets up local D1 database for testing
-- ✅ Runs all 152 tests (65 unit + 27 API + 60 UI)
-- ✅ Uploads test artifacts (Playwright reports, coverage)
-- ✅ Proper cleanup of background processes
-- ✅ Tests run against local development server only (no deployed URL testing)
+### `test-client.yml` — Client Tests
 
-## Test Coverage
+- **Suite**: Vitest client tests (`npm run test:client:coverage`)
+- **Coverage**: Posts sticky PR comment (`coverage-client` header)
+- **Results**: Publishes `Client Tests` check via junit XML
 
-The workflows run all test types as defined in the project:
+### `test-e2e.yml` — E2E Tests
 
-| Test Type | Count | Description |
-|-----------|-------|-------------|
-| Unit Tests | 65 | Individual function and module testing |
-| API Tests | 27 | Integration testing of API endpoints |
-| UI Tests | 60 | End-to-end browser testing with Playwright |
-| **Total** | **152** | Complete test suite |
+- **Suite**: Playwright browser tests (`npm run test:ui` / `test:ui:all`)
+- **Setup**: Builds client, installs Playwright browsers, seeds local D1
+- **Browser logic**: All browsers on PRs targeting `main`, chromium-only otherwise
+- **Results**: Publishes `E2E Tests` check via junit XML
+- **Artifacts**: Uploads `playwright-report/` (30-day retention)
 
-## Requirements Met
+### `test-legacy.yml` — Legacy UI Tests
 
-✅ **Code Coverage**: Unit tests with coverage reporting  
-✅ **API Tests**: Integration tests that run after Cloudflare worker setup  
-✅ **UI Tests**: End-to-end browser tests  
-✅ **Dependency Ordering**: Tests run in logical sequence  
-✅ **Deployment Integration**: Enhanced workflow waits for Cloudflare deployment  
+- **Suite**: Jest legacy coverage (`npm run test:legacy:coverage`)
+- **Coverage**: Posts sticky PR comment (`coverage-legacy` header)
+- **Note**: Runs with `continue-on-error: true` (non-blocking / advisory)
+
+### `lint.yml` — ESLint
+
+- **Suite**: ESLint flat config (`npm run lint`)
+- **Scope**: Lints `src/`, `client/src/`, `public/js/`, `tests/`
 
 ## Configuration
 
 ### Environment Variables
-- `NODE_VERSION`: Node.js version (default: '22')
+- `NODE_VERSION`: Node.js version (default: `'22'`)
+
+### Permissions
+All workflows use:
+```yaml
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+```
 
 ### Artifacts Generated
-- **Coverage Reports**: HTML and LCOV format coverage reports
-- **Playwright Reports**: Visual test reports with screenshots
-- **Test Results**: Detailed test execution results
+- **Coverage Reports**: Per-suite coverage summaries (uploaded as artifacts)
+- **Playwright Reports**: Visual test reports with screenshots (E2E only)
+- **Test Results**: junit XML published as GitHub checks
 
-## Usage
+## Scripts
 
-### Automatic PR Testing
-The workflow (`pr-tests.yml`) runs automatically on:
-- Every PR creation, update, or synchronization (targeting any branch)
-- Automatically cancels in-progress workflows when new commits are pushed to the same PR
-
-No manual intervention required. All tests run against the local development server.
+| Workflow | Coverage Script |
+|----------|----------------|
+| Backend, Client, Legacy | `.github/scripts/generate-single-coverage-comment.js --suite <name>` |
 
 ## Troubleshooting
 
 ### Common Issues
 
-**API/UI tests fail with connection errors**:
-- Check that the dev server started properly
-- Verify D1 database setup completed
+**E2E tests fail with connection errors**:
+- Check that `build:client` completed successfully
+- Verify D1 database seed completed (`seedLocalD1`)
 - Look for port conflicts (8787)
 
-**Coverage reports missing**:
-- Ensure `npm run test:coverage` works locally
-- Check that Jest is configured properly
-- Verify coverage files are generated in `coverage/` directory
+**Coverage comment missing**:
+- Ensure the corresponding `test:*:coverage` script works locally
+- Check that coverage files are generated in the expected paths
 
 ### Logs and Debugging
-- Check individual job logs in GitHub Actions tab
-- Download artifacts for detailed reports
-- Use the `tests-complete` job for overall status summary
-
-## Customization
-
-### Adding New Test Types
-1. Create new npm script in `package.json`
-2. Add corresponding job in workflow
-3. Update `tests-complete` job dependencies
-
-### Changing Test Order
-Modify the `needs` dependency in job definitions:
-```yaml
-job-name:
-  needs: [prerequisite-job]
-```
+- Each workflow appears as a separate check — click the failing one for targeted logs
+- Download artifacts for detailed reports (coverage, Playwright traces)

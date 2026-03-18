@@ -295,6 +295,7 @@ describe('ProfileIsland', () => {
     });
 
     it('updates window.userPreferences on successful preference save', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test: setting bridge global
       (window as any).userPreferences = { showFutureGoalsUnlocked: true, defaultViewMap: false };
       mockSessionAndAvatars({ showFutureGoalsUnlocked: true });
       const { container } = render(<ProfileIsland />);
@@ -312,9 +313,11 @@ describe('ProfileIsland', () => {
       fireEvent.change(toggle, { target: { checked: false } });
 
       await waitFor(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test: reading bridge global
         expect((window as any).userPreferences.showFutureGoalsUnlocked).toBe(false);
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test: cleanup bridge global
       delete (window as any).userPreferences;
     });
 
@@ -368,6 +371,7 @@ describe('ProfileIsland', () => {
     it('calls window.logout when logout button clicked', async () => {
       mockSessionAndAvatars();
       const mockLogout = vi.fn();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test: setting bridge global
       (window as any).logout = mockLogout;
 
       const { getByText } = render(<ProfileIsland />);
@@ -379,6 +383,7 @@ describe('ProfileIsland', () => {
       fireEvent.click(getByText('Logout'));
       expect(mockLogout).toHaveBeenCalled();
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test: cleanup bridge global
       delete (window as any).logout;
     });
   });
