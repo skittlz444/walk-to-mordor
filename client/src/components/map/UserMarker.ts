@@ -283,7 +283,7 @@ export function createUserMarker(
         Math.max(ANIMATION_DURATION_MS, totalLength * 0.5),
       );
       let currentIndex = 0;
-      let _accumulatedLength = 0;
+      let accumulatedLength = 0;
 
       function animateNext() {
         if (currentIndex >= points.length - 1) {
