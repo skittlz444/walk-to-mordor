@@ -44,9 +44,9 @@ jobs:
       - name: Run E2E Tests (all browsers on main, chromium-only on other branches)
         run: |
           if [ "${{ github.base_ref }}" = "main" ]; then
-            npm run test:ui:all
+            npx playwright test
           else
-            npm run test:ui
+            npx playwright test --project=chromium
           fi
 
       - name: Upload Playwright Report
