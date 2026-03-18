@@ -8,6 +8,7 @@
  */
 
 import { signal, computed } from '@preact/signals';
+import type { Goal } from '../types/goal';
 
 // ============================================================================
 // Types
@@ -39,7 +40,7 @@ export interface PartyProgress {
   distance_mode: string;
   leave_distance_behavior: string;
   members: PartyMember[];
-  newly_passed_milestones: Array<{ id: number; title: string; distance: number; description?: string | null; image_id?: string | null; special?: string | null }>;
+  newly_passed_milestones: Goal[];
 }
 
 /** Selection can be 'personal' or a party ID */
@@ -257,8 +258,8 @@ export function markMilestoneTriggered(partyId: number, milestoneDistance: numbe
  */
 export function consumeNewlyPassedMilestones(
   partyId: number,
-  milestones: Array<{ id: number; title: string; distance: number; description?: string | null; image_id?: string | null; special?: string | null }>,
-): Array<{ id: number; title: string; distance: number; description?: string | null; image_id?: string | null; special?: string | null }> {
+  milestones: Goal[],
+): Goal[] {
   const fresh = milestones.filter(m => !hasTriggeredMilestones(partyId, m.distance));
   fresh.forEach(m => markMilestoneTriggered(partyId, m.distance));
   return fresh;

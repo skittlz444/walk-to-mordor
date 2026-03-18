@@ -5,14 +5,7 @@ import { Avatar } from '../components/Avatar';
 import { getMemberColor, getMutedMemberColor } from '../utils/party-colors';
 import type { Goal } from '../types/goal';
 
-interface MilestoneData {
-  id: number;
-  title: string;
-  distance: number;
-  description?: string | null;
-  image_id?: string | null;
-  special?: string | null;
-}
+type MilestoneData = Goal;
 
 interface PartyMember {
   user_id: number;
@@ -33,7 +26,7 @@ interface PartyProgressData {
   next_position: MilestoneData | null;
   leave_distance_behavior: string;
   members: PartyMember[];
-  newly_passed_milestones: Array<{ id: number; title: string; distance: number; description?: string | null; image_id?: string | null; special?: string | null }>;
+  newly_passed_milestones: Goal[];
 }
 
 interface PartyInfo {
