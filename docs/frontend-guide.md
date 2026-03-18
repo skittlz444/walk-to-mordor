@@ -43,6 +43,40 @@ client/src/
 | `npm run test:ui` | UI tests (Chromium, Playwright) |
 | `npm run test:ui:all` | UI tests (all browsers sequentially) |
 
+## Dev Pipeline
+
+`npm run dev` is the single command for local development. It orchestrates setup steps and two long-running processes in one terminal.
+
+### Lifecycle
+
+1. **`build:sw:reset`** — resets the service worker cache version for dev mode.
+2. **`seedLocalD1`** — applies D1 migrations to the local SQLite database.
+3. **`build:client`** — runs a one-off Vite build so `public/js/client/` exists before Wrangler starts (critical on fresh clones where the directory is `.gitignore`d).
+4. **Concurrent processes** via `concurrently`:
+   - **`[vite]`** (cyan) — `npm run dev:client` watches `client/src/` and rebuilds `public/js/client/islands.js` on change.
+   - **`[wrangler]`** (yellow) — `wrangler dev` serves the Worker and static assets from `public/`, with its own file-watching for `src/` changes.
+
+### How It Works
+
+Vite watch mode writes build output to `public/js/client/`. Wrangler's Assets binding (`wrangler.json` → `assets.directory: "./public"`) serves that directory. When you edit a client file, Vite rebuilds the bundle; refresh the browser to pick up changes.
+
+The `--kill-others-on-fail` flag ensures that if either process crashes, the other is terminated immediately — no half-working dev server.
+
+### Standalone Commands
+
+| Command | What It Does |
+|---|---|
+| `npm run dev:client` | Vite watch only (no Worker) |
+| `npx wrangler dev --var ALLOW_TEST_AUTH:true` | Worker dev server only (no client rebuild) |
+| `npm run build:client` | One-off Vite production build |
+
+### Troubleshooting
+
+- **Missing islands bundle on first page load?** — Delete `public/js/client/` and re-run `npm run dev`. The initial `build:client` step will recreate it.
+- **Stale client code?** — Stop the dev server, run `npm run build:client`, then restart `npm run dev`.
+- **Port conflict?** — Wrangler defaults to port 8787. If it's in use, Wrangler will pick the next available port and print the URL.
+- **One process keeps running after Ctrl+C?** — This shouldn't happen with `concurrently` v9+, but if it does, kill orphaned `node` or `workerd` processes manually.
+
 ## Island Hydration
 
 Islands are registered in `client/src/index.tsx`. Two hydration modes:
