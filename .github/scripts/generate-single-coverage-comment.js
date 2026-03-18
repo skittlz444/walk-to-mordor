@@ -61,16 +61,16 @@ let comment = `${suite.title}\n\n`;
 
 if (coverage && coverage.total) {
   const t = coverage.total;
-  const hasData = t.lines.pct !== 'Unknown';
+  const hasData = t.lines && t.lines.pct !== 'Unknown';
 
   if (hasData) {
     comment += `### ${suite.emoji} ${suite.label}\n\n`;
     comment += '| Metric | Coverage |\n';
     comment += '|--------|----------|\n';
-    comment += `| **Lines** | ${t.lines.pct}% |\n`;
-    comment += `| **Statements** | ${t.statements.pct}% |\n`;
-    comment += `| **Functions** | ${t.functions.pct}% |\n`;
-    comment += `| **Branches** | ${t.branches.pct}% |\n\n`;
+    comment += `| **Lines** | ${t.lines?.pct ?? 'N/A'}% |\n`;
+    comment += `| **Statements** | ${t.statements?.pct ?? 'N/A'}% |\n`;
+    comment += `| **Functions** | ${t.functions?.pct ?? 'N/A'}% |\n`;
+    comment += `| **Branches** | ${t.branches?.pct ?? 'N/A'}% |\n\n`;
   } else {
     comment += `### ${suite.emoji} ${suite.label}\n\n`;
     comment += '_No test coverage data collected_\n\n';

@@ -50,11 +50,12 @@ jobs:
           comment_mode: always
 
       - name: Generate Coverage Comment
+        id: gen-coverage
         if: always()
         run: node .github/scripts/generate-single-coverage-comment.js --suite client
 
       - name: Post Coverage Comment
-        if: always()
+        if: always() && steps.gen-coverage.outcome == 'success'
         uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: coverage-client
