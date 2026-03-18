@@ -26,6 +26,7 @@ import {
   type PartySelection,
   type PartyProgress,
 } from '../stores/partyStore';
+import type { Goal } from '../types/goal';
 
 export interface PartySelectorProps {
   /** 'journey' or 'map' — affects layout */
@@ -33,7 +34,7 @@ export interface PartySelectorProps {
   /** Callback when view changes. Receives party progress or null for personal. */
   onViewChange?: (selection: PartySelection, progress: PartyProgress | null) => void;
   /** Callback for newly passed milestones */
-  onNewMilestones?: (milestones: Array<{ id: number; title: string; distance: number }>) => void;
+  onNewMilestones?: (milestones: Goal[]) => void;
 }
 
 export function PartySelector({ variant = 'journey', onViewChange, onNewMilestones }: PartySelectorProps) {

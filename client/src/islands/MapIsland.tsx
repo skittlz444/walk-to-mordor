@@ -869,6 +869,9 @@ export function MapIsland() {
           id: latest.id,
           title: latest.title,
           distance: latest.distance,
+          description: latest.description ?? null,
+          image_id: latest.image_id ?? null,
+          special: latest.special ?? null,
         };
       }
     }
