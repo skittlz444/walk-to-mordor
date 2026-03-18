@@ -111,7 +111,7 @@ export async function sendEmail(
       messageId: successResult.id
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error sending email via Resend:', error);
     return {
       success: false,
