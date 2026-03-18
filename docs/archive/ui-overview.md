@@ -13,7 +13,7 @@ The UI uses SSR shells from the Worker plus client-side island hydration. This i
 
 - SSR page composition: `src/renderLayout.ts` and page renderers in `src/render*.ts`
 - Shared island bundle: `/js/client/islands.js`
-- Shared legacy runtime scripts (on non-public pages): `/js/profile.js`, `/js/main.js`
+- Shared legacy runtime scripts (on non-public pages): `/js/main.js`
 
 ## Island Hydration
 
@@ -54,7 +54,7 @@ Key patterns:
 
 Legacy vanilla JS modules live in `public/js/`. **Do not rewrite these without explicit permission.**
 
-Key modules: `main.js` (bootstrap), `profile.js` (preferences/avatar), `calendar.js`/`progress.js` (CRUD), `goals.js` (goal list), `validators.js` (shared validation).
+Key modules: `main.js` (bootstrap), `calendar.js`/`progress.js` (CRUD), `goals.js` (goal list), `validators.js` (shared validation). Profile/preferences has been migrated to the `ProfileIsland` Preact component at `/profile`.
 
 ### Bridge Globals
 

@@ -56,7 +56,7 @@ export function DrawerIsland() {
       });
   }, []);
 
-  // Listen for avatar changes from the legacy profile modal
+  // Listen for avatar changes from the profile page
   useEffect(() => {
     function handlePreferenceChanged(e: Event) {
       const detail = (e as CustomEvent).detail;
@@ -151,15 +151,6 @@ export function DrawerIsland() {
     setIsOpen(false);
   }
 
-  function handleProfileClick(event: Event) {
-    event.preventDefault();
-    const profileModal = (window as typeof window & { showProfileModal?: () => void }).showProfileModal;
-    if (profileModal) {
-      profileModal();
-    }
-    closeDrawer();
-  }
-
   return (
     <>
       <button
@@ -203,7 +194,7 @@ export function DrawerIsland() {
             {pendingFriendsCount > 0 && <span className="drawer-badge">{pendingFriendsCount}</span>}
           </a>
           {isAdmin && <a className="drawer-link" href="/admin" onClick={closeDrawer}>Admin</a>}
-          <button className="drawer-link drawer-profile" type="button" onClick={handleProfileClick}>Profile</button>
+          <a className="drawer-link drawer-profile" href="/profile" onClick={closeDrawer}>Profile</a>
         </nav>
         <div className="drawer-footer">
           <button

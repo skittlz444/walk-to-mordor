@@ -71,12 +71,14 @@ test.describe('Email Confirmation UI', () => {
         
         // If we are on dashboard (first user case), logout
         if (page.url() === '/' || page.url().endsWith('/')) {
-             // Try to open drawer and logout via profile modal
+             // Try to open drawer and navigate to profile page to logout
              const menuBtn = page.locator('.menu-icon');
              if (await menuBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
                  await menuBtn.click();
                  await page.waitForSelector('body.drawer-open');
                  await page.click('.drawer-profile');
+                 await page.waitForURL('**/profile');
+                 await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
                  await page.click('button:has-text("Logout")');
                  await page.waitForLoadState('domcontentloaded');
              }

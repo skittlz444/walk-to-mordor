@@ -46,6 +46,7 @@ import { renderPartyJoinPage } from "./renderPartyJoinPage";
 import { renderFriendsPage } from "./renderFriendsPage";
 import { renderFriendAddPage } from "./renderFriendAddPage";
 import { renderFriendProfilePage } from "./renderFriendProfilePage";
+import { renderProfilePage } from "./renderProfilePage";
 import { renderAdminPage } from "./renderAdminPage";
 import { renderAdminGoalsPage } from "./renderAdminGoalsPage";
 import {
@@ -670,6 +671,12 @@ export default {
     const friendProfilePageParams = matchRoute(url.pathname, '/friends/:id');
     if (friendProfilePageParams) {
       return new Response(renderFriendProfilePage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
+    if (url.pathname === "/profile") {
+      return new Response(renderProfilePage(), {
         headers: { 'content-type': 'text/html' },
       });
     }

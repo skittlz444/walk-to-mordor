@@ -15,9 +15,9 @@ export interface PageConfig {
     mainContent: string;
     /** CSS class for <main> tag */
     mainClass?: string;
-    /** Additional <script> tags to load before profile.js / main.js */
+    /** Additional <script> tags to load before main.js */
     scripts?: string[];
-    /** If true, skip profile.js / main.js (for public pages that don't require auth) */
+    /** If true, skip main.js (for public pages that don't require auth) */
     publicPage?: boolean;
 }
 
@@ -103,7 +103,7 @@ ${extraStylesheets}
       
       <!-- Scripts -->
 ${extraScripts}
-${config.publicPage ? '' : '      <script src="/js/profile.js"></script>\n      <script src="/js/main.js"></script>'}
+${config.publicPage ? '' : '      <script src="/js/main.js"></script>'}
       </body>
     </html>
 `;
