@@ -1,0 +1,61 @@
+name: Backend Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Unit Tests & Coverage
+        run: npm run test:coverage
+
+      - name: Upload Coverage Reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-backend
+          path: coverage/
+          retention-days: 30
+
+      - name: Publish Test Results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: test-results/junit.xml
+          check_name: Backend Tests
+          comment_mode: always
+
+      - name: Generate Coverage Comment
+        if: always()
+        run: node .github/scripts/generate-single-coverage-comment.js --suite backend
+
+      - name: Post Coverage Comment
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: coverage-backend
+          path: coverage-comment.md
