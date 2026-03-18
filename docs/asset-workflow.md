@@ -116,3 +116,52 @@ Both require admin bearer token (401/403 on failure). Saving a goal with a non-e
 
 - [api-reference.md](./api-reference.md) — API reference (includes admin endpoints)
 - [architecture.md](./architecture.md) — Assets binding and route topology
+
+## Asset Count CI Check
+
+The CI pipeline automatically counts all files under `public/` on every PR and enforces a file budget to stay within Cloudflare Workers Assets limits.
+
+### Thresholds
+
+| Level | File Count | Behavior |
+|-------|-----------|----------|
+| **Pass** | < 15,000 | Green check — no action needed |
+| **Warning** | ≥ 15,000 and < 18,000 | Check passes, but a `::warning::` annotation alerts the PR |
+| **Fail** | ≥ 18,000 | Pipeline fails — PR cannot merge until count is reduced |
+
+These thresholds provide early warning before reaching the Cloudflare Workers Assets 25,000-file soft limit.
+
+### CI Integration
+
+The "Check Asset Count" step runs early in `.github/workflows/pr-tests.yml` (after checkout, before build/tests). It:
+
+1. Counts all files recursively under `public/`
+2. Writes a Markdown summary to the GitHub Actions Job Summary
+3. Emits `::warning::` or `::error::` annotations visible on the PR
+4. Exits with code 1 on failure to block the pipeline
+
+### Local Check
+
+Run the same check locally before deploying:
+
+```bash
+npm run check:assets
+```
+
+This outputs a human-readable table with the total count, breakdown by directory, and pass/warn/fail status.
+
+You can also check a different directory:
+
+```bash
+node .github/scripts/check-asset-count.js path/to/dir
+```
+
+> **Note:** Locally, `public/js/client/` (Vite build output) is included in the count. In CI, the check runs before the build step, so only checked-in files are counted.
+
+### If the Count Is Too High
+
+1. **Audit large directories** — run `npm run check:assets` to see the breakdown
+2. **Optimize images** — run `npm run optimize:images` to compress WebP files
+3. **Remove unused assets** — check for orphaned images via the admin images API
+4. **Consolidate map tiles** — if map tiles are the main contributor, consider reducing zoom levels or tile density
+5. **Review generated files** — ensure build output isn't accidentally committed

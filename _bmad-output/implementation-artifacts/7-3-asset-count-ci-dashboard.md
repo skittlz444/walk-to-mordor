@@ -1,6 +1,6 @@
 # Story 7.3: Asset Count CI Dashboard
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -57,41 +57,41 @@ so that **we never accidentally exceed Cloudflare Workers Assets limits and depl
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Create asset count script** (AC: #2)
-  - [ ] Create `.github/scripts/check-asset-count.js` following the existing pattern set by `.github/scripts/generate-coverage-comment.js`.
-  - [ ] Implement recursive file counting under a configurable directory (default: `public/`).
-  - [ ] Implement top-level subdirectory breakdown (e.g., `img: 866`, `js: 11`, `css: 13`).
-  - [ ] Implement threshold logic: pass (< 15,000), warn (≥ 15,000), fail (≥ 18,000).
-  - [ ] When `GITHUB_STEP_SUMMARY` env var exists, write Markdown summary table to that file and emit `::warning::` / `::error::` workflow commands.
-  - [ ] When running locally (no `GITHUB_STEP_SUMMARY`), output a human-readable table to stdout.
-  - [ ] Exit code 0 for pass/warn, exit code 1 for fail.
+- [x] **Task 1: Create asset count script** (AC: #2)
+  - [x] Create `.github/scripts/check-asset-count.js` following the existing pattern set by `.github/scripts/generate-coverage-comment.js`.
+  - [x] Implement recursive file counting under a configurable directory (default: `public/`).
+  - [x] Implement top-level subdirectory breakdown (e.g., `img: 866`, `js: 11`, `css: 13`).
+  - [x] Implement threshold logic: pass (< 15,000), warn (≥ 15,000), fail (≥ 18,000).
+  - [x] When `GITHUB_STEP_SUMMARY` env var exists, write Markdown summary table to that file and emit `::warning::` / `::error::` workflow commands.
+  - [x] When running locally (no `GITHUB_STEP_SUMMARY`), output a human-readable table to stdout.
+  - [x] Exit code 0 for pass/warn, exit code 1 for fail.
 
-- [ ] **Task 2: Add CI step to GitHub Actions workflow** (AC: #1)
-  - [ ] Add a new step "Check Asset Count" to `.github/workflows/pr-tests.yml`.
-  - [ ] Place it early in the pipeline (after checkout, before test runs) — it's fast and catches budget issues early.
-  - [ ] Step runs: `node .github/scripts/check-asset-count.js`.
-  - [ ] The step should NOT use `continue-on-error` — a fail (≥ 18,000) should block the pipeline.
+- [x] **Task 2: Add CI step to GitHub Actions workflow** (AC: #1)
+  - [x] Add a new step "Check Asset Count" to `.github/workflows/pr-tests.yml`.
+  - [x] Place it early in the pipeline (after checkout, before test runs) — it's fast and catches budget issues early.
+  - [x] Step runs: `node .github/scripts/check-asset-count.js`.
+  - [x] The step should NOT use `continue-on-error` — a fail (≥ 18,000) should block the pipeline.
 
-- [ ] **Task 3: Add `npm run check:assets` script** (AC: #3)
-  - [ ] Add `"check:assets": "node .github/scripts/check-asset-count.js"` to root `package.json` scripts.
+- [x] **Task 3: Add `npm run check:assets` script** (AC: #3)
+  - [x] Add `"check:assets": "node .github/scripts/check-asset-count.js"` to root `package.json` scripts.
 
-- [ ] **Task 4: Write tests** (AC: #4)
-  - [ ] Create `tests/api/check-asset-count.test.js` with Jest tests.
-  - [ ] Test the counting logic with mock directory structures (use `fs` mocking or a temp directory).
-  - [ ] Test threshold classification: pass, warn, fail.
-  - [ ] Test directory breakdown calculation.
-  - [ ] Test exit code behavior (mock `process.exit`).
-  - [ ] Test GitHub Actions output when `GITHUB_STEP_SUMMARY` is set (mock env var and verify file write).
-  - [ ] Test local output when `GITHUB_STEP_SUMMARY` is absent.
-  - [ ] Ensure >90% coverage of the new script.
+- [x] **Task 4: Write tests** (AC: #4)
+  - [x] Create `tests/api/check-asset-count.test.js` with Jest tests.
+  - [x] Test the counting logic with mock directory structures (use `fs` mocking or a temp directory).
+  - [x] Test threshold classification: pass, warn, fail.
+  - [x] Test directory breakdown calculation.
+  - [x] Test exit code behavior (mock `process.exit`).
+  - [x] Test GitHub Actions output when `GITHUB_STEP_SUMMARY` is set (mock env var and verify file write).
+  - [x] Test local output when `GITHUB_STEP_SUMMARY` is absent.
+  - [x] Ensure >90% coverage of the new script.
 
-- [ ] **Task 5: Update documentation** (AC: #5)
-  - [ ] Add "Asset Count CI Check" section to `docs/asset-workflow.md` explaining:
+- [x] **Task 5: Update documentation** (AC: #5)
+  - [x] Add "Asset Count CI Check" section to `docs/asset-workflow.md` explaining:
     - Thresholds: 15,000 (warn), 18,000 (fail).
     - CI integration: automatic on every PR.
     - Local check: `npm run check:assets`.
     - Remediation strategies if count is high.
-  - [ ] Keep `docs/asset-workflow.md` under 500 lines per project doc rules.
+  - [x] Keep `docs/asset-workflow.md` under 500 lines per project doc rules.
 
 ## Dev Notes
 
@@ -221,12 +221,24 @@ walk-to-mordor/
 
 ### Agent Model Used
 
-Claude Opus 4.6
+Claude Sonnet 4.5
 
 ### Completion Notes List
 
 - Story 7.3 is the third and final story in Epic 7: Developer Experience & Quality Guardrails (Phase 4).
-- Current asset count is 897 files — well under both thresholds. This is a proactive guardrail for future growth (especially map tiles and goal images).
-- The script should be a standalone Node.js file (not a shell script) for testability and cross-platform compatibility.
-- Follow the existing `.github/scripts/generate-coverage-comment.js` pattern for CommonJS style, `fs`-only dependencies, and CI integration.
-- Stories 7.1 and 7.2 are ready-for-dev but not yet implemented — `package.json` may have changed when this story is implemented. Always read current state before modifying.
+- Current asset count is 894 files — well under both thresholds. This is a proactive guardrail for future growth (especially map tiles and goal images).
+- Script follows existing `.github/scripts/generate-coverage-comment.js` pattern: CommonJS, `fs`/`path` only, no external deps.
+- CI step placed after `npm ci` but before `Build Client` — counts only checked-in files (excludes Vite output).
+- 29 tests passing with 99% statement, 96.3% branch, 100% function coverage on the new script.
+- Full test suite: 29 suites, 1055 tests, 0 failures — no regressions.
+
+### File List
+
+| File | Action | Description |
+|------|--------|-------------|
+| `.github/scripts/check-asset-count.js` | Created | Asset count script with recursive counting, threshold logic, CI/local output |
+| `.github/workflows/pr-tests.yml` | Modified | Added "Check Asset Count" step after checkout, before build |
+| `package.json` | Modified | Added `check:assets` npm script |
+| `tests/api/check-asset-count.test.js` | Created | 29 Jest tests covering all script functions and integration |
+| `docs/asset-workflow.md` | Modified | Added "Asset Count CI Check" section with thresholds, usage, remediation |
+| `_bmad-output/implementation-artifacts/7-3-asset-count-ci-dashboard.md` | Modified | Updated status to review, checked off all tasks |

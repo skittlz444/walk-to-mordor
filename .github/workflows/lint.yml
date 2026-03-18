@@ -29,3 +29,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Check Asset Count
+        run: npm run check:assets
