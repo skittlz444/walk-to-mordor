@@ -56,4 +56,19 @@ describe('createDbClient', () => {
     db.read.dump();
     expect(mockDB.dump).toHaveBeenCalled();
   });
+
+  it('returns a fresh object per call (request isolation)', () => {
+    const db2 = createDbClient(mockDB);
+    expect(db2).not.toBe(db);
+    // Both still delegate to the same underlying D1Database
+    expect(db2.read).toBe(mockDB);
+    expect(db2.write).toBe(mockDB);
+  });
+
+  it('exposes only read and write properties', () => {
+    const keys = Object.keys(db);
+    expect(keys).toHaveLength(2);
+    expect(keys).toContain('read');
+    expect(keys).toContain('write');
+  });
 });
