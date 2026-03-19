@@ -91,7 +91,7 @@ function loadSWModule() {
     'Headers',
     'URL',
     'Date',
-    swSource + '\n; return { SWR_CACHE_NAME, SWR_CACHE_VERSION, SWR_VERSION_CACHE_NAME, SWR_TTL_MS, SWR_MAX_AGE_MS, SWR_ENDPOINTS, isSWREndpoint, getCacheKey, cacheWithTimestamp, notifyClients, revalidateAndNotify, fetchAndCache, getCurrentSWRMutationVersion, bumpSWRMutationVersion };'
+    swSource + '\n; return { SWR_CACHE_NAME, SWR_CACHE_VERSION, SWR_VERSION_CACHE_NAME, SWR_TTL_MS, SWR_ENDPOINTS, isSWREndpoint, getCacheKey, cacheWithTimestamp, notifyClients, revalidateAndNotify, fetchAndCache, getCurrentSWRMutationVersion, bumpSWRMutationVersion };'
   );
 
   const exports = fn(self, caches, globalFetch, Response, Headers, URL, Date);
@@ -133,11 +133,6 @@ describe('Service Worker SWR API Caching', () => {
 
     test('SWR_TTL_MS is 5 minutes (300000ms)', () => {
       expect(sw.SWR_TTL_MS).toBe(300000);
-    });
-
-    test('SWR_MAX_AGE_MS is 6x TTL (1800000ms)', () => {
-      expect(sw.SWR_MAX_AGE_MS).toBe(1800000);
-      expect(sw.SWR_MAX_AGE_MS).toBe(6 * sw.SWR_TTL_MS);
     });
 
     test('SWR_ENDPOINTS contains all required endpoints', () => {
@@ -966,7 +961,7 @@ describe('Service Worker SWR API Caching', () => {
     });
   });
 
-  describe('TTL Freshness Logic', () => {
+  describe('TTL Metadata Behavior', () => {
     function createFetchEvent(url, options = {}) {
       const respondWithFn = jest.fn();
       const waitUntilFn = jest.fn();
@@ -984,7 +979,7 @@ describe('Service Worker SWR API Caching', () => {
       };
     }
 
-    test('fresh cache hit (within TTL) serves cached without revalidation', async () => {
+    test('fresh cache hit (within TTL) still serves cached and revalidates in background', async () => {
       const freshTimestamp = (Date.now() - 60000).toString(); // 1 min ago — within 5 min TTL
       const cachedResponse = new Response(JSON.stringify({ fresh: true }), {
         status: 200,
@@ -1004,11 +999,10 @@ describe('Service Worker SWR API Caching', () => {
       expect(response).toBeDefined();
       expect(response.headers.get('x-swr-cached-at')).toBe(freshTimestamp);
 
-      // No background revalidation for fresh entries
-      expect(event.waitUntil).not.toHaveBeenCalled();
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
     });
 
-    test('stale cache hit (beyond TTL, within MAX_AGE) serves cached + revalidates', async () => {
+    test('stale cache hit (beyond TTL) still serves cached + revalidates', async () => {
       const staleTimestamp = (Date.now() - 400000).toString(); // ~6.7 min — beyond 5 min TTL
       const cachedResponse = new Response(JSON.stringify({ stale: true }), {
         status: 200,
@@ -1037,11 +1031,11 @@ describe('Service Worker SWR API Caching', () => {
       expect(event.waitUntil).toHaveBeenCalledTimes(1);
     });
 
-    test('expired cache hit (beyond MAX_AGE) uses network-first', async () => {
-      const expiredTimestamp = (Date.now() - 2000000).toString(); // ~33 min — beyond 30 min MAX_AGE
-      const cachedResponse = new Response(JSON.stringify({ expired: true }), {
+    test('very old cache hit still serves cached while revalidation runs in background', async () => {
+      const oldTimestamp = (Date.now() - 2000000).toString(); // ~33 min old
+      const cachedResponse = new Response(JSON.stringify({ cached: true }), {
         status: 200,
-        headers: { 'x-swr-cached-at': expiredTimestamp },
+        headers: { 'x-swr-cached-at': oldTimestamp },
       });
 
       const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
@@ -1060,15 +1054,15 @@ describe('Service Worker SWR API Caching', () => {
       sw.fetchCallback(event);
 
       const response = await event.respondWith.mock.calls[0][0];
-      // Should get network response, not expired cache
-      expect(response).toBe(networkResponse);
+      expect(response.headers.get('x-swr-cached-at')).toBe(oldTimestamp);
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
     });
 
-    test('expired cache falls back to stale on network failure', async () => {
-      const expiredTimestamp = (Date.now() - 2000000).toString();
-      const cachedResponse = new Response(JSON.stringify({ expired: true }), {
+    test('background revalidation failure leaves cached response in place', async () => {
+      const oldTimestamp = (Date.now() - 2000000).toString();
+      const cachedResponse = new Response(JSON.stringify({ cached: true }), {
         status: 200,
-        headers: { 'x-swr-cached-at': expiredTimestamp },
+        headers: { 'x-swr-cached-at': oldTimestamp },
       });
 
       const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
@@ -1083,8 +1077,9 @@ describe('Service Worker SWR API Caching', () => {
       sw.fetchCallback(event);
 
       const response = await event.respondWith.mock.calls[0][0];
-      // Falls back to stale cache entry
-      expect(response.headers.get('x-swr-cached-at')).toBe(expiredTimestamp);
+      expect(response.headers.get('x-swr-cached-at')).toBe(oldTimestamp);
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
+      await expect(event.waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
     });
   });
 

@@ -14,7 +14,6 @@ const SWR_CACHE_NAME = 'walk-to-mordor-api-swr';
 const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}';
 const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
 const SWR_TTL_MS = 300000; // 5 minutes
-const SWR_MAX_AGE_MS = 6 * SWR_TTL_MS; // 30 minutes — entries older than this get network-first
 const SWR_UNSAFE_CACHE_HEADERS = [
   'content-encoding',
   'content-length',
@@ -192,21 +191,15 @@ self.addEventListener('fetch', (event) => {
         swrCachePromise.then(function(swrCache) {
           return swrCache.match(getCacheKey(event.request)).then(function(cached) {
             if (cached) {
-              var cachedAt = parseInt(cached.headers.get('x-swr-cached-at') || '0');
-              var age = Date.now() - cachedAt;
-
-              if (age > SWR_MAX_AGE_MS) {
-                // Expired — network-first, fall back to stale on failure
-                return fetchAndCache(event.request, swrCache, requestMutationVersion).catch(function() {
-                  return cached;
-                });
-              }
-
-              if (age > SWR_TTL_MS) {
-                // Stale — serve cached, revalidate in background
+              var cachedAt = parseInt(cached.headers.get('x-swr-cached-at') || '0', 10);
+              var isStale = cachedAt > 0 && Date.now() - cachedAt > SWR_TTL_MS;
+              if (isStale) {
+                // Stale entries are still served while background revalidation refreshes the cache.
                 event.waitUntil(revalidateAndNotify(event.request, swrCache, requestMutationVersion));
+                return cached;
               }
-              // Fresh or stale: return cached response
+              // Fresh entries still revalidate in the background so every cache hit follows SWR.
+              event.waitUntil(revalidateAndNotify(event.request, swrCache, requestMutationVersion));
               return cached;
             }
             // Cold cache: network-first, then cache

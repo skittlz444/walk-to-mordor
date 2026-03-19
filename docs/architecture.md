@@ -200,4 +200,4 @@ Islands or stores can subscribe via `navigator.serviceWorker.addEventListener('m
 HTML navigations always go to the network with an offline fallback response.
 
 ### Write Requests
-`POST`, `PUT`, `DELETE` requests bypass the service worker entirely (not intercepted).
+`POST`, `PUT`, `DELETE`, and `PATCH` requests are never SWR-cached and continue to use the network. Same-origin API mutations also clear the SWR cache so subsequent GETs do not reuse stale API data.
