@@ -159,84 +159,91 @@ export function stopPreferenceListener(): void {
 const SESSION_API_URL = '/api/session';
 const TOTAL_DISTANCE_API_URL = '/api/total-distance';
 
+async function hydrateTotalDistance(token: string): Promise<void> {
+  try {
+    const distResponse = await fetch(TOTAL_DISTANCE_API_URL, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!distResponse.ok) {
+      return;
+    }
+
+    const distData = (await distResponse.json()) as { totalDistance: number };
+    if (sessionToken.value === token) {
+      totalDistance.value = distData.totalDistance;
+    }
+  } catch {
+    // totalDistance remains null — non-critical
+  }
+}
+
 /**
  * Initialize the app store by fetching `/api/session`.
  *
- * Hydrates all session signals from a single API call.
+ * Hydrates session signals from a single API call.
  * If the user is not authenticated (no token), signals stay at defaults.
  * On 401 response, signals remain at defaults (unauthenticated state).
+ * User progress (`totalDistance`) hydrates in the background so page
+ * hydration does not block on a second authenticated request.
  *
  * Also starts the preference bridge (effect → window.userPreferences)
  * and the preferenceChanged event listener.
  */
 export async function initializeAppStore(): Promise<void> {
   storeError.value = null;
+  totalDistance.value = null;
 
   // Refresh token signal from localStorage
   sessionToken.value = localStorage.getItem('sessionToken') || null;
 
   const token = sessionToken.value;
-  if (!token) {
-    storeInitialized.value = true;
-    startPreferenceBridge();
-    startPreferenceListener();
-    return;
-  }
+  let shouldHydrateDistance = false;
 
-  try {
-    const response = await fetch(SESSION_API_URL, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (response.status === 401) {
-      // Token expired or invalid — clear and stay unauthenticated
-      sessionToken.value = null;
-      localStorage.removeItem('sessionToken');
-      storeInitialized.value = true;
-      startPreferenceBridge();
-      startPreferenceListener();
-      return;
-    }
-
-    if (!response.ok) {
-      throw new Error(`Session fetch failed: HTTP ${response.status}`);
-    }
-
-    const data = (await response.json()) as SessionResponse;
-
-    userId.value = data.userId;
-    username.value = data.username;
-    avatarId.value = data.avatarId;
-    isAdmin.value = data.isAdmin;
-    showFutureGoalsUnlocked.value =
-      typeof data.showFutureGoalsUnlocked === 'boolean'
-        ? data.showFutureGoalsUnlocked
-        : true;
-    defaultViewMap.value =
-      typeof data.defaultViewMap === 'boolean'
-        ? data.defaultViewMap
-        : false;
-
-    // Fetch total distance in parallel-safe manner (non-blocking on failure)
+  if (token) {
     try {
-      const distResponse = await fetch(TOTAL_DISTANCE_API_URL, {
+      const response = await fetch(SESSION_API_URL, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (distResponse.ok) {
-        const distData = (await distResponse.json()) as { totalDistance: number };
-        totalDistance.value = distData.totalDistance;
+
+      if (response.status === 401) {
+        // Token expired or invalid — clear and stay unauthenticated
+        sessionToken.value = null;
+        localStorage.removeItem('sessionToken');
+      } else {
+        if (!response.ok) {
+          throw new Error(`Session fetch failed: HTTP ${response.status}`);
+        }
+
+        const data = (await response.json()) as SessionResponse;
+
+        userId.value = data.userId;
+        username.value = data.username;
+        avatarId.value = data.avatarId;
+        isAdmin.value = data.isAdmin;
+        showFutureGoalsUnlocked.value =
+          typeof data.showFutureGoalsUnlocked === 'boolean'
+            ? data.showFutureGoalsUnlocked
+            : true;
+        defaultViewMap.value =
+          typeof data.defaultViewMap === 'boolean'
+            ? data.defaultViewMap
+            : false;
+        shouldHydrateDistance = true;
       }
-    } catch {
-      // totalDistance remains null — non-critical
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load session';
+      storeError.value = message;
+      console.error('[appStore] Initialization failed:', message);
     }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to load session';
-    storeError.value = message;
-    console.error('[appStore] Initialization failed:', message);
-  } finally {
-    storeInitialized.value = true;
-    startPreferenceBridge();
-    startPreferenceListener();
+  }
+
+  storeInitialized.value = true;
+  startPreferenceBridge();
+  startPreferenceListener();
+
+  const isMapPage = typeof window !== 'undefined' && window.location.pathname === '/map';
+  if (shouldHydrateDistance && token && !isMapPage) {
+    void hydrateTotalDistance(token);
   }
 }
 

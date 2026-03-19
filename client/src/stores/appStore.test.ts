@@ -23,6 +23,11 @@ import {
 // Mock fetch globally
 const mockFetch = vi.fn();
 
+async function flushPromises(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 describe('appStore', () => {
   let store: Record<string, string>;
 
@@ -44,6 +49,7 @@ describe('appStore', () => {
 
     // Clean up window.userPreferences
     delete window.userPreferences;
+    window.history.pushState({}, '', '/');
   });
 
   afterEach(() => {
@@ -123,10 +129,49 @@ describe('appStore', () => {
     it('marks store as initialized when no token', async () => {
       // No token in localStorage
       await initializeAppStore();
+      await flushPromises();
 
       expect(storeInitialized.value).toBe(true);
       expect(userId.value).toBeNull();
       expect(storeError.value).toBeNull();
+    });
+
+    it('marks the store initialized before background distance hydration completes', async () => {
+      store['sessionToken'] = 'test-token';
+
+      let resolveDistance:
+        | ((value: { ok: boolean; json: () => Promise<{ totalDistance: number }> }) => void)
+        | null = null;
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          userId: 42,
+          username: 'Frodo',
+          avatarId: 'avatar-123',
+          isAdmin: false,
+          showFutureGoalsUnlocked: false,
+          defaultViewMap: true,
+        }),
+      });
+      mockFetch.mockImplementationOnce(() => new Promise((resolve) => {
+        resolveDistance = resolve;
+      }));
+
+      await initializeAppStore();
+
+      expect(storeInitialized.value).toBe(true);
+      expect(userId.value).toBe(42);
+      expect(totalDistance.value).toBeNull();
+
+      resolveDistance?.({
+        ok: true,
+        json: async () => ({ totalDistance: 125.5 }),
+      });
+      await flushPromises();
+
+      expect(totalDistance.value).toBe(125.5);
     });
 
     it('does not call fetch when no token', async () => {
@@ -156,6 +201,7 @@ describe('appStore', () => {
       });
 
       await initializeAppStore();
+      await flushPromises();
 
       expect(userId.value).toBe(42);
       expect(username.value).toBe('Frodo');
@@ -198,6 +244,33 @@ describe('appStore', () => {
       });
     });
 
+    it('skips background distance hydration on the map route', async () => {
+      store['sessionToken'] = 'map-token';
+      window.history.pushState({}, '', '/map');
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          userId: 1,
+          username: 'Sam',
+          avatarId: null,
+          isAdmin: false,
+          showFutureGoalsUnlocked: true,
+          defaultViewMap: false,
+        }),
+      });
+
+      await initializeAppStore();
+      await flushPromises();
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith('/api/session', {
+        headers: { Authorization: 'Bearer map-token' },
+      });
+      expect(totalDistance.value).toBeNull();
+    });
+
     it('handles 401 response gracefully', async () => {
       store['sessionToken'] = 'expired-token';
 
@@ -207,6 +280,7 @@ describe('appStore', () => {
       });
 
       await initializeAppStore();
+      await flushPromises();
 
       expect(storeInitialized.value).toBe(true);
       expect(userId.value).toBeNull();
@@ -224,6 +298,7 @@ describe('appStore', () => {
       });
 
       await initializeAppStore();
+      await flushPromises();
 
       expect(storeInitialized.value).toBe(true);
       expect(storeError.value).toBe('Session fetch failed: HTTP 500');
