@@ -58,9 +58,9 @@ export async function syncPartyProgressLog(
   }
 }
 
-export async function handleProgressPost(request: Request, db: DbClient, body: Record<string, unknown>) {
+export async function handleProgressPost(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -174,9 +174,9 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
   }
 }
 
-export async function handleProgressPut(request: Request, db: DbClient, body: Record<string, unknown>) {
+export async function handleProgressPut(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -260,9 +260,9 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
   }
 }
 
-export async function handleProgressDelete(request: Request, db: DbClient, body: Record<string, unknown>) {
+export async function handleProgressDelete(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -325,9 +325,9 @@ export async function handleProgressDelete(request: Request, db: DbClient, body:
   }
 }
 
-export async function handleProgressGet(request: Request, db: DbClient) {
+export async function handleProgressGet(request: Request, db: DbClient, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }

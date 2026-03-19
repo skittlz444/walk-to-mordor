@@ -45,9 +45,10 @@ export async function handleInviteFriend(
   request: Request,
   db: DbClient,
   partyId: number,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -159,9 +160,10 @@ export async function handleInviteFriend(
  */
 export async function handleGetFellowshipInvites(
   request: Request,
-  db: DbClient
+  db: DbClient,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -233,9 +235,10 @@ export async function handleGetFellowshipInvites(
 export async function handleAcceptFellowshipInvite(
   request: Request,
   db: DbClient,
-  inviteId: number
+  inviteId: number,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -356,9 +359,10 @@ export async function handleAcceptFellowshipInvite(
 export async function handleRejectFellowshipInvite(
   request: Request,
   db: DbClient,
-  inviteId: number
+  inviteId: number,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }

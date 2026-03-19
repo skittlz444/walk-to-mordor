@@ -357,7 +357,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/party/join/AbCd1234', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleJoinParty).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 'AbCd1234'
+        expect.anything(), expectedDb, 'AbCd1234', undefined
       );
       expect(response.status).toBe(200);
     });
@@ -375,7 +375,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/party/1/invite', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleRegenerateInvite).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1
+        expect.anything(), expectedDb, 1, undefined
       );
       expect(response.status).toBe(200);
     });
@@ -436,7 +436,7 @@ describe('Cloudflare Worker Index', () => {
       request.text = jest.fn().mockResolvedValue('');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleLeaveParty).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1
+        expect.anything(), expectedDb, 1, undefined
       );
       expect(response.status).toBe(200);
     });
@@ -450,7 +450,7 @@ describe('Cloudflare Worker Index', () => {
       request.text = jest.fn().mockResolvedValue('');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleKickMember).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, 2, {}
+        expect.anything(), expectedDb, 1, 2, {}, undefined
       );
       expect(response.status).toBe(200);
     });
@@ -459,7 +459,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/party/1/leave', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleLeaveParty).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1
+        expect.anything(), expectedDb, 1, undefined
       );
       expect(response.status).toBe(200);
     });
@@ -484,7 +484,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/party/1/kick/2', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleKickMember).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, 2, expect.anything()
+        expect.anything(), expectedDb, 1, 2, expect.anything(), undefined
       );
       expect(response.status).toBe(200);
     });
@@ -517,7 +517,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/party/1/settings', 'PUT');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleUpdatePartySettings).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, expect.anything()
+        expect.anything(), expectedDb, 1, expect.anything(), undefined
       );
       expect(response.status).toBe(200);
     });
@@ -542,7 +542,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/party/1/transfer-leadership', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleTransferLeadership).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, expect.anything()
+        expect.anything(), expectedDb, 1, expect.anything(), undefined
       );
       expect(response.status).toBe(200);
     });
@@ -569,7 +569,7 @@ describe('Cloudflare Worker Index', () => {
     it('should route GET /api/friends to handleGetFriends', async () => {
       const request = createRequest('http://localhost/api/friends', 'GET');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleGetFriends).toHaveBeenCalledWith(expect.anything(), expectedDb);
+      expect(mockHandleGetFriends).toHaveBeenCalledWith(expect.anything(), expectedDb, undefined);
       expect(response.status).toBe(200);
     });
 
@@ -585,7 +585,7 @@ describe('Cloudflare Worker Index', () => {
     it('should route GET /api/friends/pending to handleGetPendingFriends', async () => {
       const request = createRequest('http://localhost/api/friends/pending', 'GET');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleGetPendingFriends).toHaveBeenCalledWith(expect.anything(), expectedDb);
+      expect(mockHandleGetPendingFriends).toHaveBeenCalledWith(expect.anything(), expectedDb, undefined);
       expect(response.status).toBe(200);
     });
 
@@ -599,7 +599,7 @@ describe('Cloudflare Worker Index', () => {
     it('should route GET /api/friends/search to handleSearchUsers', async () => {
       const request = createRequest('http://localhost/api/friends/search?q=test', 'GET');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleSearchUsers).toHaveBeenCalledWith(expect.anything(), expectedDb);
+      expect(mockHandleSearchUsers).toHaveBeenCalledWith(expect.anything(), expectedDb, undefined);
       expect(response.status).toBe(200);
     });
 
@@ -613,7 +613,7 @@ describe('Cloudflare Worker Index', () => {
     it('should route POST /api/friends/request to handleFriendRequest', async () => {
       const request = createRequest('http://localhost/api/friends/request', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleFriendRequest).toHaveBeenCalledWith(expect.anything(), expectedDb, expect.anything());
+      expect(mockHandleFriendRequest).toHaveBeenCalledWith(expect.anything(), expectedDb, expect.anything(), undefined);
       expect(response.status).toBe(201);
     });
 
@@ -627,7 +627,7 @@ describe('Cloudflare Worker Index', () => {
     it('should route POST /api/friends/request/code to handleFriendRequestByCode', async () => {
       const request = createRequest('http://localhost/api/friends/request/code', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleFriendRequestByCode).toHaveBeenCalledWith(expect.anything(), expectedDb, expect.anything());
+      expect(mockHandleFriendRequestByCode).toHaveBeenCalledWith(expect.anything(), expectedDb, expect.anything(), undefined);
       expect(response.status).toBe(201);
     });
 
@@ -655,7 +655,7 @@ describe('Cloudflare Worker Index', () => {
     it('should route POST /api/friends/:friendshipId/accept to handleAcceptFriend', async () => {
       const request = createRequest('http://localhost/api/friends/5/accept', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleAcceptFriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5);
+      expect(mockHandleAcceptFriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5, undefined);
       expect(response.status).toBe(200);
     });
 
@@ -689,7 +689,7 @@ describe('Cloudflare Worker Index', () => {
     it('should route POST /api/friends/:friendshipId/reject to handleRejectFriend', async () => {
       const request = createRequest('http://localhost/api/friends/5/reject', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleRejectFriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5);
+      expect(mockHandleRejectFriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5, undefined);
       expect(response.status).toBe(200);
     });
 
@@ -711,7 +711,7 @@ describe('Cloudflare Worker Index', () => {
     it('should route DELETE /api/friends/:friendshipId to handleUnfriend', async () => {
       const request = createRequest('http://localhost/api/friends/5', 'DELETE');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleUnfriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5);
+      expect(mockHandleUnfriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5, undefined);
       expect(response.status).toBe(200);
     });
 
@@ -742,7 +742,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/party/1/invite-friend', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleInviteFriend).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, expect.anything()
+        expect.anything(), expectedDb, 1, expect.anything(), undefined
       );
       expect(response.status).toBe(201);
     });
@@ -784,7 +784,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/user/fellowship-invites', 'GET');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleGetFellowshipInvites).toHaveBeenCalledWith(
-        expect.anything(), expectedDb
+        expect.anything(), expectedDb, undefined
       );
       expect(response.status).toBe(200);
     });
@@ -802,7 +802,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/user/fellowship-invites/5/accept', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleAcceptFellowshipInvite).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 5
+        expect.anything(), expectedDb, 5, undefined
       );
       expect(response.status).toBe(200);
     });
@@ -840,7 +840,7 @@ describe('Cloudflare Worker Index', () => {
       const request = createRequest('http://localhost/api/user/fellowship-invites/5/reject', 'POST');
       const response = await worker.fetch(request as any, mockEnv, {} as any);
       expect(mockHandleRejectFellowshipInvite).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 5
+        expect.anything(), expectedDb, 5, undefined
       );
       expect(response.status).toBe(200);
     });
@@ -965,7 +965,7 @@ describe('Cloudflare Worker Index', () => {
   it('should route GET /api/friends/:userId/profile to handleGetFriendProfile', async () => {
     const request = createRequest('http://localhost/api/friends/5/profile', 'GET');
     const response = await worker.fetch(request as any, mockEnv, {} as any);
-    expect(mockHandleGetFriendProfile).toHaveBeenCalledWith(expect.anything(), expectedDb, 5);
+    expect(mockHandleGetFriendProfile).toHaveBeenCalledWith(expect.anything(), expectedDb, 5, undefined);
     expect(response.status).toBe(200);
   });
 

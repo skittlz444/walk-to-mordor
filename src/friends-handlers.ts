@@ -68,8 +68,8 @@ function escapeLikeSearch(value: string): string {
  * Returns friends with { id, username, avatar_id, last_progressed }.
  * Uses a grouped SQL subquery to avoid N+1 for last_progressed.
  */
-export async function handleGetFriends(request: Request, db: DbClient): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleGetFriends(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -115,8 +115,8 @@ export async function handleGetFriends(request: Request, db: DbClient): Promise<
  * Returns pending requests where the current user is the addressee,
  * with { id, username, avatar_id, created_at } and a count.
  */
-export async function handleGetPendingFriends(request: Request, db: DbClient): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleGetPendingFriends(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -152,8 +152,8 @@ export async function handleGetPendingFriends(request: Request, db: DbClient): P
  * Minimum 3 characters, limit 10 results, excludes current user.
  * Returns { id, username, avatar_id, friendship_status } where status is null, 'pending', or 'accepted'.
  */
-export async function handleSearchUsers(request: Request, db: DbClient): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleSearchUsers(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -304,8 +304,8 @@ async function createFriendRequest(
  *
  * Request body: { user_id: number }
  */
-export async function handleFriendRequest(request: Request, db: DbClient, body: Record<string, unknown>): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleFriendRequest(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -329,8 +329,8 @@ export async function handleFriendRequest(request: Request, db: DbClient, body: 
  *
  * Request body: { friend_code: string }
  */
-export async function handleFriendRequestByCode(request: Request, db: DbClient, body: Record<string, unknown>): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleFriendRequestByCode(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -368,8 +368,8 @@ export async function handleFriendRequestByCode(request: Request, db: DbClient, 
  *
  * Only the addressee can accept. Transitions status from 'pending' to 'accepted'.
  */
-export async function handleAcceptFriend(request: Request, db: DbClient, friendshipId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleAcceptFriend(request: Request, db: DbClient, friendshipId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -408,8 +408,8 @@ export async function handleAcceptFriend(request: Request, db: DbClient, friends
  *
  * Only the addressee can reject. Deletes the pending row.
  */
-export async function handleRejectFriend(request: Request, db: DbClient, friendshipId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleRejectFriend(request: Request, db: DbClient, friendshipId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -448,8 +448,8 @@ export async function handleRejectFriend(request: Request, db: DbClient, friends
  *
  * Either party can unfriend. Deletes the accepted friendship row.
  */
-export async function handleUnfriend(request: Request, db: DbClient, friendshipId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleUnfriend(request: Request, db: DbClient, friendshipId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -514,9 +514,10 @@ interface GoalRow {
 export async function handleGetFriendProfile(
   request: Request,
   db: DbClient,
-  profileUserId: number
+  profileUserId: number,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -615,8 +616,8 @@ interface FriendPositionRow {
  * where total_distance is in km (sum of progress entries).
  * Only returns accepted friends.
  */
-export async function handleFriendPositions(request: Request, db: DbClient): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleFriendPositions(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }

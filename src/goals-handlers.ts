@@ -2,9 +2,9 @@
 import { validateSession } from "./auth-handlers";
 import type { DbClient } from "./db";
 
-export async function handleGoalsGet(request: Request, db: DbClient) {
+export async function handleGoalsGet(request: Request, db: DbClient, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }

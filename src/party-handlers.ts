@@ -59,9 +59,9 @@ export function generateInviteCode(): string {
  * Request body: { name: string, distance_mode?: 'cumulative' | 'incremental', leave_distance_behavior?: 'keep' | 'remove' }
  * Returns the created party details including invite code and configured settings.
  */
-export async function handleCreateParty(request: Request, db: DbClient, body: Record<string, unknown>): Promise<Response> {
+export async function handleCreateParty(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string): Promise<Response> {
   // Validate session
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -230,12 +230,12 @@ export async function handlePreviewParty(request: Request, db: DbClient, inviteC
  * Re-join: reactivates existing record with refreshed join fields.
  * Returns 404 for invalid codes, 400 for dissolved parties or duplicate active membership.
  */
-export async function handleJoinParty(request: Request, db: DbClient, inviteCode: string): Promise<Response> {
+export async function handleJoinParty(request: Request, db: DbClient, inviteCode: string, allowTestAuth?: string): Promise<Response> {
   if (!INVITE_CODE_PATTERN.test(inviteCode)) {
     return createErrorResponse('Invalid invite code', 404);
   }
 
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -318,8 +318,8 @@ export async function handleJoinParty(request: Request, db: DbClient, inviteCode
  * Generates a new cryptographically secure invite code, invalidating the previous one.
  * Returns both the new inviteCode and the full inviteUrl.
  */
-export async function handleRegenerateInvite(request: Request, db: DbClient, partyId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleRegenerateInvite(request: Request, db: DbClient, partyId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -390,8 +390,8 @@ export async function handleRegenerateInvite(request: Request, db: DbClient, par
  * With ?include_dissolved=true, also returns dissolved parties.
  * Each result includes id, name, role, distance_mode, leave_distance_behavior, invite_code, leader_id, active_member_count, dissolved_at.
  */
-export async function handleGetUserParties(request: Request, db: DbClient): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleGetUserParties(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -472,8 +472,8 @@ interface UnifiedActivityRow {
  * Updates last_viewed_distance for the requesting user.
  * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
  */
-export async function handlePartyProgress(request: Request, db: DbClient, partyId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handlePartyProgress(request: Request, db: DbClient, partyId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -648,8 +648,8 @@ async function computeContribution(
  * and contribution_at_departure. If the leader leaves, transfers leadership to the oldest active
  * member or dissolves the party if none remain. Uses D1 batch for consistency.
  */
-export async function handleLeaveParty(request: Request, db: DbClient, partyId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleLeaveParty(request: Request, db: DbClient, partyId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -755,8 +755,9 @@ export async function handleKickMember(
   partyId: number,
   targetUserId: number,
   body: Record<string, unknown>,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -850,8 +851,9 @@ export async function handleUpdatePartySettings(
   db: DbClient,
   partyId: number,
   body: Record<string, unknown>,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -948,8 +950,9 @@ export async function handleTransferLeadership(
   db: DbClient,
   partyId: number,
   body: Record<string, unknown>,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -1020,8 +1023,8 @@ export async function handleTransferLeadership(
  * Query parameter: ?type=all|walk|message (default: all)
  * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
  */
-export async function handlePartyActivity(request: Request, db: DbClient, partyId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handlePartyActivity(request: Request, db: DbClient, partyId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -1130,8 +1133,8 @@ const MAX_MESSAGE_LENGTH = 200;
  * Content must be 1–200 characters after trimming.
  * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
  */
-export async function handleSendPartyMessage(request: Request, db: DbClient, partyId: number, body?: Record<string, unknown>): Promise<Response> {
-  const sessionValidation = await validateSession(request, db);
+export async function handleSendPartyMessage(request: Request, db: DbClient, partyId: number, body?: Record<string, unknown>, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }

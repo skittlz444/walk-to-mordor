@@ -258,17 +258,17 @@ export default {
 
       // Party (Fellowship) endpoints
       if (url.pathname === "/api/party" && method === "POST") {
-        return handleCreateParty(request, db, body!);
+        return handleCreateParty(request, db, body!, env.ALLOW_TEST_AUTH);
       }
 
       // GET /api/user/parties — list user's party memberships (auth required)
       if (url.pathname === "/api/user/parties" && method === "GET") {
-        return handleGetUserParties(request, db);
+        return handleGetUserParties(request, db, env.ALLOW_TEST_AUTH);
       }
 
       // GET /api/user/fellowship-invites — list pending fellowship invites
       if (url.pathname === "/api/user/fellowship-invites" && method === "GET") {
-        return handleGetFellowshipInvites(request, db);
+        return handleGetFellowshipInvites(request, db, env.ALLOW_TEST_AUTH);
       }
 
       // POST /api/user/fellowship-invites/:inviteId/accept
@@ -282,7 +282,7 @@ export default {
         ) {
           return createErrorResponse('Invalid invite ID', 400);
         }
-        return handleAcceptFellowshipInvite(request, db, inviteId);
+        return handleAcceptFellowshipInvite(request, db, inviteId, env.ALLOW_TEST_AUTH);
       }
 
       // POST /api/user/fellowship-invites/:inviteId/reject
@@ -296,7 +296,7 @@ export default {
         ) {
           return createErrorResponse('Invalid invite ID', 400);
         }
-        return handleRejectFellowshipInvite(request, db, inviteId);
+        return handleRejectFellowshipInvite(request, db, inviteId, env.ALLOW_TEST_AUTH);
       }
 
       // Parameterized party routes
@@ -305,7 +305,7 @@ export default {
         if (method === "GET") {
           return handlePreviewParty(request, db, joinParams.inviteCode);
         } else if (method === "POST") {
-          return handleJoinParty(request, db, joinParams.inviteCode);
+          return handleJoinParty(request, db, joinParams.inviteCode, env.ALLOW_TEST_AUTH);
         }
       }
 
@@ -319,7 +319,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleRegenerateInvite(request, db, partyId);
+        return handleRegenerateInvite(request, db, partyId, env.ALLOW_TEST_AUTH);
       }
 
       // POST /api/party/:id/invite-friend— invite an accepted friend to a party
@@ -333,7 +333,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleInviteFriend(request, db, partyId, body!);
+        return handleInviteFriend(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
       }
 
       // GET /api/party/:id/progress — party progress calculation
@@ -347,7 +347,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handlePartyProgress(request, db, partyId);
+        return handlePartyProgress(request, db, partyId, env.ALLOW_TEST_AUTH);
       }
 
       // GET /api/party/:id/activity— party activity feed
@@ -361,7 +361,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handlePartyActivity(request, db, partyId);
+        return handlePartyActivity(request, db, partyId, env.ALLOW_TEST_AUTH);
       }
 
       // POST /api/party/:id/messages— send a message to party feed
@@ -375,7 +375,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleSendPartyMessage(request, db, partyId, body!);
+        return handleSendPartyMessage(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
       }
 
       // POST /api/party/:id/leave — leave party
@@ -389,7 +389,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleLeaveParty(request, db, partyId);
+        return handleLeaveParty(request, db, partyId, env.ALLOW_TEST_AUTH);
       }
 
       // POST /api/party/:id/kick/:userId — kick member (leader only)
@@ -411,7 +411,7 @@ export default {
         ) {
           return createErrorResponse('Invalid user ID', 400);
         }
-        return handleKickMember(request, db, partyId, targetUserId, body!);
+        return handleKickMember(request, db, partyId, targetUserId, body!, env.ALLOW_TEST_AUTH);
       }
 
       // PUT /api/party/:id/settings — update party settings (leader only)
@@ -425,7 +425,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleUpdatePartySettings(request, db, partyId, body!);
+        return handleUpdatePartySettings(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
       }
 
       // POST /api/party/:id/transfer-leadership — transfer leadership (leader only)
@@ -439,27 +439,27 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleTransferLeadership(request, db, partyId, body!);
+        return handleTransferLeadership(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
       }
 
       // Friends (Social) endpoints — exact routes first, then parameterized
       if (url.pathname === "/api/friends" && method === "GET") {
-        return handleGetFriends(request, db);
+        return handleGetFriends(request, db, env.ALLOW_TEST_AUTH);
       }
       if (url.pathname === "/api/friends/pending" && method === "GET") {
-        return handleGetPendingFriends(request, db);
+        return handleGetPendingFriends(request, db, env.ALLOW_TEST_AUTH);
       }
       if (url.pathname === "/api/friends/search" && method === "GET") {
-        return handleSearchUsers(request, db);
+        return handleSearchUsers(request, db, env.ALLOW_TEST_AUTH);
       }
       if (url.pathname === "/api/friends/request" && method === "POST") {
-        return handleFriendRequest(request, db, body!);
+        return handleFriendRequest(request, db, body!, env.ALLOW_TEST_AUTH);
       }
       if (url.pathname === "/api/friends/request/code" && method === "POST") {
-        return handleFriendRequestByCode(request, db, body!);
+        return handleFriendRequestByCode(request, db, body!, env.ALLOW_TEST_AUTH);
       }
       if (url.pathname === "/api/friends/positions" && method === "GET") {
-        return handleFriendPositions(request, db);
+        return handleFriendPositions(request, db, env.ALLOW_TEST_AUTH);
       }
 
       // Parameterized friend routes — resolve before friendshipId routes
@@ -475,7 +475,7 @@ export default {
         if (!Number.isInteger(profileUserId) || profileUserId <= 0 || String(profileUserId) !== profileParams.userId) {
           return createErrorResponse('Invalid user ID', 400);
         }
-        return handleGetFriendProfile(request, db, profileUserId);
+        return handleGetFriendProfile(request, db, profileUserId, env.ALLOW_TEST_AUTH);
       }
 
       const acceptParams= matchRoute(url.pathname, '/api/friends/:friendshipId/accept');
@@ -484,7 +484,7 @@ export default {
         if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== acceptParams.friendshipId) {
           return createErrorResponse('Invalid friendship ID', 400);
         }
-        return handleAcceptFriend(request, db, friendshipId);
+        return handleAcceptFriend(request, db, friendshipId, env.ALLOW_TEST_AUTH);
       }
 
       const rejectParams= matchRoute(url.pathname, '/api/friends/:friendshipId/reject');
@@ -493,7 +493,7 @@ export default {
         if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== rejectParams.friendshipId) {
           return createErrorResponse('Invalid friendship ID', 400);
         }
-        return handleRejectFriend(request, db, friendshipId);
+        return handleRejectFriend(request, db, friendshipId, env.ALLOW_TEST_AUTH);
       }
 
       // DELETE /api/friends/:friendshipId — unfriend
@@ -503,20 +503,20 @@ export default {
         if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== unfriendParams.friendshipId) {
           return createErrorResponse('Invalid friendship ID', 400);
         }
-        return handleUnfriend(request, db, friendshipId);
+        return handleUnfriend(request, db, friendshipId, env.ALLOW_TEST_AUTH);
       }
 
       // CRUD for calendar events
       if (url.pathname === "/api/calendar-progress" && method === "POST") {
-        return handleProgressPost(request, db, body!);
+        return handleProgressPost(request, db, body!, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/calendar-progress" && method === "PUT") {
-        return handleProgressPut(request, db, body!);
+        return handleProgressPut(request, db, body!, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/calendar-progress" && method === "DELETE") {
-        return handleProgressDelete(request, db, body!);
+        return handleProgressDelete(request, db, body!, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/calendar-progress") {
-        return handleProgressGet(request, db);
+        return handleProgressGet(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/goals") {
-        return handleGoalsGet(request, db);
+        return handleGoalsGet(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/total-distance") {
         // Validate session first
         const sessionValidation = await validateSession(request, db, env.ALLOW_TEST_AUTH);
