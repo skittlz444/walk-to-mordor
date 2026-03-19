@@ -10,6 +10,7 @@ const path = require('path');
 
 const DEFAULT_SW_PATH = path.join(__dirname, '..', 'sw.js');
 const BUILD_TIMESTAMP_PLACEHOLDER = '{{BUILD_TIMESTAMP}}';
+const SWR_CACHE_VERSION_PLACEHOLDER = '{{SWR_CACHE_VERSION}}';
 
 function getSwPath() {
   return process.env.SW_PATH || DEFAULT_SW_PATH;
@@ -38,6 +39,15 @@ function resetCacheVersion() {
     
     if (timestampRegex.test(swContent)) {
       swContent = swContent.replace(timestampRegex, placeholderConstant);
+    }
+    
+    // Reset SWR_CACHE_VERSION constant
+    const swrVersionRegex = /const SWR_CACHE_VERSION = '[^']+';/;
+    const swrPlaceholder = `const SWR_CACHE_VERSION = '${SWR_CACHE_VERSION_PLACEHOLDER}';`;
+    
+    if (swrVersionRegex.test(swContent)) {
+      swContent = swContent.replace(swrVersionRegex, swrPlaceholder);
+      console.log('✅ Reset SWR cache version to development placeholder');
     }
     
     // Write back to file

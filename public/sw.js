@@ -9,6 +9,63 @@ const urlsToCache = [
   '/manifest.json'
 ];
 
+// SWR (Stale-While-Revalidate) API caching
+const SWR_CACHE_NAME = 'walk-to-mordor-api-swr';
+const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}';
+const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
+const SWR_TTL_MS = 300000; // 5 minutes
+
+const SWR_ENDPOINTS = [
+  '/api/session',
+  '/api/goals',
+  '/api/calendar-progress',
+  '/api/total-distance',
+  '/api/user/parties',
+  '/api/friends'
+];
+
+function isSWREndpoint(pathname) {
+  return SWR_ENDPOINTS.includes(pathname);
+}
+
+async function cacheWithTimestamp(cache, request, response) {
+  const headers = new Headers(response.headers);
+  headers.set('x-swr-cached-at', Date.now().toString());
+  const timestamped = new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: headers
+  });
+  await cache.put(request, timestamped);
+}
+
+async function notifyClients(url) {
+  var clients = await self.clients.matchAll({ type: 'window' });
+  clients.forEach(function(client) {
+    client.postMessage({ type: 'sw-cache-updated', url: url });
+  });
+}
+
+async function revalidateAndNotify(request, swrCache) {
+  try {
+    var response = await fetch(request);
+    if (response && response.ok) {
+      await cacheWithTimestamp(swrCache, request, response.clone());
+      await notifyClients(request.url);
+    }
+  } catch (err) {
+    // Background revalidation failed silently — cached data still served
+  }
+}
+
+async function fetchAndCache(request, swrCache) {
+  var response = await fetch(request);
+  if (response && response.ok) {
+    await cacheWithTimestamp(swrCache, request, response.clone());
+  }
+  return response;
+}
+
 // Install event - cache essential resources
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -22,18 +79,32 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and handle SWR version busting
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      // Clean up old static asset caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME && cacheName !== SWR_CACHE_NAME && cacheName !== SWR_VERSION_CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Check SWR cache version and bust if changed
+      (async () => {
+        var versionCache = await caches.open(SWR_VERSION_CACHE_NAME);
+        var storedVersion = await versionCache.match('version');
+        var storedVersionText = storedVersion ? await storedVersion.text() : null;
+
+        if (storedVersionText !== SWR_CACHE_VERSION) {
+          await caches.delete(SWR_CACHE_NAME);
+          await versionCache.put('version', new Response(SWR_CACHE_VERSION));
+        }
+      })()
+    ])
   );
 });
 
@@ -49,9 +120,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Never cache API responses - always fetch fresh auth/session/preferences data.
+  // API requests: SWR for allowlisted endpoints, network-only for the rest.
   if (requestUrl.pathname.startsWith('/api/')) {
-    event.respondWith(fetch(event.request));
+    if (isSWREndpoint(requestUrl.pathname)) {
+      var swrCachePromise = caches.open(SWR_CACHE_NAME);
+      event.respondWith(
+        swrCachePromise.then(function(swrCache) {
+          return swrCache.match(event.request).then(function(cached) {
+            if (cached) {
+              // Return cached immediately, revalidate in background
+              event.waitUntil(revalidateAndNotify(event.request, swrCache));
+              return cached;
+            }
+            // Cold cache: network-first, then cache
+            return fetchAndCache(event.request, swrCache);
+          });
+        })
+      );
+    } else {
+      // Non-SWR API endpoints: network-only (existing behavior)
+      event.respondWith(fetch(event.request));
+    }
     return;
   }
 
