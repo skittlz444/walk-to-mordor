@@ -62,7 +62,8 @@ export const error = signal<Error | null>(null);
 
 /**
  * User preference: whether future goals appear unlocked.
- * Default true = unlocked (new global default once Story 2.10 ships).
+ * Reads from appStore preferences (single session source of truth).
+ * Kept as a computed for backward compatibility with existing consumers.
  */
 export const showFutureGoalsUnlocked = signal<boolean>(true);
 
@@ -277,24 +278,14 @@ export async function initializeMap(): Promise<void> {
     const progress = await fetchUserProgress();
     userProgress.value = progress;
 
-    // Load user preference from session (default: true/unlocked)
+    // Load user preference from appStore (hydrated by initializeAppStore)
+    // Import dynamically to avoid circular dependencies at module level
     try {
-      const token = localStorage.getItem('sessionToken');
-      if (token) {
-        const sessionRes = await fetch('/api/session', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (sessionRes.ok) {
-          const sessionData = await sessionRes.json();
-          showFutureGoalsUnlocked.value =
-            typeof sessionData.showFutureGoalsUnlocked === 'boolean'
-              ? sessionData.showFutureGoalsUnlocked
-              : true;
-        }
-      }
-    } catch (prefErr) {
+      const { showFutureGoalsUnlocked: appShowFuture } = await import('./appStore');
+      showFutureGoalsUnlocked.value = appShowFuture.value;
+    } catch {
       // Non-critical - keep default (true/unlocked)
-      console.warn('[mapStore] Could not load preference, using default:', prefErr);
+      console.warn('[mapStore] Could not read appStore preference, using default');
     }
 
     // Try cached milestones first

@@ -44,6 +44,7 @@ import {
 } from '../data/waypoints';
 import { MapWalkIsland } from './MapWalkIsland';
 import { userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
+import { avatarId as appAvatarId } from '../stores/appStore';
 import {
   createMemberPaths,
   updateMemberPaths,
@@ -67,7 +68,6 @@ import {
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
 const GOALS_API_URL = '/api/goals';
-const SESSION_API_URL = '/api/session';
 const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
@@ -1155,18 +1155,15 @@ export function MapIsland() {
           .catch(() => [] as Goal[])
       : Promise.resolve([] as Goal[]);
 
-    // Fetch session for user preference and current-user avatar marker data
+    // Read session data from appStore (already hydrated by initializeAppStore)
     interface SessionPreference {
       avatarId?: string | null;
       showFutureGoalsUnlocked?: boolean;
     }
-    const sessionPromise: Promise<SessionPreference> = token
-      ? fetch(SESSION_API_URL, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => (res.ok ? (res.json() as Promise<SessionPreference>) : {}))
-          .catch(() => ({} as SessionPreference))
-      : Promise.resolve({} as SessionPreference);
+    const sessionPromise: Promise<SessionPreference> = Promise.resolve({
+      avatarId: appAvatarId.value,
+      showFutureGoalsUnlocked: showFutureGoalsUnlocked.value,
+    });
 
     Promise.all([metaPromise, progressPromise, goalsPromise, sessionPromise])
       .then(([data, distMiles, goals, sessionData]) => {

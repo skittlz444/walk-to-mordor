@@ -3,6 +3,7 @@ import { GoalModal } from './GoalModal';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { Avatar } from '../components/Avatar';
 import { getMemberColor, getMutedMemberColor } from '../utils/party-colors';
+import { getAuthHeaders } from '../utils/auth';
 import type { Goal } from '../types/goal';
 
 type MilestoneData = Goal;
@@ -37,11 +38,6 @@ interface PartyInfo {
   leader_id: number;
   distance_mode: string;
   leave_distance_behavior: string;
-}
-
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('sessionToken');
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
 function getPartyIdFromUrl(): number {

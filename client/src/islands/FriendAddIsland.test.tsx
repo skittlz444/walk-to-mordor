@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, cleanup, waitFor } from '@testing-library/preact';
 import { FriendAddIsland } from './FriendAddIsland';
+import { sessionToken, resetAppStore } from '../stores/appStore';
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -16,6 +17,9 @@ beforeEach(() => {
     removeItem: (key: string) => { delete store[key]; },
   });
 
+  // Set appStore session token for authenticated state
+  sessionToken.value = 'test-token';
+
   // Mock window.location
   Object.defineProperty(window, 'location', {
     value: { href: '/friends/add/ABCD1234', pathname: '/friends/add/ABCD1234', origin: 'http://localhost' },
@@ -27,6 +31,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  resetAppStore();
   vi.restoreAllMocks();
   cleanup();
 });
@@ -88,9 +93,7 @@ describe('FriendAddIsland', () => {
 
   describe('preview display', () => {
     it('shows user preview with avatar when resolved', async () => {
-      // Auth check
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
-      // Resolve friend code
+      // Resolve friend code (no /api/session call — reads appStore signal)
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'gandalf', avatar_id: 'gandalf-grey' }),
@@ -107,7 +110,6 @@ describe('FriendAddIsland', () => {
     });
 
     it('shows user preview with initials fallback when no avatar', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'frodo', avatar_id: null }),
@@ -123,7 +125,6 @@ describe('FriendAddIsland', () => {
     });
 
     it('shows error when friend code cannot be resolved (404)', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: false, status: 404,
         json: () => Promise.resolve({ error: 'Friend code not found' }),
@@ -139,7 +140,6 @@ describe('FriendAddIsland', () => {
 
   describe('authenticated user actions', () => {
     it('shows "Send Friend Request" button when authenticated', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'legolas', avatar_id: null }),
@@ -153,7 +153,6 @@ describe('FriendAddIsland', () => {
     });
 
     it('sends friend request via /api/friends/request/code', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'legolas', avatar_id: null }),
@@ -184,7 +183,6 @@ describe('FriendAddIsland', () => {
     });
 
     it('shows success state after request sent', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'legolas', avatar_id: null }),
@@ -210,7 +208,6 @@ describe('FriendAddIsland', () => {
     });
 
     it('shows "Back to Friends" link after success', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'legolas', avatar_id: null }),
@@ -238,7 +235,6 @@ describe('FriendAddIsland', () => {
 
   describe('error handling on send', () => {
     it('shows "already friends" error', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'boromir', avatar_id: null }),
@@ -263,7 +259,6 @@ describe('FriendAddIsland', () => {
     });
 
     it('shows "pending" error when request exists', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'boromir', avatar_id: null }),
@@ -288,7 +283,6 @@ describe('FriendAddIsland', () => {
     });
 
     it('shows self-add error', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'testuser', avatar_id: null }),
@@ -313,7 +307,6 @@ describe('FriendAddIsland', () => {
     });
 
     it('shows generic error for unknown failures', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
       mockFetch.mockResolvedValueOnce({
         ok: true, status: 200,
         json: () => Promise.resolve({ id: 42, username: 'boromir', avatar_id: null }),
@@ -340,6 +333,9 @@ describe('FriendAddIsland', () => {
 
   describe('unauthenticated user', () => {
     it('shows "Log in to Add Friend" when not authenticated but preview loaded', async () => {
+      // Set unauthenticated state in appStore
+      sessionToken.value = null;
+
       // No session token
       vi.stubGlobal('localStorage', {
         getItem: () => null,
@@ -361,6 +357,9 @@ describe('FriendAddIsland', () => {
     });
 
     it('redirects to login with returnTo on login click', async () => {
+      // Set unauthenticated state in appStore
+      sessionToken.value = null;
+
       vi.stubGlobal('localStorage', {
         getItem: () => null,
         setItem: vi.fn(),
