@@ -25,8 +25,21 @@ const SWR_ENDPOINTS = [
   '/api/friends'
 ];
 
+// Monotonic mutation version to prevent stale in-flight GET revalidations
+// from re-populating SWR cache after a successful API mutation.
+let swrMutationVersion = 0;
+
 function isSWREndpoint(pathname) {
   return SWR_ENDPOINTS.includes(pathname);
+}
+
+function getCurrentSWRMutationVersion() {
+  return swrMutationVersion;
+}
+
+function bumpSWRMutationVersion() {
+  swrMutationVersion += 1;
+  return swrMutationVersion;
 }
 
 function getCacheKey(request) {
@@ -56,10 +69,16 @@ async function notifyClients(url) {
   });
 }
 
-async function revalidateAndNotify(request, swrCache) {
+async function revalidateAndNotify(request, swrCache, requestMutationVersion) {
+  var mutationVersionAtStart = typeof requestMutationVersion === 'number'
+    ? requestMutationVersion
+    : getCurrentSWRMutationVersion();
   try {
     var response = await fetch(request);
     if (response && response.ok) {
+      if (mutationVersionAtStart !== getCurrentSWRMutationVersion()) {
+        return;
+      }
       await cacheWithTimestamp(swrCache, request, response.clone());
       await notifyClients(request.url);
     }
@@ -68,10 +87,15 @@ async function revalidateAndNotify(request, swrCache) {
   }
 }
 
-async function fetchAndCache(request, swrCache) {
+async function fetchAndCache(request, swrCache, requestMutationVersion) {
+  var mutationVersionAtStart = typeof requestMutationVersion === 'number'
+    ? requestMutationVersion
+    : getCurrentSWRMutationVersion();
   var response = await fetch(request);
   if (response && response.ok) {
-    await cacheWithTimestamp(swrCache, request, response.clone());
+    if (mutationVersionAtStart === getCurrentSWRMutationVersion()) {
+      await cacheWithTimestamp(swrCache, request, response.clone());
+    }
   }
   return response;
 }
@@ -124,6 +148,7 @@ self.addEventListener('fetch', (event) => {
 
   // Invalidate SWR cache on same-origin API mutations (PUT/POST/DELETE/PATCH)
   if (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith('/api/') && event.request.method !== 'GET') {
+    bumpSWRMutationVersion();
     event.respondWith(
       caches.open(SWR_CACHE_NAME).then(function(cache) {
         return cache.keys().then(function(keys) {
@@ -148,6 +173,7 @@ self.addEventListener('fetch', (event) => {
   // API requests: SWR for allowlisted endpoints, network-only for the rest.
   if (requestUrl.pathname.startsWith('/api/')) {
     if (isSWREndpoint(requestUrl.pathname)) {
+      var requestMutationVersion = getCurrentSWRMutationVersion();
       var swrCachePromise = caches.open(SWR_CACHE_NAME);
       event.respondWith(
         swrCachePromise.then(function(swrCache) {
@@ -158,20 +184,20 @@ self.addEventListener('fetch', (event) => {
 
               if (age > SWR_MAX_AGE_MS) {
                 // Expired — network-first, fall back to stale on failure
-                return fetchAndCache(event.request, swrCache).catch(function() {
+                return fetchAndCache(event.request, swrCache, requestMutationVersion).catch(function() {
                   return cached;
                 });
               }
 
               if (age > SWR_TTL_MS) {
                 // Stale — serve cached, revalidate in background
-                event.waitUntil(revalidateAndNotify(event.request, swrCache));
+                event.waitUntil(revalidateAndNotify(event.request, swrCache, requestMutationVersion));
               }
               // Fresh or stale: return cached response
               return cached;
             }
             // Cold cache: network-first, then cache
-            return fetchAndCache(event.request, swrCache);
+            return fetchAndCache(event.request, swrCache, requestMutationVersion);
           });
         })
       );
@@ -253,6 +279,7 @@ self.addEventListener('fetch', (event) => {
 // Message handler — clear SWR cache on auth change or explicit request
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'sw-clear-cache') {
+    bumpSWRMutationVersion();
     event.waitUntil(caches.delete(SWR_CACHE_NAME));
   }
 });

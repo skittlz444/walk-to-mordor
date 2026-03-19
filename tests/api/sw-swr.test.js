@@ -91,7 +91,7 @@ function loadSWModule() {
     'Headers',
     'URL',
     'Date',
-    swSource + '\n; return { SWR_CACHE_NAME, SWR_CACHE_VERSION, SWR_VERSION_CACHE_NAME, SWR_TTL_MS, SWR_MAX_AGE_MS, SWR_ENDPOINTS, isSWREndpoint, getCacheKey, cacheWithTimestamp, notifyClients, revalidateAndNotify, fetchAndCache };'
+    swSource + '\n; return { SWR_CACHE_NAME, SWR_CACHE_VERSION, SWR_VERSION_CACHE_NAME, SWR_TTL_MS, SWR_MAX_AGE_MS, SWR_ENDPOINTS, isSWREndpoint, getCacheKey, cacheWithTimestamp, notifyClients, revalidateAndNotify, fetchAndCache, getCurrentSWRMutationVersion, bumpSWRMutationVersion };'
   );
 
   const exports = fn(self, caches, globalFetch, Response, Headers, URL, Date);
@@ -532,6 +532,97 @@ describe('Service Worker SWR API Caching', () => {
       await event.respondWith.mock.calls[0][0];
       expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
       expect(swrCache.delete).toHaveBeenCalled();
+    });
+
+    test('mutation bumps SWR mutation version', async () => {
+      const before = sw.getCurrentSWRMutationVersion();
+      const event = createFetchEvent('https://example.com/api/user/preferences', {
+        method: 'PUT',
+      });
+      sw.globalFetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
+      sw.fetchCallback(event);
+      await event.respondWith.mock.calls[0][0];
+      const after = sw.getCurrentSWRMutationVersion();
+      expect(after).toBe(before + 1);
+    });
+
+    test('stale revalidation does not overwrite cache after later mutation', async () => {
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      const staleTimestamp = (Date.now() - 400000).toString();
+      await swrCache.put(
+        { url: 'https://example.com/api/session' },
+        new Response(JSON.stringify({ email: 'old@example.com' }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-swr-cached-at': staleTimestamp,
+          },
+        })
+      );
+
+      const staleGetResponse = new Response(JSON.stringify({ email: 'stale-get@example.com' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const mutationResponse = new Response(JSON.stringify({ defaultViewMap: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      sw.globalFetch
+        .mockResolvedValueOnce(staleGetResponse)
+        .mockResolvedValueOnce(mutationResponse);
+
+      const getEvent = createFetchEvent('https://example.com/api/session');
+      sw.fetchCallback(getEvent);
+      const getResult = await getEvent.respondWith.mock.calls[0][0];
+      expect(getResult.headers.get('x-swr-cached-at')).toBe(staleTimestamp);
+      expect(getEvent.waitUntil).toHaveBeenCalledTimes(1);
+
+      const mutationEvent = createFetchEvent('https://example.com/api/user/preferences', {
+        method: 'PUT',
+      });
+      sw.fetchCallback(mutationEvent);
+      await mutationEvent.respondWith.mock.calls[0][0];
+
+      await getEvent.waitUntil.mock.calls[0][0];
+
+      const cachedAfterRace = await swrCache.match({ url: 'https://example.com/api/session' });
+      expect(cachedAfterRace).toBeUndefined();
+    });
+
+    test('cold cache GET does not populate cache if mutation happens before response', async () => {
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      let resolveGet;
+      const delayedGet = new Promise((resolve) => {
+        resolveGet = resolve;
+      });
+
+      sw.globalFetch
+        .mockImplementationOnce(() => delayedGet)
+        .mockResolvedValueOnce(new Response(JSON.stringify({ showFutureGoalsUnlocked: false }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }));
+
+      const getEvent = createFetchEvent('https://example.com/api/session');
+      sw.fetchCallback(getEvent);
+      expect(getEvent.respondWith).toHaveBeenCalledTimes(1);
+
+      const mutationEvent = createFetchEvent('https://example.com/api/user/preferences', {
+        method: 'PUT',
+      });
+      sw.fetchCallback(mutationEvent);
+      await mutationEvent.respondWith.mock.calls[0][0];
+
+      resolveGet(new Response(JSON.stringify({ showFutureGoalsUnlocked: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+
+      await getEvent.respondWith.mock.calls[0][0];
+
+      const cachedAfterRace = await swrCache.match({ url: 'https://example.com/api/session' });
+      expect(cachedAfterRace).toBeUndefined();
     });
 
     test('cold cache miss stores response in SWR cache', async () => {
@@ -1020,6 +1111,19 @@ describe('Service Worker SWR API Caching', () => {
 
       await waitUntilFn.mock.calls[0][0];
       expect(sw.caches.delete).toHaveBeenCalledWith('walk-to-mordor-api-swr');
+    });
+
+    test('sw-clear-cache message bumps SWR mutation version', async () => {
+      const before = sw.getCurrentSWRMutationVersion();
+      const waitUntilFn = jest.fn((p) => p);
+
+      sw.messageCallback({
+        data: { type: 'sw-clear-cache' },
+        waitUntil: waitUntilFn,
+      });
+
+      await waitUntilFn.mock.calls[0][0];
+      expect(sw.getCurrentSWRMutationVersion()).toBe(before + 1);
     });
 
     test('ignores unrecognized message types', () => {
