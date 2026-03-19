@@ -28,6 +28,7 @@ function loadSWModule() {
   let activateCallback = null;
   let fetchCallback = null;
   let installCallback = null;
+  let messageCallback = null;
 
   const self = {
     location: { origin: 'https://example.com' },
@@ -38,6 +39,7 @@ function loadSWModule() {
       if (event === 'activate') activateCallback = cb;
       if (event === 'fetch') fetchCallback = cb;
       if (event === 'install') installCallback = cb;
+      if (event === 'message') messageCallback = cb;
     }),
   };
 
@@ -88,7 +90,7 @@ function loadSWModule() {
     'Headers',
     'URL',
     'Date',
-    swSource + '\n; return { SWR_CACHE_NAME, SWR_CACHE_VERSION, SWR_VERSION_CACHE_NAME, SWR_TTL_MS, SWR_ENDPOINTS, isSWREndpoint, cacheWithTimestamp, notifyClients, revalidateAndNotify, fetchAndCache };'
+    swSource + '\n; return { SWR_CACHE_NAME, SWR_CACHE_VERSION, SWR_VERSION_CACHE_NAME, SWR_TTL_MS, SWR_MAX_AGE_MS, SWR_ENDPOINTS, isSWREndpoint, getCacheKey, cacheWithTimestamp, notifyClients, revalidateAndNotify, fetchAndCache };'
   );
 
   const exports = fn(self, caches, globalFetch, Response, Headers, URL, Date);
@@ -102,6 +104,7 @@ function loadSWModule() {
     activateCallback,
     fetchCallback,
     installCallback,
+    messageCallback,
     ...exports,
   };
 }
@@ -129,6 +132,11 @@ describe('Service Worker SWR API Caching', () => {
 
     test('SWR_TTL_MS is 5 minutes (300000ms)', () => {
       expect(sw.SWR_TTL_MS).toBe(300000);
+    });
+
+    test('SWR_MAX_AGE_MS is 6x TTL (1800000ms)', () => {
+      expect(sw.SWR_MAX_AGE_MS).toBe(1800000);
+      expect(sw.SWR_MAX_AGE_MS).toBe(6 * sw.SWR_TTL_MS);
     });
 
     test('SWR_ENDPOINTS contains all required endpoints', () => {
@@ -244,7 +252,7 @@ describe('Service Worker SWR API Caching', () => {
 
       await sw.notifyClients('https://example.com/api/goals');
 
-      expect(sw.self.clients.matchAll).toHaveBeenCalledWith({ type: 'window' });
+      expect(sw.self.clients.matchAll).toHaveBeenCalledWith({ type: 'window', includeUncontrolled: true });
       expect(client1.postMessage).toHaveBeenCalledWith({
         type: 'sw-cache-updated',
         url: 'https://example.com/api/goals',
@@ -369,10 +377,11 @@ describe('Service Worker SWR API Caching', () => {
       };
     }
 
-    test('SWR hit returns cached response and triggers background revalidation', async () => {
+    test('SWR hit returns cached response and triggers background revalidation when stale', async () => {
+      const staleTimestamp = (Date.now() - 400000).toString(); // 6.67 min ago — beyond TTL, within MAX_AGE
       const cachedResponse = new Response(JSON.stringify({ cached: true }), {
         status: 200,
-        headers: { 'x-swr-cached-at': '1700000000000' },
+        headers: { 'x-swr-cached-at': staleTimestamp },
       });
 
       // Pre-populate the SWR cache
@@ -398,9 +407,9 @@ describe('Service Worker SWR API Caching', () => {
       const responsePromise = event.respondWith.mock.calls[0][0];
       const response = await responsePromise;
       expect(response).toBeDefined();
-      expect(response.headers.get('x-swr-cached-at')).toBe('1700000000000');
+      expect(response.headers.get('x-swr-cached-at')).toBe(staleTimestamp);
 
-      // Background revalidation was queued
+      // Background revalidation was queued (because stale)
       expect(event.waitUntil).toHaveBeenCalledTimes(1);
     });
 
@@ -505,9 +514,10 @@ describe('Service Worker SWR API Caching', () => {
     });
 
     test('SWR hit background revalidation updates cache with fresh data', async () => {
+      const staleTimestamp = (Date.now() - 400000).toString(); // stale but within MAX_AGE
       const staleResponse = new Response(JSON.stringify({ version: 'old' }), {
         status: 200,
-        headers: { 'x-swr-cached-at': '1700000000000' },
+        headers: { 'x-swr-cached-at': staleTimestamp },
       });
 
       // Pre-populate SWR cache
@@ -532,7 +542,7 @@ describe('Service Worker SWR API Caching', () => {
 
       // Resolve respondWith (returns stale cached)
       const response = await event.respondWith.mock.calls[0][0];
-      expect(response.headers.get('x-swr-cached-at')).toBe('1700000000000');
+      expect(response.headers.get('x-swr-cached-at')).toBe(staleTimestamp);
 
       // Wait for background revalidation to complete
       await event.waitUntil.mock.calls[0][0];
@@ -541,7 +551,7 @@ describe('Service Worker SWR API Caching', () => {
       const updated = await swrCache.match({ url: 'https://example.com/api/goals' });
       expect(updated).toBeDefined();
       const cachedAt = parseInt(updated.headers.get('x-swr-cached-at'));
-      expect(cachedAt).toBeGreaterThan(1700000000000);
+      expect(cachedAt).toBeGreaterThan(parseInt(staleTimestamp));
 
       // postMessage should have been emitted
       expect(client.postMessage).toHaveBeenCalledWith({
@@ -716,6 +726,277 @@ describe('Service Worker SWR API Caching', () => {
 
       // SWR-related caches should NOT be in the static-cache-cleanup deletes
       // (They are preserved by the condition in the activate handler)
+    });
+  });
+
+  describe('getCacheKey', () => {
+    test('returns request URL string when no Authorization header', () => {
+      const request = new Request('https://example.com/api/goals');
+      const key = sw.getCacheKey(request);
+      expect(key).toBe('https://example.com/api/goals');
+      expect(typeof key).toBe('string');
+    });
+
+    test('returns URL with auth hash when Authorization header present', () => {
+      const request = new Request('https://example.com/api/session', {
+        headers: { 'Authorization': 'Bearer token123' },
+      });
+      const key = sw.getCacheKey(request);
+      expect(key).toMatch(/^https:\/\/example\.com\/api\/session\?_auth=.+$/);
+      expect(typeof key).toBe('string');
+    });
+
+    test('different auth tokens produce different cache keys', () => {
+      const req1 = new Request('https://example.com/api/session', {
+        headers: { 'Authorization': 'Bearer tokenAAA' },
+      });
+      const req2 = new Request('https://example.com/api/session', {
+        headers: { 'Authorization': 'Bearer tokenBBB' },
+      });
+      expect(sw.getCacheKey(req1)).not.toBe(sw.getCacheKey(req2));
+    });
+
+    test('same auth token produces same cache key', () => {
+      const req1 = new Request('https://example.com/api/goals', {
+        headers: { 'Authorization': 'Bearer sameToken' },
+      });
+      const req2 = new Request('https://example.com/api/goals', {
+        headers: { 'Authorization': 'Bearer sameToken' },
+      });
+      expect(sw.getCacheKey(req1)).toBe(sw.getCacheKey(req2));
+    });
+
+    test('same URL with vs without auth returns different keys', () => {
+      const noAuth = new Request('https://example.com/api/session');
+      const withAuth = new Request('https://example.com/api/session', {
+        headers: { 'Authorization': 'Bearer token' },
+      });
+      expect(sw.getCacheKey(noAuth)).not.toBe(sw.getCacheKey(withAuth));
+    });
+  });
+
+  describe('TTL Freshness Logic', () => {
+    function createFetchEvent(url, options = {}) {
+      const respondWithFn = jest.fn();
+      const waitUntilFn = jest.fn();
+      return {
+        request: {
+          url,
+          method: options.method || 'GET',
+          mode: options.mode || 'cors',
+          destination: options.destination || '',
+          headers: new Headers(options.headers || {}),
+          clone: function() { return this; },
+        },
+        respondWith: respondWithFn,
+        waitUntil: waitUntilFn,
+      };
+    }
+
+    test('fresh cache hit (within TTL) serves cached without revalidation', async () => {
+      const freshTimestamp = (Date.now() - 60000).toString(); // 1 min ago — within 5 min TTL
+      const cachedResponse = new Response(JSON.stringify({ fresh: true }), {
+        status: 200,
+        headers: { 'x-swr-cached-at': freshTimestamp },
+      });
+
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        cachedResponse
+      );
+
+      const event = createFetchEvent('https://example.com/api/goals');
+      sw.fetchCallback(event);
+
+      const response = await event.respondWith.mock.calls[0][0];
+      expect(response).toBeDefined();
+      expect(response.headers.get('x-swr-cached-at')).toBe(freshTimestamp);
+
+      // No background revalidation for fresh entries
+      expect(event.waitUntil).not.toHaveBeenCalled();
+    });
+
+    test('stale cache hit (beyond TTL, within MAX_AGE) serves cached + revalidates', async () => {
+      const staleTimestamp = (Date.now() - 400000).toString(); // ~6.7 min — beyond 5 min TTL
+      const cachedResponse = new Response(JSON.stringify({ stale: true }), {
+        status: 200,
+        headers: { 'x-swr-cached-at': staleTimestamp },
+      });
+
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        cachedResponse
+      );
+
+      const freshResponse = new Response(JSON.stringify({ fresh: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      sw.globalFetch.mockResolvedValueOnce(freshResponse);
+
+      const event = createFetchEvent('https://example.com/api/goals');
+      sw.fetchCallback(event);
+
+      const response = await event.respondWith.mock.calls[0][0];
+      expect(response.headers.get('x-swr-cached-at')).toBe(staleTimestamp);
+
+      // Background revalidation was triggered
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
+    });
+
+    test('expired cache hit (beyond MAX_AGE) uses network-first', async () => {
+      const expiredTimestamp = (Date.now() - 2000000).toString(); // ~33 min — beyond 30 min MAX_AGE
+      const cachedResponse = new Response(JSON.stringify({ expired: true }), {
+        status: 200,
+        headers: { 'x-swr-cached-at': expiredTimestamp },
+      });
+
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        cachedResponse
+      );
+
+      const networkResponse = new Response(JSON.stringify({ network: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      sw.globalFetch.mockResolvedValueOnce(networkResponse);
+
+      const event = createFetchEvent('https://example.com/api/goals');
+      sw.fetchCallback(event);
+
+      const response = await event.respondWith.mock.calls[0][0];
+      // Should get network response, not expired cache
+      expect(response).toBe(networkResponse);
+    });
+
+    test('expired cache falls back to stale on network failure', async () => {
+      const expiredTimestamp = (Date.now() - 2000000).toString();
+      const cachedResponse = new Response(JSON.stringify({ expired: true }), {
+        status: 200,
+        headers: { 'x-swr-cached-at': expiredTimestamp },
+      });
+
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/session' },
+        cachedResponse
+      );
+
+      sw.globalFetch.mockRejectedValueOnce(new Error('Network offline'));
+
+      const event = createFetchEvent('https://example.com/api/session');
+      sw.fetchCallback(event);
+
+      const response = await event.respondWith.mock.calls[0][0];
+      // Falls back to stale cache entry
+      expect(response.headers.get('x-swr-cached-at')).toBe(expiredTimestamp);
+    });
+  });
+
+  describe('Auth-Aware Cache Keys (Integration)', () => {
+    function createFetchEvent(url, options = {}) {
+      const respondWithFn = jest.fn();
+      const waitUntilFn = jest.fn();
+      return {
+        request: {
+          url,
+          method: options.method || 'GET',
+          mode: options.mode || 'cors',
+          destination: options.destination || '',
+          headers: new Headers(options.headers || {}),
+          clone: function() { return this; },
+        },
+        respondWith: respondWithFn,
+        waitUntil: waitUntilFn,
+      };
+    }
+
+    test('authenticated request caches with auth-keyed entry', async () => {
+      const networkResponse = new Response(JSON.stringify({ user: 'alice' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      sw.globalFetch.mockResolvedValueOnce(networkResponse);
+
+      const event = createFetchEvent('https://example.com/api/session', {
+        headers: { 'Authorization': 'Bearer alice-token' },
+      });
+      sw.fetchCallback(event);
+
+      await event.respondWith.mock.calls[0][0];
+
+      // Verify cache has auth-keyed entry
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      const authKey = sw.getCacheKey(event.request);
+      const cached = await swrCache.match(authKey);
+      expect(cached).toBeDefined();
+
+      // Plain URL should NOT match
+      const plain = await swrCache.match({ url: 'https://example.com/api/session' });
+      expect(plain).toBeUndefined();
+    });
+
+    test('different users do not share cached responses', async () => {
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+
+      // Cache response for user A
+      const reqA = new Request('https://example.com/api/session', {
+        headers: { 'Authorization': 'Bearer user-a-token' },
+      });
+      const respA = new Response(JSON.stringify({ user: 'A' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      await sw.cacheWithTimestamp(swrCache, reqA, respA);
+
+      // Try to read with user B's key
+      const reqB = new Request('https://example.com/api/session', {
+        headers: { 'Authorization': 'Bearer user-b-token' },
+      });
+      const cached = await swrCache.match(sw.getCacheKey(reqB));
+      expect(cached).toBeUndefined();
+    });
+  });
+
+  describe('Message Handler', () => {
+    test('sw-clear-cache message deletes SWR cache', async () => {
+      // Pre-populate SWR cache
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        new Response('cached')
+      );
+
+      const waitUntilFn = jest.fn((p) => p);
+      sw.messageCallback({
+        data: { type: 'sw-clear-cache' },
+        waitUntil: waitUntilFn,
+      });
+
+      await waitUntilFn.mock.calls[0][0];
+      expect(sw.caches.delete).toHaveBeenCalledWith('walk-to-mordor-api-swr');
+    });
+
+    test('ignores unrecognized message types', () => {
+      const waitUntilFn = jest.fn();
+      sw.messageCallback({
+        data: { type: 'unknown-type' },
+        waitUntil: waitUntilFn,
+      });
+      expect(waitUntilFn).not.toHaveBeenCalled();
+    });
+
+    test('handles missing data gracefully', () => {
+      const waitUntilFn = jest.fn();
+      expect(() => sw.messageCallback({
+        data: null,
+        waitUntil: waitUntilFn,
+      })).not.toThrow();
+      expect(waitUntilFn).not.toHaveBeenCalled();
     });
   });
 });

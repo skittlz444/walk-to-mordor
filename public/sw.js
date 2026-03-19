@@ -14,6 +14,7 @@ const SWR_CACHE_NAME = 'walk-to-mordor-api-swr';
 const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}';
 const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
 const SWR_TTL_MS = 300000; // 5 minutes
+const SWR_MAX_AGE_MS = 6 * SWR_TTL_MS; // 30 minutes — entries older than this get network-first
 
 const SWR_ENDPOINTS = [
   '/api/session',
@@ -28,6 +29,15 @@ function isSWREndpoint(pathname) {
   return SWR_ENDPOINTS.includes(pathname);
 }
 
+function getCacheKey(request) {
+  var authHeader = request.headers.get('Authorization') || '';
+  if (!authHeader) return request.url;
+  var hash = Array.from(authHeader).reduce(function(h, c) {
+    return ((h << 5) - h + c.charCodeAt(0)) | 0;
+  }, 0);
+  return request.url + '?_auth=' + hash.toString(36);
+}
+
 async function cacheWithTimestamp(cache, request, response) {
   const headers = new Headers(response.headers);
   headers.set('x-swr-cached-at', Date.now().toString());
@@ -36,11 +46,11 @@ async function cacheWithTimestamp(cache, request, response) {
     statusText: response.statusText,
     headers: headers
   });
-  await cache.put(request, timestamped);
+  await cache.put(getCacheKey(request), timestamped);
 }
 
 async function notifyClients(url) {
-  var clients = await self.clients.matchAll({ type: 'window' });
+  var clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   clients.forEach(function(client) {
     client.postMessage({ type: 'sw-cache-updated', url: url });
   });
@@ -126,10 +136,23 @@ self.addEventListener('fetch', (event) => {
       var swrCachePromise = caches.open(SWR_CACHE_NAME);
       event.respondWith(
         swrCachePromise.then(function(swrCache) {
-          return swrCache.match(event.request).then(function(cached) {
+          return swrCache.match(getCacheKey(event.request)).then(function(cached) {
             if (cached) {
-              // Return cached immediately, revalidate in background
-              event.waitUntil(revalidateAndNotify(event.request, swrCache));
+              var cachedAt = parseInt(cached.headers.get('x-swr-cached-at') || '0');
+              var age = Date.now() - cachedAt;
+
+              if (age > SWR_MAX_AGE_MS) {
+                // Expired — network-first, fall back to stale on failure
+                return fetchAndCache(event.request, swrCache).catch(function() {
+                  return cached;
+                });
+              }
+
+              if (age > SWR_TTL_MS) {
+                // Stale — serve cached, revalidate in background
+                event.waitUntil(revalidateAndNotify(event.request, swrCache));
+              }
+              // Fresh or stale: return cached response
               return cached;
             }
             // Cold cache: network-first, then cache
@@ -210,4 +233,11 @@ self.addEventListener('fetch', (event) => {
           });
       })
   );
+});
+
+// Message handler — clear SWR cache on auth change or explicit request
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'sw-clear-cache') {
+    event.waitUntil(caches.delete(SWR_CACHE_NAME));
+  }
 });
