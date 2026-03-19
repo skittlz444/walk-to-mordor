@@ -469,57 +469,57 @@ describe('Service Worker SWR API Caching', () => {
       expect(response).toBe(networkResponse);
     });
 
-    test('POST requests clear SWR cache and go to network', async () => {
+    test('POST requests bypass respondWith and clear SWR cache via waitUntil', async () => {
       const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
       await swrCache.put(
         { url: 'https://example.com/api/goals' },
         new Response('cached')
       );
-      sw.globalFetch.mockResolvedValueOnce(new Response('ok'));
 
       const event = createFetchEvent('https://example.com/api/goals', {
         method: 'POST',
       });
       sw.fetchCallback(event);
-      expect(event.respondWith).toHaveBeenCalledTimes(1);
-      await event.respondWith.mock.calls[0][0];
-      expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
+      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
+      await event.waitUntil.mock.calls[0][0];
+      expect(sw.globalFetch).not.toHaveBeenCalled();
       expect(swrCache.delete).toHaveBeenCalled();
     });
 
-    test('PUT requests clear SWR cache and go to network', async () => {
+    test('PUT requests bypass respondWith and clear SWR cache via waitUntil', async () => {
       const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
       await swrCache.put(
         { url: 'https://example.com/api/goals' },
         new Response('cached')
       );
-      sw.globalFetch.mockResolvedValueOnce(new Response('ok'));
 
       const event = createFetchEvent('https://example.com/api/goals', {
         method: 'PUT',
       });
       sw.fetchCallback(event);
-      expect(event.respondWith).toHaveBeenCalledTimes(1);
-      await event.respondWith.mock.calls[0][0];
-      expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
+      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
+      await event.waitUntil.mock.calls[0][0];
+      expect(sw.globalFetch).not.toHaveBeenCalled();
       expect(swrCache.delete).toHaveBeenCalled();
     });
 
-    test('DELETE requests clear SWR cache and go to network', async () => {
+    test('DELETE requests bypass respondWith and clear SWR cache via waitUntil', async () => {
       const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
       await swrCache.put(
         { url: 'https://example.com/api/goals' },
         new Response('cached')
       );
-      sw.globalFetch.mockResolvedValueOnce(new Response('ok'));
 
       const event = createFetchEvent('https://example.com/api/goals', {
         method: 'DELETE',
       });
       sw.fetchCallback(event);
-      expect(event.respondWith).toHaveBeenCalledTimes(1);
-      await event.respondWith.mock.calls[0][0];
-      expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
+      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
+      await event.waitUntil.mock.calls[0][0];
+      expect(sw.globalFetch).not.toHaveBeenCalled();
       expect(swrCache.delete).toHaveBeenCalled();
     });
 
@@ -555,21 +555,21 @@ describe('Service Worker SWR API Caching', () => {
       expect(event.respondWith).not.toHaveBeenCalled();
     });
 
-    test('PATCH requests clear SWR cache and go to network', async () => {
+    test('PATCH requests bypass respondWith and clear SWR cache via waitUntil', async () => {
       const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
       await swrCache.put(
         { url: 'https://example.com/api/goals' },
         new Response('cached')
       );
-      sw.globalFetch.mockResolvedValueOnce(new Response('ok'));
 
       const event = createFetchEvent('https://example.com/api/goals', {
         method: 'PATCH',
       });
       sw.fetchCallback(event);
-      expect(event.respondWith).toHaveBeenCalledTimes(1);
-      await event.respondWith.mock.calls[0][0];
-      expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
+      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
+      await event.waitUntil.mock.calls[0][0];
+      expect(sw.globalFetch).not.toHaveBeenCalled();
       expect(swrCache.delete).toHaveBeenCalled();
     });
 
@@ -578,9 +578,10 @@ describe('Service Worker SWR API Caching', () => {
       const event = createFetchEvent('https://example.com/api/user/preferences', {
         method: 'PUT',
       });
-      sw.globalFetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
       sw.fetchCallback(event);
-      await event.respondWith.mock.calls[0][0];
+      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.waitUntil).toHaveBeenCalledTimes(1);
+      await event.waitUntil.mock.calls[0][0];
       const after = sw.getCurrentSWRMutationVersion();
       expect(after).toBe(before + 1);
     });
@@ -603,13 +604,8 @@ describe('Service Worker SWR API Caching', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
-      const mutationResponse = new Response(JSON.stringify({ defaultViewMap: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
       sw.globalFetch
-        .mockResolvedValueOnce(staleGetResponse)
-        .mockResolvedValueOnce(mutationResponse);
+        .mockResolvedValueOnce(staleGetResponse);
 
       const getEvent = createFetchEvent('https://example.com/api/session');
       sw.fetchCallback(getEvent);
@@ -621,7 +617,9 @@ describe('Service Worker SWR API Caching', () => {
         method: 'PUT',
       });
       sw.fetchCallback(mutationEvent);
-      await mutationEvent.respondWith.mock.calls[0][0];
+      expect(mutationEvent.respondWith).not.toHaveBeenCalled();
+      expect(mutationEvent.waitUntil).toHaveBeenCalledTimes(1);
+      await mutationEvent.waitUntil.mock.calls[0][0];
 
       await getEvent.waitUntil.mock.calls[0][0];
 
@@ -637,11 +635,7 @@ describe('Service Worker SWR API Caching', () => {
       });
 
       sw.globalFetch
-        .mockImplementationOnce(() => delayedGet)
-        .mockResolvedValueOnce(new Response(JSON.stringify({ showFutureGoalsUnlocked: false }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }));
+        .mockImplementationOnce(() => delayedGet);
 
       const getEvent = createFetchEvent('https://example.com/api/session');
       sw.fetchCallback(getEvent);
@@ -651,7 +645,9 @@ describe('Service Worker SWR API Caching', () => {
         method: 'PUT',
       });
       sw.fetchCallback(mutationEvent);
-      await mutationEvent.respondWith.mock.calls[0][0];
+      expect(mutationEvent.respondWith).not.toHaveBeenCalled();
+      expect(mutationEvent.waitUntil).toHaveBeenCalledTimes(1);
+      await mutationEvent.waitUntil.mock.calls[0][0];
 
       resolveGet(new Response(JSON.stringify({ showFutureGoalsUnlocked: true }), {
         status: 200,

@@ -164,13 +164,11 @@ self.addEventListener('fetch', (event) => {
   // Invalidate SWR cache on same-origin API mutations (PUT/POST/DELETE/PATCH)
   if (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith('/api/') && event.request.method !== 'GET') {
     bumpSWRMutationVersion();
-    event.respondWith(
+    event.waitUntil(
       caches.open(SWR_CACHE_NAME).then(function(cache) {
         return cache.keys().then(function(keys) {
           return Promise.all(keys.map(function(key) { return cache.delete(key); }));
         });
-      }).then(function() {
-        return fetch(event.request);
       })
     );
     return;
