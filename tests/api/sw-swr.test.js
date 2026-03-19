@@ -59,6 +59,7 @@ function loadSWModule() {
         const key = typeof request === 'string' ? request : request.url;
         return store.delete(key);
       }),
+      keys: jest.fn(async () => Array.from(store.keys()).map((key) => new Request(key))),
       addAll: jest.fn(async () => {}),
       _store: store,
     };
@@ -429,28 +430,58 @@ describe('Service Worker SWR API Caching', () => {
       expect(response).toBe(networkResponse);
     });
 
-    test('POST requests bypass SWR entirely', () => {
+    test('POST requests clear SWR cache and go to network', async () => {
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        new Response('cached')
+      );
+      sw.globalFetch.mockResolvedValueOnce(new Response('ok'));
+
       const event = createFetchEvent('https://example.com/api/goals', {
         method: 'POST',
       });
       sw.fetchCallback(event);
-      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.respondWith).toHaveBeenCalledTimes(1);
+      await event.respondWith.mock.calls[0][0];
+      expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
+      expect(swrCache.delete).toHaveBeenCalled();
     });
 
-    test('PUT requests bypass SWR entirely', () => {
+    test('PUT requests clear SWR cache and go to network', async () => {
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        new Response('cached')
+      );
+      sw.globalFetch.mockResolvedValueOnce(new Response('ok'));
+
       const event = createFetchEvent('https://example.com/api/goals', {
         method: 'PUT',
       });
       sw.fetchCallback(event);
-      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.respondWith).toHaveBeenCalledTimes(1);
+      await event.respondWith.mock.calls[0][0];
+      expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
+      expect(swrCache.delete).toHaveBeenCalled();
     });
 
-    test('DELETE requests bypass SWR entirely', () => {
+    test('DELETE requests clear SWR cache and go to network', async () => {
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        new Response('cached')
+      );
+      sw.globalFetch.mockResolvedValueOnce(new Response('ok'));
+
       const event = createFetchEvent('https://example.com/api/goals', {
         method: 'DELETE',
       });
       sw.fetchCallback(event);
-      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.respondWith).toHaveBeenCalledTimes(1);
+      await event.respondWith.mock.calls[0][0];
+      expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
+      expect(swrCache.delete).toHaveBeenCalled();
     });
 
     test('Non-allowlisted GET API endpoints use network-only', async () => {
@@ -485,12 +516,22 @@ describe('Service Worker SWR API Caching', () => {
       expect(event.respondWith).not.toHaveBeenCalled();
     });
 
-    test('PATCH requests bypass SWR entirely', () => {
+    test('PATCH requests clear SWR cache and go to network', async () => {
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        new Response('cached')
+      );
+      sw.globalFetch.mockResolvedValueOnce(new Response('ok'));
+
       const event = createFetchEvent('https://example.com/api/goals', {
         method: 'PATCH',
       });
       sw.fetchCallback(event);
-      expect(event.respondWith).not.toHaveBeenCalled();
+      expect(event.respondWith).toHaveBeenCalledTimes(1);
+      await event.respondWith.mock.calls[0][0];
+      expect(sw.globalFetch).toHaveBeenCalledWith(event.request);
+      expect(swrCache.delete).toHaveBeenCalled();
     });
 
     test('cold cache miss stores response in SWR cache', async () => {

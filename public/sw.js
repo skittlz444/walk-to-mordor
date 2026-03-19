@@ -120,12 +120,27 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache when offline, fallback to network
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
+  const requestUrl = new URL(event.request.url);
+
+  // Invalidate SWR cache on same-origin API mutations (PUT/POST/DELETE/PATCH)
+  if (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith('/api/') && event.request.method !== 'GET') {
+    event.respondWith(
+      caches.open(SWR_CACHE_NAME).then(function(cache) {
+        return cache.keys().then(function(keys) {
+          return Promise.all(keys.map(function(key) { return cache.delete(key); }));
+        });
+      }).then(function() {
+        return fetch(event.request);
+      })
+    );
+    return;
+  }
+
+  // Skip non-GET requests (non-API, e.g. form POSTs)
   if (event.request.method !== 'GET') {
     return;
   }
 
-  const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) {
     return;
   }
