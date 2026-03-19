@@ -45,6 +45,10 @@ import {
 import { MapWalkIsland } from './MapWalkIsland';
 import { userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
 import {
+  avatarId as appAvatarId,
+  totalDistance as appTotalDistance,
+} from '../stores/appStore';
+import {
   createMemberPaths,
   updateMemberPaths,
   type MemberPathData,
@@ -67,7 +71,6 @@ import {
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
 const GOALS_API_URL = '/api/goals';
-const SESSION_API_URL = '/api/session';
 const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
@@ -1130,7 +1133,9 @@ export function MapIsland() {
       applyTransform();
     });
 
-    // Fetch metadata and user progress in parallel
+    // Fetch metadata/user progress/goals in parallel. App store bootstrap
+    // intentionally leaves total-distance hydration to the map route so page
+    // hydration is not blocked by a second authenticated request everywhere.
     const metaPromise = fetch(TILES_META_URL)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1155,27 +1160,11 @@ export function MapIsland() {
           .catch(() => [] as Goal[])
       : Promise.resolve([] as Goal[]);
 
-    // Fetch session for user preference and current-user avatar marker data
-    interface SessionPreference {
-      avatarId?: string | null;
-      showFutureGoalsUnlocked?: boolean;
-    }
-    const sessionPromise: Promise<SessionPreference> = token
-      ? fetch(SESSION_API_URL, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => (res.ok ? (res.json() as Promise<SessionPreference>) : {}))
-          .catch(() => ({} as SessionPreference))
-      : Promise.resolve({} as SessionPreference);
-
-    Promise.all([metaPromise, progressPromise, goalsPromise, sessionPromise])
-      .then(([data, distMiles, goals, sessionData]) => {
+    Promise.all([metaPromise, progressPromise, goalsPromise])
+      .then(([data, distMiles, goals]) => {
         metaRef.current = data;
-
-        // Set user preference from session data
-        if (typeof sessionData.showFutureGoalsUnlocked === 'boolean') {
-          showFutureGoalsUnlocked.value = sessionData.showFutureGoalsUnlocked;
-        }
+        const initialDistanceKm = distMiles * MILES_TO_KM;
+        appTotalDistance.value = initialDistanceKm;
 
         const previousOpenedDistance = readLastOpenedDistanceMiles(localStorage);
         const hasPreviousOpenedDistance = previousOpenedDistance !== null;
@@ -1188,7 +1177,7 @@ export function MapIsland() {
 
         // Populate mapStore userProgress for MapWalkIsland to use
         userProgress.value = {
-          totalDistance: distMiles * MILES_TO_KM,
+          totalDistance: initialDistanceKm,
           lastUpdated: new Date(),
         };
 
@@ -1224,7 +1213,7 @@ export function MapIsland() {
           userPos,
           initialZoom,
           initialDistance,
-          sessionData.avatarId,
+          appAvatarId.value,
         );
 
         // Create waypoint markers from goals data

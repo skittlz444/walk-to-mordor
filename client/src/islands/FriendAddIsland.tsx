@@ -1,15 +1,12 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { Avatar } from '../components/Avatar';
+import { isAuthenticated as appIsAuthenticated } from '../stores/appStore';
+import { getAuthHeaders } from '../utils/auth';
 
 interface ResolveData {
   id: number;
   username: string;
   avatar_id: string | null;
-}
-
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('sessionToken');
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
 function getFriendCodeFromUrl(): string {
@@ -24,23 +21,8 @@ export function FriendAddIsland() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem('sessionToken');
-    if (!token) {
-      setIsAuthenticated(false);
-      return;
-    }
-    try {
-      const res = await fetch('/api/session', { headers: { Authorization: `Bearer ${token}` } });
-      setIsAuthenticated(res.ok);
-    } catch {
-      setIsAuthenticated(false);
-    }
-  }, []);
-
-  const fetchPreview = useCallback(async () => {
+  const fetchPreview= useCallback(async () => {
     if (!friendCode) {
       setError('Invalid friend link');
       setLoading(false);
@@ -62,9 +44,8 @@ export function FriendAddIsland() {
   }, [friendCode]);
 
   useEffect(() => {
-    checkAuth();
     fetchPreview();
-  }, [checkAuth, fetchPreview]);
+  }, [fetchPreview]);
 
   const handleSendRequest = async () => {
     setSending(true);
@@ -142,7 +123,7 @@ export function FriendAddIsland() {
   }
 
   // Not authenticated and couldn't resolve preview
-  if (!isAuthenticated && !preview) {
+  if (!appIsAuthenticated.value && !preview) {
     return (
       <div className="party-page">
         <div className="party-card friend-add-preview">
@@ -174,7 +155,7 @@ export function FriendAddIsland() {
           </div>
         )}
         <div style={{ marginTop: '1.5rem' }}>
-          {isAuthenticated ? (
+          {appIsAuthenticated.value ? (
             <button
               className="party-btn party-btn--gold party-btn--full"
               onClick={handleSendRequest}

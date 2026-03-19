@@ -22,6 +22,7 @@ import type {
 } from '../types/map';
 import { getUserPosition, type Point } from '../utils/map-utils';
 import { fellowshipPath } from '../data/paths/fellowship-path';
+import { showFutureGoalsUnlocked as appShowFutureGoalsUnlocked } from './appStore';
 
 // ============================================================================
 // Core Signals
@@ -62,9 +63,10 @@ export const error = signal<Error | null>(null);
 
 /**
  * User preference: whether future goals appear unlocked.
- * Default true = unlocked (new global default once Story 2.10 ships).
+ * Derived from appStore (single session source of truth) via computed signal.
+ * Automatically stays in sync — no manual snapshot needed.
  */
-export const showFutureGoalsUnlocked = signal<boolean>(true);
+export const showFutureGoalsUnlocked = computed<boolean>(() => appShowFutureGoalsUnlocked.value);
 
 // ============================================================================
 // Computed Signals (defined in mapStore for full implementation)
@@ -277,25 +279,8 @@ export async function initializeMap(): Promise<void> {
     const progress = await fetchUserProgress();
     userProgress.value = progress;
 
-    // Load user preference from session (default: true/unlocked)
-    try {
-      const token = localStorage.getItem('sessionToken');
-      if (token) {
-        const sessionRes = await fetch('/api/session', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (sessionRes.ok) {
-          const sessionData = await sessionRes.json();
-          showFutureGoalsUnlocked.value =
-            typeof sessionData.showFutureGoalsUnlocked === 'boolean'
-              ? sessionData.showFutureGoalsUnlocked
-              : true;
-        }
-      }
-    } catch (prefErr) {
-      // Non-critical - keep default (true/unlocked)
-      console.warn('[mapStore] Could not load preference, using default:', prefErr);
-    }
+    // showFutureGoalsUnlocked is a computed from appStore — no manual sync needed.
+    // Safe: initializeAppStore() completes before island hydration (see index.tsx bootstrap)
 
     // Try cached milestones first
     let milestonesData = getCachedMilestones();
@@ -416,7 +401,7 @@ export function setViewportSize(size: { width: number; height: number }): void {
  * @param value - true = unlocked (default), false = locked (surprise mode)
  */
 export function setShowFutureGoalsUnlocked(value: boolean): void {
-  showFutureGoalsUnlocked.value = value;
+  appShowFutureGoalsUnlocked.value = value;
 }
 
 // ============================================================================

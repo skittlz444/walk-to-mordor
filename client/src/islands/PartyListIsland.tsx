@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
+import { getAuthHeaders } from '../utils/auth';
 
 interface Party {
   id: number;
@@ -25,11 +26,6 @@ interface FellowshipInvite {
   total_distance: number;
   inviter_username: string;
   created_at: string;
-}
-
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('sessionToken');
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
 export function PartyListIsland() {

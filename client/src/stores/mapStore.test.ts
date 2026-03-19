@@ -22,6 +22,7 @@ import {
   setViewportSize,
   setShowFutureGoalsUnlocked,
 } from './mapStore';
+import { showFutureGoalsUnlocked as appShowFutureGoalsUnlocked } from './appStore';
 
 /**
  * Mock localStorage for testing.
@@ -62,7 +63,7 @@ describe('mapStore', () => {
     loadingState.value = 'idle';
     error.value = null;
     viewportSize.value = { width: 0, height: 0 };
-    showFutureGoalsUnlocked.value = true;
+    appShowFutureGoalsUnlocked.value = true;
 
     // Setup mock localStorage
     mockStorage = createMockStorage();
@@ -372,10 +373,6 @@ describe('mapStore', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: true }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
           json: async () => [
             { id: 1, distance: 50, title: 'Goal 1' },
           ],
@@ -414,10 +411,6 @@ describe('mapStore', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: true }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
           json: async () => [],
         });
 
@@ -433,10 +426,6 @@ describe('mapStore', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ totalDistance: 0 }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: true }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -459,10 +448,6 @@ describe('mapStore', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ totalDistance: 100 }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: true }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -517,16 +502,17 @@ describe('mapStore', () => {
       expect(showFutureGoalsUnlocked.value).toBe(true);
     });
 
-    it('is loaded from session during initializeMap', async () => {
+    it('is loaded from appStore during initializeMap', async () => {
       mockStorage.setItem('sessionToken', 'test-token');
+
+      // Pre-set the appStore signal to false
+      const appStore = await import('./appStore');
+      appStore.showFutureGoalsUnlocked.value = false;
+
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ totalDistance: 100 }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: false }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -536,18 +522,17 @@ describe('mapStore', () => {
       await initializeMap();
 
       expect(showFutureGoalsUnlocked.value).toBe(false);
+
+      // Restore
+      appStore.showFutureGoalsUnlocked.value = true;
     });
 
-    it('defaults to true if session response omits field', async () => {
+    it('defaults to true if appStore has default', async () => {
       mockStorage.setItem('sessionToken', 'test-token');
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ totalDistance: 100 }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({}),
         })
         .mockResolvedValueOnce({
           ok: true,

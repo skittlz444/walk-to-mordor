@@ -1,15 +1,12 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
+import { isAuthenticated as appIsAuthenticated } from '../stores/appStore';
+import { getAuthHeaders } from '../utils/auth';
 
 interface PreviewData {
   name: string;
   member_count: number;
   distance_mode: string;
   leave_distance_behavior: string;
-}
-
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('sessionToken');
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
 function getInviteCodeFromUrl(): string {
@@ -23,23 +20,8 @@ export function PartyJoinIsland() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem('sessionToken');
-    if (!token) {
-      setIsAuthenticated(false);
-      return;
-    }
-    try {
-      const res = await fetch('/api/session', { headers: { Authorization: `Bearer ${token}` } });
-      setIsAuthenticated(res.ok);
-    } catch {
-      setIsAuthenticated(false);
-    }
-  }, []);
-
-  const fetchPreview = useCallback(async () => {
+  const fetchPreview= useCallback(async () => {
     if (!inviteCode) {
       setError('Invalid invite link');
       setLoading(false);
@@ -60,9 +42,8 @@ export function PartyJoinIsland() {
   }, [inviteCode]);
 
   useEffect(() => {
-    checkAuth();
     fetchPreview();
-  }, [checkAuth, fetchPreview]);
+  }, [fetchPreview]);
 
   const handleJoin = async () => {
     setJoining(true);
@@ -135,7 +116,7 @@ export function PartyJoinIsland() {
         </div>
 
         <div style={{ marginTop: '1.5rem' }}>
-          {isAuthenticated ? (
+          {appIsAuthenticated.value ? (
             <button
               className="party-btn party-btn--gold party-btn--full"
               onClick={handleJoin}
