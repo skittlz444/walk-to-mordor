@@ -27,6 +27,7 @@ const REAL_SW_PATH = path.join(__dirname, '..', '..', 'public', 'sw.js');
 
 describe('Cache Version Management Scripts', () => {
   const BUILD_TIMESTAMP_PLACEHOLDER = '{{BUILD_TIMESTAMP}}';
+  const SWR_CACHE_VERSION_PLACEHOLDER = '{{SWR_CACHE_VERSION}}';
   
   let tmpSW;
   let placeholderContent;
@@ -72,6 +73,21 @@ describe('Cache Version Management Scripts', () => {
       // Assert
       const afterContent = fs.readFileSync(tmpSW, 'utf8');
       expect(afterContent).not.toContain(BUILD_TIMESTAMP_PLACEHOLDER);
+    });
+
+    test('should replace SWR_CACHE_VERSION placeholder with timestamp', () => {
+      // Arrange - service worker should have SWR placeholder
+      const beforeContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(beforeContent).toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      
+      // Act
+      updateCacheVersion();
+      
+      // Assert
+      const afterContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(afterContent).not.toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      // SWR_CACHE_VERSION should now contain a timestamp
+      expect(afterContent).toMatch(/const SWR_CACHE_VERSION = '\d{8}-\d{6}';/);
     });
     
     test('should generate timestamp in correct format (YYYYMMDD-HHMMSS)', () => {
@@ -191,6 +207,20 @@ describe('Cache Version Management Scripts', () => {
       const resetContent = fs.readFileSync(tmpSW, 'utf8');
       expect(resetContent).toContain(`const BUILD_TIMESTAMP = '${BUILD_TIMESTAMP_PLACEHOLDER}';`);
     });
+
+    test('should restore SWR_CACHE_VERSION placeholder', () => {
+      // Arrange - first update with timestamp
+      updateCacheVersion();
+      const updatedContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(updatedContent).not.toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      
+      // Act
+      resetCacheVersion();
+      
+      // Assert
+      const resetContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(resetContent).toContain(`const SWR_CACHE_VERSION = '${SWR_CACHE_VERSION_PLACEHOLDER}';`);
+    });
     
     test('should restore CACHE_NAME placeholder', () => {
       // Arrange - first update with timestamp
@@ -275,6 +305,24 @@ describe('Cache Version Management Scripts', () => {
       const resetContent = fs.readFileSync(tmpSW, 'utf8');
       expect(resetContent).toContain(BUILD_TIMESTAMP_PLACEHOLDER);
       expect(resetContent).not.toMatch(/const BUILD_TIMESTAMP = '\d{8}-\d{6}';/);
+    });
+
+    test('SWR_CACHE_VERSION update and reset cycle works correctly', () => {
+      // Start with placeholder
+      const initialContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(initialContent).toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      
+      // Update to timestamp
+      updateCacheVersion();
+      const updatedContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(updatedContent).not.toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      expect(updatedContent).toMatch(/const SWR_CACHE_VERSION = '\d{8}-\d{6}';/);
+      
+      // Reset back to placeholder
+      resetCacheVersion();
+      const resetContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(resetContent).toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      expect(resetContent).not.toMatch(/const SWR_CACHE_VERSION = '\d{8}-\d{6}';/);
     });
     
     test('cache names should follow expected pattern', () => {

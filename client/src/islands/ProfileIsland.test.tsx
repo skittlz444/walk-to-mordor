@@ -3,10 +3,19 @@ import { render, fireEvent, cleanup, waitFor } from '@testing-library/preact';
 import { ProfileIsland } from './ProfileIsland';
 
 const mockFetch = vi.fn();
+const mockServiceWorkerPostMessage = vi.fn();
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.stubGlobal('fetch', mockFetch);
+  Object.defineProperty(navigator, 'serviceWorker', {
+    value: {
+      controller: {
+        postMessage: mockServiceWorkerPostMessage,
+      },
+    },
+    configurable: true,
+  });
 
   const store: Record<string, string> = { sessionToken: 'test-token' };
   vi.stubGlobal('localStorage', {
@@ -22,6 +31,7 @@ beforeEach(() => {
   });
 
   mockFetch.mockReset();
+  mockServiceWorkerPostMessage.mockReset();
 });
 
 afterEach(() => {
@@ -150,6 +160,26 @@ describe('ProfileIsland', () => {
           method: 'PUT',
           body: JSON.stringify({ username: 'newname', email: 'old@mail.com' }),
         }));
+      });
+    });
+
+    it('clears the SWR cache after a successful profile save', async () => {
+      mockSessionAndAvatars({ username: 'oldname', email: 'old@mail.com' });
+      const { container, getByText } = render(<ProfileIsland />);
+
+      await waitFor(() => {
+        expect(container.querySelector('#profile-username')).toBeTruthy();
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ message: 'Profile updated successfully!' }),
+      });
+
+      fireEvent.click(getByText('Save Changes'));
+
+      await waitFor(() => {
+        expect(mockServiceWorkerPostMessage).toHaveBeenCalledWith({ type: 'sw-clear-cache' });
       });
     });
 
@@ -291,6 +321,27 @@ describe('ProfileIsland', () => {
         expect(mockFetch).toHaveBeenCalledWith('/api/user/preferences', expect.objectContaining({
           body: JSON.stringify({ showFutureGoalsUnlocked: false }),
         }));
+      });
+    });
+
+    it('clears the SWR cache after a successful preference save', async () => {
+      mockSessionAndAvatars({ showFutureGoalsUnlocked: true });
+      const { container } = render(<ProfileIsland />);
+
+      await waitFor(() => {
+        expect(container.querySelector('#preview-milestones-toggle')).toBeTruthy();
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+
+      const toggle = container.querySelector('#preview-milestones-toggle') as HTMLInputElement;
+      fireEvent.change(toggle, { target: { checked: false } });
+
+      await waitFor(() => {
+        expect(mockServiceWorkerPostMessage).toHaveBeenCalledWith({ type: 'sw-clear-cache' });
       });
     });
 

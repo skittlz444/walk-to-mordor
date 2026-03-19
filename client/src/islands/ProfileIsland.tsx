@@ -14,6 +14,27 @@ function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function clearServiceWorkerSWRCache(): Promise<void> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return;
+  }
+
+  const message = { type: 'sw-clear-cache' };
+  const serviceWorker = navigator.serviceWorker;
+
+  try {
+    if (serviceWorker.controller) {
+      serviceWorker.controller.postMessage(message);
+      return;
+    }
+
+    const registration = await serviceWorker.ready;
+    registration.active?.postMessage(message);
+  } catch {
+    // Non-critical: if SW messaging fails, the mutation itself still succeeded.
+  }
+}
+
 export function ProfileIsland() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
@@ -96,6 +117,8 @@ export function ProfileIsland() {
         setAvatarStatusClass('saved');
         setTimeout(() => { setAvatarStatus(''); setAvatarStatusClass(''); }, 1500);
 
+        void clearServiceWorkerSWRCache();
+
         window.dispatchEvent(new CustomEvent('preferenceChanged', {
           detail: { avatarId: slug },
         }));
@@ -149,6 +172,8 @@ export function ProfileIsland() {
         window.dispatchEvent(new CustomEvent('preferenceChanged', {
           detail: { [preferenceKey]: newValue },
         }));
+
+        void clearServiceWorkerSWRCache();
       } else {
         const data = await response.json();
         setPreferenceStatus(data.error || 'Failed to save');
@@ -193,6 +218,7 @@ export function ProfileIsland() {
 
       if (response.ok) {
         setSuccess(data.message || 'Profile updated successfully!');
+        void clearServiceWorkerSWRCache();
       } else {
         setError(data.error || 'Failed to update profile');
       }

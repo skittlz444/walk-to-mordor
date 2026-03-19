@@ -77,7 +77,7 @@ walk-to-mordor/
 | `src/index.ts` | Worker entry: `matchRoute()` router, CORS, method guards |
 | `client/src/index.tsx` | Island hydration: discovers `[data-island]` mounts |
 | `public/js/main.js` | Legacy app controller: session management, `body.authenticated` signal |
-| `public/sw.js` | Service worker: cache-first strategy, build-stamped `CACHE_NAME` |
+| `public/sw.js` | Service worker: cache-first for static assets, SWR for API endpoints |
 
 Feature → file discovery: search `src/` for handler modules, `client/src/islands/` for islands, `public/css/` for stylesheets.
 
@@ -187,3 +187,41 @@ Playwright tests must use API pre-configuration (e.g., `PUT /api/user/preference
 - Static asset pipeline (`public/img` + `goals.image_id`) — no R2 for goal images.
 - TypeScript strict mode enforced. No `any`. Define interfaces for all D1 results.
 - `renderLayout.ts` controls CSS inclusion — extra stylesheets must be explicitly listed per page.
+
+## Service Worker Caching Strategy
+
+The service worker (`public/sw.js`) implements a multi-strategy caching approach:
+
+### Static Assets — Cache-First
+Static assets (CSS, JS, images, fonts, manifest) use cache-first with a build-stamped `CACHE_NAME` (`walk-to-mordor-<BUILD_TIMESTAMP>`). Old static caches are deleted on activate.
+
+### API Endpoints — Stale-While-Revalidate (SWR)
+Six read-heavy API endpoints use SWR caching via a separate `walk-to-mordor-api-swr` cache:
+
+| Endpoint | Description |
+|---|---|
+| `/api/session` | User session data |
+| `/api/goals` | Goal list |
+| `/api/calendar-progress` | Calendar progress data |
+| `/api/total-distance` | Total distance summary |
+| `/api/user/parties` | User's fellowship list |
+| `/api/friends` | Friends list |
+
+**SWR behavior:** On cache hit, the cached response is returned immediately while a background fetch updates the cache. On cache miss, the request goes to the network and the response is cached for next time. Non-allowlisted API endpoints remain network-only.
+
+**TTL metadata:** Each cached response stores an `x-swr-cached-at` header with a timestamp. The TTL (`SWR_TTL_MS`, default 5 minutes) is informational — stale entries are still served, and background revalidation always runs.
+
+**Cache version busting:** `SWR_CACHE_VERSION` is stamped at build time (alongside `BUILD_TIMESTAMP`). On activate, if the stored version differs from the current version, the entire SWR cache is cleared. This ensures stale API response shapes don't persist after schema migrations.
+
+### postMessage Protocol
+After a background cache update, the SW broadcasts to all clients:
+```javascript
+{ type: 'sw-cache-updated', url: '<updated-request-url>' }
+```
+Islands or stores can subscribe via `navigator.serviceWorker.addEventListener('message', ...)` to reactively refresh when cached data changes.
+
+### HTML Navigations — Network-Only
+HTML navigations always go to the network with an offline fallback response.
+
+### Write Requests
+`POST`, `PUT`, `DELETE`, and `PATCH` requests are never SWR-cached and continue to use the network. Same-origin API mutations also clear the SWR cache so subsequent GETs do not reuse stale API data.
