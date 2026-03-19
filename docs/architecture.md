@@ -77,11 +77,37 @@ walk-to-mordor/
 | `src/index.ts` | Worker entry: `matchRoute()` router, CORS, method guards |
 | `client/src/index.tsx` | Island hydration: discovers `[data-island]` mounts |
 | `public/js/main.js` | Legacy app controller: session management, `body.authenticated` signal |
-| `public/sw.js` | Service worker: cache-first strategy, build-stamped `CACHE_NAME` |
+| `public/sw.js` | Service worker: cache-first for static assets, SWR for API endpoints, build-stamped `CACHE_NAME` |
 
 Feature → file discovery: search `src/` for handler modules, `client/src/islands/` for islands, `public/css/` for stylesheets.
 
 ## Key Architectural Patterns
+
+### Service Worker Caching Strategy
+
+The service worker (`public/sw.js`) employs two distinct caching strategies:
+
+**Static Assets — Cache-First with Build Stamping**
+- `CACHE_NAME` uses `BUILD_TIMESTAMP` for versioning (e.g., `walk-to-mordor-20260317-143022`)
+- Pre-caches essential CSS/JS/manifest on install
+- Dynamic caching for static assets on first request
+- Old static caches deleted on activate
+
+**API Responses — Stale-While-Revalidate (SWR)**
+- Separate cache: `walk-to-mordor-api-swr` (`SWR_CACHE_NAME`)
+- Only allowlisted `GET` endpoints are SWR-cached:
+  - `/api/session`, `/api/goals`, `/api/calendar-progress`
+  - `/api/total-distance`, `/api/user/parties`, `/api/friends`
+- Cache hit: return cached immediately + background revalidation
+- Cache miss: network-first, cache on success
+- `POST`/`PUT`/`DELETE` always bypass cache (non-GET skipped early)
+- TTL metadata via `x-swr-cached-at` header (default 5 min)
+- Deploy-time cache busting via `SWR_CACHE_VERSION` (cleared on version mismatch during activate)
+
+**Client Notification Protocol**
+- After background cache update, the SW sends `postMessage({ type: 'sw-cache-updated', url })` to all window clients
+- Islands/stores can listen via `navigator.serviceWorker.addEventListener('message', ...)`
+- Client-side listeners are NOT implemented by the SW — each island opts in independently
 
 ### SSR Shell + Islands
 

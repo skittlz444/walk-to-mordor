@@ -10,6 +10,7 @@ const path = require('path');
 
 const DEFAULT_SW_PATH = path.join(__dirname, '..', 'sw.js');
 const BUILD_TIMESTAMP_PLACEHOLDER = '{{BUILD_TIMESTAMP}}';
+const SWR_CACHE_VERSION_PLACEHOLDER = '{{SWR_CACHE_VERSION}}';
 
 function getSwPath() {
   return process.env.SW_PATH || DEFAULT_SW_PATH;
@@ -36,6 +37,12 @@ function updateCacheVersion() {
     
     // Replace all occurrences of placeholder with actual timestamp
     swContent = swContent.replaceAll(BUILD_TIMESTAMP_PLACEHOLDER, timestamp);
+    
+    // Replace SWR_CACHE_VERSION placeholder with timestamp
+    if (swContent.includes(SWR_CACHE_VERSION_PLACEHOLDER)) {
+      swContent = swContent.replaceAll(SWR_CACHE_VERSION_PLACEHOLDER, timestamp);
+      console.log(`✅ Updated SWR cache version to: ${timestamp}`);
+    }
     
     // Write back to file
     fs.writeFileSync(swPath, swContent, 'utf8');
