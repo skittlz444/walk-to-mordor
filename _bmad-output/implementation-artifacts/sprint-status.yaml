@@ -140,9 +140,9 @@ development_status:
   # EPIC 8: Architecture & Performance Foundation (Phase 5)
   # ============================================
   epic-8: in-progress
-  8-1-unified-preact-signal-global-store: ready-for-dev
-  8-2-d1-read-replica-wrapper: ready-for-dev
-  8-3-service-worker-swr-api-caching: ready-for-dev
+  8-1-unified-preact-signal-global-store: review
+  8-2-d1-read-replica-wrapper: review
+  8-3-service-worker-swr-api-caching: review
   epic-8-retrospective: optional
 
   # ============================================
