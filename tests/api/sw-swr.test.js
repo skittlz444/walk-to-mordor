@@ -243,6 +243,45 @@ describe('Service Worker SWR API Caching', () => {
       // Should be reasonably recent (within last 10 seconds)
       expect(Date.now() - timestamp).toBeLessThan(10000);
     });
+
+    test('strips transport-specific headers when creating cached response', async () => {
+      const mockCache = {
+        put: jest.fn(async () => {}),
+      };
+      const request = new Request('https://example.com/api/session');
+      const response = new Response('{"ok":true}', {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Encoding': 'gzip',
+          'Content-Length': '999',
+          'Transfer-Encoding': 'chunked',
+          'Connection': 'keep-alive',
+          'Keep-Alive': 'timeout=5',
+          'Proxy-Authenticate': 'Basic realm="test"',
+          'Proxy-Authorization': 'Basic abc123',
+          'TE': 'trailers',
+          'Trailer': 'Expires',
+          'Upgrade': 'websocket',
+        },
+      });
+
+      await sw.cacheWithTimestamp(mockCache, request, response);
+
+      const cached = mockCache.put.mock.calls[0][1];
+      expect(cached.headers.get('Content-Type')).toBe('application/json');
+      expect(cached.headers.get('x-swr-cached-at')).toBeTruthy();
+      expect(cached.headers.get('Content-Encoding')).toBeNull();
+      expect(cached.headers.get('Content-Length')).toBeNull();
+      expect(cached.headers.get('Transfer-Encoding')).toBeNull();
+      expect(cached.headers.get('Connection')).toBeNull();
+      expect(cached.headers.get('Keep-Alive')).toBeNull();
+      expect(cached.headers.get('Proxy-Authenticate')).toBeNull();
+      expect(cached.headers.get('Proxy-Authorization')).toBeNull();
+      expect(cached.headers.get('TE')).toBeNull();
+      expect(cached.headers.get('Trailer')).toBeNull();
+      expect(cached.headers.get('Upgrade')).toBeNull();
+    });
   });
 
   describe('notifyClients', () => {
@@ -643,6 +682,30 @@ describe('Service Worker SWR API Caching', () => {
       const cachedEntry = await swrCache.match({ url: 'https://example.com/api/goals' });
       expect(cachedEntry).toBeDefined();
       expect(cachedEntry.headers.get('x-swr-cached-at')).toBeTruthy();
+    });
+
+    test('SWR-cached entry strips encoding and length headers from network response', async () => {
+      const networkResponse = new Response(JSON.stringify({ data: true }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Encoding': 'br',
+          'Content-Length': '12345',
+        },
+      });
+      sw.globalFetch.mockResolvedValueOnce(networkResponse);
+
+      const event = createFetchEvent('https://example.com/api/session');
+      sw.fetchCallback(event);
+      await event.respondWith.mock.calls[0][0];
+
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      const cachedEntry = await swrCache.match({ url: 'https://example.com/api/session' });
+      expect(cachedEntry).toBeDefined();
+      expect(cachedEntry.headers.get('x-swr-cached-at')).toBeTruthy();
+      expect(cachedEntry.headers.get('Content-Type')).toBe('application/json');
+      expect(cachedEntry.headers.get('Content-Encoding')).toBeNull();
+      expect(cachedEntry.headers.get('Content-Length')).toBeNull();
     });
 
     test('SWR hit background revalidation updates cache with fresh data', async () => {

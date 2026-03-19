@@ -15,6 +15,18 @@ const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}';
 const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
 const SWR_TTL_MS = 300000; // 5 minutes
 const SWR_MAX_AGE_MS = 6 * SWR_TTL_MS; // 30 minutes — entries older than this get network-first
+const SWR_UNSAFE_CACHE_HEADERS = [
+  'content-encoding',
+  'content-length',
+  'transfer-encoding',
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'upgrade'
+];
 
 const SWR_ENDPOINTS = [
   '/api/session',
@@ -53,6 +65,9 @@ function getCacheKey(request) {
 
 async function cacheWithTimestamp(cache, request, response) {
   const headers = new Headers(response.headers);
+  SWR_UNSAFE_CACHE_HEADERS.forEach(function(headerName) {
+    headers.delete(headerName);
+  });
   headers.set('x-swr-cached-at', Date.now().toString());
   const timestamped = new Response(response.body, {
     status: response.status,
