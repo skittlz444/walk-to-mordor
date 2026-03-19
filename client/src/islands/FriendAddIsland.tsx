@@ -22,10 +22,7 @@ export function FriendAddIsland() {
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Read auth state from appStore signal
-  const isAuthenticated = appIsAuthenticated.value;
-
-  const fetchPreview = useCallback(async () => {
+  const fetchPreview= useCallback(async () => {
     if (!friendCode) {
       setError('Invalid friend link');
       setLoading(false);
@@ -126,7 +123,7 @@ export function FriendAddIsland() {
   }
 
   // Not authenticated and couldn't resolve preview
-  if (!isAuthenticated && !preview) {
+  if (!appIsAuthenticated.value && !preview) {
     return (
       <div className="party-page">
         <div className="party-card friend-add-preview">
@@ -158,7 +155,7 @@ export function FriendAddIsland() {
           </div>
         )}
         <div style={{ marginTop: '1.5rem' }}>
-          {isAuthenticated ? (
+          {appIsAuthenticated.value ? (
             <button
               className="party-btn party-btn--gold party-btn--full"
               onClick={handleSendRequest}

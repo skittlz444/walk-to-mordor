@@ -157,6 +157,7 @@ export function stopPreferenceListener(): void {
 // ============================================================================
 
 const SESSION_API_URL = '/api/session';
+const TOTAL_DISTANCE_API_URL = '/api/total-distance';
 
 /**
  * Initialize the app store by fetching `/api/session`.
@@ -213,6 +214,19 @@ export async function initializeAppStore(): Promise<void> {
       typeof data.defaultViewMap === 'boolean'
         ? data.defaultViewMap
         : false;
+
+    // Fetch total distance in parallel-safe manner (non-blocking on failure)
+    try {
+      const distResponse = await fetch(TOTAL_DISTANCE_API_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (distResponse.ok) {
+        const distData = (await distResponse.json()) as { totalDistance: number };
+        totalDistance.value = distData.totalDistance;
+      }
+    } catch {
+      // totalDistance remains null — non-critical
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to load session';
     storeError.value = message;

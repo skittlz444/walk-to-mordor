@@ -22,6 +22,7 @@ import { AdminUsersListIsland } from './islands/AdminUsersListIsland';
 import { AdminMetricsIsland } from './islands/AdminMetricsIsland';
 import { ProfileIsland } from './islands/ProfileIsland';
 import * as partyStore from './stores/partyStore';
+import { initializeAppStore } from './stores/appStore';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
@@ -124,9 +125,14 @@ function hydrateIslands() {
   });
 }
 
-// Initialize islands when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', hydrateIslands);
-} else {
+// Initialize app store and hydrate islands when DOM is ready
+async function bootstrap() {
+  await initializeAppStore();
   hydrateIslands();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrap);
+} else {
+  bootstrap();
 }

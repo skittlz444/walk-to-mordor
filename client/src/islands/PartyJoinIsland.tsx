@@ -21,10 +21,7 @@ export function PartyJoinIsland() {
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
 
-  // Read auth state from appStore signal
-  const isAuthenticated = appIsAuthenticated.value;
-
-  const fetchPreview = useCallback(async () => {
+  const fetchPreview= useCallback(async () => {
     if (!inviteCode) {
       setError('Invalid invite link');
       setLoading(false);
@@ -119,7 +116,7 @@ export function PartyJoinIsland() {
         </div>
 
         <div style={{ marginTop: '1.5rem' }}>
-          {isAuthenticated ? (
+          {appIsAuthenticated.value ? (
             <button
               className="party-btn party-btn--gold party-btn--full"
               onClick={handleJoin}

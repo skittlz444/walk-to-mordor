@@ -150,6 +150,10 @@ describe('appStore', () => {
           defaultViewMap: true,
         }),
       });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalDistance: 125.5 }),
+      });
 
       await initializeAppStore();
 
@@ -159,6 +163,7 @@ describe('appStore', () => {
       expect(isAdmin.value).toBe(false);
       expect(showFutureGoalsUnlocked.value).toBe(false);
       expect(defaultViewMap.value).toBe(true);
+      expect(totalDistance.value).toBe(125.5);
       expect(storeInitialized.value).toBe(true);
       expect(storeError.value).toBeNull();
     });
@@ -178,10 +183,17 @@ describe('appStore', () => {
           defaultViewMap: false,
         }),
       });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalDistance: 0 }),
+      });
 
       await initializeAppStore();
 
       expect(mockFetch).toHaveBeenCalledWith('/api/session', {
+        headers: { Authorization: 'Bearer my-secret-token' },
+      });
+      expect(mockFetch).toHaveBeenCalledWith('/api/total-distance', {
         headers: { Authorization: 'Bearer my-secret-token' },
       });
     });
@@ -239,6 +251,10 @@ describe('appStore', () => {
           isAdmin: false,
         }),
       });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalDistance: 0 }),
+      });
 
       await initializeAppStore();
 
@@ -257,6 +273,10 @@ describe('appStore', () => {
           avatarId: null,
           isAdmin: false,
         }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalDistance: 0 }),
       });
 
       await initializeAppStore();
@@ -279,11 +299,65 @@ describe('appStore', () => {
           defaultViewMap: false,
         }),
       });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalDistance: 0 }),
+      });
 
       await initializeAppStore();
 
       expect(avatarId.value).toBeNull();
       expect(isAdmin.value).toBe(true);
+    });
+
+    it('leaves totalDistance null when distance fetch fails', async () => {
+      store['sessionToken'] = 'test-token';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          userId: 1,
+          username: 'test',
+          avatarId: null,
+          isAdmin: false,
+          showFutureGoalsUnlocked: true,
+          defaultViewMap: false,
+        }),
+      });
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      await initializeAppStore();
+
+      expect(totalDistance.value).toBeNull();
+      expect(storeError.value).toBeNull();
+      expect(storeInitialized.value).toBe(true);
+    });
+
+    it('leaves totalDistance null when distance endpoint returns non-ok', async () => {
+      store['sessionToken'] = 'test-token';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          userId: 1,
+          username: 'test',
+          avatarId: null,
+          isAdmin: false,
+          showFutureGoalsUnlocked: true,
+          defaultViewMap: false,
+        }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+      });
+
+      await initializeAppStore();
+
+      expect(totalDistance.value).toBeNull();
+      expect(storeError.value).toBeNull();
     });
   });
 
@@ -409,6 +483,10 @@ describe('appStore', () => {
           showFutureGoalsUnlocked: false,
           defaultViewMap: true,
         }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalDistance: 99.9 }),
       });
 
       await initializeAppStore();
