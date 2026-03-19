@@ -211,6 +211,8 @@ describe('appStore', () => {
       expect(storeInitialized.value).toBe(true);
       expect(userId.value).toBeNull();
       expect(storeError.value).toBeNull();
+      expect(sessionToken.value).toBeNull();
+      expect(isAuthenticated.value).toBe(false);
     });
 
     it('handles non-401 error response', async () => {

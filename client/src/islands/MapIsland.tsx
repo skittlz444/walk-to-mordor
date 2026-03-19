@@ -1155,7 +1155,7 @@ export function MapIsland() {
           .catch(() => [] as Goal[])
       : Promise.resolve([] as Goal[]);
 
-    // Read session data from appStore (already hydrated by initializeAppStore)
+    // Read session data from appStore — guaranteed initialized before island hydration (see index.tsx bootstrap)
     interface SessionPreference {
       avatarId?: string | null;
       showFutureGoalsUnlocked?: boolean;

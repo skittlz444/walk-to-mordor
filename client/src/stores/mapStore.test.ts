@@ -22,6 +22,7 @@ import {
   setViewportSize,
   setShowFutureGoalsUnlocked,
 } from './mapStore';
+import { showFutureGoalsUnlocked as appShowFutureGoalsUnlocked } from './appStore';
 
 /**
  * Mock localStorage for testing.
@@ -62,7 +63,7 @@ describe('mapStore', () => {
     loadingState.value = 'idle';
     error.value = null;
     viewportSize.value = { width: 0, height: 0 };
-    showFutureGoalsUnlocked.value = true;
+    appShowFutureGoalsUnlocked.value = true;
 
     // Setup mock localStorage
     mockStorage = createMockStorage();

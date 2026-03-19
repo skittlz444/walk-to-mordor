@@ -52,7 +52,7 @@ export const storeError = signal<string | null>(null);
  * for reactive consumers. Updated when initializeAppStore runs.
  */
 export const sessionToken = signal<string | null>(
-  typeof localStorage !== 'undefined' ? localStorage.getItem('sessionToken') : null,
+  typeof localStorage !== 'undefined' ? localStorage.getItem('sessionToken') || null : null,
 );
 
 // ============================================================================
@@ -173,7 +173,7 @@ export async function initializeAppStore(): Promise<void> {
   storeError.value = null;
 
   // Refresh token signal from localStorage
-  sessionToken.value = localStorage.getItem('sessionToken');
+  sessionToken.value = localStorage.getItem('sessionToken') || null;
 
   const token = sessionToken.value;
   if (!token) {
@@ -189,7 +189,9 @@ export async function initializeAppStore(): Promise<void> {
     });
 
     if (response.status === 401) {
-      // Token expired or invalid — stay unauthenticated
+      // Token expired or invalid — clear and stay unauthenticated
+      sessionToken.value = null;
+      localStorage.removeItem('sessionToken');
       storeInitialized.value = true;
       startPreferenceBridge();
       startPreferenceListener();
