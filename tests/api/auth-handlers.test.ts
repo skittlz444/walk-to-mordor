@@ -46,6 +46,7 @@ jest.mock('../../src/email-utils', () => ({
 
 describe('Auth Handlers', () => {
   let mockEnv: any;
+  let mockDb: any;
   let mockRequest: any;
 
   beforeEach(() => {
@@ -84,6 +85,8 @@ describe('Auth Handlers', () => {
       }
     };
 
+    mockDb = { read: mockEnv.DB, write: mockEnv.DB };
+
     mockRequest = {
       headers: {
         get: jest.fn()
@@ -119,7 +122,7 @@ describe('Auth Handlers', () => {
       // Third call: update progress
       mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(201);
@@ -154,7 +157,7 @@ describe('Auth Handlers', () => {
       // Third call: insert email confirmation token
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(201);
@@ -171,7 +174,7 @@ describe('Auth Handlers', () => {
 
     it('should return 400 if email is missing', async () => {
       const body = { username: 'testuser', password: 'Password123!' };
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('email');
@@ -179,7 +182,7 @@ describe('Auth Handlers', () => {
 
     it('should return 400 if password is missing', async () => {
       const body = { username: 'testuser', email: 'test@example.com' };
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('password');
@@ -188,7 +191,7 @@ describe('Auth Handlers', () => {
     it('should return 400 if email is invalid', async () => {
       (authUtils.isValidEmail as jest.Mock).mockReturnValue(false);
       const body = { username: 'testuser', email: 'bad-email', password: 'Password123!' };
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('Invalid email');
@@ -197,7 +200,7 @@ describe('Auth Handlers', () => {
     it('should return 400 if password is invalid', async () => {
       (authUtils.isValidPassword as jest.Mock).mockReturnValue({ valid: false, errors: ['Too short'] });
       const body = { username: 'testuser', email: 'test@example.com', password: 'bad' };
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('Too short');
@@ -218,7 +221,7 @@ describe('Auth Handlers', () => {
       
       mockAll.mockResolvedValueOnce({ results: [{ count: 0 }] }); // First user check
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(409);
       const data = await response.json();
       expect(data.error).toBe('Email already registered');
@@ -232,18 +235,18 @@ describe('Auth Handlers', () => {
         throw new Error('DB Connection Failed');
       });
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(500);
     });
 
     it('should return 400 if required fields are missing', async () => {
-      const response = await handleRegister(mockRequest, mockEnv, {});
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, {});
       expect(response.status).toBe(400);
     });
 
     it('should return 400 if username is invalid', async () => {
       (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
-      const response = await handleRegister(mockRequest, mockEnv, { username: 'bad', email: 't@t.com', password: 'P' });
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, { username: 'bad', email: 't@t.com', password: 'P' });
       expect(response.status).toBe(400);
     });
 
@@ -266,7 +269,7 @@ describe('Auth Handlers', () => {
       
       mockAll.mockResolvedValueOnce({ results: [{ count: 0 }] });
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(409);
     });
   });
@@ -274,7 +277,7 @@ describe('Auth Handlers', () => {
   describe('handleLogin', () => {
     it('should return 400 if password is missing', async () => {
       const body = { username: 'testuser' };
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('password');
@@ -287,7 +290,7 @@ describe('Auth Handlers', () => {
         throw new Error('DB Error');
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(500);
     });
 
@@ -315,7 +318,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -334,7 +337,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(401);
     });
 
@@ -360,7 +363,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(401);
     });
 
@@ -384,7 +387,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(403);
     });
   });
@@ -397,7 +400,7 @@ describe('Auth Handlers', () => {
         throw new Error('DB Error');
       });
 
-      const response = await handleLogout(mockRequest, mockEnv, body);
+      const response = await handleLogout(mockRequest, mockDb, body);
       expect(response.status).toBe(500);
     });
 
@@ -413,7 +416,7 @@ describe('Auth Handlers', () => {
 
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleLogout(mockRequest, mockEnv, body);
+      const response = await handleLogout(mockRequest, mockDb, body);
       expect(response.status).toBe(200);
     });
 
@@ -429,7 +432,7 @@ describe('Auth Handlers', () => {
 
       mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
 
-      const response = await handleLogout(mockRequest, mockEnv, body);
+      const response = await handleLogout(mockRequest, mockDb, body);
       expect(response.status).toBe(404);
     });
   });
@@ -456,7 +459,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.username).toBe('testuser');
@@ -464,7 +467,7 @@ describe('Auth Handlers', () => {
 
     it('should return 401 if header missing', async () => {
       mockRequest.headers.get.mockReturnValue(null);
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(401);
     });
 
@@ -478,7 +481,7 @@ describe('Auth Handlers', () => {
       mockBind.mockReturnValue({ all: mockAll });
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(401);
     });
 
@@ -503,7 +506,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(401);
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM sessions'));
     });
@@ -527,7 +530,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(403);
     });
 
@@ -538,7 +541,7 @@ describe('Auth Handlers', () => {
         throw new Error('DB Error');
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(500);
     });
   });
@@ -563,7 +566,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, mockEnv);
       expect(result.valid).toBe(true);
       if (result.valid) {
         expect(result.userId).toBe(1);
@@ -572,7 +575,7 @@ describe('Auth Handlers', () => {
 
     it('should return invalid if header missing', async () => {
       mockRequest.headers.get.mockReturnValue(null);
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, mockEnv);
       expect(result.valid).toBe(false);
     });
 
@@ -597,7 +600,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, mockEnv);
       expect(result.valid).toBe(false);
       // Should delete expired session
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM sessions'));
@@ -621,7 +624,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, mockEnv);
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.error.status).toBe(403);
@@ -635,7 +638,7 @@ describe('Auth Handlers', () => {
         throw new Error('DB Error');
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, mockEnv);
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.error.status).toBe(500);
@@ -660,7 +663,7 @@ describe('Auth Handlers', () => {
       
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1 }] });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -684,7 +687,7 @@ describe('Auth Handlers', () => {
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 2 } });
       mockFirst.mockResolvedValueOnce({ id: 2, username: 'newuser', email: 'newuser@example.com', approved: 1 });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -696,7 +699,7 @@ describe('Auth Handlers', () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_bad!user');
       (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(400);
       
       (authUtils.isValidUsername as jest.Mock).mockReturnValue(true); 
@@ -709,7 +712,7 @@ describe('Auth Handlers', () => {
             throw new Error('DB Error');
         });
 
-        const response = await handleSessionValidation(mockRequest, mockEnv);
+        const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
         expect(response.status).toBe(500);
     });
   });
@@ -731,7 +734,7 @@ describe('Auth Handlers', () => {
       
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, mockEnv);
       expect(result.valid).toBe(true);
       expect(result.userId).toBe(1);
     });
@@ -740,7 +743,7 @@ describe('Auth Handlers', () => {
        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_bad!user');
        (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
 
-       const result = await validateSession(mockRequest, mockEnv);
+       const result = await validateSession(mockRequest, mockDb, mockEnv);
        expect(result.valid).toBe(false);
        expect(result.error).toBeDefined();
 
@@ -754,7 +757,7 @@ describe('Auth Handlers', () => {
             throw new Error('DB Error');
         });
 
-        const result = await validateSession(mockRequest, mockEnv);
+        const result = await validateSession(mockRequest, mockDb, mockEnv);
         expect(result.valid).toBe(false);
         expect(result.error!.status).toBe(500);
     });
@@ -763,7 +766,7 @@ describe('Auth Handlers', () => {
   describe('handleUpdateProfile', () => {
     it('should fail if session is invalid', async () => {
       mockRequest.headers.get.mockReturnValue(null); // No header = invalid session
-      const response = await handleUpdateProfile(mockRequest, mockEnv, {});
+      const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, {});
       expect(response.status).toBe(401);
     });
 
@@ -775,7 +778,7 @@ describe('Auth Handlers', () => {
        const mockBind = jest.fn().mockReturnValue({ all: mockAll });
        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
 
-       const response = await handleUpdateProfile(mockRequest, mockEnv, {});
+       const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, {});
        expect(response.status).toBe(400);
     });
 
@@ -796,7 +799,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'newname', email: 'old@example.com' }] });
 
       const body = { username: 'newname' };
-      const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+      const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -821,7 +824,7 @@ describe('Auth Handlers', () => {
         mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'new@example.com' }] });
   
         const body = { email: 'new@example.com' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, body);
         const data = await response.json();
   
         expect(response.status).toBe(200);
@@ -844,7 +847,7 @@ describe('Auth Handlers', () => {
          mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
    
          const body = { username: 'newname' };
-         const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+         const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, body);
          expect(response.status).toBe(404);
     });
 
@@ -859,7 +862,7 @@ describe('Auth Handlers', () => {
         (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
 
         const body = { username: 'bad' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, body);
         expect(response.status).toBe(400);
 
         (authUtils.isValidUsername as jest.Mock).mockReturnValue(true);
@@ -876,7 +879,7 @@ describe('Auth Handlers', () => {
         (authUtils.isValidEmail as jest.Mock).mockReturnValue(false);
 
         const body = { email: 'bad' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, body);
         expect(response.status).toBe(400);
 
         (authUtils.isValidEmail as jest.Mock).mockReturnValue(true);
@@ -898,7 +901,7 @@ describe('Auth Handlers', () => {
         mockRun.mockRejectedValue(new Error('UNIQUE constraint failed: users.username'));
   
         const body = { username: 'taken' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, body);
         expect(response.status).toBe(409);
         const data = await response.json();
         expect(data.error).toBe('Username already exists');
@@ -920,7 +923,7 @@ describe('Auth Handlers', () => {
         mockRun.mockRejectedValue(new Error('UNIQUE constraint failed: users.email'));
   
         const body = { email: 'taken@example.com' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, body);
         expect(response.status).toBe(409);
         const data = await response.json();
         expect(data.error).toBe('Email already registered');
@@ -934,7 +937,7 @@ describe('Auth Handlers', () => {
         mockPrepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
 
         const body = { username: 'newname' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, mockEnv, body);
         expect(response.status).toBe(500);
     });
   });
@@ -975,7 +978,7 @@ describe('Auth Handlers', () => {
         })
       });
 
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.message).toContain('password reset link');
@@ -998,21 +1001,21 @@ describe('Auth Handlers', () => {
         })
       });
 
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.message).toContain('If an account with that email exists');
     });
 
     it('should return 400 for missing email', async () => {
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, {});
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, mockEnv, {});
       expect(response.status).toBe(400);
     });
 
     it('should return 400 for invalid email format', async () => {
       (authUtils.isValidEmail as jest.Mock).mockReturnValue(false);
       const body = { email: 'invalid-email' };
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(400);
     });
 
@@ -1020,7 +1023,7 @@ describe('Auth Handlers', () => {
       const body = { email: 'test@example.com' };
       mockEnv.DB.prepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
       
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, mockEnv, body);
       expect(response.status).toBe(500);
     });
   });
@@ -1059,7 +1062,7 @@ describe('Auth Handlers', () => {
         })
       });
 
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.message).toContain('Password has been reset successfully');
@@ -1067,13 +1070,13 @@ describe('Auth Handlers', () => {
 
     it('should return 400 for missing token', async () => {
       const body = { password: 'NewPassword123!' };
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
     });
 
     it('should return 400 for missing password', async () => {
       const body = { token: 'valid-token' };
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
     });
 
@@ -1083,7 +1086,7 @@ describe('Auth Handlers', () => {
         errors: ['Password must be at least 8 characters long'] 
       });
       const body = { token: 'valid-token', password: 'weak' };
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
     });
 
@@ -1096,7 +1099,7 @@ describe('Auth Handlers', () => {
         })
       });
 
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('Invalid password reset token');
@@ -1113,7 +1116,7 @@ describe('Auth Handlers', () => {
         })
       });
 
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('already been used');
@@ -1131,7 +1134,7 @@ describe('Auth Handlers', () => {
         })
       });
 
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('expired');
@@ -1141,7 +1144,7 @@ describe('Auth Handlers', () => {
       const body = { token: 'valid-token', password: 'NewPassword123!' };
       mockEnv.DB.prepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
       
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(500);
     });
   });
@@ -1169,7 +1172,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleConfirmEmail(mockRequest, mockEnv);
+      const response = await handleConfirmEmail(mockRequest, mockDb);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('?verified=true');
@@ -1185,7 +1188,7 @@ describe('Auth Handlers', () => {
         url: 'https://wtm.haydencarson.com/api/auth/confirm-email'
       };
 
-      const response = await handleConfirmEmail(mockRequest, mockEnv);
+      const response = await handleConfirmEmail(mockRequest, mockDb);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('/login?error=Missing');
@@ -1206,7 +1209,7 @@ describe('Auth Handlers', () => {
       // Token not found
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleConfirmEmail(mockRequest, mockEnv);
+      const response = await handleConfirmEmail(mockRequest, mockDb);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('/login?error=Invalid');
@@ -1236,7 +1239,7 @@ describe('Auth Handlers', () => {
       
       (authUtils.isEmailConfirmationTokenExpired as jest.Mock).mockReturnValueOnce(true);
 
-      const response = await handleConfirmEmail(mockRequest, mockEnv);
+      const response = await handleConfirmEmail(mockRequest, mockDb);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('/login?error=Confirmation');
@@ -1268,7 +1271,7 @@ describe('Auth Handlers', () => {
       // Second call: check rate limit
       mockAll.mockResolvedValueOnce({ results: [{ count: 0 }] });
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1291,7 +1294,7 @@ describe('Auth Handlers', () => {
       // User not found
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1321,7 +1324,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1354,7 +1357,7 @@ describe('Auth Handlers', () => {
       // Second call: check rate limit (3 requests already made)
       mockAll.mockResolvedValueOnce({ results: [{ count: 3 }] });
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1368,7 +1371,7 @@ describe('Auth Handlers', () => {
     it('should return error if email is missing', async () => {
       const body = {};
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -1379,7 +1382,7 @@ describe('Auth Handlers', () => {
       const body = { email: 'invalid-email' };
       (authUtils.isValidEmail as jest.Mock).mockReturnValueOnce(false);
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, mockEnv, body);
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -1411,7 +1414,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       const data = await response.json();
 
       expect(response.status).toBe(403);
@@ -1442,7 +1445,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1453,7 +1456,7 @@ describe('Auth Handlers', () => {
   describe('handleUpdatePreferences', () => {
     it('should return 401 if not authenticated', async () => {
       mockRequest.headers.get.mockReturnValue(null);
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: true });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { showFutureGoalsUnlocked: true });
       expect(response.status).toBe(401);
     });
 
@@ -1465,7 +1468,7 @@ describe('Auth Handlers', () => {
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
       mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: 'yes' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { showFutureGoalsUnlocked: 'yes' });
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('boolean');
@@ -1479,7 +1482,7 @@ describe('Auth Handlers', () => {
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
       mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, {});
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, {});
       expect(response.status).toBe(400);
     });
 
@@ -1498,7 +1501,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: false });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { showFutureGoalsUnlocked: false });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1520,7 +1523,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: true });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { showFutureGoalsUnlocked: true });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1548,7 +1551,7 @@ describe('Auth Handlers', () => {
       mockBind.mockReturnValue({ all: mockAll });
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: false });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { showFutureGoalsUnlocked: false });
       expect(response.status).toBe(500);
     });
 
@@ -1567,7 +1570,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: true });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { defaultViewMap: true });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1589,7 +1592,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: false });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { defaultViewMap: false });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1604,7 +1607,7 @@ describe('Auth Handlers', () => {
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
       mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: 'yes' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { defaultViewMap: 'yes' });
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('boolean');
@@ -1625,7 +1628,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, {
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, {
         showFutureGoalsUnlocked: false,
         defaultViewMap: true
       });
@@ -1661,7 +1664,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.showFutureGoalsUnlocked).toBe(true);
@@ -1690,7 +1693,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.showFutureGoalsUnlocked).toBe(false);
@@ -1709,7 +1712,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 0 }] });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1741,7 +1744,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.defaultViewMap).toBe(false);
@@ -1770,7 +1773,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.defaultViewMap).toBe(true);
@@ -1789,7 +1792,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 1 }] });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1820,7 +1823,7 @@ describe('Auth Handlers', () => {
       // Third call: update progress
       mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
 
-      await handleRegister(mockRequest, mockEnv, body);
+      await handleRegister(mockRequest, mockDb, mockEnv, body);
 
       expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
       // Verify INSERT includes friend_code column
@@ -1851,7 +1854,7 @@ describe('Auth Handlers', () => {
       // Third call: insert email confirmation token
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
 
-      await handleRegister(mockRequest, mockEnv, body);
+      await handleRegister(mockRequest, mockDb, mockEnv, body);
 
       expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
     });
@@ -1881,7 +1884,7 @@ describe('Auth Handlers', () => {
         approved: 1, show_future_goals_unlocked: 1, default_view_map: 0, is_admin: 0
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1910,7 +1913,7 @@ describe('Auth Handlers', () => {
         id: 1, username: 'newuser2', email: 'newuser2@example.com', approved: 1
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, mockEnv);
       expect(result.valid).toBe(true);
       expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
     });
@@ -1919,7 +1922,7 @@ describe('Auth Handlers', () => {
   describe('handleGetAvatars', () => {
     it('should return 401 if not authenticated', async () => {
       mockRequest.headers.get.mockReturnValue(null);
-      const response = await handleGetAvatars(mockRequest, mockEnv);
+      const response = await handleGetAvatars(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(401);
     });
 
@@ -1936,7 +1939,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 0, is_admin: 0, avatar_id: null }] });
 
-      const response = await handleGetAvatars(mockRequest, mockEnv);
+      const response = await handleGetAvatars(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(Array.isArray(data)).toBe(true);
@@ -1960,7 +1963,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 0, is_admin: 0, avatar_id: null }] });
 
-      const response = await handleGetAvatars(mockRequest, mockEnv);
+      const response = await handleGetAvatars(mockRequest, mockDb, mockEnv);
       const data = await response.json();
       expect(data).toHaveLength(VALID_AVATAR_SLUGS.length);
     });
@@ -1982,7 +1985,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: 'frodo' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { avatarId: 'frodo' });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -2004,7 +2007,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: null });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { avatarId: null });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -2024,7 +2027,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: 'invalid-slug' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { avatarId: 'invalid-slug' });
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('avatar_id');
@@ -2043,7 +2046,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: 42 });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { avatarId: 42 });
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('avatar_id');
@@ -2064,7 +2067,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, {
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, {
         avatarId: 'gandalf-grey',
         showFutureGoalsUnlocked: true,
         defaultViewMap: false
@@ -2092,7 +2095,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: 'legolas' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, mockEnv, { avatarId: 'legolas' });
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.avatarId).toBe('legolas');
@@ -2125,7 +2128,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.avatarId).toBe('gandalf-grey');
@@ -2156,7 +2159,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.avatarId).toBeNull();
@@ -2181,7 +2184,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.avatarId).toBe('samwise');
