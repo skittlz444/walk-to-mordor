@@ -16,6 +16,7 @@ import {
 import * as authUtils from '../../src/auth-utils';
 import * as emailUtils from '../../src/email-utils';
 import { VALID_AVATAR_SLUGS } from '../../src/avatar-slugs';
+import { DbClient } from '../../src/db';
 
 // Mock auth-utils
 jest.mock('../../src/auth-utils', () => ({
@@ -45,6 +46,8 @@ jest.mock('../../src/email-utils', () => ({
 }));
 
 describe('Auth Handlers', () => {
+  let mockDB: any;
+  let mockDb: DbClient;
   let mockEnv: any;
   let mockRequest: any;
 
@@ -72,17 +75,17 @@ describe('Auth Handlers', () => {
     (emailUtils.sendConfirmationEmail as jest.Mock).mockResolvedValue({ success: true });
 
     // Mock DB
-    mockEnv = {
-      DB: {
-        prepare: jest.fn(() => ({
-          bind: jest.fn(() => ({
-            run: jest.fn().mockResolvedValue({ meta: { last_row_id: 1, changes: 1 } }),
-            all: jest.fn().mockResolvedValue({ results: [] }),
-            first: jest.fn().mockResolvedValue(null)
-          }))
+    mockDB = {
+      prepare: jest.fn(() => ({
+        bind: jest.fn(() => ({
+          run: jest.fn().mockResolvedValue({ meta: { last_row_id: 1, changes: 1 } }),
+          all: jest.fn().mockResolvedValue({ results: [] }),
+          first: jest.fn().mockResolvedValue(null)
         }))
-      }
+      }))
     };
+    mockDb = { read: mockDB, write: mockDB } as unknown as DbClient;
+    mockEnv = {};
 
     mockRequest = {
       headers: {
@@ -104,7 +107,7 @@ describe('Auth Handlers', () => {
       // 1. Check for existing users (count = 0)
       // 2. Insert user
       // 3. Update progress (link existing)
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -119,7 +122,7 @@ describe('Auth Handlers', () => {
       // Third call: update progress
       mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(201);
@@ -139,7 +142,7 @@ describe('Auth Handlers', () => {
         password: 'Password123!'
       };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -154,7 +157,7 @@ describe('Auth Handlers', () => {
       // Third call: insert email confirmation token
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(201);
@@ -171,7 +174,7 @@ describe('Auth Handlers', () => {
 
     it('should return 400 if email is missing', async () => {
       const body = { username: 'testuser', password: 'Password123!' };
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('email');
@@ -179,7 +182,7 @@ describe('Auth Handlers', () => {
 
     it('should return 400 if password is missing', async () => {
       const body = { username: 'testuser', email: 'test@example.com' };
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('password');
@@ -188,7 +191,7 @@ describe('Auth Handlers', () => {
     it('should return 400 if email is invalid', async () => {
       (authUtils.isValidEmail as jest.Mock).mockReturnValue(false);
       const body = { username: 'testuser', email: 'bad-email', password: 'Password123!' };
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('Invalid email');
@@ -197,7 +200,7 @@ describe('Auth Handlers', () => {
     it('should return 400 if password is invalid', async () => {
       (authUtils.isValidPassword as jest.Mock).mockReturnValue({ valid: false, errors: ['Too short'] });
       const body = { username: 'testuser', email: 'test@example.com', password: 'bad' };
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('Too short');
@@ -206,7 +209,7 @@ describe('Auth Handlers', () => {
     it('should return 409 if email already exists', async () => {
       const body = { username: 'testuser', email: 'test@example.com', password: 'Password123!' };
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       
@@ -218,7 +221,7 @@ describe('Auth Handlers', () => {
       
       mockAll.mockResolvedValueOnce({ results: [{ count: 0 }] }); // First user check
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(409);
       const data = await response.json();
       expect(data.error).toBe('Email already registered');
@@ -227,23 +230,23 @@ describe('Auth Handlers', () => {
     it('should return 500 on generic database error', async () => {
       const body = { username: 'testuser', email: 'test@example.com', password: 'Password123!' };
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       mockPrepare.mockImplementation(() => {
         throw new Error('DB Connection Failed');
       });
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(500);
     });
 
     it('should return 400 if required fields are missing', async () => {
-      const response = await handleRegister(mockRequest, mockEnv, {});
+      const response = await handleRegister(mockRequest, mockDb, {}, mockEnv);
       expect(response.status).toBe(400);
     });
 
     it('should return 400 if username is invalid', async () => {
       (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
-      const response = await handleRegister(mockRequest, mockEnv, { username: 'bad', email: 't@t.com', password: 'P' });
+      const response = await handleRegister(mockRequest, mockDb, { username: 'bad', email: 't@t.com', password: 'P' }, mockEnv);
       expect(response.status).toBe(400);
     });
 
@@ -254,7 +257,7 @@ describe('Auth Handlers', () => {
         password: 'Password123!'
       };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       
@@ -266,7 +269,7 @@ describe('Auth Handlers', () => {
       
       mockAll.mockResolvedValueOnce({ results: [{ count: 0 }] });
 
-      const response = await handleRegister(mockRequest, mockEnv, body);
+      const response = await handleRegister(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(409);
     });
   });
@@ -274,7 +277,7 @@ describe('Auth Handlers', () => {
   describe('handleLogin', () => {
     it('should return 400 if password is missing', async () => {
       const body = { username: 'testuser' };
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('password');
@@ -282,19 +285,19 @@ describe('Auth Handlers', () => {
 
     it('should return 500 on database error', async () => {
       const body = { username: 'testuser', password: 'Password123!' };
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       mockPrepare.mockImplementation(() => {
         throw new Error('DB Error');
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(500);
     });
 
     it('should login successfully', async () => {
       const body = { username: 'testuser', password: 'Password123!' };
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       const mockRun = jest.fn();
@@ -315,7 +318,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -325,7 +328,7 @@ describe('Auth Handlers', () => {
     it('should return 401 for invalid credentials (user not found)', async () => {
       const body = { username: 'testuser', password: 'Password123!' };
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -334,7 +337,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(401);
     });
 
@@ -343,7 +346,7 @@ describe('Auth Handlers', () => {
       
       (authUtils.verifyPassword as jest.Mock).mockResolvedValue(false);
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -360,14 +363,14 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(401);
     });
 
     it('should return 403 if user is not approved', async () => {
       const body = { username: 'testuser', password: 'Password123!' };
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -384,7 +387,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       expect(response.status).toBe(403);
     });
   });
@@ -392,19 +395,19 @@ describe('Auth Handlers', () => {
   describe('handleLogout', () => {
     it('should return 500 on database error', async () => {
       const body = { sessionId: 'valid-session' };
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       mockPrepare.mockImplementation(() => {
         throw new Error('DB Error');
       });
 
-      const response = await handleLogout(mockRequest, mockEnv, body);
+      const response = await handleLogout(mockRequest, mockDb, body);
       expect(response.status).toBe(500);
     });
 
     it('should logout successfully', async () => {
       const body = { sessionId: 'session-id' };
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
 
@@ -413,14 +416,14 @@ describe('Auth Handlers', () => {
 
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleLogout(mockRequest, mockEnv, body);
+      const response = await handleLogout(mockRequest, mockDb, body);
       expect(response.status).toBe(200);
     });
 
     it('should return 404 if session not found', async () => {
       const body = { sessionId: 'session-id' };
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
 
@@ -429,7 +432,7 @@ describe('Auth Handlers', () => {
 
       mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
 
-      const response = await handleLogout(mockRequest, mockEnv, body);
+      const response = await handleLogout(mockRequest, mockDb, body);
       expect(response.status).toBe(404);
     });
   });
@@ -438,7 +441,7 @@ describe('Auth Handlers', () => {
     it('should return user info for valid session', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -456,7 +459,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.username).toBe('testuser');
@@ -464,13 +467,13 @@ describe('Auth Handlers', () => {
 
     it('should return 401 if header missing', async () => {
       mockRequest.headers.get.mockReturnValue(null);
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(401);
     });
 
     it('should return 401 if session invalid', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer invalid-token');
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -478,7 +481,7 @@ describe('Auth Handlers', () => {
       mockBind.mockReturnValue({ all: mockAll });
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(401);
     });
 
@@ -486,7 +489,7 @@ describe('Auth Handlers', () => {
       mockRequest.headers.get.mockReturnValue('Bearer expired-token');
       (authUtils.isSessionExpired as jest.Mock).mockReturnValue(true);
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       const mockRun = jest.fn();
@@ -503,7 +506,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(401);
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM sessions'));
     });
@@ -511,7 +514,7 @@ describe('Auth Handlers', () => {
     it('should return 403 if user not approved', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -527,18 +530,18 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(403);
     });
 
     it('should return 500 on database error', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       mockPrepare.mockImplementation(() => {
         throw new Error('DB Error');
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(500);
     });
   });
@@ -547,7 +550,7 @@ describe('Auth Handlers', () => {
     it('should return valid session', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -563,7 +566,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb);
       expect(result.valid).toBe(true);
       if (result.valid) {
         expect(result.userId).toBe(1);
@@ -572,7 +575,7 @@ describe('Auth Handlers', () => {
 
     it('should return invalid if header missing', async () => {
       mockRequest.headers.get.mockReturnValue(null);
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb);
       expect(result.valid).toBe(false);
     });
 
@@ -580,7 +583,7 @@ describe('Auth Handlers', () => {
       mockRequest.headers.get.mockReturnValue('Bearer expired-token');
       (authUtils.isSessionExpired as jest.Mock).mockReturnValue(true);
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       const mockRun = jest.fn();
@@ -597,7 +600,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb);
       expect(result.valid).toBe(false);
       // Should delete expired session
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM sessions'));
@@ -605,7 +608,7 @@ describe('Auth Handlers', () => {
     it('should return invalid if user not approved', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -621,7 +624,7 @@ describe('Auth Handlers', () => {
         }] 
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb);
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.error.status).toBe(403);
@@ -630,12 +633,12 @@ describe('Auth Handlers', () => {
 
     it('should return invalid on database error', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       mockPrepare.mockImplementation(() => {
         throw new Error('DB Error');
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb);
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.error.status).toBe(500);
@@ -644,14 +647,10 @@ describe('Auth Handlers', () => {
   });
 
   describe('handleSessionValidation (Mock Auth)', () => {
-    beforeEach(() => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
-    });
-
     it('should validate mock token correctly', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -660,7 +659,7 @@ describe('Auth Handlers', () => {
       
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1 }] });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -671,7 +670,7 @@ describe('Auth Handlers', () => {
     it('should create user if missing during mock auth', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_newuser');
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       const mockRun = jest.fn();
@@ -684,7 +683,7 @@ describe('Auth Handlers', () => {
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 2 } });
       mockFirst.mockResolvedValueOnce({ id: 2, username: 'newuser', email: 'newuser@example.com', approved: 1 });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -696,7 +695,7 @@ describe('Auth Handlers', () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_bad!user');
       (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, 'true');
       expect(response.status).toBe(400);
       
       (authUtils.isValidUsername as jest.Mock).mockReturnValue(true); 
@@ -705,24 +704,20 @@ describe('Auth Handlers', () => {
     it('should handle database errors during mock auth', async () => {
         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
         
-        mockEnv.DB.prepare.mockImplementation(() => {
+        mockDB.prepare.mockImplementation(() => {
             throw new Error('DB Error');
         });
 
-        const response = await handleSessionValidation(mockRequest, mockEnv);
+        const response = await handleSessionValidation(mockRequest, mockDb, 'true');
         expect(response.status).toBe(500);
     });
   });
 
   describe('validateSession (Mock Auth)', () => {
-    beforeEach(() => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
-    });
-
     it('should return valid session for mock token', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
       
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -731,7 +726,7 @@ describe('Auth Handlers', () => {
       
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, 'true');
       expect(result.valid).toBe(true);
       expect(result.userId).toBe(1);
     });
@@ -740,7 +735,7 @@ describe('Auth Handlers', () => {
        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_bad!user');
        (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
 
-       const result = await validateSession(mockRequest, mockEnv);
+       const result = await validateSession(mockRequest, mockDb, 'true');
        expect(result.valid).toBe(false);
        expect(result.error).toBeDefined();
 
@@ -750,11 +745,11 @@ describe('Auth Handlers', () => {
      it('should handle database errors during mock auth in validateSession', async () => {
         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
         
-        mockEnv.DB.prepare.mockImplementation(() => {
+        mockDB.prepare.mockImplementation(() => {
             throw new Error('DB Error');
         });
 
-        const result = await validateSession(mockRequest, mockEnv);
+        const result = await validateSession(mockRequest, mockDb, 'true');
         expect(result.valid).toBe(false);
         expect(result.error!.status).toBe(500);
     });
@@ -763,27 +758,25 @@ describe('Auth Handlers', () => {
   describe('handleUpdateProfile', () => {
     it('should fail if session is invalid', async () => {
       mockRequest.headers.get.mockReturnValue(null); // No header = invalid session
-      const response = await handleUpdateProfile(mockRequest, mockEnv, {});
+      const response = await handleUpdateProfile(mockRequest, mockDb, {});
       expect(response.status).toBe(401);
     });
 
     it('should fail if no fields provided', async () => {
        mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-       mockEnv.ALLOW_TEST_AUTH = 'true';
-       
+
        const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
        const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-       mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+       mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-       const response = await handleUpdateProfile(mockRequest, mockEnv, {});
+       const response = await handleUpdateProfile(mockRequest, mockDb, {}, 'true');
        expect(response.status).toBe(400);
     });
 
     it('should update username successfully', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
-      
-      const mockPrepare = mockEnv.DB.prepare;
+
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -796,7 +789,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'newname', email: 'old@example.com' }] });
 
       const body = { username: 'newname' };
-      const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+      const response = await handleUpdateProfile(mockRequest, mockDb, body, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -806,9 +799,8 @@ describe('Auth Handlers', () => {
 
     it('should update email successfully', async () => {
         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-        mockEnv.ALLOW_TEST_AUTH = 'true';
-        
-        const mockPrepare = mockEnv.DB.prepare;
+
+        const mockPrepare = mockDB.prepare;
         const mockBind = jest.fn();
         const mockRun = jest.fn();
         const mockAll = jest.fn();
@@ -821,7 +813,7 @@ describe('Auth Handlers', () => {
         mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'new@example.com' }] });
   
         const body = { email: 'new@example.com' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, body, 'true');
         const data = await response.json();
   
         expect(response.status).toBe(200);
@@ -830,9 +822,8 @@ describe('Auth Handlers', () => {
 
     it('should return 404 if user not found during update', async () => {
          mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-         mockEnv.ALLOW_TEST_AUTH = 'true';
-         
-         const mockPrepare = mockEnv.DB.prepare;
+
+         const mockPrepare = mockDB.prepare;
          const mockBind = jest.fn();
          const mockRun = jest.fn();
          const mockAll = jest.fn();
@@ -844,22 +835,21 @@ describe('Auth Handlers', () => {
          mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
    
          const body = { username: 'newname' };
-         const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+         const response = await handleUpdateProfile(mockRequest, mockDb, body, 'true');
          expect(response.status).toBe(404);
     });
 
     it('should return 400 for invalid username', async () => {
         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-        mockEnv.ALLOW_TEST_AUTH = 'true';
-        
+
         const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
         const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        mockDB.prepare.mockReturnValue({ bind: mockBind });
         
         (authUtils.isValidUsername as jest.Mock).mockReturnValue(false);
 
         const body = { username: 'bad' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, body, 'true');
         expect(response.status).toBe(400);
 
         (authUtils.isValidUsername as jest.Mock).mockReturnValue(true);
@@ -867,16 +857,15 @@ describe('Auth Handlers', () => {
 
     it('should return 400 for invalid email', async () => {
         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-        mockEnv.ALLOW_TEST_AUTH = 'true';
-        
+
         const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
         const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        mockDB.prepare.mockReturnValue({ bind: mockBind });
         
         (authUtils.isValidEmail as jest.Mock).mockReturnValue(false);
 
         const body = { email: 'bad' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, body, 'true');
         expect(response.status).toBe(400);
 
         (authUtils.isValidEmail as jest.Mock).mockReturnValue(true);
@@ -884,9 +873,8 @@ describe('Auth Handlers', () => {
 
     it('should handle unique constraint violations (username)', async () => {
         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-        mockEnv.ALLOW_TEST_AUTH = 'true';
-        
-        const mockPrepare = mockEnv.DB.prepare;
+
+        const mockPrepare = mockDB.prepare;
         const mockBind = jest.fn();
         const mockRun = jest.fn();
         const mockAll = jest.fn();
@@ -898,7 +886,7 @@ describe('Auth Handlers', () => {
         mockRun.mockRejectedValue(new Error('UNIQUE constraint failed: users.username'));
   
         const body = { username: 'taken' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, body, 'true');
         expect(response.status).toBe(409);
         const data = await response.json();
         expect(data.error).toBe('Username already exists');
@@ -906,9 +894,8 @@ describe('Auth Handlers', () => {
 
     it('should handle unique constraint violations (email)', async () => {
         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-        mockEnv.ALLOW_TEST_AUTH = 'true';
-        
-        const mockPrepare = mockEnv.DB.prepare;
+
+        const mockPrepare = mockDB.prepare;
         const mockBind = jest.fn();
         const mockRun = jest.fn();
         const mockAll = jest.fn();
@@ -920,7 +907,7 @@ describe('Auth Handlers', () => {
         mockRun.mockRejectedValue(new Error('UNIQUE constraint failed: users.email'));
   
         const body = { email: 'taken@example.com' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, body, 'true');
         expect(response.status).toBe(409);
         const data = await response.json();
         expect(data.error).toBe('Email already registered');
@@ -928,13 +915,12 @@ describe('Auth Handlers', () => {
 
     it('should handle generic database errors during update', async () => {
         mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-        mockEnv.ALLOW_TEST_AUTH = 'true';
-        
-        const mockPrepare = mockEnv.DB.prepare;
+
+        const mockPrepare = mockDB.prepare;
         mockPrepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
 
         const body = { username: 'newname' };
-        const response = await handleUpdateProfile(mockRequest, mockEnv, body);
+        const response = await handleUpdateProfile(mockRequest, mockDb, body, 'true');
         expect(response.status).toBe(500);
     });
   });
@@ -944,7 +930,7 @@ describe('Auth Handlers', () => {
       const body = { email: 'test@example.com' };
       
       // Mock user exists
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn().mockResolvedValue({
             results: [{ id: 1, username: 'testuser', email: 'test@example.com' }]
@@ -953,7 +939,7 @@ describe('Auth Handlers', () => {
       });
 
       // Mock rate limit check
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn().mockResolvedValue({
             results: [{ count: 0 }]
@@ -962,20 +948,20 @@ describe('Auth Handlers', () => {
       });
 
       // Mock cleanup
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           run: jest.fn().mockResolvedValue({ meta: { changes: 0 } })
         })
       });
       
       // Mock token insert
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           run: jest.fn().mockResolvedValue({ meta: { last_row_id: 1 } })
         })
       });
 
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.message).toContain('password reset link');
@@ -992,35 +978,35 @@ describe('Auth Handlers', () => {
       const body = { email: 'nonexistent@example.com' };
       
       // Mock user doesn't exist
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn().mockResolvedValue({ results: [] })
         })
       });
 
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.message).toContain('If an account with that email exists');
     });
 
     it('should return 400 for missing email', async () => {
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, {});
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, {}, mockEnv);
       expect(response.status).toBe(400);
     });
 
     it('should return 400 for invalid email format', async () => {
       (authUtils.isValidEmail as jest.Mock).mockReturnValue(false);
       const body = { email: 'invalid-email' };
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(400);
     });
 
     it('should handle database errors gracefully', async () => {
       const body = { email: 'test@example.com' };
-      mockEnv.DB.prepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
+      mockDB.prepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
       
-      const response = await handlePasswordResetRequest(mockRequest, mockEnv, body);
+      const response = await handlePasswordResetRequest(mockRequest, mockDb, body, mockEnv);
       expect(response.status).toBe(500);
     });
   });
@@ -1030,7 +1016,7 @@ describe('Auth Handlers', () => {
       const body = { token: 'valid-token', password: 'NewPassword123!' };
       
       // Mock token validation
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn().mockResolvedValue({
             results: [{ id: 1, user_id: 1, expires_at: '2026-02-01T00:00:00Z', used: 0 }]
@@ -1039,27 +1025,27 @@ describe('Auth Handlers', () => {
       });
       
       // Mock password update
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           run: jest.fn().mockResolvedValue({ meta: { changes: 1 } })
         })
       });
       
       // Mock token mark as used
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           run: jest.fn().mockResolvedValue({ meta: { changes: 1 } })
         })
       });
       
       // Mock session deletion
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           run: jest.fn().mockResolvedValue({ meta: { changes: 0 } })
         })
       });
 
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.message).toContain('Password has been reset successfully');
@@ -1067,13 +1053,13 @@ describe('Auth Handlers', () => {
 
     it('should return 400 for missing token', async () => {
       const body = { password: 'NewPassword123!' };
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
     });
 
     it('should return 400 for missing password', async () => {
       const body = { token: 'valid-token' };
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
     });
 
@@ -1083,20 +1069,20 @@ describe('Auth Handlers', () => {
         errors: ['Password must be at least 8 characters long'] 
       });
       const body = { token: 'valid-token', password: 'weak' };
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
     });
 
     it('should return 400 for invalid token', async () => {
       const body = { token: 'invalid-token', password: 'NewPassword123!' };
       
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn().mockResolvedValue({ results: [] })
         })
       });
 
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('Invalid password reset token');
@@ -1105,7 +1091,7 @@ describe('Auth Handlers', () => {
     it('should return 400 for already used token', async () => {
       const body = { token: 'used-token', password: 'NewPassword123!' };
       
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn().mockResolvedValue({
             results: [{ id: 1, user_id: 1, expires_at: '2026-02-01T00:00:00Z', used: 1 }]
@@ -1113,7 +1099,7 @@ describe('Auth Handlers', () => {
         })
       });
 
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('already been used');
@@ -1123,7 +1109,7 @@ describe('Auth Handlers', () => {
       (authUtils.isPasswordResetTokenExpired as jest.Mock).mockReturnValue(true);
       const body = { token: 'expired-token', password: 'NewPassword123!' };
       
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn().mockResolvedValue({
             results: [{ id: 1, user_id: 1, expires_at: '2020-01-01T00:00:00Z', used: 0 }]
@@ -1131,7 +1117,7 @@ describe('Auth Handlers', () => {
         })
       });
 
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('expired');
@@ -1139,9 +1125,9 @@ describe('Auth Handlers', () => {
 
     it('should handle database errors gracefully', async () => {
       const body = { token: 'valid-token', password: 'NewPassword123!' };
-      mockEnv.DB.prepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
+      mockDB.prepare.mockImplementationOnce(() => { throw new Error('DB Error'); });
       
-      const response = await handlePasswordReset(mockRequest, mockEnv, body);
+      const response = await handlePasswordReset(mockRequest, mockDb, body);
       expect(response.status).toBe(500);
     });
   });
@@ -1152,7 +1138,7 @@ describe('Auth Handlers', () => {
         url: 'https://wtm.haydencarson.com/api/auth/confirm-email?token=valid-token'
       };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1169,7 +1155,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleConfirmEmail(mockRequest, mockEnv);
+      const response = await handleConfirmEmail(mockRequest, mockDb);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('?verified=true');
@@ -1185,7 +1171,7 @@ describe('Auth Handlers', () => {
         url: 'https://wtm.haydencarson.com/api/auth/confirm-email'
       };
 
-      const response = await handleConfirmEmail(mockRequest, mockEnv);
+      const response = await handleConfirmEmail(mockRequest, mockDb);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('/login?error=Missing');
@@ -1196,7 +1182,7 @@ describe('Auth Handlers', () => {
         url: 'https://wtm.haydencarson.com/api/auth/confirm-email?token=invalid-token'
       };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1206,7 +1192,7 @@ describe('Auth Handlers', () => {
       // Token not found
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleConfirmEmail(mockRequest, mockEnv);
+      const response = await handleConfirmEmail(mockRequest, mockDb);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('/login?error=Invalid');
@@ -1217,7 +1203,7 @@ describe('Auth Handlers', () => {
         url: 'https://wtm.haydencarson.com/api/auth/confirm-email?token=expired-token'
       };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1236,7 +1222,7 @@ describe('Auth Handlers', () => {
       
       (authUtils.isEmailConfirmationTokenExpired as jest.Mock).mockReturnValueOnce(true);
 
-      const response = await handleConfirmEmail(mockRequest, mockEnv);
+      const response = await handleConfirmEmail(mockRequest, mockDb);
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('/login?error=Confirmation');
@@ -1247,7 +1233,7 @@ describe('Auth Handlers', () => {
     it('should resend confirmation email for unverified user', async () => {
       const body = { email: 'test@example.com' };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1268,7 +1254,7 @@ describe('Auth Handlers', () => {
       // Second call: check rate limit
       mockAll.mockResolvedValueOnce({ results: [{ count: 0 }] });
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, body, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1281,7 +1267,7 @@ describe('Auth Handlers', () => {
     it('should return success even if user not found (security)', async () => {
       const body = { email: 'nonexistent@example.com' };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1291,7 +1277,7 @@ describe('Auth Handlers', () => {
       // User not found
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, body, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1304,7 +1290,7 @@ describe('Auth Handlers', () => {
     it('should return success even if user already verified (security)', async () => {
       const body = { email: 'verified@example.com' };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1321,7 +1307,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, body, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1334,7 +1320,7 @@ describe('Auth Handlers', () => {
     it('should respect rate limiting', async () => {
       const body = { email: 'test@example.com' };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1354,7 +1340,7 @@ describe('Auth Handlers', () => {
       // Second call: check rate limit (3 requests already made)
       mockAll.mockResolvedValueOnce({ results: [{ count: 3 }] });
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, body, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1368,7 +1354,7 @@ describe('Auth Handlers', () => {
     it('should return error if email is missing', async () => {
       const body = {};
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, body, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -1379,7 +1365,7 @@ describe('Auth Handlers', () => {
       const body = { email: 'invalid-email' };
       (authUtils.isValidEmail as jest.Mock).mockReturnValueOnce(false);
 
-      const response = await handleResendConfirmation(mockRequest, mockEnv, body);
+      const response = await handleResendConfirmation(mockRequest, mockDb, body, mockEnv);
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -1391,7 +1377,7 @@ describe('Auth Handlers', () => {
     it('should reject login if email not verified', async () => {
       const body = { username: 'testuser', password: 'Password123!' };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1411,7 +1397,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       const data = await response.json();
 
       expect(response.status).toBe(403);
@@ -1421,7 +1407,7 @@ describe('Auth Handlers', () => {
     it('should allow login if email is verified', async () => {
       const body = { username: 'testuser', password: 'Password123!' };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1442,7 +1428,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleLogin(mockRequest, mockEnv, body);
+      const response = await handleLogin(mockRequest, mockDb, body);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1453,19 +1439,18 @@ describe('Auth Handlers', () => {
   describe('handleUpdatePreferences', () => {
     it('should return 401 if not authenticated', async () => {
       mockRequest.headers.get.mockReturnValue(null);
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: true });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { showFutureGoalsUnlocked: true });
       expect(response.status).toBe(401);
     });
 
     it('should return 400 if showFutureGoalsUnlocked is not a boolean', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
       const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: 'yes' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { showFutureGoalsUnlocked: 'yes' }, 'true');
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('boolean');
@@ -1473,21 +1458,19 @@ describe('Auth Handlers', () => {
 
     it('should return 400 if showFutureGoalsUnlocked is missing', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
       const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, {});
+      const response = await handleUpdatePreferences(mockRequest, mockDb, {}, 'true');
       expect(response.status).toBe(400);
     });
 
     it('should update preference to false successfully', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1498,7 +1481,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: false });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { showFutureGoalsUnlocked: false }, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1507,9 +1490,8 @@ describe('Auth Handlers', () => {
 
     it('should update preference to true successfully', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1520,7 +1502,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: true });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { showFutureGoalsUnlocked: true }, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1529,9 +1511,8 @@ describe('Auth Handlers', () => {
 
     it('should handle database errors', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1548,15 +1529,14 @@ describe('Auth Handlers', () => {
       mockBind.mockReturnValue({ all: mockAll });
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { showFutureGoalsUnlocked: false });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { showFutureGoalsUnlocked: false }, 'true');
       expect(response.status).toBe(500);
     });
 
     it('should update defaultViewMap to true successfully', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1567,7 +1547,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: true });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { defaultViewMap: true }, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1576,9 +1556,8 @@ describe('Auth Handlers', () => {
 
     it('should update defaultViewMap to false successfully', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1589,7 +1568,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: false });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { defaultViewMap: false }, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1598,13 +1577,12 @@ describe('Auth Handlers', () => {
 
     it('should return 400 if defaultViewMap is not a boolean', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
       const mockAll = jest.fn().mockResolvedValue({ results: [{ id: 1 }] });
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { defaultViewMap: 'yes' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { defaultViewMap: 'yes' }, 'true');
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('boolean');
@@ -1612,9 +1590,8 @@ describe('Auth Handlers', () => {
 
     it('should update both preferences at once', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1625,10 +1602,10 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, {
+      const response = await handleUpdatePreferences(mockRequest, mockDb, {
         showFutureGoalsUnlocked: false,
         defaultViewMap: true
-      });
+      }, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1641,7 +1618,7 @@ describe('Auth Handlers', () => {
     it('should include showFutureGoalsUnlocked true in session response', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1661,7 +1638,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.showFutureGoalsUnlocked).toBe(true);
@@ -1670,7 +1647,7 @@ describe('Auth Handlers', () => {
     it('should include showFutureGoalsUnlocked false in session response', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1690,17 +1667,17 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.showFutureGoalsUnlocked).toBe(false);
     });
 
     it('should include showFutureGoalsUnlocked in mock auth response', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1709,7 +1686,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 0 }] });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1721,7 +1698,7 @@ describe('Auth Handlers', () => {
     it('should include defaultViewMap false (default) in session response', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1741,7 +1718,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.defaultViewMap).toBe(false);
@@ -1750,7 +1727,7 @@ describe('Auth Handlers', () => {
     it('should include defaultViewMap true in session response', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1770,17 +1747,17 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.defaultViewMap).toBe(true);
     });
 
     it('should include defaultViewMap in mock auth response', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1789,7 +1766,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 1 }] });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1805,7 +1782,7 @@ describe('Auth Handlers', () => {
         password: 'Password123!'
       };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1820,9 +1797,9 @@ describe('Auth Handlers', () => {
       // Third call: update progress
       mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
 
-      await handleRegister(mockRequest, mockEnv, body);
+      await handleRegister(mockRequest, mockDb, body, mockEnv);
 
-      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
+      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockDB);
       // Verify INSERT includes friend_code column
       expect(mockPrepare).toHaveBeenCalledWith(
         expect.stringContaining('friend_code')
@@ -1836,7 +1813,7 @@ describe('Auth Handlers', () => {
         password: 'Password123!'
       };
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1851,18 +1828,18 @@ describe('Auth Handlers', () => {
       // Third call: insert email confirmation token
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 1 } });
 
-      await handleRegister(mockRequest, mockEnv, body);
+      await handleRegister(mockRequest, mockDb, body, mockEnv);
 
-      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
+      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockDB);
     });
   });
 
   describe('friend_code generation during mock auth user creation', () => {
     it('should call generateUniqueFriendCode when creating mock auth user in handleSessionValidation', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_newuser');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       const mockRun = jest.fn();
@@ -1881,18 +1858,18 @@ describe('Auth Handlers', () => {
         approved: 1, show_future_goals_unlocked: 1, default_view_map: 0, is_admin: 0
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
+      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockDB);
     });
 
     it('should call generateUniqueFriendCode when creating mock auth user in validateSession', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_newuser2');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
       const mockRun = jest.fn();
@@ -1910,24 +1887,24 @@ describe('Auth Handlers', () => {
         id: 1, username: 'newuser2', email: 'newuser2@example.com', approved: 1
       });
 
-      const result = await validateSession(mockRequest, mockEnv);
+      const result = await validateSession(mockRequest, mockDb, 'true');
       expect(result.valid).toBe(true);
-      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockEnv.DB);
+      expect(authUtils.generateUniqueFriendCode).toHaveBeenCalledWith(mockDB);
     });
   });
 
   describe('handleGetAvatars', () => {
     it('should return 401 if not authenticated', async () => {
       mockRequest.headers.get.mockReturnValue(null);
-      const response = await handleGetAvatars(mockRequest, mockEnv);
+      const response = await handleGetAvatars(mockRequest, mockDb);
       expect(response.status).toBe(401);
     });
 
     it('should return array of valid avatar slugs when authenticated', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1936,7 +1913,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 0, is_admin: 0, avatar_id: null }] });
 
-      const response = await handleGetAvatars(mockRequest, mockEnv);
+      const response = await handleGetAvatars(mockRequest, mockDb, 'true');
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(Array.isArray(data)).toBe(true);
@@ -1948,10 +1925,10 @@ describe('Auth Handlers', () => {
     });
 
     it('should return all avatar slugs', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -1960,7 +1937,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser', email: 'test@example.com', approved: 1, show_future_goals_unlocked: 1, default_view_map: 0, is_admin: 0, avatar_id: null }] });
 
-      const response = await handleGetAvatars(mockRequest, mockEnv);
+      const response = await handleGetAvatars(mockRequest, mockDb, 'true');
       const data = await response.json();
       expect(data).toHaveLength(VALID_AVATAR_SLUGS.length);
     });
@@ -1969,9 +1946,8 @@ describe('Auth Handlers', () => {
   describe('handleUpdatePreferences - avatarId', () => {
     it('should update avatarId to a valid slug', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -1982,7 +1958,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: 'frodo' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { avatarId: 'frodo' }, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -1991,9 +1967,8 @@ describe('Auth Handlers', () => {
 
     it('should update avatarId to null (clear avatar)', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -2004,7 +1979,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: null });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { avatarId: null }, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -2013,9 +1988,8 @@ describe('Auth Handlers', () => {
 
     it('should return 400 for invalid avatar slug', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -2024,7 +1998,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: 'invalid-slug' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { avatarId: 'invalid-slug' }, 'true');
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('avatar_id');
@@ -2032,9 +2006,8 @@ describe('Auth Handlers', () => {
 
     it('should return 400 for non-string avatarId', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -2043,7 +2016,7 @@ describe('Auth Handlers', () => {
 
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: 42 });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { avatarId: 42 }, 'true');
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('avatar_id');
@@ -2051,9 +2024,8 @@ describe('Auth Handlers', () => {
 
     it('should update avatarId alongside other preferences', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -2064,11 +2036,11 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, {
+      const response = await handleUpdatePreferences(mockRequest, mockDb, {
         avatarId: 'gandalf-grey',
         showFutureGoalsUnlocked: true,
         defaultViewMap: false
-      });
+      }, 'true');
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -2079,9 +2051,8 @@ describe('Auth Handlers', () => {
 
     it('should accept avatarId as sole preference', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
-      mockEnv.ALLOW_TEST_AUTH = 'true';
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
       const mockAll = jest.fn();
@@ -2092,7 +2063,7 @@ describe('Auth Handlers', () => {
       mockAll.mockResolvedValueOnce({ results: [{ id: 1, username: 'testuser' }] });
       mockRun.mockResolvedValueOnce({ meta: { changes: 1 } });
 
-      const response = await handleUpdatePreferences(mockRequest, mockEnv, { avatarId: 'legolas' });
+      const response = await handleUpdatePreferences(mockRequest, mockDb, { avatarId: 'legolas' }, 'true');
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.avatarId).toBe('legolas');
@@ -2103,7 +2074,7 @@ describe('Auth Handlers', () => {
     it('should include avatarId in session response when user has avatar set', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -2125,7 +2096,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.avatarId).toBe('gandalf-grey');
@@ -2134,7 +2105,7 @@ describe('Auth Handlers', () => {
     it('should include avatarId as null when user has no avatar set', async () => {
       mockRequest.headers.get.mockReturnValue('Bearer valid-token');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -2156,17 +2127,17 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.avatarId).toBeNull();
     });
 
     it('should include avatarId in mock auth session response', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_testuser');
 
-      const mockPrepare = mockEnv.DB.prepare;
+      const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockAll = jest.fn();
 
@@ -2181,7 +2152,7 @@ describe('Auth Handlers', () => {
         }]
       });
 
-      const response = await handleSessionValidation(mockRequest, mockEnv);
+      const response = await handleSessionValidation(mockRequest, mockDb, 'true');
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.avatarId).toBe('samwise');

@@ -1,5 +1,6 @@
 // Friends (Social) API handlers
 import { validateSession } from './auth-handlers';
+import type { DbClient } from './db';
 import { calculateTotalDistance } from './goals-handlers';
 import { createErrorResponse, createSuccessResponse } from './validators';
 
@@ -67,8 +68,8 @@ function escapeLikeSearch(value: string): string {
  * Returns friends with { id, username, avatar_id, last_progressed }.
  * Uses a grouped SQL subquery to avoid N+1 for last_progressed.
  */
-export async function handleGetFriends(request: Request, env: { DB: D1Database }): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleGetFriends(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -76,11 +77,11 @@ export async function handleGetFriends(request: Request, env: { DB: D1Database }
 
   try {
     // Fetch the current user's friend_code for the share link section
-    const currentUser = await env.DB.prepare(
+    const currentUser = await db.read.prepare(
       'SELECT friend_code FROM users WHERE id = ?'
     ).bind(userId).first<{ friend_code: string }>();
 
-    const { results } = await env.DB.prepare(`
+    const { results } = await db.read.prepare(`
       SELECT
         u.id,
         u.username,
@@ -114,15 +115,15 @@ export async function handleGetFriends(request: Request, env: { DB: D1Database }
  * Returns pending requests where the current user is the addressee,
  * with { id, username, avatar_id, created_at } and a count.
  */
-export async function handleGetPendingFriends(request: Request, env: { DB: D1Database }): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleGetPendingFriends(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   const userId = sessionValidation.userId;
 
   try {
-    const { results } = await env.DB.prepare(`
+    const { results } = await db.read.prepare(`
       SELECT
         f.id,
         u.username,
@@ -151,8 +152,8 @@ export async function handleGetPendingFriends(request: Request, env: { DB: D1Dat
  * Minimum 3 characters, limit 10 results, excludes current user.
  * Returns { id, username, avatar_id, friendship_status } where status is null, 'pending', or 'accepted'.
  */
-export async function handleSearchUsers(request: Request, env: { DB: D1Database }): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleSearchUsers(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -170,7 +171,7 @@ export async function handleSearchUsers(request: Request, env: { DB: D1Database 
   try {
     const escapedQuery = `${escapeLikeSearch(trimmedQuery)}%`;
 
-    const { results } = await env.DB.prepare(`
+    const { results } = await db.read.prepare(`
       SELECT DISTINCT
         u.id,
         u.username,
@@ -202,7 +203,7 @@ export async function handleSearchUsers(request: Request, env: { DB: D1Database 
  *
  * Returns { username, avatar_id } or 404 if code not found.
  */
-export async function handleResolveFriendCode(_request: Request, env: { DB: D1Database }, friendCode: string): Promise<Response> {
+export async function handleResolveFriendCode(_request: Request, db: DbClient, friendCode: string): Promise<Response> {
   // No authentication required — the friend code itself acts as authorization
   // to view the minimal preview. Actual friend request endpoints still require auth.
   if (!friendCode || friendCode.length !== 8 || !/^[A-Za-z0-9]{8}$/.test(friendCode)) {
@@ -210,7 +211,7 @@ export async function handleResolveFriendCode(_request: Request, env: { DB: D1Da
   }
 
   try {
-    const user = await env.DB.prepare(
+    const user = await db.read.prepare(
       'SELECT id, username, avatar_id FROM users WHERE friend_code = ?'
     ).bind(friendCode).first<ResolveRow>();
 
@@ -234,7 +235,7 @@ export async function handleResolveFriendCode(_request: Request, env: { DB: D1Da
  * Used by both request-by-user_id and request-by-friend_code flows.
  */
 async function createFriendRequest(
-  env: { DB: D1Database },
+  db: DbClient,
   requesterId: number,
   targetUserId: number
 ): Promise<Response> {
@@ -245,7 +246,7 @@ async function createFriendRequest(
 
   try {
     // Verify target user exists
-    const targetUser = await env.DB.prepare(
+    const targetUser = await db.read.prepare(
       'SELECT id FROM users WHERE id = ?'
     ).bind(targetUserId).first();
 
@@ -254,7 +255,7 @@ async function createFriendRequest(
     }
 
     // Check for existing friendship in either direction
-    const existing = await env.DB.prepare(`
+    const existing = await db.read.prepare(`
       SELECT id, status FROM friendships
       WHERE (requester_id = ? AND addressee_id = ?)
          OR (requester_id = ? AND addressee_id = ?)
@@ -268,7 +269,7 @@ async function createFriendRequest(
     }
 
     // Rate limit: max 20 pending outgoing requests
-    const pendingCount = await env.DB.prepare(
+    const pendingCount = await db.read.prepare(
       'SELECT COUNT(*) as count FROM friendships WHERE requester_id = ? AND status = ?'
     ).bind(requesterId, 'pending').first<{ count: number }>();
 
@@ -277,7 +278,7 @@ async function createFriendRequest(
     }
 
     // Create the friend request
-    const result = await env.DB.prepare(
+    const result = await db.write.prepare(
       'INSERT INTO friendships (requester_id, addressee_id, status) VALUES (?, ?, ?)'
     ).bind(requesterId, targetUserId, 'pending').run();
 
@@ -303,8 +304,8 @@ async function createFriendRequest(
  *
  * Request body: { user_id: number }
  */
-export async function handleFriendRequest(request: Request, env: { DB: D1Database }, body: Record<string, unknown>): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleFriendRequest(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -320,7 +321,7 @@ export async function handleFriendRequest(request: Request, env: { DB: D1Databas
     return createErrorResponse('Invalid user_id', 400);
   }
 
-  return createFriendRequest(env, userId, targetUserId);
+  return createFriendRequest(db, userId, targetUserId);
 }
 
 /**
@@ -328,8 +329,8 @@ export async function handleFriendRequest(request: Request, env: { DB: D1Databas
  *
  * Request body: { friend_code: string }
  */
-export async function handleFriendRequestByCode(request: Request, env: { DB: D1Database }, body: Record<string, unknown>): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleFriendRequestByCode(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -347,7 +348,7 @@ export async function handleFriendRequestByCode(request: Request, env: { DB: D1D
 
   try {
     // Resolve friend code to user
-    const targetUser = await env.DB.prepare(
+    const targetUser = await db.read.prepare(
       'SELECT id FROM users WHERE friend_code = ?'
     ).bind(friendCode).first<{ id: number }>();
 
@@ -355,7 +356,7 @@ export async function handleFriendRequestByCode(request: Request, env: { DB: D1D
       return createErrorResponse('Friend code not found', 404);
     }
 
-    return createFriendRequest(env, userId, targetUser.id);
+    return createFriendRequest(db, userId, targetUser.id);
   } catch (error) {
     console.error('Error creating friend request by code:', error);
     return createErrorResponse('Internal server error', 500);
@@ -367,15 +368,15 @@ export async function handleFriendRequestByCode(request: Request, env: { DB: D1D
  *
  * Only the addressee can accept. Transitions status from 'pending' to 'accepted'.
  */
-export async function handleAcceptFriend(request: Request, env: { DB: D1Database }, friendshipId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleAcceptFriend(request: Request, db: DbClient, friendshipId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   const userId = sessionValidation.userId;
 
   try {
-    const friendship = await env.DB.prepare(
+    const friendship = await db.read.prepare(
       'SELECT id, requester_id, addressee_id, status FROM friendships WHERE id = ?'
     ).bind(friendshipId).first<FriendshipRow>();
 
@@ -391,7 +392,7 @@ export async function handleAcceptFriend(request: Request, env: { DB: D1Database
       return createErrorResponse('Only the recipient can accept a friend request', 403);
     }
 
-    await env.DB.prepare(
+    await db.write.prepare(
       'UPDATE friendships SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
     ).bind('accepted', friendshipId).run();
 
@@ -407,15 +408,15 @@ export async function handleAcceptFriend(request: Request, env: { DB: D1Database
  *
  * Only the addressee can reject. Deletes the pending row.
  */
-export async function handleRejectFriend(request: Request, env: { DB: D1Database }, friendshipId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleRejectFriend(request: Request, db: DbClient, friendshipId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   const userId = sessionValidation.userId;
 
   try {
-    const friendship = await env.DB.prepare(
+    const friendship = await db.read.prepare(
       'SELECT id, requester_id, addressee_id, status FROM friendships WHERE id = ?'
     ).bind(friendshipId).first<FriendshipRow>();
 
@@ -431,7 +432,7 @@ export async function handleRejectFriend(request: Request, env: { DB: D1Database
       return createErrorResponse('Only the recipient can reject a friend request', 403);
     }
 
-    await env.DB.prepare(
+    await db.write.prepare(
       'DELETE FROM friendships WHERE id = ?'
     ).bind(friendshipId).run();
 
@@ -447,15 +448,15 @@ export async function handleRejectFriend(request: Request, env: { DB: D1Database
  *
  * Either party can unfriend. Deletes the accepted friendship row.
  */
-export async function handleUnfriend(request: Request, env: { DB: D1Database }, friendshipId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleUnfriend(request: Request, db: DbClient, friendshipId: number, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   const userId = sessionValidation.userId;
 
   try {
-    const friendship = await env.DB.prepare(
+    const friendship = await db.read.prepare(
       'SELECT id, requester_id, addressee_id, status FROM friendships WHERE id = ?'
     ).bind(friendshipId).first<FriendshipRow>();
 
@@ -471,7 +472,7 @@ export async function handleUnfriend(request: Request, env: { DB: D1Database }, 
       return createErrorResponse('Not authorized to remove this friendship', 403);
     }
 
-    await env.DB.prepare(
+    await db.write.prepare(
       'DELETE FROM friendships WHERE id = ?'
     ).bind(friendshipId).run();
 
@@ -512,10 +513,11 @@ interface GoalRow {
  */
 export async function handleGetFriendProfile(
   request: Request,
-  env: { DB: D1Database },
-  profileUserId: number
+  db: DbClient,
+  profileUserId: number,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -523,7 +525,7 @@ export async function handleGetFriendProfile(
 
   try {
     // Verify accepted friendship exists (privacy enforcement)
-    const friendship = await env.DB.prepare(`
+    const friendship = await db.read.prepare(`
       SELECT id FROM friendships
       WHERE status = 'accepted'
         AND ((requester_id = ? AND addressee_id = ?)
@@ -535,7 +537,7 @@ export async function handleGetFriendProfile(
     }
 
     // Fetch user profile data
-    const user = await env.DB.prepare(
+    const user = await db.read.prepare(
       'SELECT username, avatar_id, created_at FROM users WHERE id = ?'
     ).bind(profileUserId).first<ProfileUserRow>();
 
@@ -544,10 +546,10 @@ export async function handleGetFriendProfile(
     }
 
     // Calculate total distance
-    const totalDistance = await calculateTotalDistance(env, profileUserId);
+    const totalDistance = await calculateTotalDistance(db, profileUserId);
 
     // Determine current goal title (next unlocked goal)
-    const { results: goals } = await env.DB.prepare(
+    const { results: goals } = await db.read.prepare(
       'SELECT id, distance, title FROM goals ORDER BY distance ASC'
     ).all<GoalRow>();
 
@@ -559,7 +561,7 @@ export async function handleGetFriendProfile(
 
     // Fetch fellowships the friend is an active member of (non-dissolved)
     // Decorate with is_shared when current user is also active in that party
-    const { results: fellowships } = await env.DB.prepare(`
+    const { results: fellowships } = await db.read.prepare(`
       SELECT
         p.id,
         p.name,
@@ -614,15 +616,15 @@ interface FriendPositionRow {
  * where total_distance is in km (sum of progress entries).
  * Only returns accepted friends.
  */
-export async function handleFriendPositions(request: Request, env: { DB: D1Database }): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleFriendPositions(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   const userId = sessionValidation.userId;
 
   try {
-    const { results } = await env.DB.prepare(`
+    const { results } = await db.read.prepare(`
       SELECT
         u.id as user_id,
         u.username,

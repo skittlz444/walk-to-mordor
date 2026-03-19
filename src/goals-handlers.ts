@@ -1,15 +1,16 @@
 // Goals API handlers
 import { validateSession } from "./auth-handlers";
+import type { DbClient } from "./db";
 
-export async function handleGoalsGet(request: Request, env: Env) {
+export async function handleGoalsGet(request: Request, db: DbClient, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   
   try {
-    const { results } = await env.DB.prepare("SELECT * FROM goals ORDER BY distance ASC").all();
+    const { results } = await db.read.prepare("SELECT * FROM goals ORDER BY distance ASC").all();
     // Return all goals as array of {distance, title, special, image_id}
     return new Response(JSON.stringify(results), {
       headers: { "content-type": "application/json" },
@@ -25,8 +26,8 @@ export async function handleGoalsGet(request: Request, env: Env) {
   }
 }
 
-export async function calculateTotalDistance(env: { DB: D1Database }, userId: number): Promise<number> {
-  const { results } = await env.DB.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
+export async function calculateTotalDistance(db: DbClient, userId: number): Promise<number> {
+  const { results } = await db.read.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
   return Number(
     (results as Array<{ distance: number }>).reduce(
       (acc, row) => acc + row.distance,

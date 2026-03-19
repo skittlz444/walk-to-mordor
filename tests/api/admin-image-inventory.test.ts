@@ -1,4 +1,5 @@
 import { handleAdminImageInventory } from '../../src/admin-handlers';
+import { DbClient } from '../../src/db';
 
 // Mock auth-utils (needed by admin-handlers imports)
 jest.mock('../../src/auth-utils', () => ({
@@ -25,10 +26,9 @@ jest.mock('../../src/email-utils', () => ({
 }));
 
 describe('handleAdminImageInventory', () => {
-  let mockEnv: {
-    DB: { prepare: jest.Mock };
-    ASSETS: { fetch: jest.Mock };
-  };
+  let mockDB: { prepare: jest.Mock };
+  let mockDb: DbClient;
+  let mockAssets: { fetch: jest.Mock };
   let originalConsoleError: typeof console.error;
 
   beforeEach(() => {
@@ -36,10 +36,9 @@ describe('handleAdminImageInventory', () => {
     originalConsoleError = console.error;
     console.error = jest.fn();
 
-    mockEnv = {
-      DB: { prepare: jest.fn() },
-      ASSETS: { fetch: jest.fn() },
-    };
+    mockDB = { prepare: jest.fn() };
+    mockDb = { read: mockDB as unknown as D1Database, write: mockDB as unknown as D1Database };
+    mockAssets = { fetch: jest.fn() };
   });
 
   afterEach(() => {
@@ -54,14 +53,14 @@ describe('handleAdminImageInventory', () => {
 
   function mockManifest(images: string[]) {
     const manifest = { generated: '2026-03-06T12:00:00Z', images, count: images.length };
-    mockEnv.ASSETS.fetch.mockResolvedValue(
+    mockAssets.fetch.mockResolvedValue(
       new Response(JSON.stringify(manifest), { status: 200 })
     );
   }
 
   function mockGoalsQuery(rows: Array<{ id: number; title: string; image_id: string | null }>) {
     const mockAll = jest.fn().mockResolvedValue({ results: rows });
-    mockEnv.DB.prepare.mockReturnValue({ all: mockAll });
+    mockDB.prepare.mockReturnValue({ all: mockAll });
   }
 
   it('should return correct inventory structure with matching images', async () => {
@@ -71,7 +70,7 @@ describe('handleAdminImageInventory', () => {
       { id: 2, title: 'Rivendell', image_id: 'rivendell' },
     ]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -88,7 +87,7 @@ describe('handleAdminImageInventory', () => {
       { id: 1, title: 'Bag End', image_id: 'bag-end' },
     ]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -104,7 +103,7 @@ describe('handleAdminImageInventory', () => {
       { id: 42, title: 'Some Goal', image_id: 'missing-slug' },
     ]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -114,12 +113,12 @@ describe('handleAdminImageInventory', () => {
   });
 
   it('should return 503 when manifest is not found (404)', async () => {
-    mockEnv.ASSETS.fetch.mockResolvedValue(
+    mockAssets.fetch.mockResolvedValue(
       new Response('Not Found', { status: 404 })
     );
     mockGoalsQuery([]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(503);
@@ -127,10 +126,10 @@ describe('handleAdminImageInventory', () => {
   });
 
   it('should return 503 when manifest fetch throws', async () => {
-    mockEnv.ASSETS.fetch.mockRejectedValue(new Error('Network error'));
+    mockAssets.fetch.mockRejectedValue(new Error('Network error'));
     mockGoalsQuery([]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(503);
@@ -138,12 +137,12 @@ describe('handleAdminImageInventory', () => {
   });
 
   it('should return 503 when manifest JSON is malformed', async () => {
-    mockEnv.ASSETS.fetch.mockResolvedValue(
+    mockAssets.fetch.mockResolvedValue(
       new Response('not-valid-json{{{', { status: 200 })
     );
     mockGoalsQuery([]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(503);
@@ -155,7 +154,7 @@ describe('handleAdminImageInventory', () => {
     mockManifest([]);
     mockGoalsQuery([]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -170,7 +169,7 @@ describe('handleAdminImageInventory', () => {
     // Our SQL query filters out null/empty image_id, so results should be empty
     mockGoalsQuery([]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -181,11 +180,11 @@ describe('handleAdminImageInventory', () => {
 
   it('should return 500 on database error', async () => {
     mockManifest(['bag-end']);
-    mockEnv.DB.prepare.mockReturnValue({
+    mockDB.prepare.mockReturnValue({
       all: jest.fn().mockRejectedValue(new Error('DB error')),
     });
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(res.status).toBe(500);
@@ -200,7 +199,7 @@ describe('handleAdminImageInventory', () => {
       { id: 2, title: 'Rivendell', image_id: 'rivendell' },
     ]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(data.images[0].image_id).toBe('bag-end');
@@ -215,7 +214,7 @@ describe('handleAdminImageInventory', () => {
       { id: 10, title: 'Goal A', image_id: 'slug-a' },
     ]);
 
-    const res = await handleAdminImageInventory(makeRequest(), mockEnv);
+    const res = await handleAdminImageInventory(makeRequest(), mockDb, mockAssets as unknown as Fetcher);
     const data = await res.json();
 
     expect(data.missing[0].goal_id).toBe(10);

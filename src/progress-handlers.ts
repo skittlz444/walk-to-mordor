@@ -4,6 +4,7 @@ import {
   isValidDistance, 
 } from "./validators";
 import { validateSession } from "./auth-handlers";
+import type { DbClient } from "./db";
 
 /** Row shape returned by active party membership query */
 interface ActiveMembershipRow {
@@ -15,14 +16,14 @@ interface ActiveMembershipRow {
  * Graceful degradation: errors are logged but never propagated (walk is the primary operation).
  */
 export async function syncPartyProgressLog(
-  env: { DB: D1Database },
+  db: DbClient,
   userId: number,
   date: string,
   distance: number,
   operation: 'insert' | 'update' | 'delete'
 ): Promise<void> {
   try {
-    const { results: memberships } = await env.DB.prepare(
+    const { results: memberships } = await db.read.prepare(
       'SELECT party_id FROM party_members WHERE user_id = ? AND status = ?'
     ).bind(userId, 'active').all<ActiveMembershipRow>();
 
@@ -32,34 +33,34 @@ export async function syncPartyProgressLog(
 
     if (operation === 'insert') {
       const stmts = memberships.map((m) =>
-        env.DB.prepare(
+        db.write.prepare(
           'INSERT OR REPLACE INTO party_progress_log (party_id, logged_by_user_id, distance, date, logged_at) VALUES (?, ?, ?, ?, ?)'
         ).bind(m.party_id, userId, distance, date, now)
       );
-      await env.DB.batch(stmts);
+      await db.write.batch(stmts);
     } else if (operation === 'update') {
       const updateStmts = memberships.map((m) =>
-        env.DB.prepare(
+        db.write.prepare(
           'UPDATE party_progress_log SET distance = ? WHERE party_id = ? AND logged_by_user_id = ? AND date = ?'
         ).bind(distance, m.party_id, userId, date)
       );
-      await env.DB.batch(updateStmts);
+      await db.write.batch(updateStmts);
     } else if (operation === 'delete') {
       const deleteStmts = memberships.map((m) =>
-        env.DB.prepare(
+        db.write.prepare(
           'DELETE FROM party_progress_log WHERE party_id = ? AND logged_by_user_id = ? AND date = ?'
         ).bind(m.party_id, userId, date)
       );
-      await env.DB.batch(deleteStmts);
+      await db.write.batch(deleteStmts);
     }
   } catch (error) {
     console.error('Error syncing party_progress_log:', error);
   }
 }
 
-export async function handleProgressPost(request: Request, env: Env, body: Record<string, unknown>) {
+export async function handleProgressPost(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -131,14 +132,13 @@ export async function handleProgressPost(request: Request, env: Env, body: Recor
   }
 
   try {
-    await env.DB.prepare(
-      "INSERT INTO progress (date, distance, user_id) VALUES (?, ?, ?)"
+    await db.write.prepare("INSERT INTO progress (date, distance, user_id) VALUES (?, ?, ?)"
     )
       .bind(start, Number(title), userId)
       .run();
 
     // Sync to party_progress_log for all active memberships (graceful degradation)
-    await syncPartyProgressLog(env, userId!, start, Number(title), 'insert');
+    await syncPartyProgressLog(db, userId!, start, Number(title), 'insert');
 
     return new Response(JSON.stringify({ 
       message: "Created successfully",
@@ -174,9 +174,9 @@ export async function handleProgressPost(request: Request, env: Env, body: Recor
   }
 }
 
-export async function handleProgressPut(request: Request, env: Env, body: Record<string, unknown>) {
+export async function handleProgressPut(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -224,8 +224,7 @@ export async function handleProgressPut(request: Request, env: Env, body: Record
   }
 
   try {
-    const result = await env.DB.prepare(
-      "UPDATE progress SET distance = ? WHERE date = ? AND user_id = ?"
+    const result = await db.write.prepare("UPDATE progress SET distance = ? WHERE date = ? AND user_id = ?"
     )
       .bind(Number(title), start, userId)
       .run();
@@ -240,7 +239,7 @@ export async function handleProgressPut(request: Request, env: Env, body: Record
     }
 
     // Sync to party_progress_log for all active memberships (graceful degradation)
-    await syncPartyProgressLog(env, userId!, start, Number(title), 'update');
+    await syncPartyProgressLog(db, userId!, start, Number(title), 'update');
     
     return new Response(JSON.stringify({ 
       message: "Updated successfully",
@@ -261,9 +260,9 @@ export async function handleProgressPut(request: Request, env: Env, body: Record
   }
 }
 
-export async function handleProgressDelete(request: Request, env: Env, body: Record<string, unknown>) {
+export async function handleProgressDelete(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -292,7 +291,7 @@ export async function handleProgressDelete(request: Request, env: Env, body: Rec
   }
 
   try {
-    const result = await env.DB.prepare("DELETE FROM progress WHERE date = ? AND user_id = ?")
+    const result = await db.write.prepare("DELETE FROM progress WHERE date = ? AND user_id = ?")
       .bind(start, userId)
       .run();
       
@@ -306,7 +305,7 @@ export async function handleProgressDelete(request: Request, env: Env, body: Rec
     }
 
     // Sync to party_progress_log for all active memberships (graceful degradation)
-    await syncPartyProgressLog(env, userId!, start, 0, 'delete');
+    await syncPartyProgressLog(db, userId!, start, 0, 'delete');
     
     return new Response(JSON.stringify({ 
       message: "Deleted successfully",
@@ -326,16 +325,16 @@ export async function handleProgressDelete(request: Request, env: Env, body: Rec
   }
 }
 
-export async function handleProgressGet(request: Request, env: Env) {
+export async function handleProgressGet(request: Request, db: DbClient, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   const userId = sessionValidation.userId;
   
   try {
-    const { results } = await env.DB.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
+    const { results } = await db.read.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
     const calendarData = (results as Array<{ date: string; distance: number }>).map(row => ({
       start: row.date,
       title: row.distance.toString(),

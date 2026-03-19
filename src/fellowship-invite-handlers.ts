@@ -1,5 +1,6 @@
 // Fellowship Invite API handlers
 import { validateSession } from './auth-handlers';
+import type { DbClient } from './db';
 import { calculateTotalDistance } from './goals-handlers';
 import { createErrorResponse, createSuccessResponse } from './validators';
 
@@ -42,11 +43,12 @@ interface PendingInviteRow {
  */
 export async function handleInviteFriend(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   partyId: number,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -69,7 +71,7 @@ export async function handleInviteFriend(
 
   try {
     // Verify party exists and is not dissolved
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, name, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'name' | 'dissolved_at'>>();
 
@@ -82,7 +84,7 @@ export async function handleInviteFriend(
     }
 
     // Verify inviter is an active party member
-    const inviterMembership = await env.DB.prepare(
+    const inviterMembership = await db.read.prepare(
       'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, userId, 'active').first<{ id: number }>();
 
@@ -91,7 +93,7 @@ export async function handleInviteFriend(
     }
 
     // Verify target user exists
-    const targetUser = await env.DB.prepare(
+    const targetUser = await db.read.prepare(
       'SELECT id FROM users WHERE id = ?'
     ).bind(targetUserId).first<{ id: number }>();
 
@@ -100,7 +102,7 @@ export async function handleInviteFriend(
     }
 
     // Verify accepted friendship (bidirectional check)
-    const friendship = await env.DB.prepare(`
+    const friendship = await db.read.prepare(`
       SELECT id FROM friendships
       WHERE status = 'accepted'
         AND ((requester_id = ? AND addressee_id = ?)
@@ -112,7 +114,7 @@ export async function handleInviteFriend(
     }
 
     // Verify target is not already an active member
-    const targetMembership = await env.DB.prepare(
+    const targetMembership = await db.read.prepare(
       'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, targetUserId, 'active').first<{ id: number }>();
 
@@ -121,7 +123,7 @@ export async function handleInviteFriend(
     }
 
     // Check for duplicate pending invite (partial unique index also guards this)
-    const existingInvite = await env.DB.prepare(
+    const existingInvite = await db.read.prepare(
       'SELECT id FROM fellowship_invites WHERE party_id = ? AND invitee_id = ? AND status = ?'
     ).bind(partyId, targetUserId, 'pending').first<{ id: number }>();
 
@@ -130,8 +132,7 @@ export async function handleInviteFriend(
     }
 
     // Create the invite
-    const result = await env.DB.prepare(
-      'INSERT INTO fellowship_invites (party_id, inviter_id, invitee_id, status) VALUES (?, ?, ?, ?)'
+    const result = await db.write.prepare('INSERT INTO fellowship_invites (party_id, inviter_id, invitee_id, status) VALUES (?, ?, ?, ?)'
     ).bind(partyId, userId, targetUserId, 'pending').run();
 
     return createSuccessResponse({
@@ -159,16 +160,17 @@ export async function handleInviteFriend(
  */
 export async function handleGetFellowshipInvites(
   request: Request,
-  env: { DB: D1Database }
+  db: DbClient,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   const userId = sessionValidation.userId;
 
   try {
-    const { results } = await env.DB.prepare(`
+    const { results } = await db.read.prepare(`
       SELECT
         fi.id,
         fi.party_id,
@@ -232,10 +234,11 @@ export async function handleGetFellowshipInvites(
  */
 export async function handleAcceptFellowshipInvite(
   request: Request,
-  env: { DB: D1Database },
-  inviteId: number
+  db: DbClient,
+  inviteId: number,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -243,7 +246,7 @@ export async function handleAcceptFellowshipInvite(
 
   try {
     // Look up the invite
-    const invite = await env.DB.prepare(
+    const invite = await db.read.prepare(
       'SELECT id, party_id, inviter_id, invitee_id, status FROM fellowship_invites WHERE id = ?'
     ).bind(inviteId).first<Pick<InviteRow, 'id' | 'party_id' | 'inviter_id' | 'invitee_id' | 'status'>>();
 
@@ -260,7 +263,7 @@ export async function handleAcceptFellowshipInvite(
     }
 
     // Verify party is not dissolved
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, name, dissolved_at FROM parties WHERE id = ?'
     ).bind(invite.party_id).first<Pick<PartyRow, 'id' | 'name' | 'dissolved_at'>>();
 
@@ -274,7 +277,7 @@ export async function handleAcceptFellowshipInvite(
 
     // === Reuse handleJoinParty join semantics ===
     // Check for existing membership (any status)
-    const existingMember = await env.DB.prepare(
+    const existingMember = await db.read.prepare(
       'SELECT id, status FROM party_members WHERE party_id = ? AND user_id = ?'
     ).bind(invite.party_id, userId).first<{ id: number; status: string }>();
 
@@ -284,8 +287,8 @@ export async function handleAcceptFellowshipInvite(
       }
 
       // Re-join: reactivate existing record (role resets to 'member')
-      const totalDistance = await calculateTotalDistance(env, userId);
-      const updateMemberStmt = env.DB.prepare(
+      const totalDistance = await calculateTotalDistance(db, userId);
+      const updateMemberStmt = db.write.prepare(
         `UPDATE party_members 
          SET status = 'active', 
              joined_at = CURRENT_TIMESTAMP, 
@@ -298,11 +301,10 @@ export async function handleAcceptFellowshipInvite(
          WHERE id = ?`
       ).bind(totalDistance, existingMember.id);
 
-      const updateInviteStmt = env.DB.prepare(
-        'UPDATE fellowship_invites SET status = ? WHERE id = ? AND status = ?'
+      const updateInviteStmt = db.write.prepare('UPDATE fellowship_invites SET status = ? WHERE id = ? AND status = ?'
       ).bind('accepted', inviteId, 'pending');
 
-      const [, inviteResult] = await env.DB.batch([updateMemberStmt, updateInviteStmt]);
+      const [, inviteResult] = await db.write.batch([updateMemberStmt, updateInviteStmt]);
 
       if (!inviteResult.meta.changes) {
         return createErrorResponse('Invite is no longer pending', 409);
@@ -316,17 +318,15 @@ export async function handleAcceptFellowshipInvite(
     }
 
     // Fresh join: insert new membership
-    const totalDistance = await calculateTotalDistance(env, userId);
+    const totalDistance = await calculateTotalDistance(db, userId);
     try {
-      const insertMemberStmt = env.DB.prepare(
-        'INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES (?, ?, ?, ?, 0, ?)'
+      const insertMemberStmt = db.write.prepare('INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES (?, ?, ?, ?, 0, ?)'
       ).bind(invite.party_id, userId, 'member', totalDistance, 'active');
 
-      const updateInviteStmt = env.DB.prepare(
-        'UPDATE fellowship_invites SET status = ? WHERE id = ? AND status = ?'
+      const updateInviteStmt = db.write.prepare('UPDATE fellowship_invites SET status = ? WHERE id = ? AND status = ?'
       ).bind('accepted', inviteId, 'pending');
 
-      const [, inviteResult] = await env.DB.batch([insertMemberStmt, updateInviteStmt]);
+      const [, inviteResult] = await db.write.batch([insertMemberStmt, updateInviteStmt]);
 
       if (!inviteResult.meta.changes) {
         return createErrorResponse('Invite is no longer pending', 409);
@@ -358,17 +358,18 @@ export async function handleAcceptFellowshipInvite(
  */
 export async function handleRejectFellowshipInvite(
   request: Request,
-  env: { DB: D1Database },
-  inviteId: number
+  db: DbClient,
+  inviteId: number,
+  allowTestAuth?: string,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
   const userId = sessionValidation.userId;
 
   try {
-    const invite = await env.DB.prepare(
+    const invite = await db.read.prepare(
       'SELECT id, party_id, inviter_id, invitee_id, status FROM fellowship_invites WHERE id = ?'
     ).bind(inviteId).first<Pick<InviteRow, 'id' | 'party_id' | 'inviter_id' | 'invitee_id' | 'status'>>();
 
@@ -384,8 +385,7 @@ export async function handleRejectFellowshipInvite(
       return createErrorResponse('Invite is not pending', 400);
     }
 
-    await env.DB.prepare(
-      'UPDATE fellowship_invites SET status = ? WHERE id = ?'
+    await db.write.prepare('UPDATE fellowship_invites SET status = ? WHERE id = ?'
     ).bind('rejected', inviteId).run();
 
     return createSuccessResponse({ status: 'rejected' });

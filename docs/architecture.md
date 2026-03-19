@@ -124,6 +124,30 @@ D1 is the source of truth. Full schema: `docs/data-models.md`. Migrations in `mi
 
 Migration ranges: 0001–0005 core schema · 0006–0010 auth · 0011–0021 goal updates + email · 0022–0116 goal images · 0117–0118 preferences · 0119–0124 fellowship / social / admin.
 
+### Read/Write Separation
+
+All database access flows through a `DbClient` wrapper created once per request in `src/index.ts`:
+
+```typescript
+// src/db.ts
+export interface DbClient {
+  readonly read: D1Database;
+  readonly write: D1Database;
+}
+
+export function createDbClient(db: D1Database): DbClient {
+  return { read: db, write: db };
+}
+```
+
+Handlers use `db.read.prepare(...)` for SELECT queries and `db.write.prepare(...)` for INSERT/UPDATE/DELETE. Both properties delegate to the same D1Database instance today. When Cloudflare ships D1 read replicas, only `createDbClient()` changes — no handler modifications needed.
+
+| Access | Usage |
+|---|---|
+| `db.read` | All `SELECT` queries (pure reads) |
+| `db.write` | All `INSERT`, `UPDATE`, `DELETE` queries |
+| `db.write.batch(...)` | Atomic multi-statement operations |
+
 ## Build & Deploy
 
 - Config: `wrangler.json`.

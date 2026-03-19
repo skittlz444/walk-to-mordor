@@ -1,13 +1,15 @@
 import { handleCreateParty, generateInviteCode, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties } from '../../src/party-handlers';
 import { validateSession } from '../../src/auth-handlers';
 import { calculateTotalDistance } from '../../src/goals-handlers';
+import { DbClient } from '../../src/db';
 
 // Mock dependencies
 jest.mock('../../src/auth-handlers');
 jest.mock('../../src/goals-handlers');
 
 describe('Party Handlers', () => {
-  let mockEnv: any;
+  let mockDB: any;
+  let mockDb: DbClient;
   let mockRequest: any;
 
   beforeEach(() => {
@@ -27,20 +29,19 @@ describe('Party Handlers', () => {
       first: mockFirst
     }));
 
-    mockEnv = {
-      DB: {
-        prepare: jest.fn(() => ({
-          bind: mockBind,
-          run: mockRun,
-          all: mockAll,
-          first: mockFirst
-        })),
-        batch: jest.fn().mockResolvedValue([
-          { meta: { last_row_id: 1, changes: 1 } },
-          { meta: { changes: 1 } }
-        ])
-      }
+    mockDB = {
+      prepare: jest.fn(() => ({
+        bind: mockBind,
+        run: mockRun,
+        all: mockAll,
+        first: mockFirst
+      })),
+      batch: jest.fn().mockResolvedValue([
+        { meta: { last_row_id: 1, changes: 1 } },
+        { meta: { changes: 1 } }
+      ])
     };
+    mockDb = { read: mockDB as unknown as D1Database, write: mockDB as unknown as D1Database };
 
     mockRequest = {
       headers: {
@@ -76,35 +77,35 @@ describe('Party Handlers', () => {
         })
       });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
       expect(response.status).toBe(401);
       const data = await response.json();
       expect(data.error).toBe('Unauthorized');
     });
 
     it('should return 400 if name is missing', async () => {
-      const response = await handleCreateParty(mockRequest, mockEnv, {});
+      const response = await handleCreateParty(mockRequest, mockDb, {});
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('Missing required field: name');
     });
 
     it('should return 400 if name is empty string', async () => {
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: '' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: '' });
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('Missing required field: name');
     });
 
     it('should return 400 if name is only whitespace', async () => {
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: '   ' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: '   ' });
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('Missing required field: name');
     });
 
     it('should return 400 if name is not a string', async () => {
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 123 });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 123 });
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('Missing required field: name');
@@ -112,7 +113,7 @@ describe('Party Handlers', () => {
 
     it('should return 400 if name exceeds 50 characters', async () => {
       const longName = 'A'.repeat(51);
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: longName });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: longName });
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('Name must be 50 characters or less');
@@ -143,14 +144,14 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: exactName });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: exactName });
       expect(response.status).toBe(201);
     });
 
     it('should return 400 if distance_mode is invalid', async () => {
-      const response = await handleCreateParty(mockRequest, mockEnv, {
+      const response = await handleCreateParty(mockRequest, mockDb, {
         name: 'Test Party',
         distance_mode: 'invalid'
       });
@@ -160,7 +161,7 @@ describe('Party Handlers', () => {
     });
 
     it('should return 400 if leave_distance_behavior is invalid', async () => {
-      const response = await handleCreateParty(mockRequest, mockEnv, {
+      const response = await handleCreateParty(mockRequest, mockDb, {
         name: 'Test Party',
         leave_distance_behavior: 'invalid'
       });
@@ -188,9 +189,9 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
       expect(response.status).toBe(201);
       const data = await response.json();
       expect(data.distance_mode).toBe('incremental');
@@ -215,9 +216,9 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
       expect(response.status).toBe(201);
       const data = await response.json();
       expect(data.leave_distance_behavior).toBe('keep');
@@ -242,9 +243,9 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, {
+      const response = await handleCreateParty(mockRequest, mockDb, {
         name: 'Test Party',
         distance_mode: 'cumulative'
       });
@@ -272,9 +273,9 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, {
+      const response = await handleCreateParty(mockRequest, mockDb, {
         name: 'Test Party',
         leave_distance_behavior: 'remove'
       });
@@ -302,9 +303,9 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, {
+      const response = await handleCreateParty(mockRequest, mockDb, {
         name: 'The Fellowship',
         distance_mode: 'cumulative',
         leave_distance_behavior: 'remove'
@@ -340,11 +341,11 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
 
-      expect(calculateTotalDistance).toHaveBeenCalledWith(mockEnv, 1);
+      expect(calculateTotalDistance).toHaveBeenCalledWith(mockDb, 1);
     });
 
     it('should use D1 batch for atomic creation', async () => {
@@ -366,13 +367,13 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
 
       // Verify batch was called with 2 statements (party insert + member insert)
-      expect(mockEnv.DB.batch).toHaveBeenCalledTimes(1);
-      const batchArgs = mockEnv.DB.batch.mock.calls[0][0];
+      expect(mockDB.batch).toHaveBeenCalledTimes(1);
+      const batchArgs = mockDB.batch.mock.calls[0][0];
       expect(batchArgs).toHaveLength(2);
     });
 
@@ -386,10 +387,10 @@ describe('Party Handlers', () => {
           all: jest.fn().mockResolvedValue({ results: [] }),
           first: mockFirst
         });
-        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
-        mockEnv.DB.batch.mockRejectedValueOnce(new Error('DB error'));
+        mockDB.prepare.mockReturnValue({ bind: mockBind });
+        mockDB.batch.mockRejectedValueOnce(new Error('DB error'));
 
-        const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+        const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
         expect(response.status).toBe(500);
         const data = await response.json();
         expect(data.error).toBe('Internal server error while creating party');
@@ -407,16 +408,16 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
       expect(response.status).toBe(500);
       const data = await response.json();
       expect(data.error).toBe('Failed to retrieve created party');
     });
 
     it('should handle null body gracefully', async () => {
-      const response = await handleCreateParty(mockRequest, mockEnv, null as any);
+      const response = await handleCreateParty(mockRequest, mockDb, null as any);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('Missing required field: name');
@@ -441,9 +442,9 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: '  Trimmed Name  ' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: '  Trimmed Name  ' });
       expect(response.status).toBe(201);
       // Verify the trimmed name was used in the SQL bind call
       expect(mockBind).toHaveBeenCalledWith(
@@ -476,9 +477,9 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
       expect(response.status).toBe(201);
     });
 
@@ -490,9 +491,9 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
       expect(response.status).toBe(500);
       const data = await response.json();
       expect(data.error).toContain('Failed to generate unique invite code');
@@ -519,17 +520,17 @@ describe('Party Handlers', () => {
         all: jest.fn().mockResolvedValue({ results: [] }),
         first: mockFirst
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
-      mockEnv.DB.batch
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.batch
         .mockRejectedValueOnce(new Error('UNIQUE constraint failed: parties.invite_code'))
         .mockResolvedValueOnce([
           { meta: { last_row_id: 1, changes: 1 } },
           { meta: { changes: 1 } }
         ]);
 
-      const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
       expect(response.status).toBe(201);
-      expect(mockEnv.DB.batch).toHaveBeenCalledTimes(2);
+      expect(mockDB.batch).toHaveBeenCalledTimes(2);
     });
 
     it('should return 409 after exhausting UNIQUE constraint retries', async () => {
@@ -543,10 +544,10 @@ describe('Party Handlers', () => {
           all: jest.fn().mockResolvedValue({ results: [] }),
           first: mockFirst
         });
-        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
-        mockEnv.DB.batch.mockRejectedValue(new Error('UNIQUE constraint failed: parties.invite_code'));
+        mockDB.prepare.mockReturnValue({ bind: mockBind });
+        mockDB.batch.mockRejectedValue(new Error('UNIQUE constraint failed: parties.invite_code'));
 
-        const response = await handleCreateParty(mockRequest, mockEnv, { name: 'Test Party' });
+        const response = await handleCreateParty(mockRequest, mockDb, { name: 'Test Party' });
         expect(response.status).toBe(409);
         const data = await response.json();
         expect(data.error).toContain('Could not generate a unique invite code');
@@ -558,23 +559,23 @@ describe('Party Handlers', () => {
 
   describe('handlePreviewParty', () => {
     it('should return 404 for malformed invite code (too short)', async () => {
-      const response = await handlePreviewParty(mockRequest, mockEnv, 'abc');
+      const response = await handlePreviewParty(mockRequest, mockDb, 'abc');
       expect(response.status).toBe(404);
-      expect(mockEnv.DB.prepare).not.toHaveBeenCalled();
+      expect(mockDB.prepare).not.toHaveBeenCalled();
     });
 
     it('should return 404 for malformed invite code (special chars)', async () => {
-      const response = await handlePreviewParty(mockRequest, mockEnv, 'abc!@#$%');
+      const response = await handlePreviewParty(mockRequest, mockDb, 'abc!@#$%');
       expect(response.status).toBe(404);
-      expect(mockEnv.DB.prepare).not.toHaveBeenCalled();
+      expect(mockDB.prepare).not.toHaveBeenCalled();
     });
 
     it('should return 404 for non-existent invite code', async () => {
       const mockFirst = jest.fn().mockResolvedValue(null);
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handlePreviewParty(mockRequest, mockEnv, 'BADCODE1');
+      const response = await handlePreviewParty(mockRequest, mockDb, 'BADCODE1');
       expect(response.status).toBe(404);
       const data = await response.json();
       expect(data.error).toBe('Invalid invite code');
@@ -586,9 +587,9 @@ describe('Party Handlers', () => {
         leave_distance_behavior: 'keep', dissolved_at: '2026-01-01T00:00:00Z'
       });
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handlePreviewParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handlePreviewParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('This party has been dissolved');
@@ -602,9 +603,9 @@ describe('Party Handlers', () => {
         })
         .mockResolvedValueOnce({ count: 3 });
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handlePreviewParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handlePreviewParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.name).toBe('The Fellowship');
@@ -619,9 +620,9 @@ describe('Party Handlers', () => {
         const mockBind = jest.fn().mockReturnValue({
           first: jest.fn().mockRejectedValue(new Error('DB error'))
         });
-        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-        const response = await handlePreviewParty(mockRequest, mockEnv, 'AbCd1234');
+        const response = await handlePreviewParty(mockRequest, mockDb, 'AbCd1234');
         expect(response.status).toBe(500);
       } finally {
         consoleErrorSpy.mockRestore();
@@ -631,9 +632,9 @@ describe('Party Handlers', () => {
 
   describe('handleJoinParty', () => {
     it('should return 404 for malformed invite code without hitting DB', async () => {
-      const response = await handleJoinParty(mockRequest, mockEnv, 'short');
+      const response = await handleJoinParty(mockRequest, mockDb, 'short');
       expect(response.status).toBe(404);
-      expect(mockEnv.DB.prepare).not.toHaveBeenCalled();
+      expect(mockDB.prepare).not.toHaveBeenCalled();
     });
 
     it('should return 401 if session is invalid', async () => {
@@ -644,16 +645,16 @@ describe('Party Handlers', () => {
         })
       });
 
-      const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(401);
     });
 
     it('should return 404 for non-existent invite code', async () => {
       const mockFirst = jest.fn().mockResolvedValue(null);
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleJoinParty(mockRequest, mockEnv, 'BADCODE1');
+      const response = await handleJoinParty(mockRequest, mockDb, 'BADCODE1');
       expect(response.status).toBe(404);
       const data = await response.json();
       expect(data.error).toBe('Invalid invite code');
@@ -664,9 +665,9 @@ describe('Party Handlers', () => {
         id: 1, name: 'Old Party', dissolved_at: '2026-01-01T00:00:00Z'
       });
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('This party has been dissolved');
@@ -677,9 +678,9 @@ describe('Party Handlers', () => {
         .mockResolvedValueOnce({ id: 1, name: 'Party', dissolved_at: null }) // party lookup
         .mockResolvedValueOnce({ id: 10, status: 'active' }); // existing member
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('You are already an active member of this party');
@@ -691,9 +692,9 @@ describe('Party Handlers', () => {
         .mockResolvedValueOnce({ id: 1, name: 'Party', dissolved_at: null }) // party lookup
         .mockResolvedValueOnce({ id: 10, status: 'left' }); // existing departed member
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst, run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.party_id).toBe(1);
@@ -707,9 +708,9 @@ describe('Party Handlers', () => {
         .mockResolvedValueOnce({ id: 1, name: 'Party', dissolved_at: null }) // party lookup
         .mockResolvedValueOnce({ id: 10, status: 'kicked' }); // existing kicked member
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst, run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.rejoined).toBe(true);
@@ -721,15 +722,15 @@ describe('Party Handlers', () => {
         .mockResolvedValueOnce({ id: 1, name: 'Party', dissolved_at: null }) // party lookup
         .mockResolvedValueOnce(null); // no existing member
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst, run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.party_id).toBe(1);
       expect(data.party_name).toBe('Party');
       expect(data.rejoined).toBe(false);
-      expect(calculateTotalDistance).toHaveBeenCalledWith(mockEnv, 1);
+      expect(calculateTotalDistance).toHaveBeenCalledWith(mockDb, 1);
     });
 
     it('should return 400 on UNIQUE constraint race condition during fresh join', async () => {
@@ -738,9 +739,9 @@ describe('Party Handlers', () => {
         .mockResolvedValueOnce({ id: 1, name: 'Party', dissolved_at: null }) // party lookup
         .mockResolvedValueOnce(null); // no existing member (race: another request inserted between check and insert)
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst, run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('You are already an active member of this party');
@@ -752,9 +753,9 @@ describe('Party Handlers', () => {
         const mockBind = jest.fn().mockReturnValue({
           first: jest.fn().mockRejectedValue(new Error('DB error'))
         });
-        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-        const response = await handleJoinParty(mockRequest, mockEnv, 'AbCd1234');
+        const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
         expect(response.status).toBe(500);
       } finally {
         consoleErrorSpy.mockRestore();
@@ -780,16 +781,16 @@ describe('Party Handlers', () => {
         })
       });
 
-      const response = await handleRegenerateInvite(mockRequestWithUrl, mockEnv, 1);
+      const response = await handleRegenerateInvite(mockRequestWithUrl, mockDb, 1);
       expect(response.status).toBe(401);
     });
 
     it('should return 404 if party not found', async () => {
       const mockFirst = jest.fn().mockResolvedValue(null);
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleRegenerateInvite(mockRequestWithUrl, mockEnv, 999);
+      const response = await handleRegenerateInvite(mockRequestWithUrl, mockDb, 999);
       expect(response.status).toBe(404);
       const data = await response.json();
       expect(data.error).toBe('Party not found');
@@ -800,9 +801,9 @@ describe('Party Handlers', () => {
         id: 1, leader_id: 1, dissolved_at: '2026-01-01T00:00:00Z'
       });
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleRegenerateInvite(mockRequestWithUrl, mockEnv, 1);
+      const response = await handleRegenerateInvite(mockRequestWithUrl, mockDb, 1);
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.error).toBe('This party has been dissolved');
@@ -813,9 +814,9 @@ describe('Party Handlers', () => {
         id: 1, leader_id: 999, dissolved_at: null
       });
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleRegenerateInvite(mockRequestWithUrl, mockEnv, 1);
+      const response = await handleRegenerateInvite(mockRequestWithUrl, mockDb, 1);
       expect(response.status).toBe(403);
       const data = await response.json();
       expect(data.error).toContain('Only the party leader');
@@ -827,9 +828,9 @@ describe('Party Handlers', () => {
         .mockResolvedValueOnce({ id: 1, leader_id: 1, dissolved_at: null }) // party lookup
         .mockResolvedValueOnce(null); // pre-check uniqueness
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst, run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleRegenerateInvite(mockRequestWithUrl, mockEnv, 1);
+      const response = await handleRegenerateInvite(mockRequestWithUrl, mockDb, 1);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.inviteCode).toBeDefined();
@@ -844,9 +845,9 @@ describe('Party Handlers', () => {
         const mockBind = jest.fn().mockReturnValue({
           first: jest.fn().mockRejectedValue(new Error('DB error'))
         });
-        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-        const response = await handleRegenerateInvite(mockRequestWithUrl, mockEnv, 1);
+        const response = await handleRegenerateInvite(mockRequestWithUrl, mockDb, 1);
         expect(response.status).toBe(500);
       } finally {
         consoleErrorSpy.mockRestore();
@@ -859,9 +860,9 @@ describe('Party Handlers', () => {
         .mockResolvedValueOnce({ id: 1, leader_id: 1, dissolved_at: null }) // party lookup
         .mockResolvedValue({ id: 99 }); // all pre-checks find collision
       const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      const response = await handleRegenerateInvite(mockRequestWithUrl, mockEnv, 1);
+      const response = await handleRegenerateInvite(mockRequestWithUrl, mockDb, 1);
       expect(response.status).toBe(409);
     });
   });
@@ -876,7 +877,7 @@ describe('Party Handlers', () => {
       });
 
       const requestWithUrl = { ...mockRequest, url: 'https://example.com/api/user/parties' };
-      const response = await handleGetUserParties(requestWithUrl, mockEnv);
+      const response = await handleGetUserParties(requestWithUrl, mockDb);
       expect(response.status).toBe(401);
     });
 
@@ -888,10 +889,10 @@ describe('Party Handlers', () => {
 
       const mockAll = jest.fn().mockResolvedValue({ results: mockParties });
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
       const requestWithUrl = { ...mockRequest, url: 'https://example.com/api/user/parties' };
-      const response = await handleGetUserParties(requestWithUrl, mockEnv);
+      const response = await handleGetUserParties(requestWithUrl, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.parties).toHaveLength(2);
@@ -907,10 +908,10 @@ describe('Party Handlers', () => {
 
       const mockAll = jest.fn().mockResolvedValue({ results: mockParties });
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
       const requestWithUrl = { ...mockRequest, url: 'https://example.com/api/user/parties?include_dissolved=true' };
-      const response = await handleGetUserParties(requestWithUrl, mockEnv);
+      const response = await handleGetUserParties(requestWithUrl, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.parties).toHaveLength(2);
@@ -919,10 +920,10 @@ describe('Party Handlers', () => {
     it('should return empty array when user has no parties', async () => {
       const mockAll = jest.fn().mockResolvedValue({ results: [] });
       const mockBind = jest.fn().mockReturnValue({ all: mockAll });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
       const requestWithUrl = { ...mockRequest, url: 'https://example.com/api/user/parties' };
-      const response = await handleGetUserParties(requestWithUrl, mockEnv);
+      const response = await handleGetUserParties(requestWithUrl, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.parties).toHaveLength(0);
@@ -934,10 +935,10 @@ describe('Party Handlers', () => {
         const mockBind = jest.fn().mockReturnValue({
           all: jest.fn().mockRejectedValue(new Error('DB error'))
         });
-        mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+        mockDB.prepare.mockReturnValue({ bind: mockBind });
 
         const requestWithUrl = { ...mockRequest, url: 'https://example.com/api/user/parties' };
-        const response = await handleGetUserParties(requestWithUrl, mockEnv);
+        const response = await handleGetUserParties(requestWithUrl, mockDb);
         expect(response.status).toBe(500);
       } finally {
         consoleErrorSpy.mockRestore();
