@@ -1,460 +1,611 @@
 /**
- * Tests for Service Worker SWR (Stale-While-Revalidate) API caching
+ * Tests for Service Worker SWR (Stale-While-Revalidate) API Caching
  *
- * Validates:
- * - SWR hit returns cached response + background revalidation
- * - Cold cache goes to network (network-first)
- * - POST/PUT/DELETE bypass cache
- * - Non-allowlisted GET endpoints bypass cache
- * - TTL metadata (x-swr-cached-at) stored and readable
- * - postMessage emitted on cache update
- * - SWR_CACHE_VERSION change clears SWR cache on activate
- * - Static asset caching unchanged
- * - isSWREndpoint matcher works correctly
+ * Story 8.3 - Validates the SWR caching logic in public/sw.js:
+ * - SWR endpoint allowlist matching
+ * - Cache-with-timestamp for TTL metadata (x-swr-cached-at)
+ * - Client notification via postMessage
+ * - Background revalidation (revalidateAndNotify)
+ * - Cold cache fetch-and-cache
+ * - Fetch event routing (SWR hit/miss, non-SWR, write methods, static assets)
+ * - Activate event SWR cache version busting
+ *
+ * Uses Node vm module to load sw.js in a mock ServiceWorker environment
+ * so that actual function behaviour is tested, not just source strings.
  */
 
+const vm = require('vm');
 const fs = require('fs');
 const path = require('path');
 
 const SW_PATH = path.join(__dirname, '..', '..', 'public', 'sw.js');
+const SW_SOURCE = fs.readFileSync(SW_PATH, 'utf8');
+const ORIGIN = 'https://example.com';
 
-// Read sw.js source for eval-based testing
-function loadSWSource() {
-  return fs.readFileSync(SW_PATH, 'utf8');
+/**
+ * Creates a mock ServiceWorker environment, loads sw.js via vm, and returns
+ * references to the sandbox functions, mocks, and captured event listeners.
+ */
+function createSWEnvironment() {
+  var eventListeners = {};
+  var mockClient = { postMessage: jest.fn() };
+
+  var selfObj = {
+    addEventListener: function(type, handler) {
+      if (!eventListeners[type]) eventListeners[type] = [];
+      eventListeners[type].push(handler);
+    },
+    clients: {
+      matchAll: jest.fn().mockResolvedValue([mockClient]),
+    },
+    location: { origin: ORIGIN },
+  };
+
+  var defaultCache = {
+    match: jest.fn().mockResolvedValue(undefined),
+    put: jest.fn().mockResolvedValue(undefined),
+    addAll: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(true),
+  };
+
+  var mockCaches = {
+    open: jest.fn().mockResolvedValue(defaultCache),
+    keys: jest.fn().mockResolvedValue([]),
+    delete: jest.fn().mockResolvedValue(true),
+    match: jest.fn().mockResolvedValue(undefined),
+  };
+
+  var mockFetch = jest.fn();
+
+  var sandbox = {
+    self: selfObj,
+    caches: mockCaches,
+    fetch: mockFetch,
+    Response: globalThis.Response,
+    Headers: globalThis.Headers,
+    Request: globalThis.Request,
+    URL: globalThis.URL,
+    console: globalThis.console,
+  };
+
+  vm.createContext(sandbox);
+  vm.runInContext(SW_SOURCE, sandbox);
+
+  return {
+    sandbox: sandbox,
+    self: selfObj,
+    mockCaches: mockCaches,
+    defaultCache: defaultCache,
+    mockFetch: mockFetch,
+    mockClient: mockClient,
+    eventListeners: eventListeners,
+  };
 }
 
-describe('Service Worker SWR API Caching', () => {
+function createFetchEvent(urlPath, method) {
+  method = method || 'GET';
+  var url = urlPath.startsWith('http') ? urlPath : ORIGIN + urlPath;
+  var request = new Request(url, { method: method });
+  var event = {
+    request: request,
+    _responsePromise: null,
+    _waitUntilPromises: [],
+    respondWith: function(p) { event._responsePromise = p; },
+    waitUntil: function(p) { event._waitUntilPromises.push(p); },
+  };
+  return event;
+}
 
-  describe('Constants and Configuration', () => {
-    let swSource;
+function createLifecycleEvent() {
+  var event = {
+    _waitUntilPromises: [],
+    waitUntil: function(p) { event._waitUntilPromises.push(p); },
+  };
+  return event;
+}
 
-    beforeAll(() => {
-      swSource = loadSWSource();
+describe('Service Worker SWR API Caching', function() {
+
+  describe('SWR Constants (source verification)', function() {
+    test('defines SWR_CACHE_NAME as a separate cache from static CACHE_NAME', function() {
+      expect(SW_SOURCE).toContain("const SWR_CACHE_NAME = 'walk-to-mordor-api-swr'");
+      expect(SW_SOURCE).not.toMatch(/SWR_CACHE_NAME.*BUILD_TIMESTAMP/);
     });
 
-    test('should define SWR_CACHE_VERSION placeholder', () => {
-      expect(swSource).toContain("const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}'");
+    test('defines SWR_TTL_MS as 300000 (5 minutes)', function() {
+      expect(SW_SOURCE).toContain('const SWR_TTL_MS = 300000');
     });
 
-    test('should define SWR_CACHE_NAME as walk-to-mordor-api-swr', () => {
-      expect(swSource).toContain("const SWR_CACHE_NAME = 'walk-to-mordor-api-swr'");
-    });
-
-    test('should define SWR_VERSION_CACHE for version tracking', () => {
-      expect(swSource).toContain("const SWR_VERSION_CACHE = 'walk-to-mordor-swr-version'");
-    });
-
-    test('should define SWR_TTL_MS as 300000 (5 minutes)', () => {
-      expect(swSource).toContain('const SWR_TTL_MS = 300000');
-    });
-
-    test('should define all six SWR endpoints', () => {
-      const expectedEndpoints = [
-        '/api/session',
-        '/api/goals',
-        '/api/calendar-progress',
-        '/api/total-distance',
-        '/api/user/parties',
-        '/api/friends'
-      ];
-      expectedEndpoints.forEach(ep => {
-        expect(swSource).toContain(`'${ep}'`);
+    test('defines SWR_ENDPOINTS allowlist with all required endpoints', function() {
+      ['/api/session', '/api/goals', '/api/calendar-progress',
+       '/api/total-distance', '/api/user/parties', '/api/friends'].forEach(function(ep) {
+        expect(SW_SOURCE).toContain("'" + ep + "'");
       });
     });
 
-    test('should NOT include excluded endpoints in SWR_ENDPOINTS', () => {
-      // These should not appear in the SWR_ENDPOINTS array
-      const excludedEndpoints = [
-        '/api/party/',
-        '/api/friends/pending'
-      ];
-      // Extract just the SWR_ENDPOINTS array portion
-      const endpointsMatch = swSource.match(/const SWR_ENDPOINTS = \[([\s\S]*?)\];/);
-      expect(endpointsMatch).toBeTruthy();
-      const endpointsBlock = endpointsMatch[1];
-      excludedEndpoints.forEach(ep => {
-        expect(endpointsBlock).not.toContain(ep);
-      });
+    test('does NOT include excluded endpoints in the SWR allowlist', function() {
+      var match = SW_SOURCE.match(/const SWR_ENDPOINTS\s*=\s*\[([\s\S]*?)\];/);
+      expect(match).toBeTruthy();
+      expect(match[1]).not.toContain('/api/party');
+      expect(match[1]).not.toContain('/api/friends/pending');
     });
 
-    test('should preserve BUILD_TIMESTAMP and CACHE_NAME for static assets', () => {
-      expect(swSource).toContain("const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}'");
-      expect(swSource).toContain("const CACHE_NAME = `walk-to-mordor-{{BUILD_TIMESTAMP}}`");
+    test('SWR_CACHE_VERSION uses a placeholder pattern', function() {
+      expect(SW_SOURCE).toContain("const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}'");
     });
 
-    test('should not contain import statements', () => {
-      // sw.js must be a classic script
-      expect(swSource).not.toMatch(/^import\s/m);
-      expect(swSource).not.toMatch(/^import\(/m);
+    test('SWR_VERSION_CACHE is defined for version tracking', function() {
+      expect(SW_SOURCE).toContain("const SWR_VERSION_CACHE = 'walk-to-mordor-swr-version'");
+    });
+
+    test('uses x-swr-cached-at header for TTL metadata', function() {
+      expect(SW_SOURCE).toContain("'x-swr-cached-at'");
+    });
+
+    test('preserves BUILD_TIMESTAMP and CACHE_NAME for static assets', function() {
+      expect(SW_SOURCE).toContain("const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}'");
+    });
+
+    test('sw.js is a classic script (no import statements)', function() {
+      expect(SW_SOURCE).not.toMatch(/^import\s/m);
     });
   });
 
-  describe('isSWREndpoint matcher', () => {
-    let isSWREndpoint;
-    let SWR_ENDPOINTS;
+  describe('isSWREndpoint()', function() {
+    var env;
+    beforeEach(function() { env = createSWEnvironment(); });
 
-    beforeAll(() => {
-      // Extract and evaluate the isSWREndpoint function
-      const swSource = loadSWSource();
-
-      // Extract the SWR_ENDPOINTS array
-      const endpointsMatch = swSource.match(/const SWR_ENDPOINTS = \[([\s\S]*?)\];/);
-      // eslint-disable-next-line no-eval
-      SWR_ENDPOINTS = eval(`[${endpointsMatch[1]}]`);
-
-      // Extract and create the function
-      isSWREndpoint = function(pathname) {
-        return SWR_ENDPOINTS.includes(pathname);
-      };
+    test.each([
+      '/api/session', '/api/goals', '/api/calendar-progress',
+      '/api/total-distance', '/api/user/parties', '/api/friends',
+    ])('returns true for allowlisted endpoint %s', function(endpoint) {
+      expect(env.sandbox.isSWREndpoint(endpoint)).toBe(true);
     });
 
-    test('should match all allowlisted endpoints', () => {
-      const endpoints = [
-        '/api/session',
-        '/api/goals',
-        '/api/calendar-progress',
-        '/api/total-distance',
-        '/api/user/parties',
-        '/api/friends'
-      ];
-      endpoints.forEach(ep => {
-        expect(isSWREndpoint(ep)).toBe(true);
-      });
-    });
-
-    test('should NOT match non-allowlisted API endpoints', () => {
-      const excluded = [
-        '/api/party/123/activity',
-        '/api/friends/pending',
-        '/api/login',
-        '/api/register',
-        '/api/progress',
-        '/api/user/preferences',
-        '/api/admin/users'
-      ];
-      excluded.forEach(ep => {
-        expect(isSWREndpoint(ep)).toBe(false);
-      });
-    });
-
-    test('should NOT match non-API paths', () => {
-      expect(isSWREndpoint('/')).toBe(false);
-      expect(isSWREndpoint('/journey')).toBe(false);
-      expect(isSWREndpoint('/css/main.css')).toBe(false);
-    });
-
-    test('should require exact match (no partial matching)', () => {
-      expect(isSWREndpoint('/api/session/extra')).toBe(false);
-      expect(isSWREndpoint('/api/goal')).toBe(false);
-      expect(isSWREndpoint('/api/friends/')).toBe(false);
+    test.each([
+      '/api/party/123/activity', '/api/friends/pending',
+      '/api/unknown', '/api/user', '/api/', '/api/goals/1',
+      '/api/session/extra', '/', '/journey', '/css/main.css',
+    ])('returns false for non-allowlisted path %s', function(endpoint) {
+      expect(env.sandbox.isSWREndpoint(endpoint)).toBe(false);
     });
   });
 
-  describe('SWR Fetch Handler Logic', () => {
-    let mockCacheStorage;
-    let mockSwrCache;
-    let mockClients;
-    let fetchBackup;
+  describe('cacheWithTimestamp()', function() {
+    var env;
+    beforeEach(function() { env = createSWEnvironment(); });
 
-    beforeEach(() => {
-      // Mock cache storage
-      mockSwrCache = {
-        match: jest.fn(),
-        put: jest.fn().mockResolvedValue(undefined),
-        delete: jest.fn().mockResolvedValue(true)
-      };
-
-      mockCacheStorage = {
-        open: jest.fn().mockResolvedValue(mockSwrCache),
-        keys: jest.fn().mockResolvedValue([]),
-        delete: jest.fn().mockResolvedValue(true)
-      };
-
-      // Mock clients
-      mockClients = {
-        matchAll: jest.fn().mockResolvedValue([])
-      };
-
-      // Save original fetch
-      fetchBackup = global.fetch;
+    test('stores response in cache with x-swr-cached-at header', async function() {
+      var cache = { put: jest.fn().mockResolvedValue(undefined) };
+      var request = new Request(ORIGIN + '/api/session');
+      var response = new Response('{"user":"test"}', {
+        status: 200, statusText: 'OK',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      await env.sandbox.cacheWithTimestamp(cache, request, response);
+      expect(cache.put).toHaveBeenCalledTimes(1);
+      var cachedAt = cache.put.mock.calls[0][1].headers.get('x-swr-cached-at');
+      expect(cachedAt).toBeTruthy();
+      expect(Number(cachedAt)).toBeGreaterThan(0);
     });
 
-    afterEach(() => {
-      global.fetch = fetchBackup;
+    test('preserves original response status and statusText', async function() {
+      var cache = { put: jest.fn().mockResolvedValue(undefined) };
+      var request = new Request(ORIGIN + '/api/goals');
+      var response = new Response('[]', { status: 200, statusText: 'OK' });
+      await env.sandbox.cacheWithTimestamp(cache, request, response);
+      var putResp = cache.put.mock.calls[0][1];
+      expect(putResp.status).toBe(200);
+      expect(putResp.statusText).toBe('OK');
     });
 
-    test('SWR cache hit returns cached response and triggers background revalidation', async () => {
-      const cachedResponse = new Response(JSON.stringify({ data: 'cached' }), {
+    test('preserves original response headers alongside new timestamp', async function() {
+      var cache = { put: jest.fn().mockResolvedValue(undefined) };
+      var request = new Request(ORIGIN + '/api/session');
+      var response = new Response('{}', {
         status: 200,
-        headers: {
-          'content-type': 'application/json',
-          'x-swr-cached-at': (Date.now() - 60000).toString()
+        headers: { 'Content-Type': 'application/json', 'X-Custom': 'value' },
+      });
+      await env.sandbox.cacheWithTimestamp(cache, request, response);
+      var putResp = cache.put.mock.calls[0][1];
+      expect(putResp.headers.get('content-type')).toBe('application/json');
+      expect(putResp.headers.get('x-custom')).toBe('value');
+      expect(putResp.headers.get('x-swr-cached-at')).toBeTruthy();
+    });
+  });
+
+  describe('notifyClients()', function() {
+    var env;
+    beforeEach(function() { env = createSWEnvironment(); });
+
+    test('sends sw-cache-updated message with URL to all clients', async function() {
+      var url = ORIGIN + '/api/session';
+      await env.sandbox.notifyClients(url);
+      expect(env.self.clients.matchAll).toHaveBeenCalledWith({ type: 'window' });
+      expect(env.mockClient.postMessage).toHaveBeenCalledWith({
+        type: 'sw-cache-updated', url: url,
+      });
+    });
+
+    test('sends message to every connected client', async function() {
+      var client1 = { postMessage: jest.fn() };
+      var client2 = { postMessage: jest.fn() };
+      env.self.clients.matchAll.mockResolvedValue([client1, client2]);
+      await env.sandbox.notifyClients(ORIGIN + '/api/goals');
+      expect(client1.postMessage).toHaveBeenCalledTimes(1);
+      expect(client2.postMessage).toHaveBeenCalledTimes(1);
+    });
+
+    test('handles zero connected clients gracefully', async function() {
+      env.self.clients.matchAll.mockResolvedValue([]);
+      await expect(env.sandbox.notifyClients(ORIGIN + '/api/session')).resolves.not.toThrow();
+    });
+  });
+
+  describe('revalidateAndNotify()', function() {
+    var env;
+    beforeEach(function() { env = createSWEnvironment(); });
+
+    test('fetches fresh response and updates cache on success', async function() {
+      env.mockFetch.mockResolvedValue(new Response('{"fresh":true}', { status: 200 }));
+      var swrCache = { put: jest.fn().mockResolvedValue(undefined) };
+      var request = new Request(ORIGIN + '/api/session');
+      await env.sandbox.revalidateAndNotify(request, swrCache);
+      expect(env.mockFetch).toHaveBeenCalledWith(request);
+      expect(swrCache.put).toHaveBeenCalledTimes(1);
+    });
+
+    test('notifies clients after successful cache update', async function() {
+      env.mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
+      var swrCache = { put: jest.fn().mockResolvedValue(undefined) };
+      var request = new Request(ORIGIN + '/api/goals');
+      await env.sandbox.revalidateAndNotify(request, swrCache);
+      expect(env.mockClient.postMessage).toHaveBeenCalledWith({
+        type: 'sw-cache-updated', url: ORIGIN + '/api/goals',
+      });
+    });
+
+    test('does not update cache or notify on non-ok response', async function() {
+      env.mockFetch.mockResolvedValue(new Response('Not Found', { status: 404 }));
+      var swrCache = { put: jest.fn() };
+      var request = new Request(ORIGIN + '/api/session');
+      await env.sandbox.revalidateAndNotify(request, swrCache);
+      expect(swrCache.put).not.toHaveBeenCalled();
+      expect(env.mockClient.postMessage).not.toHaveBeenCalled();
+    });
+
+    test('silently handles network errors without throwing', async function() {
+      env.mockFetch.mockRejectedValue(new Error('Network failure'));
+      var swrCache = { put: jest.fn() };
+      var request = new Request(ORIGIN + '/api/session');
+      await expect(env.sandbox.revalidateAndNotify(request, swrCache)).resolves.not.toThrow();
+      expect(swrCache.put).not.toHaveBeenCalled();
+      expect(env.mockClient.postMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fetchAndCache()', function() {
+    var env;
+    beforeEach(function() { env = createSWEnvironment(); });
+
+    test('returns network response on success', async function() {
+      var networkResponse = new Response('{"data":"ok"}', { status: 200 });
+      env.mockFetch.mockResolvedValue(networkResponse);
+      var swrCache = { put: jest.fn().mockResolvedValue(undefined) };
+      var request = new Request(ORIGIN + '/api/session');
+      var result = await env.sandbox.fetchAndCache(request, swrCache);
+      expect(result).toBe(networkResponse);
+    });
+
+    test('caches successful response with x-swr-cached-at timestamp', async function() {
+      env.mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
+      var swrCache = { put: jest.fn().mockResolvedValue(undefined) };
+      var request = new Request(ORIGIN + '/api/session');
+      await env.sandbox.fetchAndCache(request, swrCache);
+      expect(swrCache.put).toHaveBeenCalledTimes(1);
+      expect(swrCache.put.mock.calls[0][1].headers.get('x-swr-cached-at')).toBeTruthy();
+    });
+
+    test('does not cache non-ok responses', async function() {
+      env.mockFetch.mockResolvedValue(new Response('Error', { status: 500 }));
+      var swrCache = { put: jest.fn() };
+      var request = new Request(ORIGIN + '/api/session');
+      var result = await env.sandbox.fetchAndCache(request, swrCache);
+      expect(result.status).toBe(500);
+      expect(swrCache.put).not.toHaveBeenCalled();
+    });
+
+    test('returns 503 Service Unavailable on network error', async function() {
+      env.mockFetch.mockRejectedValue(new Error('Network failure'));
+      var swrCache = { put: jest.fn() };
+      var request = new Request(ORIGIN + '/api/session');
+      var result = await env.sandbox.fetchAndCache(request, swrCache);
+      expect(result.status).toBe(503);
+      expect(result.statusText).toBe('Service Unavailable');
+    });
+  });
+
+  describe('Fetch event handler', function() {
+    var env;
+    beforeEach(function() { env = createSWEnvironment(); });
+
+    function getFetchHandler() {
+      var handlers = env.eventListeners.fetch;
+      expect(handlers).toBeDefined();
+      return handlers[0];
+    }
+
+    test('skips non-GET requests - POST/PUT/DELETE bypass cache', function() {
+      var handler = getFetchHandler();
+      ['POST', 'PUT', 'DELETE', 'PATCH'].forEach(function(method) {
+        var event = createFetchEvent('/api/session', method);
+        handler(event);
+        expect(event._responsePromise).toBeNull();
+      });
+    });
+
+    test('skips cross-origin requests', function() {
+      var handler = getFetchHandler();
+      var event = createFetchEvent('https://other-domain.com/api/session');
+      handler(event);
+      expect(event._responsePromise).toBeNull();
+    });
+
+    describe('SWR API endpoints (allowlisted)', function() {
+      test('returns cached response immediately on SWR cache hit', async function() {
+        var cachedResponse = new Response('{"cached":true}', { status: 200 });
+        var swrCache = {
+          match: jest.fn().mockResolvedValue(cachedResponse),
+          put: jest.fn().mockResolvedValue(undefined),
+        };
+        env.mockCaches.open.mockResolvedValue(swrCache);
+        env.mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/api/session');
+        handler(event);
+        var response = await event._responsePromise;
+        expect(response).toBe(cachedResponse);
+      });
+
+      test('triggers background revalidation on SWR cache hit', async function() {
+        var swrCache = {
+          match: jest.fn().mockResolvedValue(new Response('{"old":true}', { status: 200 })),
+          put: jest.fn().mockResolvedValue(undefined),
+        };
+        env.mockCaches.open.mockResolvedValue(swrCache);
+        env.mockFetch.mockResolvedValue(new Response('{"new":true}', { status: 200 }));
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/api/session');
+        handler(event);
+        await event._responsePromise;
+        expect(event._waitUntilPromises.length).toBeGreaterThan(0);
+        await Promise.all(event._waitUntilPromises);
+        expect(env.mockFetch).toHaveBeenCalled();
+        expect(swrCache.put).toHaveBeenCalled();
+      });
+
+      test('background revalidation sends postMessage to clients', async function() {
+        var swrCache = {
+          match: jest.fn().mockResolvedValue(new Response('{"old":true}', { status: 200 })),
+          put: jest.fn().mockResolvedValue(undefined),
+        };
+        env.mockCaches.open.mockResolvedValue(swrCache);
+        env.mockFetch.mockResolvedValue(new Response('{"new":true}', { status: 200 }));
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/api/goals');
+        handler(event);
+        await event._responsePromise;
+        await Promise.all(event._waitUntilPromises);
+        expect(env.mockClient.postMessage).toHaveBeenCalledWith({
+          type: 'sw-cache-updated', url: ORIGIN + '/api/goals',
+        });
+      });
+
+      test('fetches from network on cold cache (miss)', async function() {
+        var networkResponse = new Response('{"network":true}', { status: 200 });
+        var swrCache = {
+          match: jest.fn().mockResolvedValue(undefined),
+          put: jest.fn().mockResolvedValue(undefined),
+        };
+        env.mockCaches.open.mockResolvedValue(swrCache);
+        env.mockFetch.mockResolvedValue(networkResponse);
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/api/goals');
+        handler(event);
+        var response = await event._responsePromise;
+        expect(response).toBe(networkResponse);
+      });
+
+      test('caches network response with timestamp on cold cache miss', async function() {
+        var swrCache = {
+          match: jest.fn().mockResolvedValue(undefined),
+          put: jest.fn().mockResolvedValue(undefined),
+        };
+        env.mockCaches.open.mockResolvedValue(swrCache);
+        env.mockFetch.mockResolvedValue(new Response('{"data":1}', { status: 200 }));
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/api/total-distance');
+        handler(event);
+        await event._responsePromise;
+        expect(swrCache.put).toHaveBeenCalledTimes(1);
+        expect(swrCache.put.mock.calls[0][1].headers.get('x-swr-cached-at')).toBeTruthy();
+      });
+
+      test('each allowlisted endpoint is routed through SWR', async function() {
+        var endpoints = ['/api/session', '/api/goals', '/api/calendar-progress',
+          '/api/total-distance', '/api/user/parties', '/api/friends'];
+        for (var i = 0; i < endpoints.length; i++) {
+          var freshEnv = createSWEnvironment();
+          var swrCache = {
+            match: jest.fn().mockResolvedValue(undefined),
+            put: jest.fn().mockResolvedValue(undefined),
+          };
+          freshEnv.mockCaches.open.mockResolvedValue(swrCache);
+          freshEnv.mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
+          var handler = freshEnv.eventListeners.fetch[0];
+          var event = createFetchEvent(endpoints[i]);
+          handler(event);
+          expect(event._responsePromise).not.toBeNull();
+          await event._responsePromise;
+          expect(freshEnv.mockCaches.open).toHaveBeenCalled();
         }
       });
-      const freshResponse = new Response(JSON.stringify({ data: 'fresh' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' }
+    });
+
+    describe('Non-SWR API endpoints (network-only)', function() {
+      test('uses network-only for /api/party/:id/activity', async function() {
+        var networkResponse = new Response('[]', { status: 200 });
+        env.mockFetch.mockResolvedValue(networkResponse);
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/api/party/123/activity');
+        handler(event);
+        var response = await event._responsePromise;
+        expect(response).toBe(networkResponse);
       });
 
-      mockSwrCache.match.mockResolvedValue(cachedResponse);
-      global.fetch = jest.fn().mockResolvedValue(freshResponse);
-
-      // Simulate the SWR logic
-      const cache = mockSwrCache;
-      const request = new Request('https://example.com/api/session');
-      const cached = await cache.match(request);
-
-      expect(cached).toBe(cachedResponse);
-
-      // Background revalidation
-      const networkResponse = await global.fetch(request);
-      expect(networkResponse).toBe(freshResponse);
-    });
-
-    test('SWR cache miss fetches from network and caches result', async () => {
-      const networkResponse = new Response(JSON.stringify({ data: 'fresh' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' }
+      test('uses network-only for /api/friends/pending', async function() {
+        env.mockFetch.mockResolvedValue(new Response('[]', { status: 200 }));
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/api/friends/pending');
+        handler(event);
+        var response = await event._responsePromise;
+        expect(response.status).toBe(200);
       });
 
-      mockSwrCache.match.mockResolvedValue(undefined);
-      global.fetch = jest.fn().mockResolvedValue(networkResponse);
-
-      const request = new Request('https://example.com/api/goals');
-      const cached = await mockSwrCache.match(request);
-
-      expect(cached).toBeUndefined();
-
-      // Should go to network
-      const response = await global.fetch(request);
-      expect(response).toBe(networkResponse);
-      expect(global.fetch).toHaveBeenCalledWith(request);
-    });
-
-    test('POST/PUT/DELETE requests never enter SWR path', () => {
-      const swSource = loadSWSource();
-      // The fetch handler skips non-GET requests before reaching SWR logic
-      expect(swSource).toContain("if (event.request.method !== 'GET')");
-    });
-
-    test('TTL metadata is stored via x-swr-cached-at header', () => {
-      const swSource = loadSWSource();
-      expect(swSource).toContain("headers.set('x-swr-cached-at', Date.now().toString())");
-    });
-
-    test('postMessage is emitted on cache update', () => {
-      const swSource = loadSWSource();
-      expect(swSource).toContain("client.postMessage({ type: 'sw-cache-updated', url: url })");
-      expect(swSource).toContain("self.clients.matchAll({ type: 'window' })");
-    });
-
-    test('cacheWithTimestamp creates response with TTL header', async () => {
-      const now = Date.now();
-      jest.spyOn(Date, 'now').mockReturnValue(now);
-
-      const originalResponse = new Response(JSON.stringify({ test: true }), {
-        status: 200,
-        statusText: 'OK',
-        headers: { 'content-type': 'application/json' }
+      test('non-allowlisted API endpoints do not open the SWR cache', async function() {
+        env.mockFetch.mockResolvedValue(new Response('{}', { status: 200 }));
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/api/some-other-endpoint');
+        handler(event);
+        await event._responsePromise;
+        expect(env.mockCaches.open).not.toHaveBeenCalled();
       });
+    });
 
-      // Simulate cacheWithTimestamp logic
-      const headers = new Headers(originalResponse.headers);
-      headers.set('x-swr-cached-at', now.toString());
-      const timestamped = new Response(JSON.stringify({ test: true }), {
-        status: originalResponse.status,
-        statusText: originalResponse.statusText,
-        headers: headers
+    describe('Write methods bypass cache', function() {
+      test.each(['POST', 'PUT', 'DELETE'])(
+        '%s to an SWR endpoint bypasses cache', function(method) {
+          var handler = getFetchHandler();
+          var event = createFetchEvent('/api/session', method);
+          handler(event);
+          expect(event._responsePromise).toBeNull();
+          expect(env.mockCaches.open).not.toHaveBeenCalled();
+        }
+      );
+    });
+
+    describe('Static assets (unchanged behaviour)', function() {
+      test('static asset requests use cache-first, not SWR', function() {
+        env.mockCaches.match.mockResolvedValue(undefined);
+        env.mockFetch.mockResolvedValue(
+          new Response('body', { status: 200, headers: { 'Content-Type': 'text/css' } })
+        );
+        var handler = getFetchHandler();
+        var event = createFetchEvent('/css/main.css');
+        handler(event);
+        expect(event._responsePromise).not.toBeNull();
       });
-
-      expect(timestamped.headers.get('x-swr-cached-at')).toBe(now.toString());
-      expect(timestamped.status).toBe(200);
-
-      Date.now.mockRestore();
     });
   });
 
-  describe('SWR Cache Version Busting (activate)', () => {
-    test('activate handler checks SWR_CACHE_VERSION', () => {
-      const swSource = loadSWSource();
-      // The activate event should reference SWR version checking
-      expect(swSource).toContain('SWR_VERSION_CACHE');
-      expect(swSource).toContain('SWR_CACHE_VERSION');
-      expect(swSource).toContain("versionCache.match('version')");
+  describe('Activate event handler', function() {
+    test('stores SWR version on first activation (no previous version)', async function() {
+      var versionCache = {
+        match: jest.fn().mockResolvedValue(undefined),
+        put: jest.fn().mockResolvedValue(undefined),
+      };
+      var env = createSWEnvironment();
+      env.mockCaches.open.mockImplementation(function(name) {
+        if (name === 'walk-to-mordor-swr-version') return Promise.resolve(versionCache);
+        return Promise.resolve({ addAll: jest.fn().mockResolvedValue(undefined), match: jest.fn().mockResolvedValue(undefined), put: jest.fn().mockResolvedValue(undefined) });
+      });
+      env.mockCaches.keys.mockResolvedValue([]);
+      var handler = env.eventListeners.activate[0];
+      var event = createLifecycleEvent();
+      handler(event);
+      await Promise.all(event._waitUntilPromises);
+      expect(versionCache.put).toHaveBeenCalledWith('version', expect.any(Response));
     });
 
-    test('activate handler deletes SWR cache on version mismatch', () => {
-      const swSource = loadSWSource();
-      // Should delete SWR_CACHE_NAME when version changes
-      expect(swSource).toContain('caches.delete(SWR_CACHE_NAME)');
+    test('preserves SWR cache when stored version matches current', async function() {
+      var versionCache = {
+        match: jest.fn().mockResolvedValue(new Response('{{SWR_CACHE_VERSION}}')),
+        put: jest.fn().mockResolvedValue(undefined),
+      };
+      var env = createSWEnvironment();
+      env.mockCaches.open.mockImplementation(function(name) {
+        if (name === 'walk-to-mordor-swr-version') return Promise.resolve(versionCache);
+        return Promise.resolve({ addAll: jest.fn().mockResolvedValue(undefined), match: jest.fn().mockResolvedValue(undefined), put: jest.fn().mockResolvedValue(undefined) });
+      });
+      env.mockCaches.keys.mockResolvedValue([]);
+      var handler = env.eventListeners.activate[0];
+      var event = createLifecycleEvent();
+      handler(event);
+      await Promise.all(event._waitUntilPromises);
+      expect(env.mockCaches.delete).not.toHaveBeenCalledWith('walk-to-mordor-api-swr');
     });
 
-    test('activate handler stores new version after clearing', () => {
-      const swSource = loadSWSource();
-      expect(swSource).toContain("versionCache.put('version', new Response(SWR_CACHE_VERSION))");
+    test('clears SWR cache when stored version differs from current', async function() {
+      var versionCache = {
+        match: jest.fn().mockResolvedValue(new Response('old-version-1')),
+        put: jest.fn().mockResolvedValue(undefined),
+      };
+      var env = createSWEnvironment();
+      env.mockCaches.open.mockImplementation(function(name) {
+        if (name === 'walk-to-mordor-swr-version') return Promise.resolve(versionCache);
+        return Promise.resolve({ addAll: jest.fn().mockResolvedValue(undefined), match: jest.fn().mockResolvedValue(undefined), put: jest.fn().mockResolvedValue(undefined) });
+      });
+      env.mockCaches.keys.mockResolvedValue([]);
+      var handler = env.eventListeners.activate[0];
+      var event = createLifecycleEvent();
+      handler(event);
+      await Promise.all(event._waitUntilPromises);
+      expect(env.mockCaches.delete).toHaveBeenCalledWith('walk-to-mordor-api-swr');
+      expect(versionCache.put).toHaveBeenCalledWith('version', expect.any(Response));
     });
 
-    test('activate handler preserves SWR cache and version cache from static cleanup', () => {
-      const swSource = loadSWSource();
-      // The static cache cleanup should exclude SWR caches
-      expect(swSource).toContain('cacheName !== SWR_CACHE_NAME');
-      expect(swSource).toContain('cacheName !== SWR_VERSION_CACHE');
-    });
-  });
-
-  describe('Static Asset Caching Unchanged', () => {
-    let swSource;
-
-    beforeAll(() => {
-      swSource = loadSWSource();
-    });
-
-    test('install event still pre-caches static assets', () => {
-      expect(swSource).toContain("caches.open(CACHE_NAME)");
-      expect(swSource).toContain("cache.addAll(urlsToCache)");
-    });
-
-    test('static asset cache-first strategy is preserved', () => {
-      expect(swSource).toContain("caches.match(event.request)");
-      expect(swSource).toContain("event.request.destination === 'style'");
-      expect(swSource).toContain("event.request.destination === 'script'");
-      expect(swSource).toContain("event.request.destination === 'image'");
-    });
-
-    test('HTML navigations still use network-only with offline fallback', () => {
-      expect(swSource).toContain("event.request.mode === 'navigate'");
-      expect(swSource).toContain("event.request.destination === 'document'");
-      expect(swSource).toContain("Offline - Please check your connection");
-    });
-
-    test('urlsToCache array is unchanged', () => {
-      expect(swSource).toContain("'/css/main.css'");
-      expect(swSource).toContain("'/js/main.js'");
-      expect(swSource).toContain("'/manifest.json'");
-    });
-  });
-
-  describe('Fetch Handler Routing', () => {
-    let swSource;
-
-    beforeAll(() => {
-      swSource = loadSWSource();
-    });
-
-    test('non-GET requests are skipped before SWR logic', () => {
-      // The method check must come before the API path check
-      const methodCheckPos = swSource.indexOf("event.request.method !== 'GET'");
-      const apiCheckPos = swSource.indexOf("requestUrl.pathname.startsWith('/api/')");
-      expect(methodCheckPos).toBeLessThan(apiCheckPos);
-    });
-
-    test('cross-origin requests are skipped', () => {
-      expect(swSource).toContain('requestUrl.origin !== self.location.origin');
-    });
-
-    test('SWR endpoint check uses isSWREndpoint', () => {
-      expect(swSource).toContain('isSWREndpoint(requestUrl.pathname)');
-    });
-
-    test('non-SWR API endpoints still use network-only', () => {
-      // After the isSWREndpoint check, there should be a fallback to fetch
-      expect(swSource).toContain('// Non-SWR API endpoints: network-only');
-    });
-
-    test('revalidateAndNotify is called for cache hits', () => {
-      expect(swSource).toContain('revalidateAndNotify(event.request, swrCache)');
-    });
-
-    test('fetchAndCache is called for cache misses', () => {
-      expect(swSource).toContain('fetchAndCache(event.request, swrCache)');
+    test('preserves SWR and version caches during old static cache cleanup', async function() {
+      var versionCache = {
+        match: jest.fn().mockResolvedValue(new Response('{{SWR_CACHE_VERSION}}')),
+        put: jest.fn().mockResolvedValue(undefined),
+      };
+      var env = createSWEnvironment();
+      env.mockCaches.open.mockImplementation(function(name) {
+        if (name === 'walk-to-mordor-swr-version') return Promise.resolve(versionCache);
+        return Promise.resolve({ addAll: jest.fn().mockResolvedValue(undefined), match: jest.fn().mockResolvedValue(undefined), put: jest.fn().mockResolvedValue(undefined) });
+      });
+      env.mockCaches.keys.mockResolvedValue([
+        'walk-to-mordor-20240101-120000',
+        'walk-to-mordor-{{BUILD_TIMESTAMP}}',
+        'walk-to-mordor-api-swr',
+        'walk-to-mordor-swr-version',
+      ]);
+      var handler = env.eventListeners.activate[0];
+      var event = createLifecycleEvent();
+      handler(event);
+      await Promise.all(event._waitUntilPromises);
+      expect(env.mockCaches.delete).toHaveBeenCalledWith('walk-to-mordor-20240101-120000');
+      var deleteCalls = env.mockCaches.delete.mock.calls.map(function(c) { return c[0]; });
+      expect(deleteCalls).not.toContain('walk-to-mordor-{{BUILD_TIMESTAMP}}');
+      expect(deleteCalls).not.toContain('walk-to-mordor-swr-version');
     });
   });
 
-  describe('notifyClients function', () => {
-    test('function is defined in sw.js', () => {
-      const swSource = loadSWSource();
-      expect(swSource).toContain('async function notifyClients(url)');
-    });
-
-    test('uses self.clients.matchAll with type window', () => {
-      const swSource = loadSWSource();
-      expect(swSource).toContain("self.clients.matchAll({ type: 'window' })");
-    });
-
-    test('sends correct message shape', () => {
-      const swSource = loadSWSource();
-      expect(swSource).toContain("type: 'sw-cache-updated'");
-      expect(swSource).toContain('url: url');
-    });
-  });
-
-  describe('revalidateAndNotify function', () => {
-    test('function is defined in sw.js', () => {
-      const swSource = loadSWSource();
-      expect(swSource).toContain('async function revalidateAndNotify(request, swrCache)');
-    });
-
-    test('fetches from network', () => {
-      const swSource = loadSWSource();
-      const fnMatch = swSource.match(/async function revalidateAndNotify[\s\S]*?^}/m);
-      expect(fnMatch).toBeTruthy();
-      expect(fnMatch[0]).toContain('fetch(request)');
-    });
-
-    test('caches successful response', () => {
-      const swSource = loadSWSource();
-      const fnMatch = swSource.match(/async function revalidateAndNotify[\s\S]*?^}/m);
-      expect(fnMatch).toBeTruthy();
-      expect(fnMatch[0]).toContain('cacheWithTimestamp');
-    });
-
-    test('notifies clients after caching', () => {
-      const swSource = loadSWSource();
-      const fnMatch = swSource.match(/async function revalidateAndNotify[\s\S]*?^}/m);
-      expect(fnMatch).toBeTruthy();
-      expect(fnMatch[0]).toContain('notifyClients');
-    });
-
-    test('handles network errors gracefully', () => {
-      const swSource = loadSWSource();
-      const fnMatch = swSource.match(/async function revalidateAndNotify[\s\S]*?^}/m);
-      expect(fnMatch).toBeTruthy();
-      expect(fnMatch[0]).toContain('catch');
-    });
-  });
-
-  describe('fetchAndCache function', () => {
-    test('function is defined in sw.js', () => {
-      const swSource = loadSWSource();
-      expect(swSource).toContain('async function fetchAndCache(request, swrCache)');
-    });
-
-    test('returns network response on success', () => {
-      const swSource = loadSWSource();
-      const fnMatch = swSource.match(/async function fetchAndCache[\s\S]*?^}/m);
-      expect(fnMatch).toBeTruthy();
-      expect(fnMatch[0]).toContain('return response');
-    });
-
-    test('caches successful response with timestamp', () => {
-      const swSource = loadSWSource();
-      const fnMatch = swSource.match(/async function fetchAndCache[\s\S]*?^}/m);
-      expect(fnMatch).toBeTruthy();
-      expect(fnMatch[0]).toContain('cacheWithTimestamp');
-    });
-
-    test('returns 503 on network failure', () => {
-      const swSource = loadSWSource();
-      const fnMatch = swSource.match(/async function fetchAndCache[\s\S]*?^}/m);
-      expect(fnMatch).toBeTruthy();
-      expect(fnMatch[0]).toContain('503');
-    });
-
-    test('only caches ok responses', () => {
-      const swSource = loadSWSource();
-      const fnMatch = swSource.match(/async function fetchAndCache[\s\S]*?^}/m);
-      expect(fnMatch).toBeTruthy();
-      expect(fnMatch[0]).toContain('response.ok');
+  describe('Install event handler (static asset caching unchanged)', function() {
+    test('pre-caches static assets on install', async function() {
+      var staticCache = { addAll: jest.fn().mockResolvedValue(undefined) };
+      var env = createSWEnvironment();
+      env.mockCaches.open.mockResolvedValue(staticCache);
+      var handler = env.eventListeners.install[0];
+      var event = createLifecycleEvent();
+      handler(event);
+      await Promise.all(event._waitUntilPromises);
+      expect(env.mockCaches.open).toHaveBeenCalled();
+      expect(staticCache.addAll).toHaveBeenCalledTimes(1);
+      var cachedUrls = staticCache.addAll.mock.calls[0][0];
+      expect(cachedUrls).toContain('/css/main.css');
+      expect(cachedUrls).toContain('/js/main.js');
+      expect(cachedUrls).toContain('/manifest.json');
     });
   });
 });
