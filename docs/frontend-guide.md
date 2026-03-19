@@ -204,6 +204,36 @@ npm run lint:fix      # Auto-fix fixable issues (e.g., import type suggestions)
 - Playwright route interception blocks auth/hydration — use API pre-configuration (e.g., `PUT /api/user/preferences`) instead of `page.route` for session-dependent test setup.
 - Maintain >90% coverage for new client code.
 
+## Service Worker Behavior
+
+The service worker (`public/sw.js`) is a **classic script** (no ES module imports). It uses two separate caches:
+
+| Cache | Name | Strategy | Versioning |
+|---|---|---|---|
+| Static assets | `walk-to-mordor-{BUILD_TIMESTAMP}` | Cache-first | Build-stamped, cleared on deploy |
+| API responses | `walk-to-mordor-api-swr` | Stale-While-Revalidate | `SWR_CACHE_VERSION`, cleared on version mismatch |
+
+### SWR Allowlisted Endpoints
+
+Only these `GET` endpoints use SWR caching: `/api/session`, `/api/goals`, `/api/calendar-progress`, `/api/total-distance`, `/api/user/parties`, `/api/friends`. All other API endpoints remain network-only.
+
+### sw-cache-updated postMessage
+
+After a background revalidation updates the SWR cache, the SW sends `postMessage({ type: 'sw-cache-updated', url })` to all window clients. Islands can listen:
+
+```js
+navigator.serviceWorker.addEventListener('message', (event) => {
+  if (event.data?.type === 'sw-cache-updated') {
+    // Re-fetch or refresh signal for the updated URL
+  }
+});
+```
+
+### Build Scripts
+
+- `public/js/update-cache-version.js` — replaces `{{BUILD_TIMESTAMP}}` and `{{SWR_CACHE_VERSION}}` placeholders at build time
+- `public/js/reset-cache-version.js` — restores placeholders for development/git
+
 ## Pitfalls & Gotchas
 
 - **CSS scoping**: Each SSR renderer controls its own stylesheet list. If your island needs styles from another page's CSS, add the stylesheet in the renderer.

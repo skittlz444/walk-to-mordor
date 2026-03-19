@@ -27,6 +27,7 @@ const REAL_SW_PATH = path.join(__dirname, '..', '..', 'public', 'sw.js');
 
 describe('Cache Version Management Scripts', () => {
   const BUILD_TIMESTAMP_PLACEHOLDER = '{{BUILD_TIMESTAMP}}';
+  const SWR_CACHE_VERSION_PLACEHOLDER = '{{SWR_CACHE_VERSION}}';
   
   let tmpSW;
   let placeholderContent;
@@ -39,7 +40,8 @@ describe('Cache Version Management Scripts', () => {
     const originalContent = fs.readFileSync(REAL_SW_PATH, 'utf8');
     placeholderContent = originalContent
       .replace(/const BUILD_TIMESTAMP = ['`][^'`]*['`];/, `const BUILD_TIMESTAMP = '${BUILD_TIMESTAMP_PLACEHOLDER}';`)
-      .replace(/const CACHE_NAME = [`'"][^`'"]*[`'"];/, `const CACHE_NAME = \`walk-to-mordor-${BUILD_TIMESTAMP_PLACEHOLDER}\`;`);
+      .replace(/const CACHE_NAME = [`'"][^`'"]*[`'"];/, `const CACHE_NAME = \`walk-to-mordor-${BUILD_TIMESTAMP_PLACEHOLDER}\`;`)
+      .replace(/const SWR_CACHE_VERSION = ['`][^'`]*['`];/, `const SWR_CACHE_VERSION = '${SWR_CACHE_VERSION_PLACEHOLDER}';`);
     
     // Point scripts at the temp file via env var (lazy resolution)
     process.env.SW_PATH = tmpSW;
@@ -130,6 +132,33 @@ describe('Cache Version Management Scripts', () => {
       
       expect(timestampMatch[1]).toBe(cacheNameMatch[1]);
     });
+
+    test('should replace SWR_CACHE_VERSION placeholder with timestamp', () => {
+      // Arrange
+      const beforeContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(beforeContent).toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      
+      // Act
+      updateCacheVersion();
+      
+      // Assert
+      const afterContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(afterContent).not.toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      const swrMatch = afterContent.match(/const SWR_CACHE_VERSION = '(\d{8}-\d{6})';/);
+      expect(swrMatch).toBeTruthy();
+    });
+
+    test('should use same timestamp for BUILD_TIMESTAMP and SWR_CACHE_VERSION', () => {
+      // Act
+      updateCacheVersion();
+      
+      // Assert
+      const content = fs.readFileSync(tmpSW, 'utf8');
+      const timestampMatch = content.match(/const BUILD_TIMESTAMP = '(\d{8}-\d{6})';/);
+      const swrMatch = content.match(/const SWR_CACHE_VERSION = '(\d{8}-\d{6})';/);
+      
+      expect(timestampMatch[1]).toBe(swrMatch[1]);
+    });
     
     test('should handle missing placeholder gracefully', () => {
       // Arrange - remove ALL placeholders from service worker
@@ -162,7 +191,8 @@ describe('Cache Version Management Scripts', () => {
       // Reset to placeholder for second call
       const resetContent = firstContent
         .replace(/const BUILD_TIMESTAMP = '[^']+';/, `const BUILD_TIMESTAMP = '${BUILD_TIMESTAMP_PLACEHOLDER}';`)
-        .replace(/const CACHE_NAME = `walk-to-mordor-[^`]+`;/, `const CACHE_NAME = \`walk-to-mordor-${BUILD_TIMESTAMP_PLACEHOLDER}\`;`);
+        .replace(/const CACHE_NAME = `walk-to-mordor-[^`]+`;/, `const CACHE_NAME = \`walk-to-mordor-${BUILD_TIMESTAMP_PLACEHOLDER}\`;`)
+        .replace(/const SWR_CACHE_VERSION = '[^']+';/, `const SWR_CACHE_VERSION = '${SWR_CACHE_VERSION_PLACEHOLDER}';`);
       fs.writeFileSync(tmpSW, resetContent, 'utf8');
       
       // Wait a second to ensure different timestamp
@@ -256,6 +286,35 @@ describe('Cache Version Management Scripts', () => {
       // Should not contain any actual timestamps
       expect(content).not.toMatch(/const BUILD_TIMESTAMP = '\d{8}-\d{6}';/);
       expect(content).not.toMatch(/const CACHE_NAME = `walk-to-mordor-\d{8}-\d{6}`;/);
+    });
+
+    test('should restore SWR_CACHE_VERSION placeholder', () => {
+      // Arrange - first update with timestamp
+      updateCacheVersion();
+      const updatedContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(updatedContent).not.toContain(SWR_CACHE_VERSION_PLACEHOLDER);
+      
+      // Act
+      resetCacheVersion();
+      
+      // Assert
+      const resetContent = fs.readFileSync(tmpSW, 'utf8');
+      expect(resetContent).toContain(`const SWR_CACHE_VERSION = '${SWR_CACHE_VERSION_PLACEHOLDER}';`);
+    });
+
+    test('should handle all three resets: BUILD_TIMESTAMP, CACHE_NAME, SWR_CACHE_VERSION', () => {
+      // Arrange - update all
+      updateCacheVersion();
+      
+      // Act
+      resetCacheVersion();
+      
+      // Assert
+      const content = fs.readFileSync(tmpSW, 'utf8');
+      expect(content).toContain(`const BUILD_TIMESTAMP = '${BUILD_TIMESTAMP_PLACEHOLDER}';`);
+      expect(content).toContain(`const CACHE_NAME = \`walk-to-mordor-${BUILD_TIMESTAMP_PLACEHOLDER}\`;`);
+      expect(content).toContain(`const SWR_CACHE_VERSION = '${SWR_CACHE_VERSION_PLACEHOLDER}';`);
+      expect(content).not.toMatch(/const SWR_CACHE_VERSION = '\d{8}-\d{6}';/);
     });
   });
 
