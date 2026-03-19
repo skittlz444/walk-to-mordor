@@ -22,6 +22,7 @@ import {
   setViewportSize,
   setShowFutureGoalsUnlocked,
 } from './mapStore';
+import { preferences } from './appStore';
 
 /**
  * Mock localStorage for testing.
@@ -62,7 +63,8 @@ describe('mapStore', () => {
     loadingState.value = 'idle';
     error.value = null;
     viewportSize.value = { width: 0, height: 0 };
-    showFutureGoalsUnlocked.value = true;
+    // Reset appStore preferences (showFutureGoalsUnlocked is now a computed from appStore)
+    preferences.value = { showFutureGoalsUnlocked: true, defaultViewMap: false };
 
     // Setup mock localStorage
     mockStorage = createMockStorage();
@@ -372,10 +374,6 @@ describe('mapStore', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: true }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
           json: async () => [
             { id: 1, distance: 50, title: 'Goal 1' },
           ],
@@ -403,7 +401,7 @@ describe('mapStore', () => {
         x: 500,
         y: 600,
         scale: 2.0,
-        timestamp: Date.now() - 1000, // 1 second ago - valid
+        timestamp: Date.now() - 1000,
       };
       mockStorage.setItem('walk-to-mordor-map-state', JSON.stringify(persistedView));
 
@@ -411,10 +409,6 @@ describe('mapStore', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ totalDistance: 100 }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: true }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -436,16 +430,11 @@ describe('mapStore', () => {
         })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: true }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
           json: async () => [],
         });
 
       await initializeMap();
 
-      // Should be centered on Bag End (user at 0km)
       expect(mapViewState.value.x).toBe(3165);
       expect(mapViewState.value.y).toBe(1529);
     });
@@ -459,10 +448,6 @@ describe('mapStore', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({ totalDistance: 100 }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: true }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -517,45 +502,11 @@ describe('mapStore', () => {
       expect(showFutureGoalsUnlocked.value).toBe(true);
     });
 
-    it('is loaded from session during initializeMap', async () => {
-      mockStorage.setItem('sessionToken', 'test-token');
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ totalDistance: 100 }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ showFutureGoalsUnlocked: false }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => [],
-        });
-
-      await initializeMap();
-
+    it('reflects appStore preferences changes', () => {
+      preferences.value = { ...preferences.value, showFutureGoalsUnlocked: false };
       expect(showFutureGoalsUnlocked.value).toBe(false);
-    });
 
-    it('defaults to true if session response omits field', async () => {
-      mockStorage.setItem('sessionToken', 'test-token');
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ totalDistance: 100 }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({}),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => [],
-        });
-
-      await initializeMap();
-
+      preferences.value = { ...preferences.value, showFutureGoalsUnlocked: true };
       expect(showFutureGoalsUnlocked.value).toBe(true);
     });
   });

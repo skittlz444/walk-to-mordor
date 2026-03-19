@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { Avatar } from '../components/Avatar';
+import { getAuthHeaders } from '../utils/auth';
 
 interface PartyMember {
   user_id: number;
@@ -24,11 +25,6 @@ interface PartyProgressData {
   distance_mode: string;
   leave_distance_behavior: string;
   members: PartyMember[];
-}
-
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('sessionToken');
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
 function getPartyIdFromUrl(): number {

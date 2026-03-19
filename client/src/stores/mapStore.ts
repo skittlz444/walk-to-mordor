@@ -13,7 +13,7 @@
  * @see docs/architecture.md#ADR-003 for Preact Signals decision
  */
 
-import { signal, computed } from '@preact/signals';
+import { signal, computed, effect } from '@preact/signals';
 import type {
   UserProgress,
   Milestone,
@@ -22,6 +22,7 @@ import type {
 } from '../types/map';
 import { getUserPosition, type Point } from '../utils/map-utils';
 import { fellowshipPath } from '../data/paths/fellowship-path';
+import { preferences } from './appStore';
 
 // ============================================================================
 // Core Signals
@@ -62,9 +63,12 @@ export const error = signal<Error | null>(null);
 
 /**
  * User preference: whether future goals appear unlocked.
- * Default true = unlocked (new global default once Story 2.10 ships).
+ * Computed from appStore preferences signal so mapStore stays in sync
+ * without its own /api/session fetch.
  */
-export const showFutureGoalsUnlocked = signal<boolean>(true);
+export const showFutureGoalsUnlocked = computed<boolean>(
+  () => preferences.value.showFutureGoalsUnlocked,
+);
 
 // ============================================================================
 // Computed Signals (defined in mapStore for full implementation)
@@ -277,25 +281,8 @@ export async function initializeMap(): Promise<void> {
     const progress = await fetchUserProgress();
     userProgress.value = progress;
 
-    // Load user preference from session (default: true/unlocked)
-    try {
-      const token = localStorage.getItem('sessionToken');
-      if (token) {
-        const sessionRes = await fetch('/api/session', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (sessionRes.ok) {
-          const sessionData = await sessionRes.json();
-          showFutureGoalsUnlocked.value =
-            typeof sessionData.showFutureGoalsUnlocked === 'boolean'
-              ? sessionData.showFutureGoalsUnlocked
-              : true;
-        }
-      }
-    } catch (prefErr) {
-      // Non-critical - keep default (true/unlocked)
-      console.warn('[mapStore] Could not load preference, using default:', prefErr);
-    }
+    // showFutureGoalsUnlocked is now a computed signal reading from
+    // appStore.preferences — no separate /api/session fetch needed.
 
     // Try cached milestones first
     let milestonesData = getCachedMilestones();
@@ -411,12 +398,12 @@ export function setViewportSize(size: { width: number; height: number }): void {
 
 /**
  * Set the user's goal visibility preference.
- * Called from profile modal or session initialization.
+ * Writes through to appStore.preferences so the computed stays in sync.
  *
  * @param value - true = unlocked (default), false = locked (surprise mode)
  */
 export function setShowFutureGoalsUnlocked(value: boolean): void {
-  showFutureGoalsUnlocked.value = value;
+  preferences.value = { ...preferences.value, showFutureGoalsUnlocked: value };
 }
 
 // ============================================================================

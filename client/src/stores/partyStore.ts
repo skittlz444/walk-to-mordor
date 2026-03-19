@@ -9,6 +9,7 @@
 
 import { signal, computed } from '@preact/signals';
 import type { Goal } from '../types/goal';
+import { getAuthHeaders } from '../utils/auth';
 
 // ============================================================================
 // Types
@@ -102,11 +103,6 @@ export const viewDistance = computed(() => {
 // ============================================================================
 // Actions
 // ============================================================================
-
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('sessionToken');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 /** Load persisted view selection from localStorage */
 function loadPersistedView(): PartySelection {

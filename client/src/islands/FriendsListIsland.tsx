@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { Avatar } from '../components/Avatar';
+import { getAuthHeaders } from '../utils/auth';
 
 interface Friend {
   id: number;
@@ -20,11 +21,6 @@ interface SearchResult {
   username: string;
   avatar_id: string | null;
   friendship_status: string | null;
-}
-
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('sessionToken');
-  return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
 function relativeTime(dateStr: string | null): string {

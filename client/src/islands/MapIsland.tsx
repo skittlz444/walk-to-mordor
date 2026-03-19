@@ -44,6 +44,7 @@ import {
 } from '../data/waypoints';
 import { MapWalkIsland } from './MapWalkIsland';
 import { userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
+import { avatarId as appAvatarId, preferences as appPreferences, initializeAppStore } from '../stores/appStore';
 import {
   createMemberPaths,
   updateMemberPaths,
@@ -67,7 +68,6 @@ import {
 const TILES_META_URL = '/img/map/tiles/metadata.json';
 const PROGRESS_API_URL = '/api/total-distance';
 const GOALS_API_URL = '/api/goals';
-const SESSION_API_URL = '/api/session';
 const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
@@ -1155,27 +1155,15 @@ export function MapIsland() {
           .catch(() => [] as Goal[])
       : Promise.resolve([] as Goal[]);
 
-    // Fetch session for user preference and current-user avatar marker data
-    interface SessionPreference {
-      avatarId?: string | null;
-      showFutureGoalsUnlocked?: boolean;
-    }
-    const sessionPromise: Promise<SessionPreference> = token
-      ? fetch(SESSION_API_URL, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => (res.ok ? (res.json() as Promise<SessionPreference>) : {}))
-          .catch(() => ({} as SessionPreference))
-      : Promise.resolve({} as SessionPreference);
+    // Initialize appStore to hydrate session signals (avatarId, preferences)
+    // before the parallel data fetches complete.
+    const appStorePromise = initializeAppStore();
 
-    Promise.all([metaPromise, progressPromise, goalsPromise, sessionPromise])
-      .then(([data, distMiles, goals, sessionData]) => {
+    Promise.all([metaPromise, progressPromise, goalsPromise, appStorePromise])
+      .then(([data, distMiles, goals]) => {
         metaRef.current = data;
 
-        // Set user preference from session data
-        if (typeof sessionData.showFutureGoalsUnlocked === 'boolean') {
-          showFutureGoalsUnlocked.value = sessionData.showFutureGoalsUnlocked;
-        }
+        // showFutureGoalsUnlocked is now a computed from appStore — no manual set needed
 
         const previousOpenedDistance = readLastOpenedDistanceMiles(localStorage);
         const hasPreviousOpenedDistance = previousOpenedDistance !== null;
@@ -1224,7 +1212,7 @@ export function MapIsland() {
           userPos,
           initialZoom,
           initialDistance,
-          sessionData.avatarId,
+          appAvatarId.value,
         );
 
         // Create waypoint markers from goals data
@@ -1405,7 +1393,12 @@ export function MapIsland() {
     function onPreferenceChanged(e: Event) {
       const detail = (e as CustomEvent).detail;
       if (typeof detail?.showFutureGoalsUnlocked === 'boolean') {
-        showFutureGoalsUnlocked.value = detail.showFutureGoalsUnlocked;
+        // Write through to appStore — mapStore.showFutureGoalsUnlocked is a
+        // computed that reads from appStore.preferences automatically.
+        appPreferences.value = {
+          ...appPreferences.value,
+          showFutureGoalsUnlocked: detail.showFutureGoalsUnlocked,
+        };
         // Rebuild waypoint markers with new preference
         if (waypointMarkersRef.current && allWaypointsRef.current.length > 0) {
           updateWaypointVisibility();
