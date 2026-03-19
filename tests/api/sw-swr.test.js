@@ -209,6 +209,31 @@ describe('Service Worker SWR API Caching', () => {
       expect(cached.headers.get('X-Custom')).toBe('value');
       expect(cached.headers.get('x-swr-cached-at')).toBeTruthy();
     });
+
+    test('x-swr-cached-at timestamp is readable after cache round-trip', async () => {
+      // Use the mock cache from loadSWModule to simulate a real round-trip
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      const request = new Request('https://example.com/api/goals');
+      const response = new Response(JSON.stringify({ goals: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      await sw.cacheWithTimestamp(swrCache, request, response);
+
+      // Read it back from the cache
+      const cached = await swrCache.match(request);
+      expect(cached).toBeDefined();
+      const cachedAt = cached.headers.get('x-swr-cached-at');
+      expect(cachedAt).toBeTruthy();
+
+      // Verify it's a valid numeric timestamp (not NaN or garbage)
+      const timestamp = parseInt(cachedAt, 10);
+      expect(Number.isNaN(timestamp)).toBe(false);
+      expect(timestamp).toBeGreaterThan(0);
+      // Should be reasonably recent (within last 10 seconds)
+      expect(Date.now() - timestamp).toBeLessThan(10000);
+    });
   });
 
   describe('notifyClients', () => {
@@ -449,6 +474,90 @@ describe('Service Worker SWR API Caching', () => {
       const event = createFetchEvent('https://other-domain.com/api/goals');
       sw.fetchCallback(event);
       expect(event.respondWith).not.toHaveBeenCalled();
+    });
+
+    test('PATCH requests bypass SWR entirely', () => {
+      const event = createFetchEvent('https://example.com/api/goals', {
+        method: 'PATCH',
+      });
+      sw.fetchCallback(event);
+      expect(event.respondWith).not.toHaveBeenCalled();
+    });
+
+    test('cold cache miss stores response in SWR cache', async () => {
+      const networkResponse = new Response(JSON.stringify({ data: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      sw.globalFetch.mockResolvedValueOnce(networkResponse);
+
+      const event = createFetchEvent('https://example.com/api/goals');
+      sw.fetchCallback(event);
+
+      // Wait for the respondWith promise to resolve
+      await event.respondWith.mock.calls[0][0];
+
+      // Verify the SWR cache now has the entry with TTL metadata
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      const cachedEntry = await swrCache.match({ url: 'https://example.com/api/goals' });
+      expect(cachedEntry).toBeDefined();
+      expect(cachedEntry.headers.get('x-swr-cached-at')).toBeTruthy();
+    });
+
+    test('SWR hit background revalidation updates cache with fresh data', async () => {
+      const staleResponse = new Response(JSON.stringify({ version: 'old' }), {
+        status: 200,
+        headers: { 'x-swr-cached-at': '1700000000000' },
+      });
+
+      // Pre-populate SWR cache
+      const swrCache = await sw.caches.open('walk-to-mordor-api-swr');
+      await swrCache.put(
+        { url: 'https://example.com/api/goals' },
+        staleResponse
+      );
+
+      // Set up fresh network response
+      const freshResponse = new Response(JSON.stringify({ version: 'new' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      sw.globalFetch.mockResolvedValueOnce(freshResponse);
+
+      const client = { postMessage: jest.fn() };
+      sw.mockClients.push(client);
+
+      const event = createFetchEvent('https://example.com/api/goals');
+      sw.fetchCallback(event);
+
+      // Resolve respondWith (returns stale cached)
+      const response = await event.respondWith.mock.calls[0][0];
+      expect(response.headers.get('x-swr-cached-at')).toBe('1700000000000');
+
+      // Wait for background revalidation to complete
+      await event.waitUntil.mock.calls[0][0];
+
+      // Cache should now contain fresh entry with updated timestamp
+      const updated = await swrCache.match({ url: 'https://example.com/api/goals' });
+      expect(updated).toBeDefined();
+      const cachedAt = parseInt(updated.headers.get('x-swr-cached-at'));
+      expect(cachedAt).toBeGreaterThan(1700000000000);
+
+      // postMessage should have been emitted
+      expect(client.postMessage).toHaveBeenCalledWith({
+        type: 'sw-cache-updated',
+        url: 'https://example.com/api/goals',
+      });
+    });
+
+    test('network failure on cold cache propagates the error', async () => {
+      sw.globalFetch.mockRejectedValueOnce(new Error('Network offline'));
+
+      const event = createFetchEvent('https://example.com/api/session');
+      sw.fetchCallback(event);
+
+      // The respondWith promise should reject because fetchAndCache rethrows
+      await expect(event.respondWith.mock.calls[0][0]).rejects.toThrow('Network offline');
     });
   });
 
