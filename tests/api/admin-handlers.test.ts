@@ -19,6 +19,7 @@ import {
   handleAdminMetricsTimeline,
 } from '../../src/admin-handlers';
 import { sendPasswordResetEmail } from '../../src/email-utils';
+import { DbClient } from '../../src/db';
 import * as authUtils from '../../src/auth-utils';
 
 // Mock auth-utils
@@ -47,13 +48,12 @@ jest.mock('../../src/email-utils', () => ({
 }));
 
 describe('Admin Handlers', () => {
-  let mockEnv: {
-    DB: {
-      prepare: jest.Mock;
-      batch: jest.Mock;
-    };
-    ALLOW_TEST_AUTH?: string;
+  let mockDB: {
+    prepare: jest.Mock;
+    batch: jest.Mock;
   };
+  let mockDb: DbClient;
+  let mockAllowTestAuth: string | undefined;
   let mockRequest: {
     headers: {
       get: jest.Mock;
@@ -72,12 +72,12 @@ describe('Admin Handlers', () => {
     (authUtils.isSessionExpired as jest.Mock).mockReturnValue(false);
 
     // Mock DB
-    mockEnv = {
-      DB: {
-        prepare: jest.fn(),
-        batch: jest.fn()
-      }
+    mockDB = {
+      prepare: jest.fn(),
+      batch: jest.fn()
     };
+    mockDb = { read: mockDB as unknown as D1Database, write: mockDB as unknown as D1Database };
+    mockAllowTestAuth = undefined;
 
     mockRequest = {
       headers: {
@@ -114,7 +114,7 @@ describe('Admin Handlers', () => {
       all: mockAll,
       first: mockFirst
     });
-    mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+    mockDB.prepare.mockReturnValue({ bind: mockBind });
     return { mockBind, mockRun, mockAll, mockFirst };
   }
 
@@ -124,7 +124,8 @@ describe('Admin Handlers', () => {
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -138,7 +139,8 @@ describe('Admin Handlers', () => {
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -155,7 +157,8 @@ describe('Admin Handlers', () => {
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -188,13 +191,14 @@ describe('Admin Handlers', () => {
         first: jest.fn().mockResolvedValue({ is_admin: 0 })
       });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: sessionBind })
         .mockReturnValueOnce({ bind: adminBind });
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -229,13 +233,14 @@ describe('Admin Handlers', () => {
         first: jest.fn().mockResolvedValue({ is_admin: 1 })
       });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: sessionBind })
         .mockReturnValueOnce({ bind: adminBind });
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(true);
@@ -269,13 +274,14 @@ describe('Admin Handlers', () => {
         first: jest.fn().mockResolvedValue(null)
       });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: sessionBind })
         .mockReturnValueOnce({ bind: adminBind });
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -308,13 +314,14 @@ describe('Admin Handlers', () => {
         first: jest.fn().mockRejectedValue(new Error('DB connection failed'))
       });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: sessionBind })
         .mockReturnValueOnce({ bind: adminBind });
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -349,7 +356,7 @@ describe('Admin Handlers', () => {
         first: jest.fn()
       });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: sessionBind })
         .mockReturnValueOnce({ bind: deleteBind });
 
@@ -358,7 +365,8 @@ describe('Admin Handlers', () => {
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -376,7 +384,8 @@ describe('Admin Handlers', () => {
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -409,13 +418,14 @@ describe('Admin Handlers', () => {
         first: jest.fn().mockResolvedValue({ is_admin: 0 })
       });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: sessionBind })
         .mockReturnValueOnce({ bind: adminBind });
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -430,7 +440,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should work with test mock tokens for admin user', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+      mockAllowTestAuth = 'true';
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_AdminUser');
 
       // First call: validateSession mock auth - check if user exists
@@ -449,13 +459,14 @@ describe('Admin Handlers', () => {
         first: jest.fn().mockResolvedValue({ is_admin: 1 })
       });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: userSelectBind })
         .mockReturnValueOnce({ bind: adminBind });
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(true);
@@ -466,7 +477,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should return 403 with test mock tokens for non-admin user', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+      mockAllowTestAuth = 'true';
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_RegularUser');
 
       // First call: validateSession mock auth - user exists
@@ -485,13 +496,14 @@ describe('Admin Handlers', () => {
         first: jest.fn().mockResolvedValue({ is_admin: 0 })
       });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: userSelectBind })
         .mockReturnValueOnce({ bind: adminBind });
 
       const result = await validateAdminSession(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(result.valid).toBe(false);
@@ -523,11 +535,12 @@ describe('Admin Handlers', () => {
         first: jest.fn()
       });
 
-      mockEnv.DB.prepare.mockReturnValue({ bind: sessionBind });
+      mockDB.prepare.mockReturnValue({ bind: sessionBind });
 
       const response = await handleSessionValidation(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(response.status).toBe(200);
@@ -557,11 +570,12 @@ describe('Admin Handlers', () => {
         first: jest.fn()
       });
 
-      mockEnv.DB.prepare.mockReturnValue({ bind: sessionBind });
+      mockDB.prepare.mockReturnValue({ bind: sessionBind });
 
       const response = await handleSessionValidation(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(response.status).toBe(200);
@@ -570,7 +584,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should include isAdmin for test mock auth path', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+      mockAllowTestAuth = 'true';
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_TestAdmin');
 
       // User exists with is_admin = 1
@@ -590,11 +604,12 @@ describe('Admin Handlers', () => {
         first: jest.fn()
       });
 
-      mockEnv.DB.prepare.mockReturnValue({ bind: userBind });
+      mockDB.prepare.mockReturnValue({ bind: userBind });
 
       const response = await handleSessionValidation(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(response.status).toBe(200);
@@ -603,7 +618,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should include isAdmin: false for test mock auth path (non-admin)', async () => {
-      mockEnv.ALLOW_TEST_AUTH = 'true';
+      mockAllowTestAuth = 'true';
       mockRequest.headers.get.mockReturnValue('Bearer TEST_MOCK_TOKEN_RegularMockUser');
 
       // User exists with is_admin = 0
@@ -623,11 +638,12 @@ describe('Admin Handlers', () => {
         first: jest.fn()
       });
 
-      mockEnv.DB.prepare.mockReturnValue({ bind: userBind });
+      mockDB.prepare.mockReturnValue({ bind: userBind });
 
       const response = await handleSessionValidation(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(response.status).toBe(200);
@@ -656,11 +672,12 @@ describe('Admin Handlers', () => {
         first: jest.fn()
       });
 
-      mockEnv.DB.prepare.mockReturnValue({ bind: sessionBind });
+      mockDB.prepare.mockReturnValue({ bind: sessionBind });
 
       const response = await handleSessionValidation(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(response.status).toBe(200);
@@ -690,11 +707,12 @@ describe('Admin Handlers', () => {
         first: jest.fn()
       });
 
-      mockEnv.DB.prepare.mockReturnValue({ bind: sessionBind });
+      mockDB.prepare.mockReturnValue({ bind: sessionBind });
 
       const response = await handleSessionValidation(
         mockRequest as unknown as Request,
-        mockEnv
+        mockDb,
+        mockAllowTestAuth
       );
 
       expect(response.status).toBe(200);
@@ -706,7 +724,7 @@ describe('Admin Handlers', () => {
   describe('handleAdminDashboard', () => {
     it('should return dashboard stats with correct values', async () => {
       // Mock all four queries returned by Promise.all
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 42 }) })       // users
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 12345.67 }) })  // distance
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 5 }) })         // parties
@@ -714,7 +732,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -726,7 +744,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should return zeros when database has no data', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 0 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 0 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 0 }) })
@@ -734,7 +752,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -746,7 +764,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should handle null results gracefully', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue(null) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue(null) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue(null) })
@@ -754,7 +772,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -766,13 +784,13 @@ describe('Admin Handlers', () => {
     });
 
     it('should return 500 on database error', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB connection failed');
       });
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(500);
@@ -781,7 +799,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should return Content-Type application/json', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 10 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) })
@@ -789,14 +807,14 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.headers.get('Content-Type')).toBe('application/json');
     });
 
     it('should round totalDistanceKm to one decimal place', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 1234.5678 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) })
@@ -804,7 +822,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -812,7 +830,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should query the correct SQL statements', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 0 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 0 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 0 }) })
@@ -820,26 +838,26 @@ describe('Admin Handlers', () => {
 
       await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
-      expect(mockEnv.DB.prepare).toHaveBeenCalledTimes(4);
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledTimes(4);
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringContaining('FROM users WHERE email_verified = 1')
       );
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringContaining('SUM(distance)')
       );
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringMatching(/pm\.status\s*=\s*'active'/)
       );
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringContaining('FROM goals')
       );
     });
 
     it('should handle partial null results (some queries return data, some null)', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 10 }) })   // users: 10
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue(null) })              // distance: null
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 3 }) })     // parties: 3
@@ -847,7 +865,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -859,7 +877,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should return 500 when one query rejects inside Promise.all', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 5 }) })
         .mockReturnValueOnce({ first: jest.fn().mockRejectedValue(new Error('Query timeout')) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 2 }) })
@@ -867,7 +885,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(500);
@@ -876,7 +894,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should return all four expected keys and no extras', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 5.5 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 1 }) })
@@ -884,7 +902,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -893,7 +911,7 @@ describe('Admin Handlers', () => {
     });
 
     it('should handle very large distance values without overflow', async () => {
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 999999 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 9999999.999 }) })
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 50000 }) })
@@ -901,7 +919,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -913,13 +931,13 @@ describe('Admin Handlers', () => {
     });
 
     it('should return 500 with JSON content-type on database error', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB unavailable');
       });
 
       const response = await handleAdminDashboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(500);
@@ -931,9 +949,9 @@ describe('Admin Handlers', () => {
     it('should insert an audit log entry with all fields', async () => {
       const mockRun = jest.fn().mockResolvedValue({ meta: { last_row_id: 1, changes: 1 } });
       const mockBind = jest.fn().mockReturnValue({ run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      await logAdminAction(mockEnv as unknown as { DB: D1Database }, {
+      await logAdminAction(mockDb, {
         adminUserId: 1,
         action: 'update_goal',
         targetType: 'goal',
@@ -943,7 +961,7 @@ describe('Admin Handlers', () => {
         success: true
       });
 
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO admin_audit_log')
       );
       expect(mockBind).toHaveBeenCalledWith(1, 'update_goal', 'goal', 42, expect.any(String), '1.2.3.4', 1);
@@ -953,9 +971,9 @@ describe('Admin Handlers', () => {
     it('should insert an audit log entry with optional null fields', async () => {
       const mockRun = jest.fn().mockResolvedValue({ meta: { last_row_id: 1, changes: 1 } });
       const mockBind = jest.fn().mockReturnValue({ run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      await logAdminAction(mockEnv as unknown as { DB: D1Database }, {
+      await logAdminAction(mockDb, {
         adminUserId: 1,
         action: 'view_dashboard',
         success: true
@@ -968,9 +986,9 @@ describe('Admin Handlers', () => {
     it('should record success = 0 for failed actions', async () => {
       const mockRun = jest.fn().mockResolvedValue({ meta: { last_row_id: 1, changes: 1 } });
       const mockBind = jest.fn().mockReturnValue({ run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
-      await logAdminAction(mockEnv as unknown as { DB: D1Database }, {
+      await logAdminAction(mockDb, {
         adminUserId: 1,
         action: 'delete_goal',
         targetType: 'goal',
@@ -985,11 +1003,11 @@ describe('Admin Handlers', () => {
       const mockBind = jest.fn().mockReturnValue({
         run: jest.fn().mockRejectedValue(new Error('DB write failed'))
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
       // Should not throw
       await expect(
-        logAdminAction(mockEnv as unknown as { DB: D1Database }, {
+        logAdminAction(mockDb, {
           adminUserId: 1,
           action: 'test_action',
           success: true
@@ -1003,12 +1021,12 @@ describe('Admin Handlers', () => {
     });
 
     it('should not throw when prepare() itself throws', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB prepare failed');
       });
 
       await expect(
-        logAdminAction(mockEnv as unknown as { DB: D1Database }, {
+        logAdminAction(mockDb, {
           adminUserId: 1,
           action: 'test_action',
           success: true
@@ -1024,11 +1042,11 @@ describe('Admin Handlers', () => {
     it('should handle large details string without error', async () => {
       const mockRun = jest.fn().mockResolvedValue({ meta: { last_row_id: 1, changes: 1 } });
       const mockBind = jest.fn().mockReturnValue({ run: mockRun });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
 
       const largeDetails = JSON.stringify({ data: 'x'.repeat(5000) });
 
-      await logAdminAction(mockEnv as unknown as { DB: D1Database }, {
+      await logAdminAction(mockDb, {
         adminUserId: 1,
         action: 'bulk_update',
         details: largeDetails,
@@ -1064,7 +1082,7 @@ describe('Admin Handlers', () => {
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
       // Queries are sequential: count first (prepare call 1), then data (prepare call 2)
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: mockCountFirst, bind: mockCountBind })
         .mockReturnValueOnce({ all: mockDataAll, bind: mockDataBind });
 
@@ -1077,7 +1095,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -1095,7 +1113,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1117,7 +1135,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1130,7 +1148,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?page=2&pageSize=25');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1146,7 +1164,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?pageSize=999');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1159,7 +1177,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1172,7 +1190,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1185,7 +1203,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?page=-5');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1200,14 +1218,14 @@ describe('Admin Handlers', () => {
       });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
       const request = createGoalsRequest('?search=rivendell');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -1228,18 +1246,18 @@ describe('Admin Handlers', () => {
       const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
       const request = createGoalsRequest('?search=moria');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // Verify SQL includes WHERE with multi-field LIKE
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringContaining('WHERE (title LIKE')
       );
     });
@@ -1250,11 +1268,11 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?search=');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // Both calls should NOT contain WHERE
-      const calls = mockEnv.DB.prepare.mock.calls;
+      const calls = mockDB.prepare.mock.calls;
       expect(calls[0][0]).not.toContain('WHERE');
       expect(calls[1][0]).not.toContain('WHERE');
     });
@@ -1265,11 +1283,11 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?order=desc');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // Verify data SQL includes ORDER BY distance DESC
-      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0];
+      const dataSqlCall = mockDB.prepare.mock.calls[1][0];
       expect(dataSqlCall).toContain('ORDER BY distance DESC');
     });
 
@@ -1279,10 +1297,10 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
-      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0];
+      const dataSqlCall = mockDB.prepare.mock.calls[1][0];
       expect(dataSqlCall).toContain('ORDER BY distance ASC');
     });
 
@@ -1292,22 +1310,22 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?order=invalid');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
-      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0];
+      const dataSqlCall = mockDB.prepare.mock.calls[1][0];
       expect(dataSqlCall).toContain('ORDER BY distance ASC');
     });
 
     it('should return 500 on database error', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB connection failed');
       });
 
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(500);
@@ -1321,7 +1339,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.headers.get('Content-Type')).toBe('application/json');
@@ -1333,7 +1351,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1346,7 +1364,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1361,7 +1379,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?pageSize=25');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1374,7 +1392,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1387,14 +1405,14 @@ describe('Admin Handlers', () => {
       const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
       const request = createGoalsRequest('?search=%20rivendell%20');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // Should trim to 'rivendell' — one binding per searched field (6 fields)
@@ -1408,11 +1426,11 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?search=%20%20%20');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // No WHERE clause expected for whitespace-only search
-      const calls = mockEnv.DB.prepare.mock.calls;
+      const calls = mockDB.prepare.mock.calls;
       expect(calls[0][0]).not.toContain('WHERE');
     });
 
@@ -1422,7 +1440,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?page=abc&pageSize=xyz');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1437,14 +1455,14 @@ describe('Admin Handlers', () => {
       const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
       const request = createGoalsRequest('?search=100%25_done');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // % and _ should be escaped with backslash — one binding per searched field (6 fields)
@@ -1458,7 +1476,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?page=999&pageSize=25');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1473,14 +1491,14 @@ describe('Admin Handlers', () => {
       const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
       const request = createGoalsRequest('?search=path\\to');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // Backslash should be escaped: \ → \\ — one binding per searched field (6 fields)
@@ -1494,19 +1512,19 @@ describe('Admin Handlers', () => {
       const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
       const request = createGoalsRequest('?search=test');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // Both count and data SQL should include ESCAPE clause
-      const countSqlCall = mockEnv.DB.prepare.mock.calls[0][0] as string;
-      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0] as string;
+      const countSqlCall = mockDB.prepare.mock.calls[0][0] as string;
+      const dataSqlCall = mockDB.prepare.mock.calls[1][0] as string;
       expect(countSqlCall).toContain("ESCAPE '\\'");
       expect(dataSqlCall).toContain("ESCAPE '\\'");
     });
@@ -1517,7 +1535,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?page=0');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1530,7 +1548,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?pageSize=0');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1544,7 +1562,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?pageSize=-10');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1560,7 +1578,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1570,14 +1588,14 @@ describe('Admin Handlers', () => {
     });
 
     it('should return Content-Type application/json on 500 error', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB crashed');
       });
 
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(500);
@@ -1595,14 +1613,14 @@ describe('Admin Handlers', () => {
       });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
       const request = createGoalsRequest('?search=river&order=desc');
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -1610,7 +1628,7 @@ describe('Admin Handlers', () => {
       expect(body.goals).toHaveLength(2);
 
       // Verify both WHERE LIKE and ORDER BY DESC are in data SQL
-      const dataSqlCall = mockEnv.DB.prepare.mock.calls[1][0] as string;
+      const dataSqlCall = mockDB.prepare.mock.calls[1][0] as string;
       expect(dataSqlCall).toContain('WHERE (title LIKE');
       expect(dataSqlCall).toContain('ORDER BY distance DESC');
 
@@ -1625,7 +1643,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1639,14 +1657,14 @@ describe('Admin Handlers', () => {
       const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: mockCountFirst })
         .mockReturnValueOnce({ all: mockDataAll, bind: mockDataBind });
 
       const request = createGoalsRequest();
       const response = await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       const body = await response.json();
@@ -1661,7 +1679,7 @@ describe('Admin Handlers', () => {
       const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
@@ -1669,7 +1687,7 @@ describe('Admin Handlers', () => {
       const request = createGoalsRequest('?search=a\\b%c_d');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // \ → \\, % → \%, _ → \_ (backslash first, then %, then _) — one binding per searched field (6 fields)
@@ -1683,18 +1701,18 @@ describe('Admin Handlers', () => {
       const mockDataAll = jest.fn().mockResolvedValue({ results: [] });
       const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockCountBind })
         .mockReturnValueOnce({ bind: mockDataBind });
 
       const request = createGoalsRequest('?search=council');
       await handleAdminGoalsList(
         request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       // Verify the WHERE clause searches all text fields
-      const countSqlCall = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      const countSqlCall = mockDB.prepare.mock.calls[0][0] as string;
       expect(countSqlCall).toContain('description LIKE');
       expect(countSqlCall).toContain('special LIKE');
       expect(countSqlCall).toContain('image_id LIKE');
@@ -1718,7 +1736,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42
       );
 
@@ -1732,7 +1750,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         999
       );
 
@@ -1742,13 +1760,13 @@ describe('Admin Handlers', () => {
     });
 
     it('should return 500 on database error', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB crashed');
       });
 
       const response = await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42
       );
 
@@ -1762,7 +1780,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42
       );
 
@@ -1774,7 +1792,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42
       );
 
@@ -1786,11 +1804,11 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42
       );
 
-      const sql = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      const sql = mockDB.prepare.mock.calls[0][0] as string;
       expect(sql).toContain('SELECT');
       expect(sql).toContain('id');
       expect(sql).toContain('title');
@@ -1807,7 +1825,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42
       );
 
@@ -1855,7 +1873,7 @@ describe('Admin Handlers', () => {
       const mockFirst4 = jest.fn().mockResolvedValue(updated);
       const mockBind4 = jest.fn().mockReturnValue({ first: mockFirst4 });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockBind1 })
         .mockReturnValueOnce({ bind: mockBind2 })
         .mockReturnValueOnce({ bind: mockBind3 })
@@ -1871,7 +1889,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         validBody,
         1
@@ -1885,7 +1903,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for missing title', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, title: '' },
         1
@@ -1899,7 +1917,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for whitespace-only title', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, title: '   ' },
         1
@@ -1913,7 +1931,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for non-positive distance', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, distance: -10 },
         1
@@ -1927,7 +1945,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for zero distance', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, distance: 0 },
         1
@@ -1941,7 +1959,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for NaN distance', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, distance: 'abc' },
         1
@@ -1955,7 +1973,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for missing description', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, description: '' },
         1
@@ -1969,7 +1987,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for invalid image_id slug format', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, image_id: 'INVALID SLUG!' },
         1
@@ -1987,7 +2005,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithSlug,
         1
@@ -2003,7 +2021,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithEmptySpecial,
         1
@@ -2027,7 +2045,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithEmptyImageId,
         1
@@ -2048,11 +2066,11 @@ describe('Admin Handlers', () => {
       // Validation passes first (body is valid), then the SELECT for existing goal returns null
       const mockFirst1 = jest.fn().mockResolvedValue(null);
       const mockBind1 = jest.fn().mockReturnValue({ first: mockFirst1 });
-      mockEnv.DB.prepare.mockReturnValueOnce({ bind: mockBind1 });
+      mockDB.prepare.mockReturnValueOnce({ bind: mockBind1 });
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         999,
         validBody,
         1
@@ -2070,25 +2088,25 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, title: 'New Title', distance: 800 },
         1
       );
 
       // The 3rd DB.prepare call is the audit log INSERT
-      const auditSql = mockEnv.DB.prepare.mock.calls[2][0] as string;
+      const auditSql = mockDB.prepare.mock.calls[2][0] as string;
       expect(auditSql).toContain('INSERT INTO admin_audit_log');
     });
 
     it('should return 500 on database error during update', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB crashed');
       });
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         validBody,
         1
@@ -2103,7 +2121,7 @@ describe('Admin Handlers', () => {
       // Test 400 response
       const response400 = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, title: '' },
         1
@@ -2115,7 +2133,7 @@ describe('Admin Handlers', () => {
       mockRequest.headers.get.mockReturnValue('1.2.3.4');
       const response200 = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         validBody,
         1
@@ -2132,14 +2150,14 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         validBody,
         1
       );
 
       // Audit log INSERT is the 3rd prepare call, check the bind args
-      const auditBindCall = mockEnv.DB.prepare.mock.calls[2];
+      const auditBindCall = mockDB.prepare.mock.calls[2];
       expect(auditBindCall).toBeDefined();
     });
 
@@ -2150,7 +2168,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithNulls,
         1
@@ -2166,7 +2184,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithSpaces,
         1
@@ -2186,7 +2204,7 @@ describe('Admin Handlers', () => {
     it('should reject image_id with uppercase letters', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, image_id: 'Rivendell' },
         1
@@ -2200,7 +2218,7 @@ describe('Admin Handlers', () => {
     it('should reject image_id with spaces', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, image_id: 'bag end' },
         1
@@ -2212,7 +2230,7 @@ describe('Admin Handlers', () => {
     it('should reject image_id starting with hyphen', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, image_id: '-rivendell' },
         1
@@ -2228,7 +2246,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithDecimal,
         1
@@ -2245,7 +2263,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when body is null', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         null as unknown,
         1
@@ -2259,7 +2277,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when body is undefined', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         undefined as unknown,
         1
@@ -2283,7 +2301,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithExtras,
         1
@@ -2308,7 +2326,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithNumSlug,
         1
@@ -2324,7 +2342,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithSingleChar,
         1
@@ -2340,7 +2358,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithMultiSeg,
         1
@@ -2352,7 +2370,7 @@ describe('Admin Handlers', () => {
     it('should reject image_id ending with hyphen', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, image_id: 'rivendell-' },
         1
@@ -2366,7 +2384,7 @@ describe('Admin Handlers', () => {
     it('should reject image_id with consecutive hyphens', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, image_id: 'bag--end' },
         1
@@ -2383,7 +2401,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithUnicode,
         1
@@ -2402,7 +2420,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithHtml,
         1
@@ -2421,7 +2439,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         bodyWithLongTitle,
         1
@@ -2434,7 +2452,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for whitespace-only description', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, description: '   \n\t  ' },
         1
@@ -2448,7 +2466,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for Infinity distance', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, distance: Infinity },
         1
@@ -2462,7 +2480,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for negative Infinity distance', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, distance: -Infinity },
         1
@@ -2486,21 +2504,21 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         updatedBody,
         7
       );
 
       // The 3rd prepare call is the audit INSERT
-      const auditBindCall = mockEnv.DB.prepare.mock.calls[2];
+      const auditBindCall = mockDB.prepare.mock.calls[2];
       expect(auditBindCall).toBeDefined();
       const auditSql = auditBindCall[0] as string;
       expect(auditSql).toContain('INSERT INTO admin_audit_log');
 
       // The bind args should be: adminUserId, action, targetType, targetId, details, ipAddress, success
       // We access via the bind mock on the 3rd prepare
-      const thirdPrepare = mockEnv.DB.prepare.mock.results[2].value;
+      const thirdPrepare = mockDB.prepare.mock.results[2].value;
       const bindArgs = thirdPrepare.bind.mock.calls[0];
       expect(bindArgs[0]).toBe(7);           // adminUserId
       expect(bindArgs[1]).toBe('update_goal'); // action
@@ -2537,14 +2555,14 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         identicalBody,
         1
       );
 
       // Verify the audit details JSON is an empty changes object
-      const thirdPrepare = mockEnv.DB.prepare.mock.results[2].value;
+      const thirdPrepare = mockDB.prepare.mock.results[2].value;
       const bindArgs = thirdPrepare.bind.mock.calls[0];
       const details = JSON.parse(bindArgs[4]);
       expect(details).toEqual({});
@@ -2556,14 +2574,14 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         validBody,
         1
       );
 
       // The audit log bind should have 'unknown' as ipAddress
-      const thirdPrepare = mockEnv.DB.prepare.mock.results[2].value;
+      const thirdPrepare = mockDB.prepare.mock.results[2].value;
       const bindArgs = thirdPrepare.bind.mock.calls[0];
       expect(bindArgs[5]).toBe('unknown');
     });
@@ -2571,7 +2589,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for distance passed as string number', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, distance: '750' },
         1
@@ -2586,7 +2604,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when title is a non-string type', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, title: 12345 },
         1
@@ -2600,7 +2618,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when description is a non-string type', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, description: 42 },
         1
@@ -2614,7 +2632,7 @@ describe('Admin Handlers', () => {
     it('should reject image_id with underscores', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, image_id: 'bag_end' },
         1
@@ -2628,7 +2646,7 @@ describe('Admin Handlers', () => {
     it('should reject image_id with dots', async () => {
       const response = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         { ...validBody, image_id: 'bag.end' },
         1
@@ -2681,7 +2699,7 @@ describe('Admin Handlers', () => {
       const mockRun3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
       const mockBind3 = jest.fn().mockReturnValue({ run: mockRun3 });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: mockBind1 })
         .mockReturnValueOnce({ bind: mockBind2 })
         .mockReturnValueOnce({ bind: mockBind3 });
@@ -2697,7 +2715,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         1
       );
@@ -2713,7 +2731,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         1
       );
@@ -2727,7 +2745,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         1
       );
@@ -2744,7 +2762,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         body,
         1
       );
@@ -2764,7 +2782,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: 99.5 },
         1
       );
@@ -2778,7 +2796,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: 999999 },
         1
       );
@@ -2792,7 +2810,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, description: '' },
         1
       );
@@ -2807,7 +2825,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, description: '   ' },
         1
       );
@@ -2822,7 +2840,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, foo: 'bar', extraField: 123 },
         1
       );
@@ -2835,7 +2853,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for null body', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         null,
         1
       );
@@ -2848,7 +2866,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for undefined body', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         undefined,
         1
       );
@@ -2861,7 +2879,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for string body', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         'not-an-object',
         1
       );
@@ -2874,7 +2892,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for numeric body', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         42,
         1
       );
@@ -2892,7 +2910,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         noTitle,
         1
       );
@@ -2905,7 +2923,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for empty string title', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, title: '' },
         1
       );
@@ -2918,7 +2936,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for whitespace-only title', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, title: '   ' },
         1
       );
@@ -2931,7 +2949,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when title is a number instead of string', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, title: 12345 },
         1
       );
@@ -2947,7 +2965,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, title: '  Weathertop  ' },
         1
       );
@@ -2964,7 +2982,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         noDistance,
         1
       );
@@ -2977,7 +2995,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when distance_miles is explicitly null', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: null },
         1
       );
@@ -2990,7 +3008,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when distance_miles is a string', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: '200' },
         1
       );
@@ -3003,7 +3021,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when distance_miles is zero', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: 0 },
         1
       );
@@ -3016,7 +3034,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when distance_miles is negative', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: -50 },
         1
       );
@@ -3029,7 +3047,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when distance_miles is Infinity', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: Infinity },
         1
       );
@@ -3042,7 +3060,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when distance_miles is negative Infinity', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: -Infinity },
         1
       );
@@ -3055,7 +3073,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when distance_miles is NaN', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: NaN },
         1
       );
@@ -3068,7 +3086,7 @@ describe('Admin Handlers', () => {
     it('should return 400 when distance_miles is a boolean', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, distance_miles: true },
         1
       );
@@ -3083,7 +3101,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for image_id with spaces', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: 'bag end' },
         1
       );
@@ -3096,7 +3114,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for image_id with uppercase letters', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: 'BagEnd' },
         1
       );
@@ -3109,7 +3127,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for image_id with underscores', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: 'bag_end' },
         1
       );
@@ -3122,7 +3140,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for image_id with leading hyphen', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: '-bag-end' },
         1
       );
@@ -3135,7 +3153,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for image_id with trailing hyphen', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: 'bag-end-' },
         1
       );
@@ -3148,7 +3166,7 @@ describe('Admin Handlers', () => {
     it('should return 400 for image_id with consecutive hyphens', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: 'bag--end' },
         1
       );
@@ -3164,7 +3182,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: 'weather-top-hill' },
         1
       );
@@ -3178,7 +3196,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: 'weathertop' },
         1
       );
@@ -3192,7 +3210,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: null },
         1
       );
@@ -3206,7 +3224,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, image_id: '' },
         1
       );
@@ -3223,7 +3241,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, special: 'milestone' },
         1
       );
@@ -3238,7 +3256,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, special: '' },
         1
       );
@@ -3252,7 +3270,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, special: '   ' },
         1
       );
@@ -3266,7 +3284,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, special: '  milestone  ' },
         1
       );
@@ -3282,7 +3300,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         7
       );
@@ -3307,7 +3325,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         1
       );
@@ -3324,12 +3342,12 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         1
       );
 
-      const firstSql = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      const firstSql = mockDB.prepare.mock.calls[0][0] as string;
       expect(firstSql).toContain('INSERT INTO goals');
       expect(firstSql).toContain('distance, title, description, special, image_id');
     });
@@ -3340,7 +3358,7 @@ describe('Admin Handlers', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         1
       );
@@ -3354,12 +3372,12 @@ describe('Admin Handlers', () => {
       const mockBind = jest.fn().mockReturnValue({
         run: jest.fn().mockRejectedValue(new Error('DB write error')),
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
       mockRequest.headers.get.mockReturnValue('10.0.0.1');
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         1
       );
@@ -3373,12 +3391,12 @@ describe('Admin Handlers', () => {
       const mockBind = jest.fn().mockReturnValue({
         run: jest.fn().mockRejectedValue(new Error('DB error')),
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind: mockBind });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
       mockRequest.headers.get.mockReturnValue('10.0.0.1');
 
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         validCreateBody,
         1
       );
@@ -3389,7 +3407,7 @@ describe('Admin Handlers', () => {
     it('should return 400 with JSON Content-Type for validation errors', async () => {
       const response = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         { ...validCreateBody, title: '' },
         1
       );
@@ -3417,14 +3435,14 @@ describe('Admin Handlers', () => {
       });
       const dataBind = jest.fn().mockReturnValue({ all: dataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: countBind })
         .mockReturnValueOnce({ bind: dataBind });
       mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25&search=fro';
 
       const response = await handleAdminUsersList(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -3460,14 +3478,14 @@ describe('Admin Handlers', () => {
       });
       const dataBind = jest.fn().mockReturnValue({ all: dataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: countFirst })
         .mockReturnValueOnce({ bind: dataBind });
       mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25';
 
       const response = await handleAdminUsersList(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -3491,14 +3509,14 @@ describe('Admin Handlers', () => {
       });
       const dataBind = jest.fn().mockReturnValue({ all: dataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ first: countFirst })
         .mockReturnValueOnce({ bind: dataBind });
       mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25';
 
       const response = await handleAdminUsersList(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -3507,13 +3525,13 @@ describe('Admin Handlers', () => {
     });
 
     it('should return 500 when the user list query fails', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB down');
       });
 
       const response = await handleAdminUsersList(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(500);
@@ -3538,14 +3556,14 @@ describe('Admin Handlers', () => {
       });
       const dataBind = jest.fn().mockReturnValue({ all: dataAll });
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: countBind })
         .mockReturnValueOnce({ bind: dataBind });
       mockRequest.url = 'https://wtm.haydencarson.com/api/admin/users?page=1&pageSize=25&search=Fellowship';
 
       const response = await handleAdminUsersList(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -3556,7 +3574,7 @@ describe('Admin Handlers', () => {
       expect(countBind).toHaveBeenCalledWith('%Fellowship%', '%Fellowship%', '%Fellowship%');
 
       // Verify the count SQL includes the membership JOIN for fellowship search
-      const countSqlCall = mockEnv.DB.prepare.mock.calls[0][0] as string;
+      const countSqlCall = mockDB.prepare.mock.calls[0][0] as string;
       expect(countSqlCall).toContain('membership.fellowship_names LIKE');
       expect(countSqlCall).toContain('LEFT JOIN');
     });
@@ -3570,7 +3588,7 @@ describe('Admin Handlers', () => {
       const bind2 = jest.fn().mockReturnValue({ run: run2 });
       const run3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
       const bind3 = jest.fn().mockReturnValue({ run: run3 });
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: bind1 })
         .mockReturnValueOnce({ bind: bind2 })
         .mockReturnValueOnce({ bind: bind3 });
@@ -3578,14 +3596,14 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminUserVerify(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         8,
         1
       );
 
       expect(response.status).toBe(200);
       expect(bind2).toHaveBeenCalledWith(8);
-      expect((mockEnv.DB.prepare.mock.calls[2][0] as string)).toContain('INSERT INTO admin_audit_log');
+      expect((mockDB.prepare.mock.calls[2][0] as string)).toContain('INSERT INTO admin_audit_log');
     });
 
     it('should trigger a password reset email and log success', async () => {
@@ -3599,7 +3617,7 @@ describe('Admin Handlers', () => {
       const bind2 = jest.fn().mockReturnValue({ run: run2 });
       const run3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
       const bind3 = jest.fn().mockReturnValue({ run: run3 });
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: bind1 })
         .mockReturnValueOnce({ bind: bind2 })
         .mockReturnValueOnce({ bind: bind3 });
@@ -3608,7 +3626,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminUserResetPassword(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database; RESEND_API_KEY?: string },
+        mockDb as unknown as { DB: D1Database; RESEND_API_KEY?: string },
         9,
         1
       );
@@ -3630,7 +3648,7 @@ describe('Admin Handlers', () => {
       const bind2 = jest.fn().mockReturnValue({ run: run2 });
       const run3 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
       const bind3 = jest.fn().mockReturnValue({ run: run3 });
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: bind1 })
         .mockReturnValueOnce({ bind: bind2 })
         .mockReturnValueOnce({ bind: bind3 });
@@ -3638,7 +3656,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminUserToggleAdmin(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         10,
         1
       );
@@ -3652,11 +3670,11 @@ describe('Admin Handlers', () => {
     it('should require exact confirmation text before deleting a user', async () => {
       const first = jest.fn().mockResolvedValue({ id: 11, username: 'gandalf', email: 'gandalf@example.com' });
       const bind1 = jest.fn().mockReturnValue({ first });
-      mockEnv.DB.prepare.mockReturnValueOnce({ bind: bind1 });
+      mockDB.prepare.mockReturnValueOnce({ bind: bind1 });
 
       const response = await handleAdminUserDelete(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         11,
         { confirmation: 'wrong' },
         1
@@ -3676,11 +3694,11 @@ describe('Admin Handlers', () => {
       const bind3 = jest.fn().mockReturnValue(statement3);
       const run4 = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
       const bind4 = jest.fn().mockReturnValue({ run: run4 });
-      mockEnv.DB.batch.mockResolvedValue([
+      mockDB.batch.mockResolvedValue([
         { meta: { changes: 0 } },
         { meta: { changes: 1 } },
       ]);
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce({ bind: bind1 })
         .mockReturnValueOnce({ bind: bind2 })
         .mockReturnValueOnce({ bind: bind3 })
@@ -3689,7 +3707,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminUserDelete(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database },
+        mockDb,
         12,
         { confirmation: 'boromir' },
         1
@@ -3698,8 +3716,8 @@ describe('Admin Handlers', () => {
       expect(response.status).toBe(200);
       expect(bind2).toHaveBeenCalledWith(12);
       expect(bind3).toHaveBeenCalledWith(12);
-      expect(mockEnv.DB.batch).toHaveBeenCalledWith([statement2, statement3]);
-      expect((mockEnv.DB.prepare.mock.calls[3][0] as string)).toContain('INSERT INTO admin_audit_log');
+      expect(mockDB.batch).toHaveBeenCalledWith([statement2, statement3]);
+      expect((mockDB.prepare.mock.calls[3][0] as string)).toContain('INSERT INTO admin_audit_log');
     });
   });
 
@@ -3719,7 +3737,7 @@ describe('Admin Handlers', () => {
       });
       const totalsPrepare = { all: totalsAll };
 
-      mockEnv.DB.prepare
+      mockDB.prepare
         .mockReturnValueOnce(distancePrepare)
         .mockReturnValueOnce(activePrepare)
         .mockReturnValueOnce(goalsPrepare)
@@ -3727,7 +3745,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminMetricsSummary(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -3748,12 +3766,12 @@ describe('Admin Handlers', () => {
           ],
         }),
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind });
+      mockDB.prepare.mockReturnValue({ bind });
       mockRequest.url = 'https://wtm.haydencarson.com/api/admin/metrics/leaderboard?start=2026-03-01&end=2026-03-07';
 
       const response = await handleAdminMetricsLeaderboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);
@@ -3768,7 +3786,7 @@ describe('Admin Handlers', () => {
 
       const response = await handleAdminMetricsLeaderboard(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(400);
@@ -3785,11 +3803,11 @@ describe('Admin Handlers', () => {
           ],
         }),
       });
-      mockEnv.DB.prepare.mockReturnValue({ bind });
+      mockDB.prepare.mockReturnValue({ bind });
 
       const response = await handleAdminMetricsTimeline(
         mockRequest as unknown as Request,
-        mockEnv as unknown as { DB: D1Database }
+        mockDb
       );
 
       expect(response.status).toBe(200);

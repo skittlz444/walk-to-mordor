@@ -13,12 +13,14 @@ import {
 } from '../../src/friends-handlers';
 import { validateSession } from '../../src/auth-handlers';
 import { calculateTotalDistance } from '../../src/goals-handlers';
+import { DbClient } from '../../src/db';
 
 jest.mock('../../src/auth-handlers');
 jest.mock('../../src/goals-handlers');
 
 describe('Friends Handlers', () => {
-  let mockEnv: any;
+  let mockDB: any;
+  let mockDb: DbClient;
   let mockRequest: any;
   let mockFirst: jest.Mock;
   let mockRun: jest.Mock;
@@ -41,16 +43,15 @@ describe('Friends Handlers', () => {
       first: mockFirst,
     }));
 
-    mockEnv = {
-      DB: {
-        prepare: jest.fn(() => ({
-          bind: mockBind,
-          run: mockRun,
-          all: mockAll,
-          first: mockFirst,
-        })),
-      },
+    mockDB = {
+      prepare: jest.fn(() => ({
+        bind: mockBind,
+        run: mockRun,
+        all: mockAll,
+        first: mockFirst,
+      })),
     };
+    mockDb = { read: mockDB as unknown as D1Database, write: mockDB as unknown as D1Database };
 
     mockRequest = {
       url: 'http://localhost/api/friends',
@@ -66,7 +67,7 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleGetFriends(mockRequest, mockEnv);
+      const response = await handleGetFriends(mockRequest, mockDb);
       expect(response.status).toBe(401);
     });
 
@@ -75,7 +76,7 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleGetPendingFriends(mockRequest, mockEnv);
+      const response = await handleGetPendingFriends(mockRequest, mockDb);
       expect(response.status).toBe(401);
     });
 
@@ -85,13 +86,13 @@ describe('Friends Handlers', () => {
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
       mockRequest.url = 'http://localhost/api/friends/search?q=test';
-      const response = await handleSearchUsers(mockRequest, mockEnv);
+      const response = await handleSearchUsers(mockRequest, mockDb);
       expect(response.status).toBe(401);
     });
 
     it('should resolve friend code without authentication (public endpoint)', async () => {
       mockFirst.mockResolvedValue({ id: 5, username: 'alice', avatar_id: 'arwen' });
-      const response = await handleResolveFriendCode(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleResolveFriendCode(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(200);
       const data = await response.json() as { id: number; username: string; avatar_id: string };
       expect(data.username).toBe('alice');
@@ -104,7 +105,7 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 2 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 2 });
       expect(response.status).toBe(401);
     });
 
@@ -113,7 +114,7 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleFriendRequestByCode(mockRequest, mockEnv, { friend_code: 'AbCd1234' });
+      const response = await handleFriendRequestByCode(mockRequest, mockDb, { friend_code: 'AbCd1234' });
       expect(response.status).toBe(401);
     });
 
@@ -122,7 +123,7 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleAcceptFriend(mockRequest, mockEnv, 1);
+      const response = await handleAcceptFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(401);
     });
 
@@ -131,7 +132,7 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleRejectFriend(mockRequest, mockEnv, 1);
+      const response = await handleRejectFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(401);
     });
 
@@ -140,7 +141,7 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleUnfriend(mockRequest, mockEnv, 1);
+      const response = await handleUnfriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(401);
     });
   });
@@ -149,7 +150,7 @@ describe('Friends Handlers', () => {
   describe('handleGetFriends', () => {
     it('should return an empty friends list', async () => {
       mockAll.mockResolvedValue({ results: [] });
-      const response = await handleGetFriends(mockRequest, mockEnv);
+      const response = await handleGetFriends(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { friends: unknown[] };
       expect(data.friends).toEqual([]);
@@ -161,7 +162,7 @@ describe('Friends Handlers', () => {
         { id: 2, username: 'bob', avatar_id: null, last_progressed: null },
       ];
       mockAll.mockResolvedValue({ results: friends });
-      const response = await handleGetFriends(mockRequest, mockEnv);
+      const response = await handleGetFriends(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { friends: typeof friends };
       expect(data.friends).toEqual(friends);
@@ -172,7 +173,7 @@ describe('Friends Handlers', () => {
       mockAll.mockRejectedValue(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleGetFriends(mockRequest, mockEnv);
+      const response = await handleGetFriends(mockRequest, mockDb);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -182,7 +183,7 @@ describe('Friends Handlers', () => {
   describe('handleGetPendingFriends', () => {
     it('should return empty pending list with count 0', async () => {
       mockAll.mockResolvedValue({ results: [] });
-      const response = await handleGetPendingFriends(mockRequest, mockEnv);
+      const response = await handleGetPendingFriends(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { pending: unknown[]; count: number };
       expect(data.pending).toEqual([]);
@@ -195,7 +196,7 @@ describe('Friends Handlers', () => {
         { id: 6, username: 'diana', avatar_id: null, created_at: '2024-01-11T12:00:00Z' },
       ];
       mockAll.mockResolvedValue({ results: pending });
-      const response = await handleGetPendingFriends(mockRequest, mockEnv);
+      const response = await handleGetPendingFriends(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { pending: typeof pending; count: number };
       expect(data.pending).toEqual(pending);
@@ -206,7 +207,7 @@ describe('Friends Handlers', () => {
       mockAll.mockRejectedValue(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleGetPendingFriends(mockRequest, mockEnv);
+      const response = await handleGetPendingFriends(mockRequest, mockDb);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -216,7 +217,7 @@ describe('Friends Handlers', () => {
   describe('handleSearchUsers', () => {
     it('should reject search with missing query', async () => {
       mockRequest.url = 'http://localhost/api/friends/search';
-      const response = await handleSearchUsers(mockRequest, mockEnv);
+      const response = await handleSearchUsers(mockRequest, mockDb);
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('at least 3 characters');
@@ -224,7 +225,7 @@ describe('Friends Handlers', () => {
 
     it('should reject search with query shorter than 3 characters', async () => {
       mockRequest.url = 'http://localhost/api/friends/search?q=ab';
-      const response = await handleSearchUsers(mockRequest, mockEnv);
+      const response = await handleSearchUsers(mockRequest, mockDb);
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('at least 3 characters');
@@ -232,7 +233,7 @@ describe('Friends Handlers', () => {
 
     it('should reject search with only whitespace under 3 chars', async () => {
       mockRequest.url = 'http://localhost/api/friends/search?q=  a ';
-      const response = await handleSearchUsers(mockRequest, mockEnv);
+      const response = await handleSearchUsers(mockRequest, mockDb);
       expect(response.status).toBe(400);
     });
 
@@ -243,7 +244,7 @@ describe('Friends Handlers', () => {
       ];
       mockAll.mockResolvedValue({ results });
       mockRequest.url = 'http://localhost/api/friends/search?q=test';
-      const response = await handleSearchUsers(mockRequest, mockEnv);
+      const response = await handleSearchUsers(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { results: typeof results };
       expect(data.results).toEqual(results);
@@ -252,7 +253,7 @@ describe('Friends Handlers', () => {
     it('should escape wildcards in search query', async () => {
       mockAll.mockResolvedValue({ results: [] });
       mockRequest.url = 'http://localhost/api/friends/search?q=test%25user';
-      const response = await handleSearchUsers(mockRequest, mockEnv);
+      const response = await handleSearchUsers(mockRequest, mockDb);
       expect(response.status).toBe(200);
       // Verify the escaped pattern was passed to bind
       expect(mockBind).toHaveBeenCalled();
@@ -264,7 +265,7 @@ describe('Friends Handlers', () => {
     it('should escape underscore wildcards', async () => {
       mockAll.mockResolvedValue({ results: [] });
       mockRequest.url = 'http://localhost/api/friends/search?q=test_user';
-      const response = await handleSearchUsers(mockRequest, mockEnv);
+      const response = await handleSearchUsers(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const bindArgs = mockBind.mock.calls[0];
       expect(bindArgs[2]).toBe('test\\_user%');
@@ -275,7 +276,7 @@ describe('Friends Handlers', () => {
       const originalConsoleError = console.error;
       console.error = jest.fn();
       mockRequest.url = 'http://localhost/api/friends/search?q=test';
-      const response = await handleSearchUsers(mockRequest, mockEnv);
+      const response = await handleSearchUsers(mockRequest, mockDb);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -284,20 +285,20 @@ describe('Friends Handlers', () => {
   // ===== GET /api/friends/resolve/:friendCode =====
   describe('handleResolveFriendCode', () => {
     it('should reject invalid friend code format (too short)', async () => {
-      const response = await handleResolveFriendCode(mockRequest, mockEnv, 'abc');
+      const response = await handleResolveFriendCode(mockRequest, mockDb, 'abc');
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('Invalid friend code');
     });
 
     it('should reject invalid friend code format (special chars)', async () => {
-      const response = await handleResolveFriendCode(mockRequest, mockEnv, 'abc!@#$%');
+      const response = await handleResolveFriendCode(mockRequest, mockDb, 'abc!@#$%');
       expect(response.status).toBe(400);
     });
 
     it('should return 404 for unknown friend code', async () => {
       mockFirst.mockResolvedValue(null);
-      const response = await handleResolveFriendCode(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleResolveFriendCode(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(404);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('not found');
@@ -305,7 +306,7 @@ describe('Friends Handlers', () => {
 
     it('should resolve a valid friend code', async () => {
       mockFirst.mockResolvedValue({ id: 5, username: 'alice', avatar_id: 'arwen' });
-      const response = await handleResolveFriendCode(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleResolveFriendCode(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(200);
       const data = await response.json() as { id: number; username: string; avatar_id: string };
       expect(data.username).toBe('alice');
@@ -317,7 +318,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockRejectedValue(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleResolveFriendCode(mockRequest, mockEnv, 'AbCd1234');
+      const response = await handleResolveFriendCode(mockRequest, mockDb, 'AbCd1234');
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -326,37 +327,37 @@ describe('Friends Handlers', () => {
   // ===== POST /api/friends/request =====
   describe('handleFriendRequest', () => {
     it('should reject missing user_id', async () => {
-      const response = await handleFriendRequest(mockRequest, mockEnv, {});
+      const response = await handleFriendRequest(mockRequest, mockDb, {});
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('user_id');
     });
 
     it('should reject non-integer user_id', async () => {
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 'abc' });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 'abc' });
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('Invalid user_id');
     });
 
     it('should reject zero user_id', async () => {
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 0 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 0 });
       expect(response.status).toBe(400);
     });
 
     it('should reject negative user_id', async () => {
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: -1 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: -1 });
       expect(response.status).toBe(400);
     });
 
     it('should reject float user_id', async () => {
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 1.5 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 1.5 });
       expect(response.status).toBe(400);
     });
 
     it('should reject self-friend request', async () => {
       // User 1 trying to friend user 1
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 1 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 1 });
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('yourself');
@@ -365,7 +366,7 @@ describe('Friends Handlers', () => {
     it('should reject if target user does not exist', async () => {
       // First call: target user check returns null
       mockFirst.mockResolvedValueOnce(null);
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 999 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 999 });
       expect(response.status).toBe(404);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('User not found');
@@ -376,7 +377,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({ id: 2 });
       // Second call: existing friendship found (accepted)
       mockFirst.mockResolvedValueOnce({ id: 10, status: 'accepted' });
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 2 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 2 });
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('Already friends');
@@ -387,7 +388,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({ id: 2 });
       // Second call: existing pending friendship found
       mockFirst.mockResolvedValueOnce({ id: 10, status: 'pending' });
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 2 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 2 });
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('pending');
@@ -397,7 +398,7 @@ describe('Friends Handlers', () => {
       // The SQL checks both directions, so a reverse pending is caught too
       mockFirst.mockResolvedValueOnce({ id: 2 }); // target exists
       mockFirst.mockResolvedValueOnce({ id: 11, status: 'pending' }); // reverse pending found
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 2 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 2 });
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('pending');
@@ -410,7 +411,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce(null);
       // Third call: pending count >= 20
       mockFirst.mockResolvedValueOnce({ count: 20 });
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 2 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 2 });
       expect(response.status).toBe(429);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('Too many pending');
@@ -426,7 +427,7 @@ describe('Friends Handlers', () => {
       // Insert succeeds
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 42, changes: 1 } });
 
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 2 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 2 });
       expect(response.status).toBe(201);
       const data = await response.json() as { friendship_id: number; status: string };
       expect(data.friendship_id).toBe(42);
@@ -440,7 +441,7 @@ describe('Friends Handlers', () => {
       mockRun.mockRejectedValueOnce(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleFriendRequest(mockRequest, mockEnv, { user_id: 2 });
+      const response = await handleFriendRequest(mockRequest, mockDb, { user_id: 2 });
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -449,27 +450,27 @@ describe('Friends Handlers', () => {
   // ===== POST /api/friends/request/code =====
   describe('handleFriendRequestByCode', () => {
     it('should reject missing friend_code', async () => {
-      const response = await handleFriendRequestByCode(mockRequest, mockEnv, {});
+      const response = await handleFriendRequestByCode(mockRequest, mockDb, {});
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('friend_code');
     });
 
     it('should reject invalid friend_code format', async () => {
-      const response = await handleFriendRequestByCode(mockRequest, mockEnv, { friend_code: 'short' });
+      const response = await handleFriendRequestByCode(mockRequest, mockDb, { friend_code: 'short' });
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('Invalid friend code');
     });
 
     it('should reject non-string friend_code', async () => {
-      const response = await handleFriendRequestByCode(mockRequest, mockEnv, { friend_code: 12345678 });
+      const response = await handleFriendRequestByCode(mockRequest, mockDb, { friend_code: 12345678 });
       expect(response.status).toBe(400);
     });
 
     it('should return 404 for unknown friend code', async () => {
       mockFirst.mockResolvedValueOnce(null); // code not found
-      const response = await handleFriendRequestByCode(mockRequest, mockEnv, { friend_code: 'AbCd1234' });
+      const response = await handleFriendRequestByCode(mockRequest, mockDb, { friend_code: 'AbCd1234' });
       expect(response.status).toBe(404);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('Friend code not found');
@@ -478,7 +479,7 @@ describe('Friends Handlers', () => {
     it('should reject self-friend via friend code', async () => {
       // Resolve code to user 1 (same as current user)
       mockFirst.mockResolvedValueOnce({ id: 1 });
-      const response = await handleFriendRequestByCode(mockRequest, mockEnv, { friend_code: 'AbCd1234' });
+      const response = await handleFriendRequestByCode(mockRequest, mockDb, { friend_code: 'AbCd1234' });
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('yourself');
@@ -496,7 +497,7 @@ describe('Friends Handlers', () => {
       // Insert succeeds
       mockRun.mockResolvedValueOnce({ meta: { last_row_id: 55, changes: 1 } });
 
-      const response = await handleFriendRequestByCode(mockRequest, mockEnv, { friend_code: 'AbCd1234' });
+      const response = await handleFriendRequestByCode(mockRequest, mockDb, { friend_code: 'AbCd1234' });
       expect(response.status).toBe(201);
       const data = await response.json() as { friendship_id: number; status: string };
       expect(data.friendship_id).toBe(55);
@@ -507,7 +508,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockRejectedValueOnce(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleFriendRequestByCode(mockRequest, mockEnv, { friend_code: 'AbCd1234' });
+      const response = await handleFriendRequestByCode(mockRequest, mockDb, { friend_code: 'AbCd1234' });
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -517,7 +518,7 @@ describe('Friends Handlers', () => {
   describe('handleAcceptFriend', () => {
     it('should return 404 if friendship not found', async () => {
       mockFirst.mockResolvedValueOnce(null);
-      const response = await handleAcceptFriend(mockRequest, mockEnv, 99);
+      const response = await handleAcceptFriend(mockRequest, mockDb, 99);
       expect(response.status).toBe(404);
     });
 
@@ -525,7 +526,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 2, addressee_id: 1, status: 'accepted',
       });
-      const response = await handleAcceptFriend(mockRequest, mockEnv, 1);
+      const response = await handleAcceptFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('not pending');
@@ -536,7 +537,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 1, addressee_id: 2, status: 'pending',
       });
-      const response = await handleAcceptFriend(mockRequest, mockEnv, 1);
+      const response = await handleAcceptFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(403);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('recipient');
@@ -546,7 +547,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 3, addressee_id: 2, status: 'pending',
       });
-      const response = await handleAcceptFriend(mockRequest, mockEnv, 1);
+      const response = await handleAcceptFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(403);
     });
 
@@ -555,12 +556,12 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 2, addressee_id: 1, status: 'pending',
       });
-      const response = await handleAcceptFriend(mockRequest, mockEnv, 1);
+      const response = await handleAcceptFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(200);
       const data = await response.json() as { status: string };
       expect(data.status).toBe('accepted');
       // Verify the update SQL was called
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE friendships SET status')
       );
     });
@@ -569,7 +570,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockRejectedValueOnce(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleAcceptFriend(mockRequest, mockEnv, 1);
+      const response = await handleAcceptFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -579,7 +580,7 @@ describe('Friends Handlers', () => {
   describe('handleRejectFriend', () => {
     it('should return 404 if friendship not found', async () => {
       mockFirst.mockResolvedValueOnce(null);
-      const response = await handleRejectFriend(mockRequest, mockEnv, 99);
+      const response = await handleRejectFriend(mockRequest, mockDb, 99);
       expect(response.status).toBe(404);
     });
 
@@ -587,7 +588,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 2, addressee_id: 1, status: 'accepted',
       });
-      const response = await handleRejectFriend(mockRequest, mockEnv, 1);
+      const response = await handleRejectFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(400);
     });
 
@@ -595,7 +596,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 1, addressee_id: 2, status: 'pending',
       });
-      const response = await handleRejectFriend(mockRequest, mockEnv, 1);
+      const response = await handleRejectFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(403);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('recipient');
@@ -605,7 +606,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 3, addressee_id: 2, status: 'pending',
       });
-      const response = await handleRejectFriend(mockRequest, mockEnv, 1);
+      const response = await handleRejectFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(403);
     });
 
@@ -614,12 +615,12 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 2, addressee_id: 1, status: 'pending',
       });
-      const response = await handleRejectFriend(mockRequest, mockEnv, 1);
+      const response = await handleRejectFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(200);
       const data = await response.json() as { status: string };
       expect(data.status).toBe('rejected');
       // Verify delete SQL was called
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringContaining('DELETE FROM friendships')
       );
     });
@@ -628,7 +629,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockRejectedValueOnce(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleRejectFriend(mockRequest, mockEnv, 1);
+      const response = await handleRejectFriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -638,7 +639,7 @@ describe('Friends Handlers', () => {
   describe('handleUnfriend', () => {
     it('should return 404 if friendship not found', async () => {
       mockFirst.mockResolvedValueOnce(null);
-      const response = await handleUnfriend(mockRequest, mockEnv, 99);
+      const response = await handleUnfriend(mockRequest, mockDb, 99);
       expect(response.status).toBe(404);
     });
 
@@ -646,7 +647,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 2, addressee_id: 1, status: 'pending',
       });
-      const response = await handleUnfriend(mockRequest, mockEnv, 1);
+      const response = await handleUnfriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(400);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('not accepted');
@@ -656,7 +657,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 3, addressee_id: 4, status: 'accepted',
       });
-      const response = await handleUnfriend(mockRequest, mockEnv, 1);
+      const response = await handleUnfriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(403);
       const data = await response.json() as { error: string };
       expect(data.error).toContain('Not authorized');
@@ -666,7 +667,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 1, addressee_id: 2, status: 'accepted',
       });
-      const response = await handleUnfriend(mockRequest, mockEnv, 1);
+      const response = await handleUnfriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(200);
       const data = await response.json() as { status: string };
       expect(data.status).toBe('removed');
@@ -676,7 +677,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({
         id: 1, requester_id: 2, addressee_id: 1, status: 'accepted',
       });
-      const response = await handleUnfriend(mockRequest, mockEnv, 1);
+      const response = await handleUnfriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(200);
       const data = await response.json() as { status: string };
       expect(data.status).toBe('removed');
@@ -686,7 +687,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockRejectedValueOnce(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleUnfriend(mockRequest, mockEnv, 1);
+      const response = await handleUnfriend(mockRequest, mockDb, 1);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -699,14 +700,14 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 2);
       expect(response.status).toBe(401);
     });
 
     it('should return 404 when users are not friends', async () => {
       // No friendship found
       mockFirst.mockResolvedValueOnce(null);
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 2);
       expect(response.status).toBe(404);
       const data = await response.json();
       expect(data.error).toBe('User not found or not a friend');
@@ -717,7 +718,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockResolvedValueOnce({ id: 10 });
       // User not found
       mockFirst.mockResolvedValueOnce(null);
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 999);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 999);
       expect(response.status).toBe(404);
       const data = await response.json();
       expect(data.error).toBe('User not found or not a friend');
@@ -741,7 +742,7 @@ describe('Friends Handlers', () => {
 
       (calculateTotalDistance as jest.Mock).mockResolvedValue(100.50);
 
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 2);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.username).toBe('alice');
@@ -770,7 +771,7 @@ describe('Friends Handlers', () => {
         ],
       });
 
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 3);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 3);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.fellowships).toEqual([
@@ -791,7 +792,7 @@ describe('Friends Handlers', () => {
       // No fellowships
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 4);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 4);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.fellowships).toEqual([]);
@@ -812,7 +813,7 @@ describe('Friends Handlers', () => {
       // No fellowships
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 5);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 5);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.total_distance).toBe(0);
@@ -838,7 +839,7 @@ describe('Friends Handlers', () => {
       // No fellowships
       mockAll.mockResolvedValueOnce({ results: [] });
 
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 6);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 6);
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.current_goal_title).toBe('Moria'); // last goal
@@ -848,7 +849,7 @@ describe('Friends Handlers', () => {
       mockFirst.mockRejectedValueOnce(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleGetFriendProfile(mockRequest, mockEnv, 2);
+      const response = await handleGetFriendProfile(mockRequest, mockDb, 2);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });
@@ -861,13 +862,13 @@ describe('Friends Handlers', () => {
         valid: false,
         error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }),
       });
-      const response = await handleFriendPositions(mockRequest, mockEnv);
+      const response = await handleFriendPositions(mockRequest, mockDb);
       expect(response.status).toBe(401);
     });
 
     it('should return empty friends array when user has no accepted friends', async () => {
       mockAll.mockResolvedValueOnce({ results: [] });
-      const response = await handleFriendPositions(mockRequest, mockEnv);
+      const response = await handleFriendPositions(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { friends: unknown[] };
       expect(data.friends).toEqual([]);
@@ -880,7 +881,7 @@ describe('Friends Handlers', () => {
           { user_id: 99, username: 'frodo', avatar_id: null, total_distance: 180.2 },
         ],
       });
-      const response = await handleFriendPositions(mockRequest, mockEnv);
+      const response = await handleFriendPositions(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { friends: Array<{ user_id: number; username: string; avatar_id: string | null; total_distance: number }> };
       expect(data.friends).toHaveLength(2);
@@ -904,7 +905,7 @@ describe('Friends Handlers', () => {
           { user_id: 5, username: 'pippin', avatar_id: null, total_distance: 50 },
         ],
       });
-      const response = await handleFriendPositions(mockRequest, mockEnv);
+      const response = await handleFriendPositions(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { friends: Array<{ avatar_id: string | null }> };
       expect(data.friends[0].avatar_id).toBeNull();
@@ -916,7 +917,7 @@ describe('Friends Handlers', () => {
           { user_id: 7, username: 'merry', avatar_id: null, total_distance: 0 },
         ],
       });
-      const response = await handleFriendPositions(mockRequest, mockEnv);
+      const response = await handleFriendPositions(mockRequest, mockDb);
       expect(response.status).toBe(200);
       const data = await response.json() as { friends: Array<{ total_distance: number }> };
       expect(data.friends[0].total_distance).toBe(0);
@@ -924,9 +925,9 @@ describe('Friends Handlers', () => {
 
     it('should query with status=accepted to exclude pending/rejected', async () => {
       mockAll.mockResolvedValueOnce({ results: [] });
-      await handleFriendPositions(mockRequest, mockEnv);
+      await handleFriendPositions(mockRequest, mockDb);
       // Verify the SQL contains status = 'accepted'
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith(
+      expect(mockDB.prepare).toHaveBeenCalledWith(
         expect.stringContaining("status = 'accepted'")
       );
     });
@@ -935,7 +936,7 @@ describe('Friends Handlers', () => {
       mockAll.mockRejectedValueOnce(new Error('DB error'));
       const originalConsoleError = console.error;
       console.error = jest.fn();
-      const response = await handleFriendPositions(mockRequest, mockEnv);
+      const response = await handleFriendPositions(mockRequest, mockDb);
       expect(response.status).toBe(500);
       console.error = originalConsoleError;
     });

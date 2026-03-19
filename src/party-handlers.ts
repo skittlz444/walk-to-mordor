@@ -3,6 +3,7 @@ import { validateSession } from "./auth-handlers";
 import { generateAlphanumericCode } from "./auth-utils";
 import { calculateTotalDistance } from "./goals-handlers";
 import { createErrorResponse, createSuccessResponse } from "./validators";
+import type { DbClient } from './db';
 
 /** Palette size for deterministic member color assignment */
 const COLOR_PALETTE_SIZE = 12;
@@ -58,9 +59,9 @@ export function generateInviteCode(): string {
  * Request body: { name: string, distance_mode?: 'cumulative' | 'incremental', leave_distance_behavior?: 'keep' | 'remove' }
  * Returns the created party details including invite code and configured settings.
  */
-export async function handleCreateParty(request: Request, env: { DB: D1Database }, body: Record<string, unknown>): Promise<Response> {
+export async function handleCreateParty(request: Request, db: DbClient, body: Record<string, unknown>): Promise<Response> {
   // Validate session
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -96,7 +97,7 @@ export async function handleCreateParty(request: Request, env: { DB: D1Database 
 
   try {
     // Get user's current total distance for distance_at_join
-    const totalDistance = await calculateTotalDistance(env, userId);
+    const totalDistance = await calculateTotalDistance(db, userId);
 
     const maxRetries = 5;
 
@@ -106,7 +107,7 @@ export async function handleCreateParty(request: Request, env: { DB: D1Database 
       let inviteCode = generateInviteCode();
       const maxCodeGenRetries = 5;
       for (let codeAttempt = 0; codeAttempt < maxCodeGenRetries; codeAttempt++) {
-        const existing = await env.DB.prepare(
+        const existing = await db.read.prepare(
           'SELECT id FROM parties WHERE invite_code = ?'
         ).bind(inviteCode).first();
         if (!existing) break;
@@ -117,23 +118,23 @@ export async function handleCreateParty(request: Request, env: { DB: D1Database 
       }
 
       // Use D1 batch for atomic party + member creation
-      const insertPartyStmt = env.DB.prepare(
+      const insertPartyStmt = db.write.prepare(
         'INSERT INTO parties (name, leader_id, invite_code, distance_mode, leave_distance_behavior) VALUES (?, ?, ?, ?, ?)'
       ).bind(trimmedName, userId, inviteCode, resolvedDistanceMode, resolvedLeaveBehavior);
 
       // Use subquery to reference the party by invite_code so both inserts are in one atomic batch
-      const insertMemberStmt = env.DB.prepare(
+      const insertMemberStmt = db.write.prepare(
         'INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES ((SELECT id FROM parties WHERE invite_code = ?), ?, ?, ?, 0, ?)'
       ).bind(inviteCode, userId, 'leader', totalDistance, 'active');
 
       try {
-        const batchResults = await env.DB.batch([insertPartyStmt, insertMemberStmt]);
+        const batchResults = await db.write.batch([insertPartyStmt, insertMemberStmt]);
 
         // Get the newly created party ID from the first batch result
         const partyId = batchResults[0].meta.last_row_id;
 
         // Fetch the created party to return full details
-        const party = await env.DB.prepare(
+        const party = await db.read.prepare(
           'SELECT id, name, leader_id, created_at, invite_code, distance_mode, leave_distance_behavior FROM parties WHERE id = ?'
         ).bind(partyId).first<PartyRow>();
 
@@ -187,13 +188,13 @@ const INVITE_CODE_PATTERN = /^[A-Za-z0-9]{8}$/;
  * Returns party name, member count, distance_mode, leave_distance_behavior.
  * Returns 404 for invalid invite codes, 400 if party is dissolved.
  */
-export async function handlePreviewParty(request: Request, env: { DB: D1Database }, inviteCode: string): Promise<Response> {
+export async function handlePreviewParty(request: Request, db: DbClient, inviteCode: string): Promise<Response> {
   if (!INVITE_CODE_PATTERN.test(inviteCode)) {
     return createErrorResponse('Invalid invite code', 404);
   }
 
   try {
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, name, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE invite_code = ?'
     ).bind(inviteCode).first<Pick<PartyRow, 'id' | 'name' | 'distance_mode' | 'leave_distance_behavior' | 'dissolved_at'>>();
 
@@ -205,7 +206,7 @@ export async function handlePreviewParty(request: Request, env: { DB: D1Database
       return createErrorResponse('This party has been dissolved', 400);
     }
 
-    const memberCount = await env.DB.prepare(
+    const memberCount = await db.read.prepare(
       'SELECT COUNT(*) as count FROM party_members WHERE party_id = ? AND status = ?'
     ).bind(party.id, 'active').first<{ count: number }>();
 
@@ -229,12 +230,12 @@ export async function handlePreviewParty(request: Request, env: { DB: D1Database
  * Re-join: reactivates existing record with refreshed join fields.
  * Returns 404 for invalid codes, 400 for dissolved parties or duplicate active membership.
  */
-export async function handleJoinParty(request: Request, env: { DB: D1Database }, inviteCode: string): Promise<Response> {
+export async function handleJoinParty(request: Request, db: DbClient, inviteCode: string): Promise<Response> {
   if (!INVITE_CODE_PATTERN.test(inviteCode)) {
     return createErrorResponse('Invalid invite code', 404);
   }
 
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -242,7 +243,7 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
 
   try {
     // Look up party by invite code
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, name, dissolved_at FROM parties WHERE invite_code = ?'
     ).bind(inviteCode).first<Pick<PartyRow, 'id' | 'name' | 'dissolved_at'>>();
 
@@ -255,7 +256,7 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
     }
 
     // Check for existing membership (any status)
-    const existingMember = await env.DB.prepare(
+    const existingMember = await db.read.prepare(
       'SELECT id, status FROM party_members WHERE party_id = ? AND user_id = ?'
     ).bind(party.id, userId).first<Pick<PartyMemberRow, 'id' | 'status'>>();
 
@@ -265,8 +266,8 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
       }
 
       // Re-join: reactivate existing record (role resets to 'member' — leadership is not preserved across re-joins)
-      const totalDistance = await calculateTotalDistance(env, userId);
-      await env.DB.prepare(
+      const totalDistance = await calculateTotalDistance(db, userId);
+      await db.write.prepare(
         `UPDATE party_members 
          SET status = 'active', 
              joined_at = CURRENT_TIMESTAMP, 
@@ -287,9 +288,9 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
     }
 
     // Fresh join: insert new membership
-    const totalDistance = await calculateTotalDistance(env, userId);
+    const totalDistance = await calculateTotalDistance(db, userId);
     try {
-      await env.DB.prepare(
+      await db.write.prepare(
         'INSERT INTO party_members (party_id, user_id, role, distance_at_join, last_viewed_distance, status) VALUES (?, ?, ?, ?, 0, ?)'
       ).bind(party.id, userId, 'member', totalDistance, 'active').run();
     } catch (insertError: unknown) {
@@ -317,8 +318,8 @@ export async function handleJoinParty(request: Request, env: { DB: D1Database },
  * Generates a new cryptographically secure invite code, invalidating the previous one.
  * Returns both the new inviteCode and the full inviteUrl.
  */
-export async function handleRegenerateInvite(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleRegenerateInvite(request: Request, db: DbClient, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -326,7 +327,7 @@ export async function handleRegenerateInvite(request: Request, env: { DB: D1Data
 
   try {
     // Verify user is the leader
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, leader_id, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'dissolved_at'>>();
 
@@ -348,13 +349,13 @@ export async function handleRegenerateInvite(request: Request, env: { DB: D1Data
       const newCode = generateInviteCode();
 
       // Pre-check uniqueness
-      const existing = await env.DB.prepare(
+      const existing = await db.read.prepare(
         'SELECT id FROM parties WHERE invite_code = ?'
       ).bind(newCode).first();
       if (existing) continue;
 
       try {
-        await env.DB.prepare(
+        await db.write.prepare(
           'UPDATE parties SET invite_code = ? WHERE id = ?'
         ).bind(newCode, partyId).run();
 
@@ -389,8 +390,8 @@ export async function handleRegenerateInvite(request: Request, env: { DB: D1Data
  * With ?include_dissolved=true, also returns dissolved parties.
  * Each result includes id, name, role, distance_mode, leave_distance_behavior, invite_code, leader_id, active_member_count, dissolved_at.
  */
-export async function handleGetUserParties(request: Request, env: { DB: D1Database }): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleGetUserParties(request: Request, db: DbClient): Promise<Response> {
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -421,7 +422,7 @@ export async function handleGetUserParties(request: Request, env: { DB: D1Databa
       `;
     }
 
-    const { results } = await env.DB.prepare(query).bind(userId).all();
+    const { results } = await db.read.prepare(query).bind(userId).all();
 
     return createSuccessResponse({ parties: results });
   } catch (error: unknown) {
@@ -471,8 +472,8 @@ interface UnifiedActivityRow {
  * Updates last_viewed_distance for the requesting user.
  * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
  */
-export async function handlePartyProgress(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handlePartyProgress(request: Request, db: DbClient, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -480,7 +481,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
 
   try {
     // Check party exists and is not dissolved
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'distance_mode' | 'leave_distance_behavior' | 'dissolved_at'>>();
 
@@ -489,7 +490,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
     }
 
     // Verify requesting user is an active member (IDOR prevention)
-    const membership = await env.DB.prepare(
+    const membership = await db.read.prepare(
       'SELECT id, last_viewed_distance FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id' | 'last_viewed_distance'>>();
 
@@ -500,7 +501,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
     const previousViewedDistance = membership.last_viewed_distance;
 
     // Get active members with their total distances
-    const { results: activeMembers } = await env.DB.prepare(
+    const { results: activeMembers } = await db.read.prepare(
       `SELECT pm.user_id, u.username as display_name, pm.distance_at_join, pm.joined_at,
               u.avatar_id,
               COALESCE((SELECT SUM(p.distance) FROM progress p WHERE p.user_id = pm.user_id), 0) as total_distance
@@ -543,7 +544,7 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
     }
 
     // Handle departed members with kept contributions
-    const { results: departedMembers } = await env.DB.prepare(
+    const { results: departedMembers } = await db.read.prepare(
       `SELECT pm.user_id, u.username as display_name, pm.status, pm.contribution_at_departure, pm.joined_at,
               u.avatar_id
        FROM party_members pm
@@ -570,22 +571,22 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
     totalDistance = Number(totalDistance.toFixed(2));
 
     // Calculate milestone position (latest milestone ≤ total_distance)
-    const calculatedPosition = await env.DB.prepare(
+    const calculatedPosition = await db.read.prepare(
       'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance <= ? ORDER BY distance DESC LIMIT 1'
     ).bind(totalDistance).first<GoalRow>();
 
     // Calculate next milestone (first goal > total_distance)
-    const nextPosition = await env.DB.prepare(
+    const nextPosition = await db.read.prepare(
       'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance > ? ORDER BY distance ASC LIMIT 1'
     ).bind(totalDistance).first<GoalRow>();
 
     // Get newly passed milestones (between previous last_viewed_distance and current total)
-    const { results: newlyPassedMilestones } = await env.DB.prepare(
+    const { results: newlyPassedMilestones } = await db.read.prepare(
       'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance > ? AND distance <= ? ORDER BY distance ASC'
     ).bind(previousViewedDistance, totalDistance).all<GoalRow>();
 
     // Update last_viewed_distance for the requesting user
-    await env.DB.prepare(
+    await db.write.prepare(
       'UPDATE party_members SET last_viewed_distance = ? WHERE party_id = ? AND user_id = ?'
     ).bind(totalDistance, partyId, userId).run();
 
@@ -628,12 +629,12 @@ export async function handlePartyProgress(request: Request, env: { DB: D1Databas
  * For 'cumulative': contribution = total_distance
  */
 async function computeContribution(
-  env: { DB: D1Database },
+  db: DbClient,
   userId: number,
   distanceAtJoin: number,
   distanceMode: string,
 ): Promise<number> {
-  const totalDistance = await calculateTotalDistance(env, userId);
+  const totalDistance = await calculateTotalDistance(db, userId);
   if (distanceMode === 'incremental') {
     return Math.max(0, Number((totalDistance - distanceAtJoin).toFixed(2)));
   }
@@ -647,8 +648,8 @@ async function computeContribution(
  * and contribution_at_departure. If the leader leaves, transfers leadership to the oldest active
  * member or dissolves the party if none remain. Uses D1 batch for consistency.
  */
-export async function handleLeaveParty(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleLeaveParty(request: Request, db: DbClient, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -656,7 +657,7 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
 
   try {
     // Fetch party
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, leader_id, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'distance_mode' | 'leave_distance_behavior' | 'dissolved_at'>>();
 
@@ -668,7 +669,7 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
     }
 
     // Verify active membership
-    const membership = await env.DB.prepare(
+    const membership = await db.read.prepare(
       'SELECT id, distance_at_join, role FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id' | 'distance_at_join' | 'role'>>();
 
@@ -677,7 +678,7 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
     }
 
     // Compute contribution before departure
-    const contribution = await computeContribution(env, userId, membership.distance_at_join, party.distance_mode);
+    const contribution = await computeContribution(db, userId, membership.distance_at_join, party.distance_mode);
     const distanceKept = party.leave_distance_behavior === 'keep' ? 1 : 0;
 
     // Build batch statements
@@ -685,7 +686,7 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
 
     // 1. Update member status
     stmts.push(
-      env.DB.prepare(
+      db.write.prepare(
         `UPDATE party_members SET status = 'left', departed_at = CURRENT_TIMESTAMP, distance_kept = ?, contribution_at_departure = ? WHERE id = ?`
       ).bind(distanceKept, contribution, membership.id)
     );
@@ -693,46 +694,46 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
     // Handle leader departure
     if (membership.role === 'leader') {
       // Find oldest active member (excluding current user)
-      const nextLeader = await env.DB.prepare(
+      const nextLeader = await db.read.prepare(
         'SELECT id, user_id FROM party_members WHERE party_id = ? AND user_id != ? AND status = ? ORDER BY joined_at ASC LIMIT 1'
       ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id' | 'user_id'>>();
 
       if (nextLeader) {
         // Transfer leadership
         stmts.push(
-          env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('leader', nextLeader.id)
+          db.write.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('leader', nextLeader.id)
         );
         stmts.push(
-          env.DB.prepare('UPDATE parties SET leader_id = ? WHERE id = ?').bind(nextLeader.user_id, partyId)
+          db.write.prepare('UPDATE parties SET leader_id = ? WHERE id = ?').bind(nextLeader.user_id, partyId)
         );
       } else {
         // No active members remain — dissolve
         stmts.push(
-          env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+          db.write.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
         );
         // Invalidate pending fellowship invites for the dissolved party
         stmts.push(
-          env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
+          db.write.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
         );
       }
     } else {
       // Non-leader leaving: check if any active members remain after this departure
-      const remainingCount = await env.DB.prepare(
+      const remainingCount = await db.read.prepare(
         'SELECT COUNT(*) as count FROM party_members WHERE party_id = ? AND user_id != ? AND status = ?'
       ).bind(partyId, userId, 'active').first<{ count: number }>();
 
       if (!remainingCount || remainingCount.count === 0) {
         stmts.push(
-          env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+          db.write.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
         );
         // Invalidate pending fellowship invites for the dissolved party
         stmts.push(
-          env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
+          db.write.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
         );
       }
     }
 
-    await env.DB.batch(stmts);
+    await db.write.batch(stmts);
 
     return createSuccessResponse({ message: 'You have left the party' });
   } catch (error: unknown) {
@@ -750,12 +751,12 @@ export async function handleLeaveParty(request: Request, env: { DB: D1Database }
  */
 export async function handleKickMember(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   partyId: number,
   targetUserId: number,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -763,7 +764,7 @@ export async function handleKickMember(
 
   try {
     // Fetch party
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, leader_id, distance_mode, leave_distance_behavior, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'distance_mode' | 'leave_distance_behavior' | 'dissolved_at'>>();
 
@@ -785,7 +786,7 @@ export async function handleKickMember(
     }
 
     // Verify target is an active member
-    const targetMembership = await env.DB.prepare(
+    const targetMembership = await db.read.prepare(
       'SELECT id, distance_at_join FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, targetUserId, 'active').first<Pick<PartyMemberRow, 'id' | 'distance_at_join'>>();
 
@@ -794,7 +795,7 @@ export async function handleKickMember(
     }
 
     // Compute contribution before applying disposition
-    const contribution = await computeContribution(env, targetUserId, targetMembership.distance_at_join, party.distance_mode);
+    const contribution = await computeContribution(db, targetUserId, targetMembership.distance_at_join, party.distance_mode);
 
     // Determine distance_kept: removeDistance overrides party default
     const { removeDistance } = body || {};
@@ -809,27 +810,27 @@ export async function handleKickMember(
     const stmts: D1PreparedStatement[] = [];
 
     stmts.push(
-      env.DB.prepare(
+      db.write.prepare(
         `UPDATE party_members SET status = 'kicked', departed_at = CURRENT_TIMESTAMP, distance_kept = ?, contribution_at_departure = ? WHERE id = ?`
       ).bind(distanceKept, contribution, targetMembership.id)
     );
 
     // Check if any active members remain after kick (excluding the kicked user)
-    const remainingCount = await env.DB.prepare(
+    const remainingCount = await db.read.prepare(
       'SELECT COUNT(*) as count FROM party_members WHERE party_id = ? AND user_id != ? AND status = ?'
     ).bind(partyId, targetUserId, 'active').first<{ count: number }>();
 
     if (!remainingCount || remainingCount.count === 0) {
       stmts.push(
-        env.DB.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
+        db.write.prepare('UPDATE parties SET dissolved_at = CURRENT_TIMESTAMP WHERE id = ?').bind(partyId)
       );
       // Invalidate pending fellowship invites for the dissolved party
       stmts.push(
-        env.DB.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
+        db.write.prepare("UPDATE fellowship_invites SET status = 'rejected' WHERE party_id = ? AND status = 'pending'").bind(partyId)
       );
     }
 
-    await env.DB.batch(stmts);
+    await db.write.batch(stmts);
 
     return createSuccessResponse({ message: 'Member has been kicked from the party' });
   } catch (error: unknown) {
@@ -846,11 +847,11 @@ export async function handleKickMember(
  */
 export async function handleUpdatePartySettings(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   partyId: number,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -858,7 +859,7 @@ export async function handleUpdatePartySettings(
 
   try {
     // Fetch party
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, leader_id, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'dissolved_at'>>();
 
@@ -921,12 +922,12 @@ export async function handleUpdatePartySettings(
 
     bindValues.push(partyId);
 
-    await env.DB.prepare(
+    await db.write.prepare(
       `UPDATE parties SET ${setClauses.join(', ')} WHERE id = ?`
     ).bind(...bindValues).run();
 
     // Fetch updated party
-    const updated = await env.DB.prepare(
+    const updated = await db.read.prepare(
       'SELECT id, name, leader_id, distance_mode, leave_distance_behavior FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'name' | 'leader_id' | 'distance_mode' | 'leave_distance_behavior'>>();
 
@@ -944,11 +945,11 @@ export async function handleUpdatePartySettings(
  */
 export async function handleTransferLeadership(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   partyId: number,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -956,7 +957,7 @@ export async function handleTransferLeadership(
 
   try {
     // Fetch party
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, leader_id, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'leader_id' | 'dissolved_at'>>();
 
@@ -981,7 +982,7 @@ export async function handleTransferLeadership(
     }
 
     // Verify new leader is an active member
-    const newLeaderMembership = await env.DB.prepare(
+    const newLeaderMembership = await db.read.prepare(
       'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, new_leader_id, 'active').first<Pick<PartyMemberRow, 'id'>>();
 
@@ -990,7 +991,7 @@ export async function handleTransferLeadership(
     }
 
     // Get current leader's membership row
-    const currentLeaderMembership = await env.DB.prepare(
+    const currentLeaderMembership = await db.read.prepare(
       'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id'>>();
 
@@ -999,10 +1000,10 @@ export async function handleTransferLeadership(
     }
 
     // Atomic batch: update roles + parties.leader_id
-    await env.DB.batch([
-      env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('member', currentLeaderMembership.id),
-      env.DB.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('leader', newLeaderMembership.id),
-      env.DB.prepare('UPDATE parties SET leader_id = ? WHERE id = ?').bind(new_leader_id, partyId),
+    await db.write.batch([
+      db.write.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('member', currentLeaderMembership.id),
+      db.write.prepare('UPDATE party_members SET role = ? WHERE id = ?').bind('leader', newLeaderMembership.id),
+      db.write.prepare('UPDATE parties SET leader_id = ? WHERE id = ?').bind(new_leader_id, partyId),
     ]);
 
     return createSuccessResponse({ message: 'Leadership transferred successfully', new_leader_id });
@@ -1019,8 +1020,8 @@ export async function handleTransferLeadership(
  * Query parameter: ?type=all|walk|message (default: all)
  * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
  */
-export async function handlePartyActivity(request: Request, env: { DB: D1Database }, partyId: number): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handlePartyActivity(request: Request, db: DbClient, partyId: number): Promise<Response> {
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -1028,7 +1029,7 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
 
   try {
     // Check party exists and is not dissolved
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'dissolved_at'>>();
 
@@ -1037,7 +1038,7 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
     }
 
     // Verify requesting user is an active member
-    const membership = await env.DB.prepare(
+    const membership = await db.read.prepare(
       'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id'>>();
 
@@ -1055,7 +1056,7 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
     let activities: UnifiedActivityRow[];
 
     if (filterType === 'walk') {
-      const { results } = await env.DB.prepare(
+      const { results } = await db.read.prepare(
         `SELECT 'walk' as type, ppl.logged_by_user_id as user_id, u.username as display_name,
                 u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', ppl.logged_at) as created_at,
                 ppl.distance, ppl.date, NULL as content, NULL as message_id
@@ -1068,7 +1069,7 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
       ).bind(partyId).all<UnifiedActivityRow>();
       activities = results;
     } else if (filterType === 'message') {
-      const { results } = await env.DB.prepare(
+      const { results } = await db.read.prepare(
         `SELECT 'message' as type, pmsg.user_id, u.username as display_name,
                 u.avatar_id, strftime('%Y-%m-%dT%H:%M:%SZ', pmsg.created_at) as created_at,
                 NULL as distance, NULL as date, pmsg.content, pmsg.id as message_id
@@ -1082,7 +1083,7 @@ export async function handlePartyActivity(request: Request, env: { DB: D1Databas
       activities = results;
     } else {
       // 'all' — union both types, each pre-limited for efficiency
-      const { results } = await env.DB.prepare(
+      const { results } = await db.read.prepare(
         `SELECT * FROM (
            SELECT * FROM (
              SELECT 'walk' as type, ppl.logged_by_user_id as user_id, u.username as display_name,
@@ -1129,8 +1130,8 @@ const MAX_MESSAGE_LENGTH = 200;
  * Content must be 1–200 characters after trimming.
  * Security: 401 if unauthenticated, 403 if not an active member, 404 if party not found/dissolved.
  */
-export async function handleSendPartyMessage(request: Request, env: { DB: D1Database }, partyId: number, body?: Record<string, unknown>): Promise<Response> {
-  const sessionValidation = await validateSession(request, env);
+export async function handleSendPartyMessage(request: Request, db: DbClient, partyId: number, body?: Record<string, unknown>): Promise<Response> {
+  const sessionValidation = await validateSession(request, db);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -1162,7 +1163,7 @@ export async function handleSendPartyMessage(request: Request, env: { DB: D1Data
     }
 
     // Check party exists and is not dissolved
-    const party = await env.DB.prepare(
+    const party = await db.read.prepare(
       'SELECT id, dissolved_at FROM parties WHERE id = ?'
     ).bind(partyId).first<Pick<PartyRow, 'id' | 'dissolved_at'>>();
 
@@ -1171,7 +1172,7 @@ export async function handleSendPartyMessage(request: Request, env: { DB: D1Data
     }
 
     // Verify requesting user is an active member
-    const membership = await env.DB.prepare(
+    const membership = await db.read.prepare(
       'SELECT id FROM party_members WHERE party_id = ? AND user_id = ? AND status = ?'
     ).bind(partyId, userId, 'active').first<Pick<PartyMemberRow, 'id'>>();
 
@@ -1180,7 +1181,7 @@ export async function handleSendPartyMessage(request: Request, env: { DB: D1Data
     }
 
     // Insert message
-    const result = await env.DB.prepare(
+    const result = await db.write.prepare(
       'INSERT INTO party_messages (party_id, user_id, content) VALUES (?, ?, ?)'
     ).bind(partyId, userId, content).run();
 
@@ -1189,7 +1190,7 @@ export async function handleSendPartyMessage(request: Request, env: { DB: D1Data
     if (!messageId) {
       return createErrorResponse('Failed to create message', 500);
     }
-    const message = await env.DB.prepare(
+    const message = await db.read.prepare(
       `SELECT pm.id, pm.party_id, pm.user_id, pm.content, pm.created_at, u.username as display_name, u.avatar_id
        FROM party_messages pm
        JOIN users u ON pm.user_id = u.id

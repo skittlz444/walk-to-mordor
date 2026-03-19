@@ -1,4 +1,5 @@
 import { handleAdminGoalGet, handleAdminGoalUpdate, logAdminAction } from '../../src/admin-handlers';
+import { DbClient } from '../../src/db';
 
 // Mock auth-utils (required since admin-handlers transitively relies on auth exports)
 jest.mock('../../src/auth-utils', () => ({
@@ -25,7 +26,8 @@ jest.mock('../../src/email-utils', () => ({
 }));
 
 describe('Admin Goal Edit Handlers (Story 4.4)', () => {
-  let mockEnv: { DB: { prepare: jest.Mock } };
+  let mockDB: { prepare: jest.Mock };
+  let mockDb: DbClient;
   let mockRequest: { headers: { get: jest.Mock }; url: string };
   let originalConsoleError: typeof console.error;
 
@@ -34,9 +36,8 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     originalConsoleError = console.error;
     console.error = jest.fn();
 
-    mockEnv = {
-      DB: { prepare: jest.fn() },
-    };
+    mockDB = { prepare: jest.fn() };
+    mockDb = { read: mockDB as unknown as D1Database, write: mockDB as unknown as D1Database };
 
     mockRequest = {
       headers: { get: jest.fn().mockReturnValue(null) },
@@ -73,9 +74,9 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
         all: jest.fn().mockResolvedValue({ results: call.all ?? [] }),
       });
       if (idx === 0) {
-        mockEnv.DB.prepare.mockReturnValueOnce({ bind: mockBind });
+        mockDB.prepare.mockReturnValueOnce({ bind: mockBind });
       } else {
-        mockEnv.DB.prepare.mockReturnValueOnce({ bind: mockBind });
+        mockDB.prepare.mockReturnValueOnce({ bind: mockBind });
       }
     });
   }
@@ -88,7 +89,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       const res = await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42
       );
 
@@ -102,7 +103,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       const res = await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         9999
       );
 
@@ -112,13 +113,13 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     });
 
     it('should return 500 on database error', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB down');
       });
 
       const res = await handleAdminGoalGet(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42
       );
 
@@ -152,7 +153,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         validBody,
         1
@@ -167,7 +168,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     it('should return 400 for missing title', async () => {
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, title: '' },
         1
@@ -181,7 +182,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     it('should return 400 for empty-after-trim title', async () => {
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, title: '   ' },
         1
@@ -195,7 +196,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     it('should return 400 for non-positive distance', async () => {
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, distance: -5 },
         1
@@ -209,7 +210,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     it('should return 400 for zero distance', async () => {
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, distance: 0 },
         1
@@ -223,7 +224,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     it('should return 400 for non-number distance', async () => {
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, distance: 'abc' },
         1
@@ -237,7 +238,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     it('should return 400 for missing description', async () => {
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, description: '' },
         1
@@ -251,7 +252,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     it('should return 400 for invalid image_id slug format', async () => {
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, image_id: 'Invalid Slug!' },
         1
@@ -265,7 +266,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     it('should return 400 for image_id with uppercase', async () => {
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, image_id: 'Rivendell' },
         1
@@ -287,7 +288,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, special: '' },
         1
@@ -295,9 +296,9 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       expect(res.status).toBe(200);
       // Verify the UPDATE statement was called with null for special
-      const updateCall = mockEnv.DB.prepare.mock.calls[1];
+      const updateCall = mockDB.prepare.mock.calls[1];
       expect(updateCall[0]).toContain('UPDATE goals SET');
-      const bindArgs = mockEnv.DB.prepare.mock.results[1].value.bind.mock.calls[0];
+      const bindArgs = mockDB.prepare.mock.results[1].value.bind.mock.calls[0];
       expect(bindArgs[3]).toBeNull(); // special param
     });
 
@@ -312,14 +313,14 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, image_id: '' },
         1
       );
 
       expect(res.status).toBe(200);
-      const bindArgs = mockEnv.DB.prepare.mock.results[1].value.bind.mock.calls[0];
+      const bindArgs = mockDB.prepare.mock.results[1].value.bind.mock.calls[0];
       expect(bindArgs[4]).toBeNull(); // image_id param
     });
 
@@ -328,7 +329,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         9999,
         validBody,
         1
@@ -350,16 +351,16 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, title: 'Updated Title' },
         7
       );
 
       // Verify the audit log INSERT was called
-      const auditCall = mockEnv.DB.prepare.mock.calls[2];
+      const auditCall = mockDB.prepare.mock.calls[2];
       expect(auditCall[0]).toContain('INSERT INTO admin_audit_log');
-      const auditBindArgs = mockEnv.DB.prepare.mock.results[2].value.bind.mock.calls[0];
+      const auditBindArgs = mockDB.prepare.mock.results[2].value.bind.mock.calls[0];
       expect(auditBindArgs[0]).toBe(7);           // adminUserId
       expect(auditBindArgs[1]).toBe('update_goal'); // action
       expect(auditBindArgs[2]).toBe('goal');        // targetType
@@ -379,7 +380,7 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
 
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         { ...validBody, image_id: 'bag-end' },
         1
@@ -389,13 +390,13 @@ describe('Admin Goal Edit Handlers (Story 4.4)', () => {
     });
 
     it('should return 500 on database error during update', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB down');
       });
 
       const res = await handleAdminGoalUpdate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         42,
         validBody,
         1

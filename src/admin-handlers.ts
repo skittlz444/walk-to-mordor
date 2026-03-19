@@ -1,4 +1,5 @@
 import { generatePasswordResetToken, getPasswordResetExpiry } from './auth-utils';
+import type { DbClient } from './db';
 import { sendPasswordResetEmail } from './email-utils';
 import { isValidDateFormat } from './validators';
 
@@ -115,19 +116,19 @@ function getIsoDateOffset(daysAgo: number): string {
  * Handle GET /api/admin/dashboard — returns live system statistics.
  * Requires admin authentication (enforced by the route guard in index.ts).
  */
-export async function handleAdminDashboard(_request: Request, env: { DB: D1Database }): Promise<Response> {
+export async function handleAdminDashboard(_request: Request, db: DbClient): Promise<Response> {
   try {
     // Run all four stat queries in parallel for best performance
     const [usersResult, distanceResult, partiesResult, goalsResult] = await Promise.all([
-      env.DB.prepare('SELECT COUNT(*) as count FROM users WHERE email_verified = 1').first<{ count: number }>(),
-      env.DB.prepare('SELECT COALESCE(SUM(distance), 0) as total FROM progress').first<{ total: number }>(),
-      env.DB.prepare(
+      db.read.prepare('SELECT COUNT(*) as count FROM users WHERE email_verified = 1').first<{ count: number }>(),
+      db.read.prepare('SELECT COALESCE(SUM(distance), 0) as total FROM progress').first<{ total: number }>(),
+      db.read.prepare(
         `SELECT COUNT(DISTINCT p.id) as count
          FROM parties p
          INNER JOIN party_members pm ON pm.party_id = p.id
          WHERE pm.status = 'active'`
       ).first<{ count: number }>(),
-      env.DB.prepare('SELECT COUNT(*) as count FROM goals').first<{ count: number }>(),
+      db.read.prepare('SELECT COUNT(*) as count FROM goals').first<{ count: number }>(),
     ]);
 
     const stats: DashboardStats = {
@@ -154,7 +155,7 @@ export async function handleAdminDashboard(_request: Request, env: { DB: D1Datab
  * Handle GET /api/admin/users — returns a paginated support view of user accounts.
  * Requires admin authentication (enforced by the route guard in index.ts).
  */
-export async function handleAdminUsersList(request: Request, env: { DB: D1Database }): Promise<Response> {
+export async function handleAdminUsersList(request: Request, db: DbClient): Promise<Response> {
   try {
     const url = new URL(request.url);
     const rawPage = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
@@ -185,8 +186,8 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
       ? `SELECT COUNT(*) as total FROM users u${membershipJoinSql}${whereClause}`
       : `SELECT COUNT(*) as total FROM users u${whereClause}`;
     const countResult = searchBindings.length > 0
-      ? await env.DB.prepare(countSql).bind(...searchBindings).first<{ total: number }>()
-      : await env.DB.prepare(countSql).first<{ total: number }>();
+      ? await db.read.prepare(countSql).bind(...searchBindings).first<{ total: number }>()
+      : await db.read.prepare(countSql).first<{ total: number }>();
 
     const total = countResult?.total ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -226,7 +227,7 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
       LIMIT ? OFFSET ?`;
 
     const dataBindings: Array<string | number> = [...searchBindings, pageSize, offset];
-    const result = await env.DB.prepare(dataSql).bind(...dataBindings).all();
+    const result = await db.read.prepare(dataSql).bind(...dataBindings).all();
     const users: AdminUserRow[] = (result.results as Array<{
       id: number;
       username: string;
@@ -273,12 +274,12 @@ export async function handleAdminUsersList(request: Request, env: { DB: D1Databa
  */
 export async function handleAdminUserVerify(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   userId: number,
   adminUserId: number,
 ): Promise<Response> {
   try {
-    const existing = await env.DB.prepare(
+    const existing = await db.read.prepare(
       'SELECT id, username, email_verified FROM users WHERE id = ?'
     ).bind(userId).first<{ id: number; username: string; email_verified: number }>();
 
@@ -289,9 +290,9 @@ export async function handleAdminUserVerify(
       });
     }
 
-    await env.DB.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').bind(userId).run();
+    await db.write.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').bind(userId).run();
 
-    await logAdminAction(env, {
+    await logAdminAction(db, {
       adminUserId,
       action: 'verify_user_email',
       targetType: 'user',
@@ -323,12 +324,13 @@ export async function handleAdminUserVerify(
  */
 export async function handleAdminUserResetPassword(
   request: Request,
-  env: { DB: D1Database; RESEND_API_KEY?: string },
+  db: DbClient,
   userId: number,
   adminUserId: number,
+  resendApiKey?: string,
 ): Promise<Response> {
   try {
-    const user = await env.DB.prepare(
+    const user = await db.read.prepare(
       'SELECT id, username, email FROM users WHERE id = ?'
     ).bind(userId).first<{ id: number; username: string; email: string }>();
 
@@ -342,17 +344,17 @@ export async function handleAdminUserResetPassword(
     const token = generatePasswordResetToken();
     const expiresAt = getPasswordResetExpiry();
 
-    await env.DB.prepare(
+    await db.write.prepare(
       'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
     ).bind(userId, token, expiresAt).run();
 
     const origin = new URL(request.url).origin;
-    const emailResult = await sendPasswordResetEmail(env as Env, user.email, user.username, token, origin);
+    const emailResult = await sendPasswordResetEmail({ RESEND_API_KEY: resendApiKey } as Env, user.email, user.username, token, origin);
 
     if (!emailResult.success) {
-      await env.DB.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run();
+      await db.write.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run();
 
-      await logAdminAction(env, {
+      await logAdminAction(db, {
         adminUserId,
         action: 'trigger_password_reset',
         targetType: 'user',
@@ -368,7 +370,7 @@ export async function handleAdminUserResetPassword(
       });
     }
 
-    await logAdminAction(env, {
+    await logAdminAction(db, {
       adminUserId,
       action: 'trigger_password_reset',
       targetType: 'user',
@@ -396,12 +398,12 @@ export async function handleAdminUserResetPassword(
  */
 export async function handleAdminUserToggleAdmin(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   userId: number,
   adminUserId: number,
 ): Promise<Response> {
   try {
-    const existing = await env.DB.prepare(
+    const existing = await db.read.prepare(
       'SELECT id, username, is_admin FROM users WHERE id = ?'
     ).bind(userId).first<{ id: number; username: string; is_admin: number }>();
 
@@ -420,9 +422,9 @@ export async function handleAdminUserToggleAdmin(
     }
 
     const nextValue = existing.is_admin === 1 ? 0 : 1;
-    await env.DB.prepare('UPDATE users SET is_admin = ? WHERE id = ?').bind(nextValue, userId).run();
+    await db.write.prepare('UPDATE users SET is_admin = ? WHERE id = ?').bind(nextValue, userId).run();
 
-    await logAdminAction(env, {
+    await logAdminAction(db, {
       adminUserId,
       action: 'toggle_admin_access',
       targetType: 'user',
@@ -454,7 +456,7 @@ export async function handleAdminUserToggleAdmin(
  */
 export async function handleAdminUserDelete(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   userId: number,
   body: unknown,
   adminUserId: number,
@@ -470,7 +472,7 @@ export async function handleAdminUserDelete(
     const data = body as Record<string, unknown>;
     const confirmation = typeof data.confirmation === 'string' ? data.confirmation.trim() : '';
 
-    const existing = await env.DB.prepare(
+    const existing = await db.read.prepare(
       'SELECT id, username, email FROM users WHERE id = ?'
     ).bind(userId).first<{ id: number; username: string; email: string }>();
 
@@ -495,12 +497,12 @@ export async function handleAdminUserDelete(
       });
     }
 
-    const [, deleteResult] = await env.DB.batch([
-      env.DB.prepare(
+    const [, deleteResult] = await db.write.batch([
+      db.write.prepare(
         `DELETE FROM admin_audit_log
          WHERE admin_user_id = ?`
       ).bind(userId),
-      env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
+      db.write.prepare('DELETE FROM users WHERE id = ?').bind(userId),
     ]);
     const deletedRows = Number((deleteResult.meta as Record<string, unknown>).changes ?? 0);
 
@@ -511,7 +513,7 @@ export async function handleAdminUserDelete(
       });
     }
 
-    await logAdminAction(env, {
+    await logAdminAction(db, {
       adminUserId,
       action: 'delete_user',
       targetType: 'user',
@@ -537,15 +539,15 @@ export async function handleAdminUserDelete(
 /**
  * Handle GET /api/admin/metrics — returns the community summary cards.
  */
-export async function handleAdminMetricsSummary(_request: Request, env: { DB: D1Database }): Promise<Response> {
+export async function handleAdminMetricsSummary(_request: Request, db: DbClient): Promise<Response> {
   try {
     const [distanceResult, activeWalkersResult, goalsResult, userTotalsResult] = await Promise.all([
-      env.DB.prepare('SELECT COALESCE(SUM(distance), 0) as total_group_distance_km FROM progress').first<{ total_group_distance_km: number }>(),
-      env.DB.prepare(
+      db.read.prepare('SELECT COALESCE(SUM(distance), 0) as total_group_distance_km FROM progress').first<{ total_group_distance_km: number }>(),
+      db.read.prepare(
         "SELECT COUNT(DISTINCT user_id) as active_walkers FROM progress WHERE date >= date('now', '-6 days')"
       ).first<{ active_walkers: number }>(),
-      env.DB.prepare('SELECT distance FROM goals ORDER BY distance ASC').all(),
-      env.DB.prepare('SELECT user_id, COALESCE(SUM(distance), 0) as total_distance_km FROM progress GROUP BY user_id').all(),
+      db.read.prepare('SELECT distance FROM goals ORDER BY distance ASC').all(),
+      db.read.prepare('SELECT user_id, COALESCE(SUM(distance), 0) as total_distance_km FROM progress GROUP BY user_id').all(),
     ]);
 
     const goalDistances = (goalsResult.results as Array<{ distance: number }>).map((row) => row.distance);
@@ -576,7 +578,7 @@ export async function handleAdminMetricsSummary(_request: Request, env: { DB: D1
 /**
  * Handle GET /api/admin/metrics/leaderboard — returns distance totals for the chosen date range.
  */
-export async function handleAdminMetricsLeaderboard(request: Request, env: { DB: D1Database }): Promise<Response> {
+export async function handleAdminMetricsLeaderboard(request: Request, db: DbClient): Promise<Response> {
   try {
     const url = new URL(request.url);
     const start = url.searchParams.get('start');
@@ -605,7 +607,7 @@ export async function handleAdminMetricsLeaderboard(request: Request, env: { DB:
 
     const joinDateFilters = start && end ? ' AND p.date >= ? AND p.date <= ?' : '';
     const bindings: string[] = start && end ? [start, end] : [];
-    const result = await env.DB.prepare(
+    const result = await db.read.prepare(
       `SELECT
          u.id,
          u.username,
@@ -652,11 +654,11 @@ export async function handleAdminMetricsLeaderboard(request: Request, env: { DB:
 /**
  * Handle GET /api/admin/metrics/timeline — returns the last 30 days of group activity.
  */
-export async function handleAdminMetricsTimeline(_request: Request, env: { DB: D1Database }): Promise<Response> {
+export async function handleAdminMetricsTimeline(_request: Request, db: DbClient): Promise<Response> {
   try {
     const start = getIsoDateOffset(29);
     const end = getIsoDateOffset(0);
-    const result = await env.DB.prepare(
+    const result = await db.read.prepare(
       `SELECT date, COALESCE(SUM(distance), 0) as distance_km
        FROM progress
        WHERE date >= ? AND date <= ?
@@ -704,7 +706,7 @@ export async function handleAdminMetricsTimeline(_request: Request, env: { DB: D
  *   - search (optional, performs a text search over goal fields)
  *   - order ('asc' | 'desc', default 'asc' — by distance)
  */
-export async function handleAdminGoalsList(request: Request, env: { DB: D1Database }): Promise<Response> {
+export async function handleAdminGoalsList(request: Request, db: DbClient): Promise<Response> {
   try {
     const url = new URL(request.url);
     const rawPage = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
@@ -740,8 +742,8 @@ export async function handleAdminGoalsList(request: Request, env: { DB: D1Databa
 
     // Get total count first to clamp page
     const countResult = countBindings.length > 0
-      ? await env.DB.prepare(countSql).bind(...countBindings).first<{ total: number }>()
-      : await env.DB.prepare(countSql).first<{ total: number }>();
+      ? await db.read.prepare(countSql).bind(...countBindings).first<{ total: number }>()
+      : await db.read.prepare(countSql).first<{ total: number }>();
 
     const total = countResult?.total ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -750,7 +752,7 @@ export async function handleAdminGoalsList(request: Request, env: { DB: D1Databa
     const offset = (page - 1) * pageSize;
     dataBindings.push(offset);
 
-    const dataResult = await env.DB.prepare(dataSql).bind(...dataBindings).all();
+    const dataResult = await db.read.prepare(dataSql).bind(...dataBindings).all();
 
     // Map results with computed has_image field
     const goals: AdminGoalRow[] = (dataResult.results as Array<{
@@ -807,9 +809,9 @@ export interface AdminGoalDetail {
  * Handle GET /api/admin/goals/:id — returns a single goal's full details.
  * Requires admin authentication (enforced by the route guard in index.ts).
  */
-export async function handleAdminGoalGet(_request: Request, env: { DB: D1Database }, goalId: number): Promise<Response> {
+export async function handleAdminGoalGet(_request: Request, db: DbClient, goalId: number): Promise<Response> {
   try {
-    const goal = await env.DB.prepare(
+    const goal = await db.read.prepare(
       'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
     ).bind(goalId).first<AdminGoalDetail>();
 
@@ -843,7 +845,7 @@ const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
  */
 export async function handleAdminGoalUpdate(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   goalId: number,
   body: unknown,
   adminUserId: number,
@@ -889,7 +891,7 @@ export async function handleAdminGoalUpdate(
     }
 
     // 2. Fetch existing goal for 404 check and audit diff
-    const existing = await env.DB.prepare(
+    const existing = await db.read.prepare(
       'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
     ).bind(goalId).first<AdminGoalDetail>();
 
@@ -901,7 +903,7 @@ export async function handleAdminGoalUpdate(
     }
 
     // 3. Update
-    await env.DB.prepare(
+    await db.write.prepare(
       'UPDATE goals SET title=?, distance=?, description=?, special=?, image_id=? WHERE id = ?'
     ).bind(title, distance, description, special, imageId, goalId).run();
 
@@ -913,7 +915,7 @@ export async function handleAdminGoalUpdate(
     if (existing.special !== special) changes.special = { old: existing.special, new: special };
     if (existing.image_id !== imageId) changes.image_id = { old: existing.image_id, new: imageId };
 
-    await logAdminAction(env, {
+    await logAdminAction(db, {
       adminUserId,
       action: 'update_goal',
       targetType: 'goal',
@@ -924,7 +926,7 @@ export async function handleAdminGoalUpdate(
     });
 
     // 5. Return updated goal
-    const updated = await env.DB.prepare(
+    const updated = await db.read.prepare(
       'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
     ).bind(goalId).first<AdminGoalDetail>();
 
@@ -959,7 +961,7 @@ export interface CreateGoalRequest {
  */
 export async function handleAdminGoalCreate(
   request: Request,
-  env: { DB: D1Database },
+  db: DbClient,
   body: unknown,
   adminUserId: number,
 ): Promise<Response> {
@@ -1014,7 +1016,7 @@ export async function handleAdminGoalCreate(
     const distanceKm = distanceMiles * 1.60934;
 
     // 3. Parameterized INSERT
-    const insertResult = await env.DB.prepare(
+    const insertResult = await db.write.prepare(
       'INSERT INTO goals (distance, title, description, special, image_id) VALUES (?, ?, ?, ?, ?)'
     ).bind(distanceKm, title, description || null, special, imageId).run();
 
@@ -1029,7 +1031,7 @@ export async function handleAdminGoalCreate(
     }
 
     // 4. Fetch created record
-    const createdGoal = await env.DB.prepare(
+    const createdGoal = await db.read.prepare(
       'SELECT id, title, distance, description, special, image_id FROM goals WHERE id = ?'
     ).bind(newGoalId).first<AdminGoalDetail>();
 
@@ -1042,7 +1044,7 @@ export async function handleAdminGoalCreate(
     }
 
     // 5. Audit log
-    await logAdminAction(env, {
+    await logAdminAction(db, {
       adminUserId,
       action: 'create_goal',
       targetType: 'goal',
@@ -1099,13 +1101,13 @@ export interface ImageInventoryResponse {
  * Cross-references the build-time image manifest against goal image_id assignments.
  * Requires admin authentication (enforced by the route guard in index.ts).
  */
-export async function handleAdminImageInventory(request: Request, env: { DB: D1Database; ASSETS: Fetcher }): Promise<Response> {
+export async function handleAdminImageInventory(request: Request, db: DbClient, assets: Fetcher): Promise<Response> {
   try {
     // 1. Fetch the image manifest via Workers Assets binding
     const manifestUrl = new URL('/img/image-manifest.json', request.url);
     let manifestResponse: Response;
     try {
-      manifestResponse = await env.ASSETS.fetch(new Request(manifestUrl.toString()));
+      manifestResponse = await assets.fetch(new Request(manifestUrl.toString()));
     } catch {
       return new Response(JSON.stringify({ error: 'Image manifest not available — run npm run build:manifest' }), {
         status: 503,
@@ -1132,7 +1134,7 @@ export async function handleAdminImageInventory(request: Request, env: { DB: D1D
     const manifestSlugs = new Set(manifest.images);
 
     // 2. Query all goals with non-null image_id
-    const goalsResult = await env.DB.prepare(
+    const goalsResult = await db.read.prepare(
       'SELECT id, title, image_id FROM goals WHERE image_id IS NOT NULL AND image_id != \'\''
     ).all();
 
@@ -1196,11 +1198,11 @@ export async function handleAdminImageInventory(request: Request, env: { DB: D1D
  * to ensure the log write completes after the response is sent.
  * The function never throws — errors are logged to console.
  */
-export async function logAdminAction(env: { DB: D1Database }, params: AdminActionParams): Promise<void> {
+export async function logAdminAction(db: DbClient, params: AdminActionParams): Promise<void> {
   const { adminUserId, action, targetType, targetId, details, ipAddress, success } = params;
 
   try {
-    await env.DB.prepare(
+    await db.write.prepare(
       `INSERT INTO admin_audit_log (admin_user_id, action, target_type, target_id, details, ip_address, success)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).bind(

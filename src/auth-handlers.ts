@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Legacy handler signatures use `any` for Env and body params; typed Env/body interfaces planned for a dedicated refactoring story */
+/* eslint-disable @typescript-eslint/no-explicit-any -- Legacy handler signatures use `any` for body params; typed body interfaces planned for a dedicated refactoring story */
 // Authentication API handlers
 import {
   generateSalt,
@@ -18,6 +18,7 @@ import {
   isEmailConfirmationTokenExpired,
   generateUniqueFriendCode
 } from './auth-utils';
+import type { DbClient } from './db';
 import { createErrorResponse, createSuccessResponse } from './validators';
 import { sendPasswordResetEmail, sendConfirmationEmail } from './email-utils';
 import { isValidAvatarSlug, VALID_AVATAR_SLUGS } from './avatar-slugs';
@@ -29,7 +30,7 @@ const EMAIL_CONFIRMATION_RATE_LIMIT = 3; // Maximum confirmation emails per hour
 /**
  * Handle user registration
  */
-export async function handleRegister(request: Request, env: any, body: any) {
+export async function handleRegister(request: Request, db: DbClient, body: any, env: Env) {
   const { username, email, password } = body || {};
 
   // Validate required fields
@@ -61,7 +62,7 @@ export async function handleRegister(request: Request, env: any, body: any) {
 
   try {
     // Check if this is the first user
-    const { results: existingUsers } = await env.DB.prepare(
+    const { results: existingUsers } = await db.read.prepare(
       'SELECT COUNT(*) as count FROM users'
     ).all();
     const isFirstUser = existingUsers[0].count === 0;
@@ -71,10 +72,10 @@ export async function handleRegister(request: Request, env: any, body: any) {
     const passwordHash = await hashPassword(password, salt);
 
     // Generate unique friend code
-    const friendCode = await generateUniqueFriendCode(env.DB);
+    const friendCode = await generateUniqueFriendCode(db.read);
 
     // Insert new user (first user is automatically approved and verified)
-    const result = await env.DB.prepare(
+    const result = await db.write.prepare(
       'INSERT INTO users (username, email, password_hash, salt, approved, email_verified, friend_code) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).bind(username, email, passwordHash, salt, 1, isFirstUser ? 1 : 0, friendCode).run();
 
@@ -82,7 +83,7 @@ export async function handleRegister(request: Request, env: any, body: any) {
 
     // If this is the first user, link existing progress entries to them
     if (isFirstUser) {
-      await env.DB.prepare(
+      await db.write.prepare(
         'UPDATE progress SET user_id = ? WHERE user_id IS NULL'
       ).bind(userId).run();
       
@@ -97,7 +98,7 @@ export async function handleRegister(request: Request, env: any, body: any) {
     const token = generateEmailConfirmationToken();
     const expiresAt = getEmailConfirmationExpiry();
 
-    await env.DB.prepare(
+    await db.write.prepare(
       'INSERT INTO email_confirmation_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
     ).bind(userId, token, expiresAt).run();
 
@@ -138,7 +139,7 @@ export async function handleRegister(request: Request, env: any, body: any) {
 /**
  * Handle user login
  */
-export async function handleLogin(request: Request, env: any, body: any) {
+export async function handleLogin(request: Request, db: DbClient, body: any) {
   const { username, password } = body || {};
 
   // Validate required fields
@@ -151,7 +152,7 @@ export async function handleLogin(request: Request, env: any, body: any) {
 
   try {
     // Get user from database
-    const { results } = await env.DB.prepare(
+    const { results } = await db.read.prepare(
       'SELECT id, username, email, password_hash, salt, approved, email_verified FROM users WHERE username = ?'
     ).bind(username).all();
 
@@ -187,7 +188,7 @@ export async function handleLogin(request: Request, env: any, body: any) {
     const sessionId = generateSessionId();
     const expiresAt = getSessionExpiry();
 
-    await env.DB.prepare(
+    await db.write.prepare(
       'INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)'
     ).bind(sessionId, user.id, expiresAt).run();
 
@@ -207,7 +208,7 @@ export async function handleLogin(request: Request, env: any, body: any) {
 /**
  * Handle user logout
  */
-export async function handleLogout(request: Request, env: any, body: any) {
+export async function handleLogout(request: Request, db: DbClient, body: any) {
   const { sessionId } = body || {};
 
   if (!sessionId) {
@@ -215,7 +216,7 @@ export async function handleLogout(request: Request, env: any, body: any) {
   }
 
   try {
-    const result = await env.DB.prepare(
+    const result = await db.write.prepare(
       'DELETE FROM sessions WHERE id = ?'
     ).bind(sessionId).run();
 
@@ -233,7 +234,7 @@ export async function handleLogout(request: Request, env: any, body: any) {
 /**
  * Validate session and return user info
  */
-export async function handleSessionValidation(request: Request, env: any) {
+export async function handleSessionValidation(request: Request, db: DbClient, allowTestAuth?: string) {
   const authHeader = request.headers.get('Authorization');
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -243,7 +244,7 @@ export async function handleSessionValidation(request: Request, env: any) {
   const sessionId = authHeader.substring(7);
 
   // Mock Authentication (TEST ONLY) - Guarded by environment variable
-  if (env.ALLOW_TEST_AUTH === 'true' && sessionId.startsWith('TEST_MOCK_TOKEN_')) {
+  if (allowTestAuth === 'true' && sessionId.startsWith('TEST_MOCK_TOKEN_')) {
     try {
       const username = sessionId.replace('TEST_MOCK_TOKEN_', '');
       
@@ -253,7 +254,7 @@ export async function handleSessionValidation(request: Request, env: any) {
       }
       
       // Check if user exists
-      let { results } = await env.DB.prepare(
+      let { results } = await db.read.prepare(
         'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin, avatar_id FROM users WHERE username = ?'
       ).bind(username).all();
 
@@ -262,14 +263,14 @@ export async function handleSessionValidation(request: Request, env: any) {
         // Create test user (INSERT OR IGNORE to handle concurrent requests)
         const salt = 'test_salt';
         const passwordHash = 'dummy_hash_for_testing'; // Optimized for tests
-        const friendCode = await generateUniqueFriendCode(env.DB);
+        const friendCode = await generateUniqueFriendCode(db.read);
         
-        await env.DB.prepare(
+        await db.write.prepare(
           'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, email_verified, friend_code) VALUES (?, ?, ?, ?, 1, 1, ?)'
         ).bind(username, `${username}@example.com`, passwordHash, salt, friendCode).run();
         
         // Fetch the user (created here or by a concurrent request)
-        const createdUser = await env.DB.prepare(
+        const createdUser = await db.read.prepare(
           'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin, avatar_id FROM users WHERE username = ?'
         ).bind(username).first();
         
@@ -298,7 +299,7 @@ export async function handleSessionValidation(request: Request, env: any) {
   }
 
   try {
-    const { results } = await env.DB.prepare(
+    const { results } = await db.read.prepare(
       'SELECT s.id, s.expires_at, u.id as user_id, u.username, u.email, u.approved, u.show_future_goals_unlocked, u.default_view_map, u.is_admin, u.avatar_id FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
     ).bind(sessionId).all();
 
@@ -311,7 +312,7 @@ export async function handleSessionValidation(request: Request, env: any) {
     // Check if session is expired
     if (isSessionExpired(session.expires_at)) {
       // Delete expired session
-      await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId).run();
+      await db.write.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId).run();
       return createErrorResponse('Session expired', 401);
     }
 
@@ -339,7 +340,7 @@ export async function handleSessionValidation(request: Request, env: any) {
 /**
  * Middleware to extract and validate session from request
  */
-export async function validateSession(request: Request, env: any): Promise<
+export async function validateSession(request: Request, db: DbClient, allowTestAuth?: string): Promise<
   | { valid: true; userId: number }
   | { valid: false; error: Response }
 > {
@@ -355,7 +356,7 @@ export async function validateSession(request: Request, env: any): Promise<
   const sessionId = authHeader.substring(7);
 
   // Mock Authentication (TEST ONLY) - Guarded by environment variable
-  if (env.ALLOW_TEST_AUTH === 'true' && sessionId.startsWith('TEST_MOCK_TOKEN_')) {
+  if (allowTestAuth === 'true' && sessionId.startsWith('TEST_MOCK_TOKEN_')) {
     try {
       const username = sessionId.replace('TEST_MOCK_TOKEN_', '');
       
@@ -368,7 +369,7 @@ export async function validateSession(request: Request, env: any): Promise<
       }
       
       // Check if user exists
-      let { results } = await env.DB.prepare(
+      let { results } = await db.read.prepare(
         'SELECT id, username, email, approved FROM users WHERE username = ?'
       ).bind(username).all();
 
@@ -377,14 +378,14 @@ export async function validateSession(request: Request, env: any): Promise<
         // Create test user (INSERT OR IGNORE to handle concurrent requests)
         const salt = 'test_salt';
         const passwordHash = 'dummy_hash_for_testing'; // Optimized for tests
-        const friendCode = await generateUniqueFriendCode(env.DB);
+        const friendCode = await generateUniqueFriendCode(db.read);
         
-        await env.DB.prepare(
+        await db.write.prepare(
           'INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, email_verified, friend_code) VALUES (?, ?, ?, ?, 1, 1, ?)'
         ).bind(username, `${username}@example.com`, passwordHash, salt, friendCode).run();
         
         // Fetch the user (created here or by a concurrent request)
-        const createdUser = await env.DB.prepare(
+        const createdUser = await db.read.prepare(
           'SELECT id, username, email, approved FROM users WHERE username = ?'
         ).bind(username).first();
         
@@ -396,7 +397,7 @@ export async function validateSession(request: Request, env: any): Promise<
         user = results[0];
       }
 
-      return { valid: true, userId: user.id };
+      return { valid: true, userId: (user as any).id };
     } catch (error: any) {
       console.error('Database error during mock auth:', error);
       return { 
@@ -407,7 +408,7 @@ export async function validateSession(request: Request, env: any): Promise<
   }
 
   try {
-    const { results } = await env.DB.prepare(
+    const { results } = await db.read.prepare(
       'SELECT s.id, s.expires_at, u.id as user_id, u.approved FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ?'
     ).bind(sessionId).all();
 
@@ -422,7 +423,7 @@ export async function validateSession(request: Request, env: any): Promise<
 
     // Check if session is expired
     if (isSessionExpired(session.expires_at)) {
-      await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId).run();
+      await db.write.prepare('DELETE FROM sessions WHERE id = ?').bind(sessionId).run();
       return { 
         valid: false, 
         error: createErrorResponse('Session expired', 401) 
@@ -451,19 +452,19 @@ export async function validateSession(request: Request, env: any): Promise<
  * Middleware to extract, validate session, and verify admin status from request.
  * Returns 401 for unauthenticated, 403 for non-admin.
  */
-export async function validateAdminSession(request: Request, env: any): Promise<
+export async function validateAdminSession(request: Request, db: DbClient, allowTestAuth?: string): Promise<
   | { valid: true; userId: number; isAdmin: true }
   | { valid: false; error: Response }
 > {
   // First validate the session using existing logic
-  const sessionResult = await validateSession(request, env);
+  const sessionResult = await validateSession(request, db, allowTestAuth);
   if (!sessionResult.valid) {
     return sessionResult;
   }
 
   try {
     // Check admin status for the authenticated user
-    const user = await env.DB.prepare(
+    const user = await db.read.prepare(
       'SELECT is_admin FROM users WHERE id = ?'
     ).bind(sessionResult.userId).first();
 
@@ -487,9 +488,9 @@ export async function validateAdminSession(request: Request, env: any): Promise<
 /**
  * Handle user profile update (username and/or email)
  */
-export async function handleUpdateProfile(request: Request, env: any, body: any) {
+export async function handleUpdateProfile(request: Request, db: DbClient, body: any, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -534,14 +535,14 @@ export async function handleUpdateProfile(request: Request, env: any, body: any)
 
     const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
     
-    const result = await env.DB.prepare(query).bind(...values).run();
+    const result = await db.write.prepare(query).bind(...values).run();
 
     if (result.meta.changes === 0) {
       return createErrorResponse('User not found', 404);
     }
 
     // Get updated user info
-    const { results } = await env.DB.prepare(
+    const { results } = await db.read.prepare(
       'SELECT id, username, email FROM users WHERE id = ?'
     ).bind(userId).all();
 
@@ -574,8 +575,8 @@ export async function handleUpdateProfile(request: Request, env: any, body: any)
 /**
  * Return the list of valid avatar slugs (requires authentication)
  */
-export async function handleGetAvatars(request: Request, env: any) {
-  const sessionValidation = await validateSession(request, env);
+export async function handleGetAvatars(request: Request, db: DbClient, allowTestAuth?: string) {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -586,9 +587,9 @@ export async function handleGetAvatars(request: Request, env: any) {
 /**
  * Handle user preferences update (e.g., goal visibility, default view)
  */
-export async function handleUpdatePreferences(request: Request, env: any, body: any) {
+export async function handleUpdatePreferences(request: Request, db: DbClient, body: any, allowTestAuth?: string) {
   // Validate session
-  const sessionValidation = await validateSession(request, env);
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
     return sessionValidation.error;
   }
@@ -637,7 +638,7 @@ export async function handleUpdatePreferences(request: Request, env: any, body: 
     values.push(userId);
 
     const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
-    await env.DB.prepare(query).bind(...values).run();
+    await db.write.prepare(query).bind(...values).run();
 
     const response: Record<string, boolean | string | null> = {};
     if (hasShowFutureGoals) response.showFutureGoalsUnlocked = showFutureGoalsUnlocked;
@@ -654,7 +655,7 @@ export async function handleUpdatePreferences(request: Request, env: any, body: 
 /**
  * Handle password reset request - generates a reset token
  */
-export async function handlePasswordResetRequest(request: Request, env: any, body: any) {
+export async function handlePasswordResetRequest(request: Request, db: DbClient, body: any, env: Env) {
   const { email } = body || {};
 
   // Validate required field
@@ -669,7 +670,7 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
 
   try {
     // Get user from database
-    const { results } = await env.DB.prepare(
+    const { results } = await db.read.prepare(
       'SELECT id, username, email FROM users WHERE email = ?'
     ).bind(email).all();
 
@@ -684,7 +685,7 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
     const user = results[0] as any;
 
     // Rate limiting: Check recent reset requests
-    const { results: recentRequests } = await env.DB.prepare(
+    const { results: recentRequests } = await db.read.prepare(
       `SELECT count(*) as count FROM password_reset_tokens 
        WHERE user_id = ? AND created_at > datetime('now', '-1 hour')`
     ).bind(user.id).all();
@@ -699,7 +700,7 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
 
     // Cleanup expired/used tokens
     try {
-      await env.DB.prepare(
+      await db.write.prepare(
         'DELETE FROM password_reset_tokens WHERE expires_at < ? OR used = 1'
       ).bind(new Date().toISOString()).run();
     } catch (cleanupError) {
@@ -712,7 +713,7 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
     const expiresAt = getPasswordResetExpiry();
 
     // Store reset token in database
-    await env.DB.prepare(
+    await db.write.prepare(
       'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
     ).bind(user.id, token, expiresAt).run();
 
@@ -744,7 +745,7 @@ export async function handlePasswordResetRequest(request: Request, env: any, bod
 /**
  * Handle password reset - verify token and set new password
  */
-export async function handlePasswordReset(request: Request, env: any, body: any) {
+export async function handlePasswordReset(request: Request, db: DbClient, body: any) {
   const { token, password } = body || {};
 
   // Validate required fields
@@ -763,7 +764,7 @@ export async function handlePasswordReset(request: Request, env: any, body: any)
 
   try {
     // Get token from database
-    const { results } = await env.DB.prepare(
+    const { results } = await db.read.prepare(
       'SELECT id, user_id, expires_at, used FROM password_reset_tokens WHERE token = ?'
     ).bind(token).all();
 
@@ -788,17 +789,17 @@ export async function handlePasswordReset(request: Request, env: any, body: any)
     const passwordHash = await hashPassword(password, salt);
 
     // Update user's password
-    await env.DB.prepare(
+    await db.write.prepare(
       'UPDATE users SET password_hash = ?, salt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
     ).bind(passwordHash, salt, resetToken.user_id).run();
 
     // Mark token as used
-    await env.DB.prepare(
+    await db.write.prepare(
       'UPDATE password_reset_tokens SET used = 1 WHERE id = ?'
     ).bind(resetToken.id).run();
 
     // Invalidate all existing sessions for this user (force re-login)
-    await env.DB.prepare(
+    await db.write.prepare(
       'DELETE FROM sessions WHERE user_id = ?'
     ).bind(resetToken.user_id).run();
 
@@ -814,7 +815,7 @@ export async function handlePasswordReset(request: Request, env: any, body: any)
 /**
  * Handle email confirmation - verify token and activate account
  */
-export async function handleConfirmEmail(request: Request, env: any) {
+export async function handleConfirmEmail(request: Request, db: DbClient) {
   const url = new URL(request.url);
   const token = url.searchParams.get('token');
   const origin = new URL(request.url).origin;
@@ -825,7 +826,7 @@ export async function handleConfirmEmail(request: Request, env: any) {
 
   try {
     // Get token from database
-    const { results } = await env.DB.prepare(
+    const { results } = await db.read.prepare(
       'SELECT id, user_id, expires_at FROM email_confirmation_tokens WHERE token = ?'
     ).bind(token).all();
 
@@ -838,7 +839,7 @@ export async function handleConfirmEmail(request: Request, env: any) {
     // Check if token is expired
     if (isEmailConfirmationTokenExpired(confirmToken.expires_at)) {
       // Clean up expired token
-      await env.DB.prepare(
+      await db.write.prepare(
         'DELETE FROM email_confirmation_tokens WHERE id = ?'
       ).bind(confirmToken.id).run();
       
@@ -846,12 +847,12 @@ export async function handleConfirmEmail(request: Request, env: any) {
     }
 
     // Update user's email_verified status
-    await env.DB.prepare(
+    await db.write.prepare(
       'UPDATE users SET email_verified = 1 WHERE id = ?'
     ).bind(confirmToken.user_id).run();
 
     // Delete used token
-    await env.DB.prepare(
+    await db.write.prepare(
       'DELETE FROM email_confirmation_tokens WHERE id = ?'
     ).bind(confirmToken.id).run();
 
@@ -866,7 +867,7 @@ export async function handleConfirmEmail(request: Request, env: any) {
 /**
  * Handle resend confirmation email
  */
-export async function handleResendConfirmation(request: Request, env: any, body: any) {
+export async function handleResendConfirmation(request: Request, db: DbClient, body: any, env: Env) {
   const { email } = body || {};
 
   if (!email) {
@@ -879,7 +880,7 @@ export async function handleResendConfirmation(request: Request, env: any, body:
 
   try {
     // Get user from database
-    const { results } = await env.DB.prepare(
+    const { results } = await db.read.prepare(
       'SELECT id, username, email, email_verified FROM users WHERE email = ?'
     ).bind(email).all();
 
@@ -894,7 +895,7 @@ export async function handleResendConfirmation(request: Request, env: any, body:
     const user = results[0] as any;
 
     // Rate limiting: Check recent confirmation requests
-    const { results: recentRequests } = await env.DB.prepare(
+    const { results: recentRequests } = await db.read.prepare(
       `SELECT count(*) as count FROM email_confirmation_tokens 
        WHERE user_id = ? AND created_at > datetime('now', '-1 hour')`
     ).bind(user.id).all();
@@ -909,7 +910,7 @@ export async function handleResendConfirmation(request: Request, env: any, body:
 
     // Delete old confirmation tokens for this user that are older than 24 hours
     // We keep recent ones to maintain the rate limit history window (1 hour)
-    await env.DB.prepare(
+    await db.write.prepare(
       "DELETE FROM email_confirmation_tokens WHERE user_id = ? AND created_at < datetime('now', '-24 hours')"
     ).bind(user.id).run();
 
@@ -917,7 +918,7 @@ export async function handleResendConfirmation(request: Request, env: any, body:
     const token = generateEmailConfirmationToken();
     const expiresAt = getEmailConfirmationExpiry();
 
-    await env.DB.prepare(
+    await db.write.prepare(
       'INSERT INTO email_confirmation_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
     ).bind(user.id, token, expiresAt).run();
 

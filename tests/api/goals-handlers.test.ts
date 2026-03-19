@@ -1,15 +1,14 @@
 import { handleGoalsGet, calculateTotalDistance } from '../../src/goals-handlers';
+import { DbClient } from '../../src/db';
 
 describe('Goals Handlers', () => {
-  let mockEnv: any;
+  let mockDB: any;
+  let mockDb: DbClient;
   let mockRequest: Request;
 
   beforeEach(() => {
-    mockEnv = {
-      DB: {
-        prepare: jest.fn()
-      }
-    };
+    mockDB = { prepare: jest.fn() };
+    mockDb = { read: mockDB as unknown as D1Database, write: mockDB as unknown as D1Database };
     
     // Mock request with auth header
     mockRequest = new Request('https://example.com', {
@@ -27,7 +26,7 @@ describe('Goals Handlers', () => {
       ];
 
       // Mock session validation
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn(() => Promise.resolve({
             results: [{
@@ -41,13 +40,13 @@ describe('Goals Handlers', () => {
       });
 
       // Mock goals query
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         all: jest.fn(() => Promise.resolve({
           results: mockResults
         }))
       });
 
-      const response = await handleGoalsGet(mockRequest, mockEnv);
+      const response = await handleGoalsGet(mockRequest, mockDb);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -56,7 +55,7 @@ describe('Goals Handlers', () => {
 
     it('should handle database errors', async () => {
       // Mock session validation
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           all: jest.fn(() => Promise.resolve({
             results: [{
@@ -70,11 +69,11 @@ describe('Goals Handlers', () => {
       });
       
       // Mock goals query to fail
-      mockEnv.DB.prepare.mockReturnValueOnce({
+      mockDB.prepare.mockReturnValueOnce({
         all: jest.fn(() => Promise.reject(new Error('Database connection failed')))
       });
 
-      const response = await handleGoalsGet(mockRequest, mockEnv);
+      const response = await handleGoalsGet(mockRequest, mockDb);
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -83,7 +82,7 @@ describe('Goals Handlers', () => {
 
     it('should reject requests without authentication', async () => {
       const unauthRequest = new Request('https://example.com');
-      const response = await handleGoalsGet(unauthRequest, mockEnv);
+      const response = await handleGoalsGet(unauthRequest, mockDb);
       const data = await response.json();
 
       expect(response.status).toBe(401);
@@ -99,7 +98,7 @@ describe('Goals Handlers', () => {
         { distance: 1.3 }
       ];
 
-      mockEnv.DB.prepare.mockReturnValue({
+      mockDB.prepare.mockReturnValue({
         bind: jest.fn().mockReturnValue({
           all: jest.fn(() => Promise.resolve({
             results: mockResults
@@ -107,14 +106,14 @@ describe('Goals Handlers', () => {
         })
       });
 
-      const total = await calculateTotalDistance(mockEnv, 1);
+      const total = await calculateTotalDistance(mockDb, 1);
 
       expect(total).toBe(10); // 5.5 + 3.2 + 1.3 = 10
-      expect(mockEnv.DB.prepare).toHaveBeenCalledWith("SELECT * FROM progress WHERE user_id = ?");
+      expect(mockDB.prepare).toHaveBeenCalledWith("SELECT * FROM progress WHERE user_id = ?");
     });
 
     it('should return 0 for no progress entries', async () => {
-      mockEnv.DB.prepare.mockReturnValue({
+      mockDB.prepare.mockReturnValue({
         bind: jest.fn().mockReturnValue({
           all: jest.fn(() => Promise.resolve({
             results: []
@@ -122,7 +121,7 @@ describe('Goals Handlers', () => {
         })
       });
 
-      const total = await calculateTotalDistance(mockEnv, 1);
+      const total = await calculateTotalDistance(mockDb, 1);
 
       expect(total).toBe(0);
     });
@@ -134,7 +133,7 @@ describe('Goals Handlers', () => {
         { distance: 3.333 }
       ];
 
-      mockEnv.DB.prepare.mockReturnValue({
+      mockDB.prepare.mockReturnValue({
         bind: jest.fn().mockReturnValue({
           all: jest.fn(() => Promise.resolve({
             results: mockResults
@@ -142,7 +141,7 @@ describe('Goals Handlers', () => {
         })
       });
 
-      const total = await calculateTotalDistance(mockEnv, 1);
+      const total = await calculateTotalDistance(mockDb, 1);
 
       expect(total).toBe(6.67); // Should be rounded to 2 decimal places
     });

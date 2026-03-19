@@ -1,4 +1,5 @@
 import { handleAdminGoalCreate } from '../../src/admin-handlers';
+import { DbClient } from '../../src/db';
 
 // Mock auth-utils (required since admin-handlers transitively relies on auth exports)
 jest.mock('../../src/auth-utils', () => ({
@@ -25,7 +26,8 @@ jest.mock('../../src/email-utils', () => ({
 }));
 
 describe('Admin Goal Create Handler (Story 4.6)', () => {
-  let mockEnv: { DB: { prepare: jest.Mock } };
+  let mockDB: { prepare: jest.Mock };
+  let mockDb: DbClient;
   let mockRequest: { headers: { get: jest.Mock }; url: string };
   let originalConsoleError: typeof console.error;
 
@@ -34,9 +36,8 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     originalConsoleError = console.error;
     console.error = jest.fn();
 
-    mockEnv = {
-      DB: { prepare: jest.fn() },
-    };
+    mockDB = { prepare: jest.fn() };
+    mockDb = { read: mockDB as unknown as D1Database, write: mockDB as unknown as D1Database };
 
     mockRequest = {
       headers: { get: jest.fn().mockReturnValue(null) },
@@ -62,7 +63,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
         run: jest.fn().mockResolvedValue(call.run ?? { meta: { changes: 1, last_row_id: 99 } }),
         all: jest.fn().mockResolvedValue({ results: call.all ?? [] }),
       });
-      mockEnv.DB.prepare.mockReturnValueOnce({ bind: mockBind });
+      mockDB.prepare.mockReturnValueOnce({ bind: mockBind });
     });
   }
 
@@ -94,7 +95,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
 
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         validBody,
         1
       );
@@ -114,22 +115,22 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, distance_miles: 100 },
         1
       );
 
       // Verify the INSERT bind args
-      const insertCall = mockEnv.DB.prepare.mock.calls[0];
+      const insertCall = mockDB.prepare.mock.calls[0];
       expect(insertCall[0]).toContain('INSERT INTO goals');
-      const bindArgs = mockEnv.DB.prepare.mock.results[0].value.bind.mock.calls[0];
+      const bindArgs = mockDB.prepare.mock.results[0].value.bind.mock.calls[0];
       expect(bindArgs[0]).toBeCloseTo(160.934, 2); // 100 * 1.60934
     });
 
     it('should return 400 for missing title', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, title: '' },
         1
       );
@@ -142,7 +143,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for empty-after-trim title', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, title: '   ' },
         1
       );
@@ -155,7 +156,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for missing distance', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, distance_miles: undefined },
         1
       );
@@ -168,7 +169,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for negative distance', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, distance_miles: -5 },
         1
       );
@@ -181,7 +182,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for zero distance', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, distance_miles: 0 },
         1
       );
@@ -194,7 +195,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for non-number distance', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, distance_miles: 'abc' },
         1
       );
@@ -207,7 +208,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for invalid image_id format', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, image_id: 'Invalid Slug!' },
         1
       );
@@ -220,7 +221,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for image_id with uppercase', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, image_id: 'Rivendell' },
         1
       );
@@ -239,7 +240,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
 
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, image_id: 'camp-under-oak' },
         1
       );
@@ -256,7 +257,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
 
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, special: 'A special event', image_id: 'weathertop' },
         1
       );
@@ -276,13 +277,13 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, special: '', image_id: '  ' },
         1
       );
 
       // Verify the INSERT was called with null for special and image_id
-      const bindArgs = mockEnv.DB.prepare.mock.results[0].value.bind.mock.calls[0];
+      const bindArgs = mockDB.prepare.mock.results[0].value.bind.mock.calls[0];
       expect(bindArgs[3]).toBeNull(); // special
       expect(bindArgs[4]).toBeNull(); // image_id
     });
@@ -296,12 +297,12 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, description: '' },
         1
       );
 
-      const bindArgs = mockEnv.DB.prepare.mock.results[0].value.bind.mock.calls[0];
+      const bindArgs = mockDB.prepare.mock.results[0].value.bind.mock.calls[0];
       expect(bindArgs[2]).toBeNull(); // description (empty -> null)
     });
 
@@ -314,15 +315,15 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
 
       await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         validBody,
         7
       );
 
       // Verify the audit log INSERT was called
-      const auditCall = mockEnv.DB.prepare.mock.calls[2];
+      const auditCall = mockDB.prepare.mock.calls[2];
       expect(auditCall[0]).toContain('INSERT INTO admin_audit_log');
-      const auditBindArgs = mockEnv.DB.prepare.mock.results[2].value.bind.mock.calls[0];
+      const auditBindArgs = mockDB.prepare.mock.results[2].value.bind.mock.calls[0];
       expect(auditBindArgs[0]).toBe(7);              // adminUserId
       expect(auditBindArgs[1]).toBe('create_goal');   // action
       expect(auditBindArgs[2]).toBe('goal');           // targetType
@@ -334,13 +335,13 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     });
 
     it('should return 500 on database error', async () => {
-      mockEnv.DB.prepare.mockImplementation(() => {
+      mockDB.prepare.mockImplementation(() => {
         throw new Error('DB down');
       });
 
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         validBody,
         1
       );
@@ -353,7 +354,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for Infinity distance', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, distance_miles: Infinity },
         1
       );
@@ -366,7 +367,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for negative Infinity distance', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, distance_miles: -Infinity },
         1
       );
@@ -379,7 +380,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for null body', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         null,
         1
       );
@@ -392,7 +393,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for undefined body', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         undefined,
         1
       );
@@ -405,7 +406,7 @@ describe('Admin Goal Create Handler (Story 4.6)', () => {
     it('should return 400 for boolean distance_miles', async () => {
       const res = await handleAdminGoalCreate(
         mockRequest as unknown as Request,
-        mockEnv,
+        mockDb,
         { ...validBody, distance_miles: true },
         1
       );

@@ -65,6 +65,7 @@ import { renderAdminGoalEditPage } from "./renderAdminGoalEditPage";
 import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 import { renderAdminUsersPage } from "./renderAdminUsersPage";
 import { renderAdminMetricsPage } from "./renderAdminMetricsPage";
+import { createDbClient } from './db';
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -100,6 +101,8 @@ export default {
         return assetResponse;
       }
     }
+
+    const db = createDbClient(env.DB);
 
     // Validate HTTP method for API endpoints
     if (url.pathname.startsWith("/api/")) {
@@ -139,65 +142,65 @@ export default {
     if (url.pathname.startsWith("/api/")) {
       // Public authentication endpoints (no session required)
       if (url.pathname === "/api/register" && method === "POST") {
-        return handleRegister(request, env, body);
+        return handleRegister(request, db, body, env);
       } else if (url.pathname === "/api/login" && method === "POST") {
-        return handleLogin(request, env, body);
+        return handleLogin(request, db, body);
       } else if (url.pathname === "/api/logout" && method === "POST") {
-        return handleLogout(request, env, body);
+        return handleLogout(request, db, body);
       } else if (url.pathname === "/api/session" && method === "GET") {
-        return handleSessionValidation(request, env);
+        return handleSessionValidation(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/profile" && method === "PUT") {
-        return handleUpdateProfile(request, env, body);
+        return handleUpdateProfile(request, db, body, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/user/preferences" && method === "PUT") {
-        return handleUpdatePreferences(request, env, body);
+        return handleUpdatePreferences(request, db, body, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/avatars" && method === "GET") {
-        return handleGetAvatars(request, env);
+        return handleGetAvatars(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/password-reset-request" && method === "POST") {
-        return handlePasswordResetRequest(request, env, body);
+        return handlePasswordResetRequest(request, db, body, env);
       } else if (url.pathname === "/api/password-reset" && method === "POST") {
-        return handlePasswordReset(request, env, body);
+        return handlePasswordReset(request, db, body);
       } else if (url.pathname === "/api/auth/confirm-email" && method === "GET") {
-        return handleConfirmEmail(request, env);
+        return handleConfirmEmail(request, db);
       } else if (url.pathname === "/api/auth/resend-confirmation" && method === "POST") {
-        return handleResendConfirmation(request, env, body);
+        return handleResendConfirmation(request, db, body, env);
       }
       
       // Protected endpoints (authentication required)
       // Admin API endpoints (admin authentication required)
       if (url.pathname.startsWith("/api/admin/")) {
-        const adminValidation = await validateAdminSession(request, env);
+        const adminValidation = await validateAdminSession(request, db, env.ALLOW_TEST_AUTH);
         if (!adminValidation.valid) return adminValidation.error;
 
         // Admin API endpoints (Story 4.2+)
         if (url.pathname === "/api/admin/dashboard" && method === "GET") {
-          return handleAdminDashboard(request, env);
+          return handleAdminDashboard(request, db);
         }
 
         if (url.pathname === "/api/admin/users" && method === "GET") {
-          return handleAdminUsersList(request, env);
+          return handleAdminUsersList(request, db);
         }
 
         if (url.pathname === "/api/admin/metrics" && method === "GET") {
-          return handleAdminMetricsSummary(request, env);
+          return handleAdminMetricsSummary(request, db);
         }
         if (url.pathname === "/api/admin/metrics/leaderboard" && method === "GET") {
-          return handleAdminMetricsLeaderboard(request, env);
+          return handleAdminMetricsLeaderboard(request, db);
         }
         if (url.pathname === "/api/admin/metrics/timeline" && method === "GET") {
-          return handleAdminMetricsTimeline(request, env);
+          return handleAdminMetricsTimeline(request, db);
         }
 
         // Admin Goals List (Story 4.3) / Create (Story 4.6)
         if (url.pathname === "/api/admin/goals" && method === "GET") {
-          return handleAdminGoalsList(request, env);
+          return handleAdminGoalsList(request, db);
         }
         if (url.pathname === "/api/admin/goals" && method === "POST") {
-          return handleAdminGoalCreate(request, env, body, adminValidation.userId);
+          return handleAdminGoalCreate(request, db, body, adminValidation.userId);
         }
 
         // Admin Image Inventory (Story 4.5)
         if (url.pathname === "/api/admin/images" && method === "GET") {
-          return handleAdminImageInventory(request, env);
+          return handleAdminImageInventory(request, db, env.ASSETS);
         }
 
         // Admin Goal Detail / Update (Story 4.4)
@@ -207,8 +210,8 @@ export default {
           if (!Number.isInteger(goalId) || goalId <= 0 || String(goalId) !== adminGoalParams.id) {
             return createErrorResponse('Invalid goal ID', 400);
           }
-          if (method === 'GET') return handleAdminGoalGet(request, env, goalId);
-          if (method === 'PUT') return handleAdminGoalUpdate(request, env, goalId, body, adminValidation.userId);
+          if (method === 'GET') return handleAdminGoalGet(request, db, goalId);
+          if (method === 'PUT') return handleAdminGoalUpdate(request, db, goalId, body, adminValidation.userId);
         }
 
         const adminUserVerifyParams = matchRoute(url.pathname, '/api/admin/users/:id/verify');
@@ -217,7 +220,7 @@ export default {
           if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserVerifyParams.id) {
             return createErrorResponse('Invalid user ID', 400);
           }
-          if (method === 'PUT') return handleAdminUserVerify(request, env, userId, adminValidation.userId);
+          if (method === 'PUT') return handleAdminUserVerify(request, db, userId, adminValidation.userId);
         }
 
         const adminUserResetParams = matchRoute(url.pathname, '/api/admin/users/:id/reset');
@@ -226,7 +229,7 @@ export default {
           if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserResetParams.id) {
             return createErrorResponse('Invalid user ID', 400);
           }
-          if (method === 'PUT') return handleAdminUserResetPassword(request, env, userId, adminValidation.userId);
+          if (method === 'PUT') return handleAdminUserResetPassword(request, db, userId, adminValidation.userId, env.RESEND_API_KEY);
         }
 
         const adminUserToggleAdminParams = matchRoute(url.pathname, '/api/admin/users/:id/admin');
@@ -235,7 +238,7 @@ export default {
           if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserToggleAdminParams.id) {
             return createErrorResponse('Invalid user ID', 400);
           }
-          if (method === 'PUT') return handleAdminUserToggleAdmin(request, env, userId, adminValidation.userId);
+          if (method === 'PUT') return handleAdminUserToggleAdmin(request, db, userId, adminValidation.userId);
         }
 
         const adminUserParams = matchRoute(url.pathname, '/api/admin/users/:id');
@@ -244,7 +247,7 @@ export default {
           if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserParams.id) {
             return createErrorResponse('Invalid user ID', 400);
           }
-          if (method === 'DELETE') return handleAdminUserDelete(request, env, userId, body, adminValidation.userId);
+          if (method === 'DELETE') return handleAdminUserDelete(request, db, userId, body, adminValidation.userId);
         }
 
         return new Response(JSON.stringify({ error: 'Admin API endpoint not found' }), {
@@ -255,17 +258,17 @@ export default {
 
       // Party (Fellowship) endpoints
       if (url.pathname === "/api/party" && method === "POST") {
-        return handleCreateParty(request, env, body!);
+        return handleCreateParty(request, db, body!);
       }
 
       // GET /api/user/parties — list user's party memberships (auth required)
       if (url.pathname === "/api/user/parties" && method === "GET") {
-        return handleGetUserParties(request, env);
+        return handleGetUserParties(request, db);
       }
 
       // GET /api/user/fellowship-invites — list pending fellowship invites
       if (url.pathname === "/api/user/fellowship-invites" && method === "GET") {
-        return handleGetFellowshipInvites(request, env);
+        return handleGetFellowshipInvites(request, db);
       }
 
       // POST /api/user/fellowship-invites/:inviteId/accept
@@ -279,7 +282,7 @@ export default {
         ) {
           return createErrorResponse('Invalid invite ID', 400);
         }
-        return handleAcceptFellowshipInvite(request, env, inviteId);
+        return handleAcceptFellowshipInvite(request, db, inviteId);
       }
 
       // POST /api/user/fellowship-invites/:inviteId/reject
@@ -293,16 +296,16 @@ export default {
         ) {
           return createErrorResponse('Invalid invite ID', 400);
         }
-        return handleRejectFellowshipInvite(request, env, inviteId);
+        return handleRejectFellowshipInvite(request, db, inviteId);
       }
 
       // Parameterized party routes
       const joinParams = matchRoute(url.pathname, '/api/party/join/:inviteCode');
       if (joinParams) {
         if (method === "GET") {
-          return handlePreviewParty(request, env, joinParams.inviteCode);
+          return handlePreviewParty(request, db, joinParams.inviteCode);
         } else if (method === "POST") {
-          return handleJoinParty(request, env, joinParams.inviteCode);
+          return handleJoinParty(request, db, joinParams.inviteCode);
         }
       }
 
@@ -316,10 +319,10 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleRegenerateInvite(request, env, partyId);
+        return handleRegenerateInvite(request, db, partyId);
       }
 
-      // POST /api/party/:id/invite-friend — invite an accepted friend to a party
+      // POST /api/party/:id/invite-friend— invite an accepted friend to a party
       const inviteFriendParams = matchRoute(url.pathname, '/api/party/:id/invite-friend');
       if (inviteFriendParams && method === "POST") {
         const partyId = Number.parseInt(inviteFriendParams.id, 10);
@@ -330,7 +333,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleInviteFriend(request, env, partyId, body!);
+        return handleInviteFriend(request, db, partyId, body!);
       }
 
       // GET /api/party/:id/progress — party progress calculation
@@ -344,10 +347,10 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handlePartyProgress(request, env, partyId);
+        return handlePartyProgress(request, db, partyId);
       }
 
-      // GET /api/party/:id/activity — party activity feed
+      // GET /api/party/:id/activity— party activity feed
       const activityParams = matchRoute(url.pathname, '/api/party/:id/activity');
       if (activityParams && method === "GET") {
         const partyId = Number.parseInt(activityParams.id, 10);
@@ -358,10 +361,10 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handlePartyActivity(request, env, partyId);
+        return handlePartyActivity(request, db, partyId);
       }
 
-      // POST /api/party/:id/messages — send a message to party feed
+      // POST /api/party/:id/messages— send a message to party feed
       const messagesParams = matchRoute(url.pathname, '/api/party/:id/messages');
       if (messagesParams && method === "POST") {
         const partyId = Number.parseInt(messagesParams.id, 10);
@@ -372,7 +375,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleSendPartyMessage(request, env, partyId, body!);
+        return handleSendPartyMessage(request, db, partyId, body!);
       }
 
       // POST /api/party/:id/leave — leave party
@@ -386,7 +389,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleLeaveParty(request, env, partyId);
+        return handleLeaveParty(request, db, partyId);
       }
 
       // POST /api/party/:id/kick/:userId — kick member (leader only)
@@ -408,7 +411,7 @@ export default {
         ) {
           return createErrorResponse('Invalid user ID', 400);
         }
-        return handleKickMember(request, env, partyId, targetUserId, body!);
+        return handleKickMember(request, db, partyId, targetUserId, body!);
       }
 
       // PUT /api/party/:id/settings — update party settings (leader only)
@@ -422,7 +425,7 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleUpdatePartySettings(request, env, partyId, body!);
+        return handleUpdatePartySettings(request, db, partyId, body!);
       }
 
       // POST /api/party/:id/transfer-leadership — transfer leadership (leader only)
@@ -436,33 +439,33 @@ export default {
         ) {
           return createErrorResponse('Invalid party ID', 400);
         }
-        return handleTransferLeadership(request, env, partyId, body!);
+        return handleTransferLeadership(request, db, partyId, body!);
       }
 
       // Friends (Social) endpoints — exact routes first, then parameterized
       if (url.pathname === "/api/friends" && method === "GET") {
-        return handleGetFriends(request, env);
+        return handleGetFriends(request, db);
       }
       if (url.pathname === "/api/friends/pending" && method === "GET") {
-        return handleGetPendingFriends(request, env);
+        return handleGetPendingFriends(request, db);
       }
       if (url.pathname === "/api/friends/search" && method === "GET") {
-        return handleSearchUsers(request, env);
+        return handleSearchUsers(request, db);
       }
       if (url.pathname === "/api/friends/request" && method === "POST") {
-        return handleFriendRequest(request, env, body!);
+        return handleFriendRequest(request, db, body!);
       }
       if (url.pathname === "/api/friends/request/code" && method === "POST") {
-        return handleFriendRequestByCode(request, env, body!);
+        return handleFriendRequestByCode(request, db, body!);
       }
       if (url.pathname === "/api/friends/positions" && method === "GET") {
-        return handleFriendPositions(request, env);
+        return handleFriendPositions(request, db);
       }
 
       // Parameterized friend routes — resolve before friendshipId routes
       const resolveParams = matchRoute(url.pathname, '/api/friends/resolve/:friendCode');
       if (resolveParams && method === "GET") {
-        return handleResolveFriendCode(request, env, resolveParams.friendCode);
+        return handleResolveFriendCode(request, db, resolveParams.friendCode);
       }
 
       // GET /api/friends/:userId/profile — friend profile (before generic :friendshipId routes)
@@ -472,7 +475,7 @@ export default {
         if (!Number.isInteger(profileUserId) || profileUserId <= 0 || String(profileUserId) !== profileParams.userId) {
           return createErrorResponse('Invalid user ID', 400);
         }
-        return handleGetFriendProfile(request, env, profileUserId);
+        return handleGetFriendProfile(request, db, profileUserId);
       }
 
       const acceptParams= matchRoute(url.pathname, '/api/friends/:friendshipId/accept');
@@ -481,16 +484,16 @@ export default {
         if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== acceptParams.friendshipId) {
           return createErrorResponse('Invalid friendship ID', 400);
         }
-        return handleAcceptFriend(request, env, friendshipId);
+        return handleAcceptFriend(request, db, friendshipId);
       }
 
-      const rejectParams = matchRoute(url.pathname, '/api/friends/:friendshipId/reject');
+      const rejectParams= matchRoute(url.pathname, '/api/friends/:friendshipId/reject');
       if (rejectParams && method === "POST") {
         const friendshipId = Number.parseInt(rejectParams.friendshipId, 10);
         if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== rejectParams.friendshipId) {
           return createErrorResponse('Invalid friendship ID', 400);
         }
-        return handleRejectFriend(request, env, friendshipId);
+        return handleRejectFriend(request, db, friendshipId);
       }
 
       // DELETE /api/friends/:friendshipId — unfriend
@@ -500,29 +503,29 @@ export default {
         if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== unfriendParams.friendshipId) {
           return createErrorResponse('Invalid friendship ID', 400);
         }
-        return handleUnfriend(request, env, friendshipId);
+        return handleUnfriend(request, db, friendshipId);
       }
 
       // CRUD for calendar events
       if (url.pathname === "/api/calendar-progress" && method === "POST") {
-        return handleProgressPost(request, env, body!);
+        return handleProgressPost(request, db, body!);
       } else if (url.pathname === "/api/calendar-progress" && method === "PUT") {
-        return handleProgressPut(request, env, body!);
+        return handleProgressPut(request, db, body!);
       } else if (url.pathname === "/api/calendar-progress" && method === "DELETE") {
-        return handleProgressDelete(request, env, body!);
+        return handleProgressDelete(request, db, body!);
       } else if (url.pathname === "/api/calendar-progress") {
-        return handleProgressGet(request, env);
+        return handleProgressGet(request, db);
       } else if (url.pathname === "/api/goals") {
-        return handleGoalsGet(request, env);
+        return handleGoalsGet(request, db);
       } else if (url.pathname === "/api/total-distance") {
         // Validate session first
-        const sessionValidation = await validateSession(request, env);
+        const sessionValidation = await validateSession(request, db, env.ALLOW_TEST_AUTH);
         if (!sessionValidation.valid) {
           return sessionValidation.error;
         }
         
         try {
-          const totalDistance = await calculateTotalDistance(env, sessionValidation.userId!);
+          const totalDistance = await calculateTotalDistance(db, sessionValidation.userId!);
           return new Response(JSON.stringify({ totalDistance }), {
             headers: { "content-type": "application/json" },
           });
