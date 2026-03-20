@@ -1,6 +1,6 @@
 # Story 8.1: Unified Preact Signal Global Store
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
