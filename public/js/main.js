@@ -69,9 +69,9 @@ async function logout() {
 window.getAuthHeaders = getAuthHeaders;
 window.logout = logout;
 
-// Initialize global user preferences (default: unlocked, journey view)
+// Initialize global user preferences (default: locked, journey view)
 window.userPreferences = window.userPreferences || {
-  showFutureGoalsUnlocked: true,
+  showFutureGoalsUnlocked: false,
   defaultViewMap: false
 };
 

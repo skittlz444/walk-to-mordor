@@ -174,4 +174,66 @@ describe('UpcomingGoalCard', () => {
     // Distance to go should also show 2 decimal places using the same rounding logic as the component
     expect(container.textContent).toContain(`${expectedRemaining} km to go`);
   });
+
+  // --- Story 9.1: Locked Milestone Card Previews ---
+
+  it('locked=true adds goal-locked-interactive class', () => {
+    const { container } = render(
+      <UpcomingGoalCard
+        goal={mockGoal}
+        currentDistance={50}
+        locked={true}
+        onClick={() => {}}
+      />
+    );
+
+    const card = container.querySelector('.goal-locked-interactive');
+    expect(card).toBeTruthy();
+  });
+
+  it('locked=true shows lock icon', () => {
+    const { container } = render(
+      <UpcomingGoalCard
+        goal={mockGoal}
+        currentDistance={50}
+        locked={true}
+        onClick={() => {}}
+      />
+    );
+
+    const lockIcon = container.querySelector('.fas.fa-lock');
+    expect(lockIcon).toBeTruthy();
+  });
+
+  it('locked=true card is still clickable', () => {
+    const handleClick = vi.fn();
+    const { container } = render(
+      <UpcomingGoalCard
+        goal={mockGoal}
+        currentDistance={50}
+        locked={true}
+        onClick={handleClick}
+      />
+    );
+
+    const card = container.querySelector('.upcoming-goal');
+    card?.click();
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('locked=false (default) has no lock styling', () => {
+    const { container } = render(
+      <UpcomingGoalCard
+        goal={mockGoal}
+        currentDistance={50}
+        onClick={() => {}}
+      />
+    );
+
+    const lockedCard = container.querySelector('.goal-locked-interactive');
+    expect(lockedCard).toBeNull();
+
+    const lockIcon = container.querySelector('.fas.fa-lock');
+    expect(lockIcon).toBeNull();
+  });
 });

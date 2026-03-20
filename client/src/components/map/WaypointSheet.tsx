@@ -13,9 +13,10 @@ export interface WaypointSheetProps {
   waypoint: Waypoint;
   onClose: () => void;
   onExpand: (waypointId: number) => void;
+  locked?: boolean;
 }
 
-export function WaypointSheet({ waypoint, onClose, onExpand }: WaypointSheetProps) {
+export function WaypointSheet({ waypoint, onClose, onExpand, locked = false }: WaypointSheetProps) {
   const imgError = useSignal(false);
 
   const distanceKm = (waypoint.distance * MILES_TO_KM).toFixed(1);
@@ -46,17 +47,23 @@ export function WaypointSheet({ waypoint, onClose, onExpand }: WaypointSheetProp
           ✕
         </button>
         <div class="waypoint-sheet-content">
-          <div class="waypoint-sheet-thumb">
+          <div class="waypoint-sheet-thumb" style="position: relative;">
             {thumbSrc && !imgError.value ? (
               <img
                 src={thumbSrc}
                 alt={`${waypoint.title} thumbnail`}
                 loading="lazy"
+                style={locked ? 'filter: blur(8px) brightness(0.6);' : undefined}
                 onError={handleImgError}
               />
             ) : (
               <div class="waypoint-popup-thumb-placeholder" aria-hidden="true">
                 <i class="fas fa-mountain"></i>
+              </div>
+            )}
+            {locked && (
+              <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-lock" style="font-size: 1.4em; color: rgba(255,255,255,0.7); text-shadow: 0 1px 4px rgba(0,0,0,0.6);" aria-hidden="true" />
               </div>
             )}
           </div>

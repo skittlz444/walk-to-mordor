@@ -31,8 +31,8 @@ export const avatarId = signal<string | null>(null);
 /** Whether the current user has admin privileges. */
 export const isAdmin = signal<boolean>(false);
 
-/** User preference: show future goals as unlocked. Default true. */
-export const showFutureGoalsUnlocked = signal<boolean>(true);
+/** User preference: show future goals as unlocked. Default false (locked for new users). */
+export const showFutureGoalsUnlocked = signal<boolean>(false);
 
 /** User preference: default view is map (vs journey list). */
 export const defaultViewMap = signal<boolean>(false);
@@ -223,7 +223,7 @@ export async function initializeAppStore(): Promise<void> {
         showFutureGoalsUnlocked.value =
           typeof data.showFutureGoalsUnlocked === 'boolean'
             ? data.showFutureGoalsUnlocked
-            : true;
+            : false;
         defaultViewMap.value =
           typeof data.defaultViewMap === 'boolean'
             ? data.defaultViewMap
@@ -256,7 +256,7 @@ export function resetAppStore(): void {
   username.value = '';
   avatarId.value = null;
   isAdmin.value = false;
-  showFutureGoalsUnlocked.value = true;
+  showFutureGoalsUnlocked.value = false;
   defaultViewMap.value = false;
   totalDistance.value = null;
   storeInitialized.value = false;

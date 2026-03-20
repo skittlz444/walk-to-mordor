@@ -196,7 +196,7 @@
   background: var(--bg-button-medium) !important;
 }
 
-/* Locked goal styling */
+/* Locked goal styling (legacy non-interactive — kept for backward compat) */
 .goal-locked {
   opacity: 0.4;
   color: var(--text-gray-medium, #666) !important;
@@ -205,6 +205,17 @@
 
 .goal-locked::before {
   content: "🔒 ";
+}
+
+/* Locked-but-clickable: dimmed with pointer cursor, still interactive */
+.goal-locked-interactive {
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.goal-locked-interactive:hover {
+  opacity: 0.8;
 }
 
 /* Next goal "target" styling - distinct from regular locked */
@@ -229,13 +240,16 @@
   margin-top: 0.3em;
 }
 
-/* Locked + next-target combination: accent-styled but non-interactive */
-.goal-locked.goal-next-target {
+/* Locked-interactive + next-target: accent-styled and clickable */
+.goal-locked-interactive.goal-next-target {
   opacity: 0.75;
-  pointer-events: none;
-  color: var(--text-gray-medium, #666) !important;
+  cursor: pointer;
 }
 
-.goal-locked.goal-next-target::before {
+.goal-locked-interactive.goal-next-target:hover {
+  opacity: 0.9;
+}
+
+.goal-locked-interactive.goal-next-target::before {
   content: none;
 }
