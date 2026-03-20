@@ -76,8 +76,8 @@ export async function handleRegister(request: Request, db: DbClient, body: any, 
 
     // Insert new user (first user is automatically approved and verified)
     const result = await db.write.prepare(
-      'INSERT INTO users (username, email, password_hash, salt, approved, email_verified, friend_code) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).bind(username, email, passwordHash, salt, 1, isFirstUser ? 1 : 0, friendCode).run();
+      'INSERT INTO users (username, email, password_hash, salt, approved, email_verified, friend_code, show_future_goals_unlocked) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(username, email, passwordHash, salt, 1, isFirstUser ? 1 : 0, friendCode, 0).run();
 
     const userId = result.meta.last_row_id;
 

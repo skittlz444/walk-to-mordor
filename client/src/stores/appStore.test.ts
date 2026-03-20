@@ -74,8 +74,8 @@ describe('appStore', () => {
       expect(isAdmin.value).toBe(false);
     });
 
-    it('showFutureGoalsUnlocked starts as true', () => {
-      expect(showFutureGoalsUnlocked.value).toBe(true);
+    it('showFutureGoalsUnlocked starts as false', () => {
+      expect(showFutureGoalsUnlocked.value).toBe(false);
     });
 
     it('defaultViewMap starts as false', () => {
@@ -315,7 +315,7 @@ describe('appStore', () => {
       expect(storeError.value).toBe('Network failure');
     });
 
-    it('defaults showFutureGoalsUnlocked to true when missing from response', async () => {
+    it('defaults showFutureGoalsUnlocked to false when missing from response', async () => {
       store['sessionToken'] = 'test-token';
 
       mockFetch.mockResolvedValueOnce({
@@ -335,7 +335,7 @@ describe('appStore', () => {
 
       await initializeAppStore();
 
-      expect(showFutureGoalsUnlocked.value).toBe(true);
+      expect(showFutureGoalsUnlocked.value).toBe(false);
     });
 
     it('defaults defaultViewMap to false when missing from response', async () => {
@@ -443,7 +443,7 @@ describe('appStore', () => {
       await initializeAppStore();
 
       expect(window.userPreferences).toEqual({
-        showFutureGoalsUnlocked: true,
+        showFutureGoalsUnlocked: false,
         defaultViewMap: false,
       });
     });
@@ -468,7 +468,7 @@ describe('appStore', () => {
       await initializeAppStore();
 
       expect(window.userPreferences).toEqual({
-        showFutureGoalsUnlocked: true,
+        showFutureGoalsUnlocked: false,
         defaultViewMap: false,
       });
     });
@@ -527,7 +527,7 @@ describe('appStore', () => {
       window.dispatchEvent(event);
 
       // Values remain at defaults
-      expect(showFutureGoalsUnlocked.value).toBe(true);
+      expect(showFutureGoalsUnlocked.value).toBe(false);
       expect(defaultViewMap.value).toBe(false);
     });
 
@@ -537,12 +537,12 @@ describe('appStore', () => {
       stopPreferenceListener();
 
       const event = new CustomEvent('preferenceChanged', {
-        detail: { showFutureGoalsUnlocked: false },
+        detail: { showFutureGoalsUnlocked: true },
       });
       window.dispatchEvent(event);
 
       // Should not have changed since listener was removed
-      expect(showFutureGoalsUnlocked.value).toBe(true);
+      expect(showFutureGoalsUnlocked.value).toBe(false);
     });
   });
 
@@ -578,7 +578,7 @@ describe('appStore', () => {
       expect(username.value).toBe('');
       expect(avatarId.value).toBeNull();
       expect(isAdmin.value).toBe(false);
-      expect(showFutureGoalsUnlocked.value).toBe(true);
+      expect(showFutureGoalsUnlocked.value).toBe(false);
       expect(defaultViewMap.value).toBe(false);
       expect(totalDistance.value).toBeNull();
       expect(storeInitialized.value).toBe(false);
@@ -595,7 +595,7 @@ describe('appStore', () => {
       window.dispatchEvent(event);
 
       // Listener was stopped, so value should remain at default
-      expect(showFutureGoalsUnlocked.value).toBe(true);
+      expect(showFutureGoalsUnlocked.value).toBe(false);
     });
   });
 
@@ -629,11 +629,11 @@ describe('appStore', () => {
 
   describe('signal reactivity', () => {
     it('preferences computed updates when showFutureGoalsUnlocked changes', () => {
-      expect(preferences.value.showFutureGoalsUnlocked).toBe(true);
-
-      showFutureGoalsUnlocked.value = false;
-
       expect(preferences.value.showFutureGoalsUnlocked).toBe(false);
+
+      showFutureGoalsUnlocked.value = true;
+
+      expect(preferences.value.showFutureGoalsUnlocked).toBe(true);
     });
 
     it('preferences computed updates when defaultViewMap changes', () => {
