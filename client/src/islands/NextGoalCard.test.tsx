@@ -157,4 +157,52 @@ describe('NextGoalCard', () => {
     expect(progressTrack).toBeTruthy();
     expect(progressFill).toBeTruthy();
   });
+
+  // --- Story 9.1: Locked Milestone Card Previews ---
+
+  it('locked=true shows lock icon', () => {
+    const { container } = render(
+      <NextGoalCard
+        goal={mockGoal}
+        currentDistance={75}
+        previousDistance={50}
+        locked={true}
+        onClick={() => {}}
+      />
+    );
+
+    const lockIcon = container.querySelector('.fas.fa-lock');
+    expect(lockIcon).toBeTruthy();
+  });
+
+  it('locked=true card is still clickable', () => {
+    const handleClick = vi.fn();
+    const { container } = render(
+      <NextGoalCard
+        goal={mockGoal}
+        currentDistance={75}
+        previousDistance={50}
+        locked={true}
+        onClick={handleClick}
+      />
+    );
+
+    const card = container.querySelector('.upcoming-goal.next-goal');
+    card?.click();
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('locked=false (default) has no lock icon', () => {
+    const { container } = render(
+      <NextGoalCard
+        goal={mockGoal}
+        currentDistance={75}
+        previousDistance={50}
+        onClick={() => {}}
+      />
+    );
+
+    const lockIcon = container.querySelector('.fas.fa-lock');
+    expect(lockIcon).toBeNull();
+  });
 });

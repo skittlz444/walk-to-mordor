@@ -155,6 +155,54 @@ describe('WaypointPopup', () => {
     dialog.dispatchEvent(event);
     expect(stopSpy).toHaveBeenCalled();
   });
+
+  // --- Story 9.1: Locked Milestone Card Previews ---
+
+  it('locked=true applies blur filter to thumbnail', () => {
+    const wpWithImage = { ...baseWaypoint, image_id: '7' } as Waypoint & { image_id: string };
+    render(
+      <WaypointPopup
+        waypoint={wpWithImage}
+        position={{ x: 100, y: 100 }}
+        onClose={mockOnClose}
+        onExpand={mockOnExpand}
+        locked={true}
+      />,
+    );
+    const img = screen.getByAltText('Bucklebury Ferry thumbnail') as HTMLImageElement;
+    expect(img.style.filter).toContain('blur(8px)');
+    expect(img.style.filter).toContain('brightness(0.6)');
+  });
+
+  it('locked=true expand button still works', () => {
+    render(
+      <WaypointPopup
+        waypoint={baseWaypoint}
+        position={{ x: 100, y: 100 }}
+        onClose={mockOnClose}
+        onExpand={mockOnExpand}
+        locked={true}
+      />,
+    );
+    const expandBtn = screen.getByLabelText('View full details');
+    fireEvent.click(expandBtn);
+    expect(mockOnExpand).toHaveBeenCalledWith(42);
+  });
+
+  it('locked=false (default) no blur on thumbnail', () => {
+    const wpWithImage = { ...baseWaypoint, image_id: '7' } as Waypoint & { image_id: string };
+    render(
+      <WaypointPopup
+        waypoint={wpWithImage}
+        position={{ x: 100, y: 100 }}
+        onClose={mockOnClose}
+        onExpand={mockOnExpand}
+      />,
+    );
+    const img = screen.getByAltText('Bucklebury Ferry thumbnail') as HTMLImageElement;
+    const style = img.getAttribute('style') || '';
+    expect(style).not.toContain('blur');
+  });
 });
 
 describe('WaypointSheet', () => {
@@ -237,6 +285,37 @@ describe('WaypointSheet', () => {
       />,
     );
     expect(screen.getByText('Rivendell')).toBeTruthy();
+  });
+
+  // --- Story 9.1: Locked Milestone Card Previews ---
+
+  it('locked=true applies blur filter to thumbnail', () => {
+    const wpWithImage = { ...baseWaypoint, image_id: '7' } as Waypoint & { image_id: string };
+    render(
+      <WaypointSheet
+        waypoint={wpWithImage}
+        onClose={mockOnClose}
+        onExpand={mockOnExpand}
+        locked={true}
+      />,
+    );
+    const img = screen.getByAltText('Bucklebury Ferry thumbnail') as HTMLImageElement;
+    expect(img.style.filter).toContain('blur(8px)');
+    expect(img.style.filter).toContain('brightness(0.6)');
+  });
+
+  it('locked=false (default) no blur on sheet thumbnail', () => {
+    const wpWithImage = { ...baseWaypoint, image_id: '7' } as Waypoint & { image_id: string };
+    render(
+      <WaypointSheet
+        waypoint={wpWithImage}
+        onClose={mockOnClose}
+        onExpand={mockOnExpand}
+      />,
+    );
+    const img = screen.getByAltText('Bucklebury Ferry thumbnail') as HTMLImageElement;
+    const style = img.getAttribute('style') || '';
+    expect(style).not.toContain('blur');
   });
 });
 

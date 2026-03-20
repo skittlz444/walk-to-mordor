@@ -1627,6 +1627,7 @@ export function MapIsland() {
         onClose={closePopup}
         onExpand={handleExpandWaypoint}
         isMobile={isMobile}
+        locked={!showFutureGoalsUnlocked.value && selectedWaypoint.value !== null && userDistance.value < selectedWaypoint.value.distance}
         onDesktopPopupSizeChange={handleDesktopPopupSizeChange}
       />
       {/* Friend mini-card popup (HTML overlay, outside Konva canvas) */}
@@ -1645,6 +1646,7 @@ export function MapIsland() {
         <GoalModal
           goal={expandGoal.value}
           currentDistance={userDistance.value * MILES_TO_KM}
+          locked={!showFutureGoalsUnlocked.value && (userDistance.value * MILES_TO_KM) < expandGoal.value.distance}
           onClose={() => { expandGoal.value = null; }}
         />
       )}

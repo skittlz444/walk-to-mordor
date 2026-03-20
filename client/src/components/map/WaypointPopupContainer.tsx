@@ -25,6 +25,7 @@ export interface WaypointPopupContainerProps {
   onClose: () => void;
   onExpand: (waypointId: number) => void;
   isMobile: Signal<boolean>;
+  locked?: boolean;
   onDesktopPopupSizeChange?: (size: { width: number; height: number } | null) => void;
 }
 
@@ -35,6 +36,7 @@ export function WaypointPopupContainer({
   onClose,
   onExpand,
   isMobile,
+  locked = false,
   onDesktopPopupSizeChange,
 }: WaypointPopupContainerProps) {
   const waypoint = selectedWaypoint.value;
@@ -123,6 +125,7 @@ export function WaypointPopupContainer({
         waypoint={waypoint}
         onClose={onClose}
         onExpand={onExpand}
+        locked={locked}
       />
     );
   }
@@ -147,6 +150,7 @@ export function WaypointPopupContainer({
       position={pos}
       onClose={onClose}
       onExpand={onExpand}
+      locked={locked}
       popupRef={popupRef}
     />
   );

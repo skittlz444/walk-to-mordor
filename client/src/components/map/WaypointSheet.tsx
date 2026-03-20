@@ -13,9 +13,10 @@ export interface WaypointSheetProps {
   waypoint: Waypoint;
   onClose: () => void;
   onExpand: (waypointId: number) => void;
+  locked?: boolean;
 }
 
-export function WaypointSheet({ waypoint, onClose, onExpand }: WaypointSheetProps) {
+export function WaypointSheet({ waypoint, onClose, onExpand, locked = false }: WaypointSheetProps) {
   const imgError = useSignal(false);
 
   const distanceKm = (waypoint.distance * MILES_TO_KM).toFixed(1);
@@ -52,6 +53,7 @@ export function WaypointSheet({ waypoint, onClose, onExpand }: WaypointSheetProp
                 src={thumbSrc}
                 alt={`${waypoint.title} thumbnail`}
                 loading="lazy"
+                style={locked ? 'filter: blur(8px) brightness(0.6);' : undefined}
                 onError={handleImgError}
               />
             ) : (

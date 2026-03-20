@@ -15,6 +15,7 @@ export interface WaypointPopupProps {
   position: { x: number; y: number };
   onClose: () => void;
   onExpand: (waypointId: number) => void;
+  locked?: boolean;
   popupRef?: (el: HTMLDivElement | null) => void;
 }
 
@@ -23,6 +24,7 @@ export function WaypointPopup({
   position,
   onClose,
   onExpand,
+  locked = false,
   popupRef,
 }: WaypointPopupProps) {
   const imgError = useSignal(false);
@@ -58,6 +60,7 @@ export function WaypointPopup({
               src={thumbSrc}
               alt={`${waypoint.title} thumbnail`}
               loading="lazy"
+              style={locked ? 'filter: blur(8px) brightness(0.6);' : undefined}
               onError={handleImgError}
             />
           ) : (

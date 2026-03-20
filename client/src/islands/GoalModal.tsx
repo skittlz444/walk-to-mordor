@@ -6,10 +6,11 @@ interface GoalModalProps {
   goal: Goal;
   currentDistance: number;
   isCongratulations?: boolean;
+  locked?: boolean;
   onClose: () => void;
 }
 
-export function GoalModal({ goal, currentDistance, isCongratulations = false, onClose }: GoalModalProps) {
+export function GoalModal({ goal, currentDistance, isCongratulations = false, locked = false, onClose }: GoalModalProps) {
   const highResLoaded = useSignal(false);
   const thumbFormat = useSignal<'webp' | 'jpg'>('webp');
   const highResFormat = useSignal<'webp' | 'jpg'>('webp');
@@ -68,7 +69,7 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, on
 
   return (
     <div class="modal-overlay" onClick={handleOverlayClick}>
-      <div class="modal-dialog modal-large">
+      <div class="modal-dialog modal-large" role="dialog" aria-modal="true" aria-label={`Goal: ${goal.title}`}>
         <div class="modal-content">
           <div class="modal-body goal-modal-scrollable">
             <div style="padding: 1.5em;">
@@ -104,22 +105,32 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, on
                     id="goal-thumb-image"
                     src={`/img/thumbs/${goal.image_id || '0'}-thumb.webp`}
                     alt="Goal image"
-                    style={`width: 100%; height: auto; filter: ${highResLoaded.value ? 'none' : 'blur(2px)'}; transition: filter 0.3s ease;`}
+                    style={`width: 100%; height: auto; filter: ${locked ? 'blur(12px) brightness(0.6)' : (highResLoaded.value ? 'none' : 'blur(2px)')}; transform: ${locked ? 'scale(1.1)' : 'none'}; transition: filter 0.3s ease;`}
                     onError={handleThumbError}
                   />
-                  <img 
-                    id="goal-highres-image"
-                    src={`/img/highres/${goal.image_id || '0'}.webp`}
-                    alt="Goal image"
-                    style={`position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: ${highResLoaded.value ? '1' : '0'}; transition: opacity 0.5s ease;`}
-                    onLoad={handleHighResLoad}
-                    onError={handleHighResError}
-                  />
+                  {!locked && (
+                    <img 
+                      id="goal-highres-image"
+                      src={`/img/highres/${goal.image_id || '0'}.webp`}
+                      alt="Goal image"
+                      style={`position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: ${highResLoaded.value ? '1' : '0'}; transition: opacity 0.5s ease;`}
+                      onLoad={handleHighResLoad}
+                      onError={handleHighResError}
+                    />
+                  )}
+                  {locked && (
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                      <i class="fas fa-lock" style="font-size: 3em; color: rgba(255,255,255,0.7); text-shadow: 0 2px 8px rgba(0,0,0,0.6);" aria-hidden="true" />
+                    </div>
+                  )}
                 </div>
               </div>
               
               {goal.description && (
-                <div style="color: #ccc; font-size: 1em; line-height: 1.4; text-align: justify;">
+                <div
+                  style={`font-size: 1em; line-height: 1.4; text-align: justify; ${locked ? 'color: transparent; text-shadow: 0 0 8px rgba(255,255,255,0.5); user-select: none;' : 'color: #ccc;'}`}
+                  {...(locked ? { 'aria-hidden': 'true' } : {})}
+                >
                   {goal.description}
                 </div>
               )}

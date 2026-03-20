@@ -4,6 +4,7 @@ interface NextGoalCardProps {
   goal: Goal;
   currentDistance: number;
   previousDistance: number;
+  locked?: boolean;
   onClick?: () => void;
 }
 
@@ -11,7 +12,7 @@ interface NextGoalCardProps {
  * NextGoalCard - Preact Island for the next goal with progress bar
  * Displays the immediate next goal with visual emphasis and segment progress
  */
-export function NextGoalCard({ goal, currentDistance, previousDistance, onClick }: NextGoalCardProps) {
+export function NextGoalCard({ goal, currentDistance, previousDistance, locked = false, onClick }: NextGoalCardProps) {
   // Calculate segment progress
   const segmentTotal = goal.distance - previousDistance;
   const segmentProgress = currentDistance - previousDistance;
@@ -53,6 +54,7 @@ export function NextGoalCard({ goal, currentDistance, previousDistance, onClick 
         fontWeight: 'bold',
         maxWidth: '90vw'
       }}>
+        {locked && <i class="fas fa-lock" style="margin-right: 0.4em; font-size: 0.85em; color: #888;" aria-hidden="true" />}
         {goal.title}
       </span>
       

@@ -294,4 +294,120 @@ describe('GoalModal', () => {
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
+
+  // --- Story 9.1: Locked Milestone Card Previews ---
+
+  it('locked=true renders thumbnail with blur(12px) filter', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        isCongratulations={false}
+        locked={true}
+        onClose={mockOnClose}
+      />
+    );
+
+    const thumbImage = document.querySelector('#goal-thumb-image') as HTMLImageElement;
+    expect(thumbImage.style.filter).toContain('blur(12px)');
+    expect(thumbImage.style.filter).toContain('brightness(0.6)');
+    expect(thumbImage.style.transform).toContain('scale(1.1)');
+  });
+
+  it('locked=true does NOT render high-res image', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        isCongratulations={false}
+        locked={true}
+        onClose={mockOnClose}
+      />
+    );
+
+    const highResImage = document.querySelector('#goal-highres-image');
+    expect(highResImage).toBeNull();
+  });
+
+  it('locked=true shows lock icon overlay', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        isCongratulations={false}
+        locked={true}
+        onClose={mockOnClose}
+      />
+    );
+
+    const lockIcon = document.querySelector('.fas.fa-lock');
+    expect(lockIcon).toBeTruthy();
+  });
+
+  it('locked=true obscures description with transparent color', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        isCongratulations={false}
+        locked={true}
+        onClose={mockOnClose}
+      />
+    );
+
+    const descriptionEl = screen.getByText('A test goal description');
+    expect(descriptionEl.style.color).toBe('transparent');
+    expect(descriptionEl.style.userSelect).toBe('none');
+  });
+
+  it('locked=true sets aria-hidden on description', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        isCongratulations={false}
+        locked={true}
+        onClose={mockOnClose}
+      />
+    );
+
+    const descriptionEl = screen.getByText('A test goal description');
+    expect(descriptionEl.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('locked=false (default) renders normally without lock icon or blur', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        isCongratulations={false}
+        onClose={mockOnClose}
+      />
+    );
+
+    const lockIcon = document.querySelector('.fas.fa-lock');
+    expect(lockIcon).toBeNull();
+
+    const highResImage = document.querySelector('#goal-highres-image');
+    expect(highResImage).toBeTruthy();
+
+    const descriptionEl = screen.getByText('A test goal description');
+    expect(descriptionEl.getAttribute('aria-hidden')).toBeNull();
+  });
+
+  it('modal has role="dialog" and aria-label', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        isCongratulations={false}
+        onClose={mockOnClose}
+      />
+    );
+
+    const dialog = document.querySelector('.modal-dialog') as HTMLElement;
+    expect(dialog.getAttribute('role')).toBe('dialog');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.getAttribute('aria-label')).toBe('Goal: Test Goal');
+  });
 });

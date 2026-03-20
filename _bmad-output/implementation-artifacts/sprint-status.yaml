@@ -149,7 +149,7 @@ development_status:
   # EPIC 9: Journey UX Enhancement (Phase 6)
   # ============================================
   epic-9: in-progress
-  9-1-locked-milestone-card-previews: ready-for-dev
+  9-1-locked-milestone-card-previews: review
   9-2-persistent-journey-progress-bar: cancelled # Cancelled after UX review
   epic-9-retrospective: optional
 
