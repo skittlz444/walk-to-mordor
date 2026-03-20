@@ -1,6 +1,6 @@
 # Story 8.3: Service Worker SWR API Caching
 
-**Status:** ready-for-dev
+**Status:** done
 
 ## Story
 

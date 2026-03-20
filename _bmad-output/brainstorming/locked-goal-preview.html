@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Locked Goal Previews</title>
+  <style>
+    :root {
+      --bg-dark: #121212;
+      --panel-bg: rgba(40, 40, 40, 0.95);
+      --text-main: #f5f5f5;
+      --text-dim: #aaaaaa;
+      --gold: #FFD700;
+      --gold-dim: #b89600;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 3rem;
+    }
+
+    h1, h2 {
+      margin: 0 0 1rem 0;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      color: var(--gold);
+      border-bottom: 1px solid #333;
+      padding-bottom: 0.5rem;
+    }
+
+    .section {
+      background: #1a1a1a;
+      padding: 1.5rem;
+      border-radius: 8px;
+      border: 1px solid #333;
+      max-width: 800px;
+    }
+
+    /* =========================================================
+       1. Journey Page List View
+       ========================================================= */
+    .list-view-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .journey-card {
+      position: relative;
+      background: rgba(40, 40, 40, 0.95);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      word-break: break-word;
+      margin: 0.7em 0;
+      padding: 0.7em 1em;
+      cursor: not-allowed;
+      overflow: hidden;
+    }
+
+    .journey-card-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+      /* Blur and darken the background for text contrast */
+      filter: blur(8px) brightness(0.3);
+      transform: scale(1.1); /* Prevents blur bleeding at edges */
+      z-index: 1;
+      opacity: 0.8;
+    }
+
+    .journey-card-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .journey-special {
+      display: block;
+      color: #FFD700;
+      font-size: 1.3em;
+      font-weight: bold;
+      margin-bottom: 0.2em;
+    }
+
+    .journey-title {
+      font-size: 1.1em;
+      color: #fff;
+      font-weight: bold;
+      max-width: 90vw;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .journey-title-icon {
+      opacity: 0.8;
+    }
+
+    .journey-distance {
+      font-size: 0.95em;
+      color: #FFD700;
+      margin-top: 0.2em;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    .journey-distance-to-go {
+      color: #aaa;
+      font-size: 0.9em;
+    }
+
+    /* =========================================================
+       2. Map Waypoint Popup View
+       ========================================================= */
+    .map-popup-container {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      background-image: radial-gradient(circle, #333 1px, transparent 1px);
+      background-size: 20px 20px;
+      border-radius: 8px;
+    }
+
+    .waypoint-popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--panel-bg);
+      border-radius: 8px;
+      width: 220px;
+      box-shadow: var(--shadow);
+      padding: 0;
+      overflow: hidden;
+      font-family: var(--font-body);
+      border: 1px solid #444;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .waypoint-popup-close {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 10px;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    .waypoint-popup-content {
+      display: flex;
+      padding: 8px;
+      gap: 10px;
+    }
+
+    .waypoint-popup-thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #222;
+      flex-shrink: 0;
+    }
+
+    .waypoint-popup-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      /* Apply blur on the map thumb */
+      filter: blur(4px) brightness(0.7);
+      transform: scale(1.1);
+    }
+
+    .waypoint-popup-info {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .waypoint-popup-title {
+      margin: 0 0 2px 0;
+      font-size: 13px;
+      color: #fff;
+    }
+
+    .waypoint-popup-distance {
+      margin: 0 0 4px 0;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .waypoint-popup-expand {
+      margin-top: auto;
+      align-self: flex-start;
+      background: transparent;
+      border: 1px solid #555;
+      color: var(--text-dim);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 10px;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    /* =========================================================
+       3. Alternative Modal View (Locked but Openable)
+       ========================================================= */
+    .modal-backdrop {
+      background: rgba(0,0,0,0.8);
+      border-radius: 8px;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .goal-modal {
+      background: var(--panel-bg);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+      border: 1px solid #333;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .goal-modal-header {
+      text-align: center;
+    }
+
+    .goal-modal-title {
+      color: var(--gold);
+      margin: 0 0 0.5rem 0;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .goal-modal-distance {
+      color: #fff;
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    .goal-modal-remaining {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      margin: 0.25rem 0 0 0;
+    }
+
+    .goal-modal-image-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #111;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .goal-modal-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      /* Heavy blur simulating low-res thumb stretch over main image area */
+      filter: blur(12px) brightness(0.6);
+      transform: scale(1.1); 
+    }
+
+    .goal-modal-locked-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(255,255,255,0.7);
+      font-size: 2rem;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    .goal-modal-description {
+      margin-top: 0.5rem;
+      line-height: 1.5;
+    }
+
+    /* Blurred text technique */
+    .blurred-text {
+      color: transparent;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Locked Goal Previews Concept</h1>
+
+  <div class="section" style="max-width: 100%; display: flex; flex-direction: column; align-items: center;">
+    <div style="width: 100%; max-width: 600px;">
+      <h2>1. Journey Page List View</h2>
+      <p style="font-size: 0.9em; color: var(--text-dim); margin-bottom: 1rem;">
+        Locked cards in the main journey list use the thumbnail as a blurred background, giving a hint of the scenery to come. Sized to match the actual app.
+      </p>
+    </div>
+    <div class="list-view-container">
+      
+      <!-- Normal Unlocked Goal for context -->
+      <div class="journey-card" style="cursor: pointer; overflow: visible;">
+        <div class="journey-card-content">
+          <span class="journey-title">
+            The Prancing Pony
+          </span>
+          <span class="journey-distance">
+            42.00 km <span class="journey-distance-to-go"></span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Locked Goals -->
+      <div class="journey-card" title="Locked">
+        <div class="journey-card-bg" style="background-image: url('https://picsum.photos/seed/rivendell/400/200');"></div>
+        <div class="journey-card-content">
+          <span class="journey-title">
+            <svg class="journey-title-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Rivendell
+          </span>
+          <span class="journey-distance">
+            737.00 km <span class="journey-distance-to-go">(42.3 km to go)</span>
+          </span>
+        </div>
+      </div>
+      
+      <div class="journey-card" title="Locked">
+        <div class="journey-card-bg" style="background-image: url('https://picsum.photos/seed/moria/400/200');"></div>
+        <div class="journey-card-content">
+          <span class="journey-title">
+            <svg class="journey-title-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            The Gates of Moria
+          </span>
+          <span class="journey-distance">
+            850.00 km <span class="journey-distance-to-go">(155.3 km to go)</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="journey-card" title="Locked">
+        <div class="journey-card-bg" style="background-image: url('https://picsum.photos/seed/lorien/400/200');"></div>
+        <div class="journey-card-content">
+          <span class="journey-title">
+            <svg class="journey-title-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Lothlórien
+          </span>
+          <span class="journey-distance">
+            1050.00 km <span class="journey-distance-to-go">(355.3 km to go)</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="journey-card" title="Locked">
+        <div class="journey-card-bg" style="background-image: url('https://picsum.photos/seed/argonath/400/200');"></div>
+        <div class="journey-card-content">
+          <span class="journey-title">
+            <svg class="journey-title-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            The Argonath
+          </span>
+          <span class="journey-distance">
+            1200.00 km <span class="journey-distance-to-go">(505.3 km to go)</span>
+          </span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>2. Map Waypoint Popup View</h2>
+    <p style="font-size: 0.9em; color: var(--text-dim); margin-bottom: 1rem;">
+      On the map, clicking a locked waypoint shows the popup with a blurred thumbnail and a disabled expand button (unless they've enabled unlocked previews).
+    </p>
+    <div class="map-popup-container">
+      <div class="waypoint-popup">
+        <button class="waypoint-popup-close">✕</button>
+        <div class="waypoint-popup-content">
+          <div class="waypoint-popup-thumb">
+            <img src="https://picsum.photos/seed/rivendell/100/100" alt="Locked thumbnail" />
+          </div>
+          <div class="waypoint-popup-info">
+            <h3 class="waypoint-popup-title">Rivendell</h3>
+            <p class="waypoint-popup-distance">737.0 km</p>
+            <button class="waypoint-popup-expand">Expand (Locked)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>3. Alternative: Openable Locked Modal</h2>
+    <p style="font-size: 0.9em; color: var(--text-dim); margin-bottom: 1rem;">
+      In this alternative concept, clicking a locked goal in the list or map <b>does</b> open the modal. The title and distance are clearly visible. The main image area shows the thumbnail heavily blurred, and the description text is rendered completely illegible.
+    </p>
+
+    <div class="modal-backdrop">
+      <div class="goal-modal">
+        <div class="goal-modal-header">
+          <h2 class="goal-modal-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Rivendell
+          </h2>
+          <p class="goal-modal-distance">737.00 km</p>
+          <p class="goal-modal-remaining">42.30 km to go</p>
+        </div>
+
+        <div class="goal-modal-image-container">
+          <img class="goal-modal-image" src="https://picsum.photos/seed/rivendell/100/50" alt="Blurred locked image" />
+          <div class="goal-modal-locked-overlay">
+            <!-- Central lock icon just to reinforce it's locked -->
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </div>
+        </div>
+
+        <div class="goal-modal-description">
+          <p class="blurred-text">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+          </p>
+          <p class="blurred-text" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);">
+            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

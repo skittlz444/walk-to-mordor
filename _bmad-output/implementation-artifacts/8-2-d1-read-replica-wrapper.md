@@ -1,6 +1,6 @@
 # Story 8.2: D1 Read Replica Wrapper
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
