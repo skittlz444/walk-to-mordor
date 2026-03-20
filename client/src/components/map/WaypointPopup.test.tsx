@@ -174,6 +174,21 @@ describe('WaypointPopup', () => {
     expect(img.style.filter).toContain('brightness(0.6)');
   });
 
+  it('locked=true shows lock icon overlay on thumbnail', () => {
+    const wpWithImage = { ...baseWaypoint, image_id: '7' } as Waypoint & { image_id: string };
+    const { container } = render(
+      <WaypointPopup
+        waypoint={wpWithImage}
+        position={{ x: 100, y: 100 }}
+        onClose={mockOnClose}
+        onExpand={mockOnExpand}
+        locked={true}
+      />,
+    );
+    const lockIcon = container.querySelector('.waypoint-popup-thumb .fas.fa-lock');
+    expect(lockIcon).toBeTruthy();
+  });
+
   it('locked=true expand button still works', () => {
     render(
       <WaypointPopup
@@ -302,6 +317,20 @@ describe('WaypointSheet', () => {
     const img = screen.getByAltText('Bucklebury Ferry thumbnail') as HTMLImageElement;
     expect(img.style.filter).toContain('blur(8px)');
     expect(img.style.filter).toContain('brightness(0.6)');
+  });
+
+  it('locked=true shows lock icon overlay on thumbnail', () => {
+    const wpWithImage = { ...baseWaypoint, image_id: '7' } as Waypoint & { image_id: string };
+    const { container } = render(
+      <WaypointSheet
+        waypoint={wpWithImage}
+        onClose={mockOnClose}
+        onExpand={mockOnExpand}
+        locked={true}
+      />,
+    );
+    const lockIcon = container.querySelector('.waypoint-sheet-thumb .fas.fa-lock');
+    expect(lockIcon).toBeTruthy();
   });
 
   it('locked=false (default) no blur on sheet thumbnail', () => {

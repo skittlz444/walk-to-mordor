@@ -54,7 +54,7 @@ export function WaypointPopup({
         ✕
       </button>
       <div class="waypoint-popup-content">
-        <div class="waypoint-popup-thumb">
+        <div class="waypoint-popup-thumb" style="position: relative;">
           {thumbSrc && !imgError.value ? (
             <img
               src={thumbSrc}
@@ -66,6 +66,11 @@ export function WaypointPopup({
           ) : (
             <div class="waypoint-popup-thumb-placeholder" aria-hidden="true">
               <i class="fas fa-mountain"></i>
+            </div>
+          )}
+          {locked && (
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-lock" style="font-size: 1.4em; color: rgba(255,255,255,0.7); text-shadow: 0 1px 4px rgba(0,0,0,0.6);" aria-hidden="true" />
             </div>
           )}
         </div>
