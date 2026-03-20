@@ -275,31 +275,26 @@ export function createWaypointMarkers(
           mg.add(createCircleShape(fill, stroke, strokeWidth, opacity, shadowBlur, shadowColor));
         }
 
-        // Interactivity for unlocked or preference-visible waypoints only
-        if (showAsUnlocked) {
-          mg.listening(true);
-          mg.on('mouseenter', () => {
-            const stage = layer.getStage();
-            if (stage) {
-              const container = stage.container();
-              container.style.cursor = 'pointer';
-            }
-          });
-          mg.on('mouseleave', () => {
-            const stage = layer.getStage();
-            if (stage) {
-              const container = stage.container();
-              container.style.cursor = 'grab';
-            }
-          });
-          mg.on('click tap', () => {
-            if (window.__MAP_DEV_LOG) console.log('[WaypointMarker] Selected:', wp.title, wp);
-            if (onSelect) onSelect(wp);
-          });
-        } else {
-          // Locked: no event handling for performance
-          mg.listening(false);
-        }
+        // All waypoints are interactive — locked ones open in locked preview mode
+        mg.listening(true);
+        mg.on('mouseenter', () => {
+          const stage = layer.getStage();
+          if (stage) {
+            const container = stage.container();
+            container.style.cursor = 'pointer';
+          }
+        });
+        mg.on('mouseleave', () => {
+          const stage = layer.getStage();
+          if (stage) {
+            const container = stage.container();
+            container.style.cursor = 'grab';
+          }
+        });
+        mg.on('click tap', () => {
+          if (window.__MAP_DEV_LOG) console.log('[WaypointMarker] Selected:', wp.title, wp);
+          if (onSelect) onSelect(wp);
+        });
 
         group.add(mg);
         markerGroups.push(mg);
@@ -343,32 +338,28 @@ export function createWaypointMarkers(
           listening: false,
         }));
 
-        // Cluster is interactive if it has unlocked items
-        if (hasUnlocked) {
-          mg.listening(true);
-          mg.on('mouseenter', () => {
-            const stage = layer.getStage();
-            if (stage) {
-              const container = stage.container();
-              container.style.cursor = 'pointer';
-            }
-          });
-          mg.on('mouseleave', () => {
-            const stage = layer.getStage();
-            if (stage) {
-              const container = stage.container();
-              container.style.cursor = 'grab';
-            }
-          });
-          mg.on('click tap', () => {
-            // Select the first unlocked item in the cluster, but pass the full cluster list
-            const target = cluster.items.find((w) => w.distance <= uDist) ?? cluster.items[0];
-            if (window.__MAP_DEV_LOG) console.log('[WaypointMarker] Cluster selected:', cluster.items.length, 'items, picked:', target.title);
-            if (onSelect) onSelect(target, cluster.items);
-          });
-        } else {
-          mg.listening(false);
-        }
+        // All clusters are interactive — locked waypoints open in locked preview mode
+        mg.listening(true);
+        mg.on('mouseenter', () => {
+          const stage = layer.getStage();
+          if (stage) {
+            const container = stage.container();
+            container.style.cursor = 'pointer';
+          }
+        });
+        mg.on('mouseleave', () => {
+          const stage = layer.getStage();
+          if (stage) {
+            const container = stage.container();
+            container.style.cursor = 'grab';
+          }
+        });
+        mg.on('click tap', () => {
+          // Select the first unlocked item in the cluster, but pass the full cluster list
+          const target = cluster.items.find((w) => w.distance <= uDist) ?? cluster.items[0];
+          if (window.__MAP_DEV_LOG) console.log('[WaypointMarker] Cluster selected:', cluster.items.length, 'items, picked:', target.title);
+          if (onSelect) onSelect(target, cluster.items);
+        });
 
         group.add(mg);
         markerGroups.push(mg);
