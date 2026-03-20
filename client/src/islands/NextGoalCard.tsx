@@ -22,7 +22,7 @@ export function NextGoalCard({ goal, currentDistance, previousDistance, locked =
 
   return (
     <div 
-      className="upcoming-goal next-goal"
+      className={`upcoming-goal next-goal${locked ? ' goal-locked-interactive' : ''}`}
       data-goal-index={0}
       onClick={onClick}
       style={{

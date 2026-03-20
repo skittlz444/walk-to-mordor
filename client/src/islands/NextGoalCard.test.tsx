@@ -160,6 +160,21 @@ describe('NextGoalCard', () => {
 
   // --- Story 9.1: Locked Milestone Card Previews ---
 
+  it('locked=true applies goal-locked-interactive class', () => {
+    const { container } = render(
+      <NextGoalCard
+        goal={mockGoal}
+        currentDistance={75}
+        previousDistance={50}
+        locked={true}
+        onClick={() => {}}
+      />
+    );
+
+    const card = container.querySelector('.upcoming-goal.next-goal.goal-locked-interactive');
+    expect(card).toBeTruthy();
+  });
+
   it('locked=true shows lock icon', () => {
     const { container } = render(
       <NextGoalCard

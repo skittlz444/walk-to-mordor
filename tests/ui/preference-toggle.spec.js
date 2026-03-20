@@ -197,8 +197,8 @@ test.describe('User Goal Visibility Preference', () => {
         return list && list.children.length > 1; // next + at least one more
       });
 
-      // Future goals (not the next one) should have .goal-locked class
-      const lockedGoals = page.locator('.goal-locked');
+      // Future goals (not the next one) should have .goal-locked-interactive class
+      const lockedGoals = page.locator('.goal-locked-interactive');
       const count = await lockedGoals.count();
       expect(count).toBeGreaterThan(0);
 
@@ -223,8 +223,8 @@ test.describe('User Goal Visibility Preference', () => {
         return list && list.children.length > 1;
       });
 
-      // No upcoming goals should have .goal-locked class when preference is ON
-      const lockedGoals = page.locator('#upcoming-goals-list .goal-locked');
+      // No upcoming goals should have .goal-locked-interactive class when preference is ON
+      const lockedGoals = page.locator('#upcoming-goals-list .goal-locked-interactive');
       const count = await lockedGoals.count();
       expect(count).toBe(0);
     });
