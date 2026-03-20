@@ -1,5 +1,5 @@
 # generated: 2026-03-17
-# last_updated: 2026-03-17
+# last_updated: 2026-03-20
 # project: walk-to-mordor
 # project_key: NOKEY
 # tracking_system: file-system
@@ -38,7 +38,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-03-17
+last_updated: 2026-03-20
 project: walk-to-mordor
 project_key: NOKEY
 tracking_system: file-system
@@ -148,9 +148,9 @@ development_status:
   # ============================================
   # EPIC 9: Journey UX Enhancement (Phase 6)
   # ============================================
-  epic-9: backlog
-  9-1-locked-milestone-card-previews: backlog
-  9-2-persistent-journey-progress-bar: backlog
+  epic-9: in-progress
+  9-1-locked-milestone-card-previews: ready-for-dev
+  9-2-persistent-journey-progress-bar: cancelled # Cancelled after UX review
   epic-9-retrospective: optional
 
   # ============================================

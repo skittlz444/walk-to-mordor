@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walk to Mordor Mockup</title>
+  <style>
+    /* Base reset & fonts matching the app */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    /* Minimal layout wrappers */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+      position: relative;
+    }
+
+    /* Menu button top right */
+    .menu-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 48px;
+      height: 48px;
+      border: 2px solid #FFD700;
+      border-radius: 50%;
+      background: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .menu-btn span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background-color: #FFD700;
+    }
+
+    /* Header Section */
+    .header-section {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .main-title {
+      color: #bb9e00; /* gold-ish */
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 10px rgba(255,215,0,0.3);
+    }
+    .total-distance {
+      font-size: 2.2rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    .last-goal-text {
+      color: #888;
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* THE NEW PROGRESS BAR SECTION */
+    .journey-progress-container {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto 3rem auto;
+      padding: 0 1rem;
+      container-type: inline-size;
+      container-name: journeyprogress;
+    }
+    
+    .progress-track {
+      background-color: #222;
+      height: 24px;
+      border-radius: 12px;
+      position: relative;
+      border: 1px solid #444;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+    }
+    
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      /* Golden gradient fill */
+      background: linear-gradient(90deg, #aa8500, #FFD700);
+      border-radius: 12px;
+      width: 2.8%; /* 181.38 / 6425 */
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+      min-width: 12px; /* ensure rounded corners look right at 0% */
+    }
+
+    /* Special Waypoint Markers */
+    .waypoint-marker {
+      position: absolute;
+      top: 24px; /* below the bar */
+      width: 2px;
+      height: 8px;
+      background-color: #666;
+      transform: translateX(-50%);
+    }
+    
+    .waypoint-marker.reached {
+      background-color: #FFD700;
+      height: 12px;
+      top: 24px;
+      box-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
+    }
+
+    /* Labels for waypoints */
+    .waypoint-label {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      color: #888;
+      white-space: nowrap;
+      text-align: center;
+      line-height: 1.2;
+      /* Only show essential labels by default */
+      display: none; 
+    }
+    
+    .waypoint-marker.reached .waypoint-label {
+      color: #ccc;
+    }
+
+    /* Responsive label showing based on container size */
+    @container journeyprogress (min-width: 500px) {
+      .waypoint-marker.show-desktop .waypoint-label {
+        display: block;
+      }
+    }
+
+    /* User Position Indicator */
+    .user-position {
+      position: absolute;
+      top: -12px;
+      right: -12px; /* center on the edge of the fill */
+      width: 24px;
+      height: 24px;
+      background-color: #000;
+      border: 2px solid #FFD700;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+    }
+
+
+    /* Party Info / Buttons */
+    .controls-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .party-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #ccc;
+      font-size: 0.9rem;
+    }
+    .party-select-btn {
+      background-color: #333;
+      color: #fff;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .party-members {
+      color: #888;
+      font-size: 0.8rem;
+      text-align: center;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+    .action-btn {
+      background-color: #333;
+      color: #fff;
+      border: none;
+      padding: 0.4rem 1rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+
+    /* Completed Goals List (faded) */
+    .completed-goals {
+      text-align: center;
+      color: #888;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .completed-goal-item {
+      text-decoration: line-through;
+    }
+    .completed-goal-item span.gold {
+      color: #aa8500;
+      text-decoration: none; /* keep distance legible */
+    }
+
+
+    /* Next Goal Highlight Card */
+    .next-goal-card {
+      background-color: #222;
+      border: 1px solid #FFD700;
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
+      margin-bottom: 2rem;
+      position: relative;
+    }
+    
+    .next-goal-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    .next-goal-distance {
+      color: #FFD700;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    .next-goal-remaining {
+      color: #888;
+      font-size: 0.9rem;
+      font-weight: normal;
+    }
+    
+    /* Internal progress bar for next goal */
+    .next-goal-progress {
+      height: 8px;
+      background-color: #111;
+      border-radius: 4px;
+      width: 100%;
+      position: relative;
+      margin-top: 1rem;
+    }
+    .next-goal-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background-color: #FFD700;
+      width: 85%;
+      border-radius: 4px;
+    }
+
+
+    /* Mock Calendar Bar at Bottom */
+    .calendar-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #1e1e1e;
+      border-top: 1px solid #333;
+      padding: 1rem;
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .calendar-title {
+      font-size: 1.2rem;
+    }
+    .calendar-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .cal-btn {
+      background-color: #333;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      border-top: 1px solid #444;
+      border-left: 1px solid #444;
+    }
+    .cal-cell {
+      border-right: 1px solid #444;
+      padding: 4px;
+      font-size: 0.75rem;
+      color: #888;
+      min-height: 40px;
+    }
+    .cal-cell.active {
+      background-color: #0d47a1;
+      color: #fff;
+    }
+    
+  </style>
+</head>
+<body>
+
+  <button class="menu-btn">
+    <span></span><span></span><span></span>
+  </button>
+
+  <div class="app-container">
+    
+    <div class="header-section">
+      <h1 class="main-title">Total distance travelled</h1>
+      <div class="total-distance">181.38 km</div>
+      <div class="last-goal-text">Tom Bombadil's House <span style="text-decoration:line-through">157.72 km</span></div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- NEW IMPLEMENTATION: PERSISTENT PROGRESS BAR    -->
+    <!-- ============================================== -->
+    <div class="journey-progress-container">
+      <div class="progress-track">
+        
+        <!-- The golden fill -->
+        <div class="progress-fill">
+          <!-- The avatar/ring moving with the tip -->
+          <div class="user-position"></div>
+        </div>
+
+        <!-- Background map markers / Ticks -->
+        <!-- Total dist: 6425, so percentage is distance/6425 * 100 -->
+        
+        <!-- Dist: 217.26 km (Bree) -> 3.38% -->
+        <div class="waypoint-marker show-desktop" style="left: 3.38%;">
+          <div class="waypoint-label">Bree<br/>217km</div>
+        </div>
+
+        <!-- Dist: 737.07 km (Rivendell) -> 11.47% -->
+        <div class="waypoint-marker show-desktop" style="left: 11.47%;">
+          <div class="waypoint-label">Rivendell<br/>737km</div>
+        </div>
+        
+        <!-- Dist: 1284.25 km (Moria Doors) -> 19.98% -->
+        <div class="waypoint-marker show-desktop" style="left: 19.98%;">
+          <div class="waypoint-label">Moria<br/>1284km</div>
+        </div>
+
+        <!-- Dist: 1480.59 km (Cerin Amroth/Lothlorien) -> 23.04% -->
+        <div class="waypoint-marker" style="left: 23.04%;"></div>
+
+        <!-- Dist: 2106.62 km (Parth Galen) -> 32.78% -->
+        <div class="waypoint-marker" style="left: 32.78%;"></div>
+        
+        <!-- Dist: 2863.01 km (Mount Doom) -> 44.56% -->
+        <div class="waypoint-marker show-desktop" style="left: 44.56%;">
+          <div class="waypoint-label">Mount Doom<br/>2863km</div>
+        </div>
+
+        <!-- Dist: 3056.13 km (Minas Tirith) -> 47.56% -->
+        <div class="waypoint-marker show-desktop" style="left: 47.56%;">
+          <div class="waypoint-label">Minas Tirith<br/>3056km</div>
+        </div>
+
+        <!-- Dist: 3917.13 km (Isengard) -> 60.96% -->
+        <div class="waypoint-marker show-desktop" style="left: 60.96%;">
+          <div class="waypoint-label">Isengard<br/>3917km</div>
+        </div>
+        
+        <!-- Dist: 5671.31 km (Bag End original run? Or just removed?) -> Let's keep Grey Havens / Bag End as return
+             Actually the return to bag end is the end of the journey roughly. -->
+        <!-- End of Journey -> 100% -->
+        <div class="waypoint-marker show-desktop" style="left: 100%;">
+          <div class="waypoint-label" style="text-align: right; transform: translateX(-100%); left: 100%;">Bag End (Return)<br/>6425km</div>
+        </div>
+
+      </div>
+    </div>
+    <!-- ============================================== -->
+
+
+    <div class="controls-section">
+      <div class="party-selector">
+        👥 View: 
+        <button class="party-select-btn">Carson Company ▼</button>
+      </div>
+      <div class="party-members">(3 members)</div>
+      
+      <div class="action-buttons">
+        <button class="action-btn">Hide Completed</button>
+        <button class="action-btn">Show All Completed</button>
+      </div>
+    </div>
+
+    <div class="completed-goals">
+      <div class="completed-goal-item">Reach the top of a knoll in the Old Forest. Surrounded by Trees <span class="gold">140.01 km</span></div>
+      <div class="completed-goal-item">See Old Man Willow <span class="gold">152.89 km</span></div>
+      <div class="completed-goal-item">Tom Bombadil's House <span class="gold">157.72 km</span></div>
+    </div>
+
+    <div class="next-goal-card">
+      <div class="next-goal-title">The Hobbits are captured by Wights</div>
+      <div class="next-goal-distance">185.07 km <span class="next-goal-remaining">(3.69 km to go)</span></div>
+      <div class="next-goal-progress">
+        <div class="next-goal-fill"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="calendar-bar">
+    <div class="calendar-header">
+      <div class="calendar-title">March 2026</div>
+      <div class="calendar-controls">
+        <button class="cal-btn">📅</button>
+        <button class="cal-btn">📋</button>
+        <span style="margin: 0 10px;">&lt; &gt;</span>
+        <span>Today</span>
+      </div>
+    </div>
+    <div class="calendar-grid">
+      <div class="cal-cell active">15<br/>5.35 km</div>
+      <div class="cal-cell active">16<br/>3.64 km</div>
+      <div class="cal-cell active">17<br/>3.02 km</div>
+      <div class="cal-cell active">18<br/>6.76 km</div>
+      <div class="cal-cell active">19<br/>0.44 km</div>
+      <div class="cal-cell">20</div>
+      <div class="cal-cell">21</div>
+    </div>
+  </div>
+
+</body>
+</html>
