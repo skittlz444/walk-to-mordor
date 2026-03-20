@@ -129,6 +129,26 @@ function createCircleShape(
   });
 }
 
+/**
+ * Attach standard interactive handlers (cursor + click/tap) to a Konva marker group.
+ */
+function attachMarkerHandlers(mg: Konva.Group, layer: Konva.Layer, onClick: () => void): void {
+  mg.listening(true);
+  mg.on('mouseenter', () => {
+    const stage = layer.getStage();
+    if (stage) {
+      stage.container().style.cursor = 'pointer';
+    }
+  });
+  mg.on('mouseleave', () => {
+    const stage = layer.getStage();
+    if (stage) {
+      stage.container().style.cursor = 'grab';
+    }
+  });
+  mg.on('click tap', onClick);
+}
+
 /** A cluster of overlapping waypoints or a single waypoint. */
 interface WaypointCluster {
   /** Representative x position (average). */
@@ -276,22 +296,7 @@ export function createWaypointMarkers(
         }
 
         // All waypoints are interactive — locked ones open in locked preview mode
-        mg.listening(true);
-        mg.on('mouseenter', () => {
-          const stage = layer.getStage();
-          if (stage) {
-            const container = stage.container();
-            container.style.cursor = 'pointer';
-          }
-        });
-        mg.on('mouseleave', () => {
-          const stage = layer.getStage();
-          if (stage) {
-            const container = stage.container();
-            container.style.cursor = 'grab';
-          }
-        });
-        mg.on('click tap', () => {
+        attachMarkerHandlers(mg, layer, () => {
           if (window.__MAP_DEV_LOG) console.log('[WaypointMarker] Selected:', wp.title, wp);
           if (onSelect) onSelect(wp);
         });
@@ -339,22 +344,7 @@ export function createWaypointMarkers(
         }));
 
         // All clusters are interactive — locked waypoints open in locked preview mode
-        mg.listening(true);
-        mg.on('mouseenter', () => {
-          const stage = layer.getStage();
-          if (stage) {
-            const container = stage.container();
-            container.style.cursor = 'pointer';
-          }
-        });
-        mg.on('mouseleave', () => {
-          const stage = layer.getStage();
-          if (stage) {
-            const container = stage.container();
-            container.style.cursor = 'grab';
-          }
-        });
-        mg.on('click tap', () => {
+        attachMarkerHandlers(mg, layer, () => {
           // Select the first unlocked item in the cluster, but pass the full cluster list
           const target = cluster.items.find((w) => w.distance <= uDist) ?? cluster.items[0];
           if (window.__MAP_DEV_LOG) console.log('[WaypointMarker] Cluster selected:', cluster.items.length, 'items, picked:', target.title);

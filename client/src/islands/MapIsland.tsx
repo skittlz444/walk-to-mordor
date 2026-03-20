@@ -1627,7 +1627,10 @@ export function MapIsland() {
         onClose={closePopup}
         onExpand={handleExpandWaypoint}
         isMobile={isMobile}
-        locked={!showFutureGoalsUnlocked.value && selectedWaypoint.value !== null && userDistance.value < selectedWaypoint.value.distance}
+        locked={(() => {
+          const wp = selectedWaypoint.value;
+          return !showFutureGoalsUnlocked.value && wp !== null && userDistance.value < wp.distance;
+        })()}
         onDesktopPopupSizeChange={handleDesktopPopupSizeChange}
       />
       {/* Friend mini-card popup (HTML overlay, outside Konva canvas) */}
