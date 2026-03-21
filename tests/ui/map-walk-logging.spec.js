@@ -141,8 +141,8 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
       await page.locator('.map-walk-button').click();
       await expect(page.locator('#map-calendar-sheet')).toBeVisible();
 
-      // Switch to month view
-      await page.locator('#sheet-month-view').evaluate(el => el.click());
+      // Switch to month view via the visible label so Playwright uses actionability checks
+      await page.locator('label[for="sheet-month-view"]').click();
       await expect(page.locator('#map-calendar-sheet')).toBeVisible();
 
       // Month view should use week-row divs for grid layout
@@ -151,11 +151,12 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
       const rowCount = await weekRows.count();
       expect(rowCount).toBeGreaterThanOrEqual(4);
 
-      // Close button should still be accessible (not pushed off screen)
-      await expect(page.locator('#sheet-close-btn')).toBeVisible();
+      // Close button should be within the viewport (not pushed off-screen)
+      const closeButton = page.locator('#sheet-close-btn');
+      await expect(closeButton).toBeInViewport();
 
       // Calendar sheet should be closeable
-      await page.locator('#sheet-close-btn').click();
+      await closeButton.click();
       await expect(page.locator('#map-calendar-sheet')).toBeHidden();
     });
   });
