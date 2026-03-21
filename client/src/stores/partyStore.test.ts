@@ -79,6 +79,7 @@ describe('partyStore computed signals', () => {
     selectedView.value = 1;
     partyProgress.value = {
       total_distance: 42.5,
+      user_total_distance: 20,
       member_count: 3,
       calculated_position: null,
       distance_mode: 'incremental',
@@ -178,7 +179,7 @@ describe('fetchPartyProgress', () => {
 
 describe('selectView', () => {
   it('sets personal view and clears progress', async () => {
-    partyProgress.value = { total_distance: 50, member_count: 2, calculated_position: null, distance_mode: 'incremental', leave_distance_behavior: 'keep', members: [], newly_passed_milestones: [] };
+    partyProgress.value = { total_distance: 50, user_total_distance: 20, member_count: 2, calculated_position: null, distance_mode: 'incremental', leave_distance_behavior: 'keep', members: [], newly_passed_milestones: [] };
 
     const result = await selectView('personal');
 

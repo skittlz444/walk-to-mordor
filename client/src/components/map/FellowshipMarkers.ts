@@ -12,7 +12,7 @@
 
 import Konva from 'konva';
 import type { PathNode } from '../../data/paths/fellowship-path';
-import { getUserPosition, markerScale, KM_TO_MILES, MILES_TO_KM, type Point } from '../../utils/map-utils';
+import { getUserPosition, markerScale, KM_TO_MILES, type Point } from '../../utils/map-utils';
 
 /** Visual size of fellowship markers in screen pixels. */
 const MARKER_SIZE = 36;
@@ -180,7 +180,7 @@ function buildFellowshipMarkerGroup(
     }),
   );
 
-  const distKm = Math.round(fellowship.total_distance * MILES_TO_KM);
+  const distKm = Math.round(fellowship.total_distance);
   tooltip.add(new Konva.Text({
     text: `${fellowship.name}: ${distKm} km`,
     fontFamily: 'system-ui, sans-serif',
@@ -224,7 +224,8 @@ export function createFellowshipMarkers(
   const layer = new Konva.Layer({ listening: true });
   stage.add(layer);
 
-  // Ensure fellowship markers render above paths but below user marker layer.
+  // Z-index stacking: move fellowship layer to top first, then marker layer
+  // above it. This ensures fellowships render above paths but below the user marker.
   layer.moveToTop();
   markerLayer.moveToTop();
 

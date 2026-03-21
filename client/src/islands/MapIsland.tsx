@@ -1800,7 +1800,7 @@ export function MapIsland() {
                 </label>
               </div>
               {showFellowshipsOnMap.value && fellowshipPositions.value.length === 0 && (
-                <p className="friends-hint">Join a fellowship to see them on the map</p>
+                <p className="friends-hint">Loading fellowship positions…</p>
               )}
             </div>
           )}
