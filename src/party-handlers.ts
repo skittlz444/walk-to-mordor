@@ -1228,3 +1228,87 @@ export async function handleSendPartyMessage(request: Request, db: DbClient, par
     return createErrorResponse('Internal server error while sending message', 500);
   }
 }
+
+/** D1 result row for party positions query */
+interface PartyPositionRow {
+  party_id: number;
+  name: string;
+  distance_mode: string;
+}
+
+/** D1 result row for party member distance (for position calculation) */
+interface PartyMemberDistRow {
+  user_id: number;
+  distance_at_join: number;
+  total_distance: number;
+  status: string;
+  contribution_at_departure: number | null;
+  distance_kept: number | null;
+}
+
+/**
+ * GET /api/user/parties/positions — Get positions of all user's active fellowships for map display.
+ *
+ * Returns { fellowships: [{ party_id, name, total_distance }] }
+ * where total_distance is in km (sum of member contributions based on distance_mode).
+ * Only returns active (non-dissolved) parties where user is an active member.
+ */
+export async function handlePartyPositions(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    // Get all active parties the user belongs to
+    const { results: parties } = await db.read.prepare(`
+      SELECT p.id as party_id, p.name, p.distance_mode
+      FROM party_members pm
+      JOIN parties p ON pm.party_id = p.id
+      WHERE pm.user_id = ? AND pm.status = 'active' AND p.dissolved_at IS NULL
+    `).bind(userId).all<PartyPositionRow>();
+
+    if (parties.length === 0) {
+      return createSuccessResponse({ fellowships: [] });
+    }
+
+    const fellowships: Array<{ party_id: number; name: string; total_distance: number }> = [];
+
+    for (const party of parties) {
+      // Get all members (active + departed with kept contributions)
+      const { results: members } = await db.read.prepare(`
+        SELECT pm.user_id, pm.distance_at_join, pm.status, pm.contribution_at_departure, pm.distance_kept,
+               COALESCE((SELECT SUM(p.distance) FROM progress p WHERE p.user_id = pm.user_id), 0) as total_distance
+        FROM party_members pm
+        WHERE pm.party_id = ?
+          AND (pm.status = 'active' OR (pm.status IN ('left', 'kicked') AND pm.distance_kept = 1))
+      `).bind(party.party_id).all<PartyMemberDistRow>();
+
+      let totalDistance = 0;
+      for (const member of members) {
+        if (member.status !== 'active') {
+          // Departed member with kept contribution
+          totalDistance += member.contribution_at_departure ?? 0;
+        } else if (party.distance_mode === 'incremental') {
+          totalDistance += Math.max(0, member.total_distance - member.distance_at_join);
+        } else {
+          totalDistance += member.total_distance;
+        }
+      }
+
+      totalDistance = Number(totalDistance.toFixed(2));
+
+      fellowships.push({
+        party_id: party.party_id,
+        name: party.name,
+        total_distance: totalDistance,
+      });
+    }
+
+    return createSuccessResponse({ fellowships });
+  } catch (error: unknown) {
+    console.error('Database error during party positions retrieval:', error);
+    return createErrorResponse('Internal server error while retrieving party positions', 500);
+  }
+}

@@ -35,6 +35,7 @@ export interface PartyMember {
 
 export interface PartyProgress {
   total_distance: number;
+  user_total_distance: number;
   member_count: number;
   calculated_position: { id: number; title: string; distance: number } | null;
   distance_mode: string;

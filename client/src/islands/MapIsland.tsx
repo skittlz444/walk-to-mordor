@@ -19,6 +19,11 @@ import {
   type FriendMarkerNodes,
   type FriendMarkerData,
 } from '../components/map/FriendMarkers';
+import {
+  createFellowshipMarkers,
+  type FellowshipMarkerNodes,
+  type FellowshipMarkerData,
+} from '../components/map/FellowshipMarkers';
 import { FriendMiniCard } from '../components/map/FriendMiniCard';
 import { WaypointPopupContainer } from '../components/map/WaypointPopupContainer';
 import { GoalModal } from './GoalModal';
@@ -267,6 +272,9 @@ export function MapIsland() {
   const panAnimRef = useRef<Konva.Animation | null>(null);
   const memberPathsRef = useRef<MemberPathNodes | null>(null);
   const friendMarkerRef = useRef<FriendMarkerNodes | null>(null);
+  const fellowshipMarkerRef = useRef<FellowshipMarkerNodes | null>(null);
+  // Fellowship marker shown at the selected fellowship's total distance
+  const activeFellowshipMarkerRef = useRef<FellowshipMarkerNodes | null>(null);
 
   const stageSize = useSignal<StageSize>({ width: 800, height: 600 });
   const currentScale = useSignal(1);
@@ -298,6 +306,13 @@ export function MapIsland() {
   const friendPositionsFetchedAt = useSignal(0);
   const selectedFriend = useSignal<FriendMarkerData | null>(null);
   const friendPopupPosition = useSignal<{ x: number; y: number } | null>(null);
+
+  // Fellowship marker state
+  const showFellowshipsOnMap = useSignal(
+    typeof window !== 'undefined' && localStorage.getItem('wtm_fellowships_on_map') === 'true'
+  );
+  const fellowshipPositions = useSignal<FellowshipMarkerData[]>([]);
+  const fellowshipPositionsFetchedAt = useSignal(0);
 
   /** Cache TTL for friend positions: 5 minutes */
   const FRIEND_CACHE_TTL = 5 * 60 * 1000;
@@ -553,6 +568,34 @@ export function MapIsland() {
       const scale = currentScale.value;
       const { width: vw, height: vh } = stageSize.value;
       friendMarkerRef.current.updateVisibility({
+        x: -stagePos.x / scale,
+        y: -stagePos.y / scale,
+        width: vw / scale,
+        height: vh / scale,
+      });
+    }
+
+    // Update fellowship marker scale + visibility on zoom/pan
+    if (fellowshipMarkerRef.current) {
+      fellowshipMarkerRef.current.setScale(currentScale.value);
+      const stagePos = position.value;
+      const scale = currentScale.value;
+      const { width: vw, height: vh } = stageSize.value;
+      fellowshipMarkerRef.current.updateVisibility({
+        x: -stagePos.x / scale,
+        y: -stagePos.y / scale,
+        width: vw / scale,
+        height: vh / scale,
+      });
+    }
+
+    // Update active fellowship view marker scale + visibility on zoom/pan
+    if (activeFellowshipMarkerRef.current) {
+      activeFellowshipMarkerRef.current.setScale(currentScale.value);
+      const stagePos = position.value;
+      const scale = currentScale.value;
+      const { width: vw, height: vh } = stageSize.value;
+      activeFellowshipMarkerRef.current.updateVisibility({
         x: -stagePos.x / scale,
         y: -stagePos.y / scale,
         width: vw / scale,
@@ -829,34 +872,77 @@ export function MapIsland() {
 
     drawMemberPaths(effectiveSelection === 'personal' ? null : progress);
 
-    // Switch displayed distance: party total when viewing a fellowship,
-    // personal distance when switching back to "My Journey".
-    const newDistanceMiles = effectiveSelection === 'personal'
-      ? personalDistanceRef.current
-      : progress
-        ? progress.total_distance * KM_TO_MILES
-        : userDistance.value;
+    // Clean up active fellowship marker when switching away from a fellowship
+    if (activeFellowshipMarkerRef.current) {
+      activeFellowshipMarkerRef.current.destroy();
+      activeFellowshipMarkerRef.current = null;
+    }
 
-    if (newDistanceMiles !== userDistance.value) {
-      userDistance.value = newDistanceMiles;
-      const newPos = getUserPosition(fellowshipPath, newDistanceMiles);
+    if (effectiveSelection === 'personal') {
+      // Switching back to personal view — restore user marker to personal distance
+      const personalDist = personalDistanceRef.current;
+      if (personalDist !== userDistance.value) {
+        userDistance.value = personalDist;
+        const personalPos = getUserPosition(fellowshipPath, personalDist);
 
-      if (pathNodesRef.current) {
-        updateJourneyPath(pathNodesRef.current, newDistanceMiles, currentScale.value);
-        pathLayerRef.current?.batchDraw();
+        if (pathNodesRef.current) {
+          updateJourneyPath(pathNodesRef.current, personalDist, currentScale.value);
+          pathLayerRef.current?.batchDraw();
+        }
+
+        if (markerRef.current) {
+          markerRef.current.setDistance(personalDist);
+          markerRef.current.setPosition(personalPos, true);
+          markerLayerRef.current?.batchDraw();
+        }
+
+        if (waypointMarkersRef.current) {
+          updateWaypointVisibility();
+        }
+
+        centerOnPosition(personalPos, currentScale.value, true);
       }
+    } else if (progress) {
+      // Viewing a fellowship — update path/waypoints to fellowship total distance,
+      // but keep user marker at their personal distance.
+      const fellowshipDistMiles = progress.total_distance * KM_TO_MILES;
+      const fellowshipPos = getUserPosition(fellowshipPath, fellowshipDistMiles);
 
-      if (markerRef.current) {
-        markerRef.current.setDistance(newDistanceMiles);
-        markerRef.current.setPosition(newPos, true);
-        markerLayerRef.current?.batchDraw();
+      // Update journey path and waypoints to show fellowship total distance
+      userDistance.value = fellowshipDistMiles;
+      if (pathNodesRef.current) {
+        updateJourneyPath(pathNodesRef.current, fellowshipDistMiles, currentScale.value);
+        pathLayerRef.current?.batchDraw();
       }
 
       if (waypointMarkersRef.current) {
         updateWaypointVisibility();
       }
 
-      centerOnPosition(newPos, currentScale.value, true);
+      // Keep the user's personal marker at their personal distance
+      const personalDist = personalDistanceRef.current;
+      const personalPos = getUserPosition(fellowshipPath, personalDist);
+      if (markerRef.current) {
+        markerRef.current.setDistance(personalDist);
+        markerRef.current.setPosition(personalPos, true);
+        markerLayerRef.current?.batchDraw();
+      }
+
+      // Create fellowship group marker at the fellowship's total distance
+      const partyName = selectedParty.value?.name ?? 'Fellowship';
+      if (stageRef.current && markerLayerRef.current) {
+        activeFellowshipMarkerRef.current = createFellowshipMarkers(
+          stageRef.current,
+          markerLayerRef.current,
+        );
+        activeFellowshipMarkerRef.current.update(
+          [{ party_id: effectiveSelection as number, name: partyName, total_distance: progress.total_distance }],
+          fellowshipPath,
+          currentScale.value,
+        );
+      }
+
+      centerOnPosition(fellowshipPos, currentScale.value, true);
     }
 
     showSocialPanel.value = false;
@@ -972,6 +1058,68 @@ export function MapIsland() {
       friendPositionsFetchedAt.value = 0;
     }
   }, [fetchFriendPositions, handleFriendSelect]);
+
+  /** Cache TTL for fellowship positions: 5 minutes */
+  const FELLOWSHIP_CACHE_TTL = 5 * 60 * 1000;
+
+  /** Fetch fellowship positions from the API and update the cache. */
+  const fetchFellowshipPositions = useCallback(async (): Promise<FellowshipMarkerData[]> => {
+    try {
+      const token = localStorage.getItem('sessionToken');
+      if (!token) return [];
+      const res = await fetch('/api/user/parties/positions', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      const data = await res.json() as { fellowships: FellowshipMarkerData[] };
+      fellowshipPositions.value = data.fellowships;
+      fellowshipPositionsFetchedAt.value = Date.now();
+      return data.fellowships;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  /** Enable or disable fellowship markers on the map. */
+  const handleFellowshipsToggle = useCallback(async (enabled: boolean) => {
+    showFellowshipsOnMap.value = enabled;
+    localStorage.setItem('wtm_fellowships_on_map', String(enabled));
+
+    if (enabled) {
+      // Check cache freshness
+      const isFresh = Date.now() - fellowshipPositionsFetchedAt.value < FELLOWSHIP_CACHE_TTL;
+      const fellowships = isFresh ? fellowshipPositions.value : await fetchFellowshipPositions();
+
+      if (fellowships.length > 0 && stageRef.current && markerLayerRef.current) {
+        if (!fellowshipMarkerRef.current) {
+          fellowshipMarkerRef.current = createFellowshipMarkers(
+            stageRef.current,
+            markerLayerRef.current,
+          );
+        }
+        fellowshipMarkerRef.current.update(fellowships, fellowshipPath, currentScale.value);
+
+        // Apply frustum culling
+        const stagePos = position.value;
+        const scale = currentScale.value;
+        const { width: vw, height: vh } = stageSize.value;
+        fellowshipMarkerRef.current.updateVisibility({
+          x: -stagePos.x / scale,
+          y: -stagePos.y / scale,
+          width: vw / scale,
+          height: vh / scale,
+        });
+      }
+    } else {
+      // Destroy fellowship markers
+      if (fellowshipMarkerRef.current) {
+        fellowshipMarkerRef.current.destroy();
+        fellowshipMarkerRef.current = null;
+      }
+      fellowshipPositions.value = [];
+      fellowshipPositionsFetchedAt.value = 0;
+    }
+  }, [fetchFellowshipPositions]);
 
   // Fetch user parties on mount
   useEffect(() => {
@@ -1358,12 +1506,26 @@ export function MapIsland() {
             return;
           }
 
+          // In fellowship view, update the user marker to the new personal distance
+          // while keeping the fellowship view (which will re-fetch fellowship progress)
+          if (markerRef.current) {
+            const personalPos = getUserPosition(fellowshipPath, newDistMiles);
+            markerRef.current.setDistance(newDistMiles);
+            markerRef.current.setPosition(personalPos, true);
+            markerLayerRef.current?.batchDraw();
+          }
+
           void handlePartyViewChange(selectedView.value);
         };
 
         // If friends toggle was persisted as ON, load friend markers
         if (showFriendsOnMap.value) {
           handleFriendsToggle(true);
+        }
+
+        // If fellowships toggle was persisted as ON, load fellowship markers
+        if (showFellowshipsOnMap.value) {
+          handleFellowshipsToggle(true);
         }
       })
       .catch(() => {
@@ -1497,8 +1659,18 @@ export function MapIsland() {
         friendMarkerRef.current.destroy();
         friendMarkerRef.current = null;
       }
+      if (fellowshipMarkerRef.current) {
+        fellowshipMarkerRef.current.destroy();
+        fellowshipMarkerRef.current = null;
+      }
+      if (activeFellowshipMarkerRef.current) {
+        activeFellowshipMarkerRef.current.destroy();
+        activeFellowshipMarkerRef.current = null;
+      }
       friendPositions.value = [];
       friendPositionsFetchedAt.value = 0;
+      fellowshipPositions.value = [];
+      fellowshipPositionsFetchedAt.value = 0;
       allWaypointsRef.current = [];
       allGoalsRef.current = [];
       stage.destroy();
@@ -1610,6 +1782,28 @@ export function MapIsland() {
               <p className="friends-hint">Add friends to see them on the map</p>
             )}
           </div>
+          {/* Fellowships on Map section — visible when user has fellowships */}
+          {userParties.value.length > 0 && (
+            <div className="social-panel-section">
+              <h4>Fellowships on Map</h4>
+              <div className="friends-toggle-row">
+                <span>Show fellowships</span>
+                <label className="friends-toggle" aria-label="Toggle fellowships on map">
+                  <input
+                    type="checkbox"
+                    checked={showFellowshipsOnMap.value}
+                    onChange={(e) => {
+                      handleFellowshipsToggle((e.target as HTMLInputElement).checked);
+                    }}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+              </div>
+              {showFellowshipsOnMap.value && fellowshipPositions.value.length === 0 && (
+                <p className="friends-hint">Join a fellowship to see them on the map</p>
+              )}
+            </div>
+          )}
         </div>
       )}
       {/* Party legend (visible when party view is active) */}
