@@ -273,7 +273,7 @@ export function PartyManageIsland() {
           <div style={{ marginBottom: '0.75rem' }}>
             <label style={{ display: 'block', marginBottom: '0.35rem' }}>Fellowship Icon</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Avatar username={settingsName || 'F'} avatarId={settingsAvatarId} size={48} />
+              <Avatar username={settingsName || 'Fellowship'} avatarId={settingsAvatarId} size={48} />
               <button
                 type="button"
                 className="party-btn party-btn--secondary party-btn--small"
@@ -322,7 +322,7 @@ export function PartyManageIsland() {
                     }}
                     title={avatarId}
                   >
-                    <Avatar username={avatarId} avatarId={avatarId} size={40} />
+                    <Avatar username={avatarId.replace(/-/g, ' ')} avatarId={avatarId} size={40} />
                   </button>
                 ))}
               </div>

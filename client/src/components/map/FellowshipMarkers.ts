@@ -71,6 +71,34 @@ function fellowshipMarkerScale(stageScale: number): number {
 }
 
 /**
+ * Create initials fallback elements (background circle + text initial).
+ */
+function createInitials(name: string): { bgCircle: Konva.Circle; initial: Konva.Text } {
+  const bgCircle = new Konva.Circle({
+    x: 0,
+    y: 0,
+    radius: MARKER_HALF - 2,
+    fill: getInitialsColor(name),
+  });
+
+  const initial = new Konva.Text({
+    text: name.charAt(0).toUpperCase(),
+    fontSize: 16,
+    fontFamily: 'system-ui, sans-serif',
+    fontStyle: 'bold',
+    fill: '#FFFFFF',
+    align: 'center',
+    verticalAlign: 'middle',
+    width: MARKER_SIZE,
+    height: MARKER_SIZE,
+    x: -MARKER_HALF,
+    y: -MARKER_HALF,
+  });
+
+  return { bgCircle, initial };
+}
+
+/**
  * Build a single fellowship marker group (Konva.Group).
  * Renders initials immediately, then async-loads avatar image if available.
  */
@@ -100,37 +128,16 @@ function buildFellowshipMarkerGroup(
     fill: 'transparent',
   });
 
+  // Always render initials first (used as fallback or shown when no avatar)
+  const { bgCircle, initial } = createInitials(fellowship.name);
+  group.add(bgCircle);
+  group.add(initial);
+  group.add(border);
+
   if (fellowship.avatar_id) {
-    // Avatar image: render initials as fallback, then swap when image loads
-    const bgCircle = new Konva.Circle({
-      x: 0,
-      y: 0,
-      radius: MARKER_HALF - 2,
-      fill: getInitialsColor(fellowship.name),
-    });
-
-    const initial = new Konva.Text({
-      text: fellowship.name.charAt(0).toUpperCase(),
-      fontSize: 16,
-      fontFamily: 'system-ui, sans-serif',
-      fontStyle: 'bold',
-      fill: '#FFFFFF',
-      align: 'center',
-      verticalAlign: 'middle',
-      width: MARKER_SIZE,
-      height: MARKER_SIZE,
-      x: -MARKER_HALF,
-      y: -MARKER_HALF,
-    });
-
-    group.add(bgCircle);
-    group.add(initial);
-    group.add(border);
-
-    // Async load avatar image
+    // Async load avatar image, swap initials when loaded
     const thumbUrl = `/img/avatars/thumbs/${fellowship.avatar_id}.webp`;
     const img = new window.Image();
-    img.crossOrigin = 'anonymous';
     pendingImages.add(img);
     img.onload = () => {
       pendingImages.delete(img);
@@ -168,32 +175,6 @@ function buildFellowshipMarkerGroup(
       // Keep initials fallback on error — nothing to do
     };
     img.src = thumbUrl;
-  } else {
-    // No avatar: render initials circle with fellowship name initial
-    const bgCircle = new Konva.Circle({
-      x: 0,
-      y: 0,
-      radius: MARKER_HALF - 2,
-      fill: getInitialsColor(fellowship.name),
-    });
-
-    const initial = new Konva.Text({
-      text: fellowship.name.charAt(0).toUpperCase(),
-      fontSize: 16,
-      fontFamily: 'system-ui, sans-serif',
-      fontStyle: 'bold',
-      fill: '#FFFFFF',
-      align: 'center',
-      verticalAlign: 'middle',
-      width: MARKER_SIZE,
-      height: MARKER_SIZE,
-      x: -MARKER_HALF,
-      y: -MARKER_HALF,
-    });
-
-    group.add(bgCircle);
-    group.add(initial);
-    group.add(border);
   }
 
   // Tooltip (hidden by default)
