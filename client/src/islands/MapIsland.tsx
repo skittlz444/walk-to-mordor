@@ -930,13 +930,14 @@ export function MapIsland() {
 
       // Create fellowship group marker at the fellowship's total distance
       const partyName = selectedParty.value?.name ?? 'Fellowship';
+      const partyAvatarId = selectedParty.value?.avatar_id ?? null;
       if (stageRef.current && markerLayerRef.current) {
         activeFellowshipMarkerRef.current = createFellowshipMarkers(
           stageRef.current,
           markerLayerRef.current,
         );
         activeFellowshipMarkerRef.current.update(
-          [{ party_id: effectiveSelection as number, name: partyName, total_distance: progress.total_distance }],
+          [{ party_id: effectiveSelection as number, name: partyName, total_distance: progress.total_distance, avatar_id: partyAvatarId }],
           fellowshipPath,
           currentScale.value,
         );
@@ -1762,11 +1763,11 @@ export function MapIsland() {
               ))}
             </div>
           )}
-          {/* Friends on Map section — always visible */}
+          {/* Show on Map section — friends and fellowships toggles */}
           <div className="social-panel-section">
-            <h4>Friends on Map</h4>
+            <h4>Show on Map</h4>
             <div className="friends-toggle-row">
-              <span>Show friends</span>
+              <span>Friends</span>
               <label className="friends-toggle" aria-label="Toggle friends on map">
                 <input
                   type="checkbox"
@@ -1781,29 +1782,27 @@ export function MapIsland() {
             {showFriendsOnMap.value && friendPositions.value.length === 0 && (
               <p className="friends-hint">Add friends to see them on the map</p>
             )}
+            {userParties.value.length > 0 && (
+              <>
+                <div className="friends-toggle-row">
+                  <span>Fellowships</span>
+                  <label className="friends-toggle" aria-label="Toggle fellowships on map">
+                    <input
+                      type="checkbox"
+                      checked={showFellowshipsOnMap.value}
+                      onChange={(e) => {
+                        handleFellowshipsToggle((e.target as HTMLInputElement).checked);
+                      }}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                </div>
+                {showFellowshipsOnMap.value && fellowshipPositions.value.length === 0 && (
+                  <p className="friends-hint">Loading fellowship positions…</p>
+                )}
+              </>
+            )}
           </div>
-          {/* Fellowships on Map section — visible when user has fellowships */}
-          {userParties.value.length > 0 && (
-            <div className="social-panel-section">
-              <h4>Fellowships on Map</h4>
-              <div className="friends-toggle-row">
-                <span>Show fellowships</span>
-                <label className="friends-toggle" aria-label="Toggle fellowships on map">
-                  <input
-                    type="checkbox"
-                    checked={showFellowshipsOnMap.value}
-                    onChange={(e) => {
-                      handleFellowshipsToggle((e.target as HTMLInputElement).checked);
-                    }}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-              {showFellowshipsOnMap.value && fellowshipPositions.value.length === 0 && (
-                <p className="friends-hint">Loading fellowship positions…</p>
-              )}
-            </div>
-          )}
         </div>
       )}
       {/* Party legend (visible when party view is active) */}

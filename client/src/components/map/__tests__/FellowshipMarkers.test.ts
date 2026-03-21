@@ -99,6 +99,11 @@ vi.mock('konva', () => {
   }
   MockLayer.prototype = {};
 
+  function MockImage(options: Record<string, unknown>) {
+    return { ...options, destroy: vi.fn() };
+  }
+  MockImage.prototype = {};
+
   return {
     default: {
       Group: MockGroup,
@@ -108,6 +113,7 @@ vi.mock('konva', () => {
       Label: MockLabel,
       Tag: MockTag,
       Layer: MockLayer,
+      Image: MockImage,
     },
   };
 });
@@ -141,8 +147,8 @@ describe('FellowshipMarkers', () => {
   };
 
   const sampleFellowships: FellowshipMarkerData[] = [
-    { party_id: 1, name: 'Fellowship of the Ring', total_distance: 100 },
-    { party_id: 2, name: 'The Shire Walkers', total_distance: 200 },
+    { party_id: 1, name: 'Fellowship of the Ring', total_distance: 100, avatar_id: null },
+    { party_id: 2, name: 'The Shire Walkers', total_distance: 200, avatar_id: 'gandalf-grey' },
   ];
 
   const pathNodes = [
@@ -255,7 +261,7 @@ describe('FellowshipMarkers', () => {
       expect(nodes.markers.has(2)).toBe(false);
     });
 
-    it('renders group icon elements (circles and rects for people silhouettes)', () => {
+    it('renders initials fallback elements when no avatar_id', () => {
       const nodes = createFellowshipMarkers(
         mockStage as unknown as Konva.Stage,
         mockMarkerLayer as unknown as Konva.Layer,
@@ -263,10 +269,11 @@ describe('FellowshipMarkers', () => {
 
       nodes.update([sampleFellowships[0]], pathNodes, 1.0);
 
-      // Should have created circles for the group icon (bg + people heads + border)
+      // Should have created circles for bg and border
       expect(circleInstances.length).toBeGreaterThan(0);
-      // Should have created rects for people body shapes
-      expect(rectInstances.length).toBeGreaterThan(0);
+      // Should have created text for the fellowship initial 'F' (for 'Fellowship of the Ring')
+      const initialText = textInstances.find(t => t.text === 'F');
+      expect(initialText).toBeDefined();
     });
 
     it('sets name attribute for test selection', () => {
@@ -276,7 +283,7 @@ describe('FellowshipMarkers', () => {
       );
 
       const fellowships: FellowshipMarkerData[] = [
-        { party_id: 42, name: 'Test Fellowship', total_distance: 300 },
+        { party_id: 42, name: 'Test Fellowship', total_distance: 300, avatar_id: null },
       ];
       nodes.update(fellowships, pathNodes, 1.0);
 
@@ -294,7 +301,7 @@ describe('FellowshipMarkers', () => {
         mockMarkerLayer as unknown as Konva.Layer,
       );
 
-      nodes.update([{ party_id: 1, name: 'Test Party', total_distance: 100 }], pathNodes, 1.0);
+      nodes.update([{ party_id: 1, name: 'Test Party', total_distance: 100, avatar_id: null }], pathNodes, 1.0);
 
       // Tooltip text should include fellowship name and distance in km
       const tooltipText = textInstances.find(t =>

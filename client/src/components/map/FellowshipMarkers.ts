@@ -1,9 +1,9 @@
 /**
- * FellowshipMarkers – renders fellowship group markers on the Konva map.
+ * FellowshipMarkers – renders fellowship avatar markers on the Konva map.
  *
  * Follows the FriendMarkers.ts imperative Konva pattern.
- * Each fellowship is rendered as a 36px circular marker with a group icon
- * (silhouette of multiple people) and the fellowship name as a tooltip.
+ * Each fellowship is rendered as a 36px circular marker with either a leader-set
+ * avatar image or an initials fallback (first letter of the fellowship name).
  * Markers live on a dedicated Konva layer.
  *
  * Exports createFellowshipMarkers(), which returns a FellowshipMarkerNodes
@@ -22,9 +22,7 @@ const MARKER_HALF = MARKER_SIZE / 2;
 const CULLING_MARGIN = 50;
 
 /** Fellowship marker colors */
-const MARKER_BG = '#2A1F0E';
 const MARKER_BORDER = '#DAA520';
-const ICON_COLOR = '#DAA520';
 const TOOLTIP_BG = '#1a1a2e';
 const TOOLTIP_TEXT_COLOR = '#e0e0e0';
 
@@ -32,6 +30,7 @@ export interface FellowshipMarkerData {
   party_id: number;
   name: string;
   total_distance: number; // km
+  avatar_id: string | null;
 }
 
 export interface FellowshipMarkerNodes {
@@ -55,6 +54,15 @@ export interface ViewportBounds {
 }
 
 /**
+ * Generate a deterministic HSL background colour for a fellowship name.
+ * Used for initials fallback when no avatar is set.
+ */
+function getInitialsColor(name: string): string {
+  const hue = (name.charCodeAt(0) * 137) % 360;
+  return `hsl(${hue}, 50%, 35%)`;
+}
+
+/**
  * Calculate the fellowship marker scale factor.
  * Uses markerScale with slightly larger max than FriendMarkers (18 vs 16).
  */
@@ -64,12 +72,15 @@ function fellowshipMarkerScale(stageScale: number): number {
 
 /**
  * Build a single fellowship marker group (Konva.Group).
- * Renders a group icon (stylized people silhouette) with a golden border.
+ * Renders initials immediately, then async-loads avatar image if available.
  */
 function buildFellowshipMarkerGroup(
   fellowship: FellowshipMarkerData,
   position: Point,
   scale: number,
+  layer: Konva.Layer,
+  destroyedRef: { current: boolean },
+  pendingImages: Set<HTMLImageElement>,
 ): Konva.Group {
   const group = new Konva.Group({
     x: position.x,
@@ -78,75 +89,6 @@ function buildFellowshipMarkerGroup(
     scaleY: scale,
     name: `fellowship-marker-${fellowship.party_id}`,
   });
-
-  // Background circle
-  const bgCircle = new Konva.Circle({
-    x: 0,
-    y: 0,
-    radius: MARKER_HALF - 2,
-    fill: MARKER_BG,
-  });
-  group.add(bgCircle);
-
-  // Group icon — three small circles representing people
-  const iconGroup = new Konva.Group();
-
-  // Center person (slightly larger)
-  iconGroup.add(new Konva.Circle({
-    x: 0,
-    y: -3,
-    radius: 4,
-    fill: ICON_COLOR,
-  }));
-  // Center body
-  iconGroup.add(new Konva.Rect({
-    x: -4,
-    y: 2,
-    width: 8,
-    height: 6,
-    fill: ICON_COLOR,
-    cornerRadius: 2,
-  }));
-
-  // Left person (smaller)
-  iconGroup.add(new Konva.Circle({
-    x: -8,
-    y: -1,
-    radius: 3,
-    fill: ICON_COLOR,
-    opacity: 0.8,
-  }));
-  // Left body
-  iconGroup.add(new Konva.Rect({
-    x: -11,
-    y: 3,
-    width: 6,
-    height: 5,
-    fill: ICON_COLOR,
-    cornerRadius: 2,
-    opacity: 0.8,
-  }));
-
-  // Right person (smaller)
-  iconGroup.add(new Konva.Circle({
-    x: 8,
-    y: -1,
-    radius: 3,
-    fill: ICON_COLOR,
-    opacity: 0.8,
-  }));
-  // Right body
-  iconGroup.add(new Konva.Rect({
-    x: 5,
-    y: 3,
-    width: 6,
-    height: 5,
-    fill: ICON_COLOR,
-    cornerRadius: 2,
-    opacity: 0.8,
-  }));
-
-  group.add(iconGroup);
 
   // Golden border circle
   const border = new Konva.Circle({
@@ -157,7 +99,102 @@ function buildFellowshipMarkerGroup(
     strokeWidth: 2.5,
     fill: 'transparent',
   });
-  group.add(border);
+
+  if (fellowship.avatar_id) {
+    // Avatar image: render initials as fallback, then swap when image loads
+    const bgCircle = new Konva.Circle({
+      x: 0,
+      y: 0,
+      radius: MARKER_HALF - 2,
+      fill: getInitialsColor(fellowship.name),
+    });
+
+    const initial = new Konva.Text({
+      text: fellowship.name.charAt(0).toUpperCase(),
+      fontSize: 16,
+      fontFamily: 'system-ui, sans-serif',
+      fontStyle: 'bold',
+      fill: '#FFFFFF',
+      align: 'center',
+      verticalAlign: 'middle',
+      width: MARKER_SIZE,
+      height: MARKER_SIZE,
+      x: -MARKER_HALF,
+      y: -MARKER_HALF,
+    });
+
+    group.add(bgCircle);
+    group.add(initial);
+    group.add(border);
+
+    // Async load avatar image
+    const thumbUrl = `/img/avatars/thumbs/${fellowship.avatar_id}.webp`;
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    pendingImages.add(img);
+    img.onload = () => {
+      pendingImages.delete(img);
+      if (destroyedRef.current) return;
+
+      // Remove the initials fallback
+      bgCircle.visible(false);
+      initial.visible(false);
+
+      // Create clipped avatar image
+      const avatarImage = new Konva.Image({
+        image: img,
+        x: -MARKER_HALF + 2,
+        y: -MARKER_HALF + 2,
+        width: MARKER_SIZE - 4,
+        height: MARKER_SIZE - 4,
+      });
+
+      // Clip to circle using a clip group
+      const clipGroup = new Konva.Group({
+        clipFunc: (ctx: Konva.Context) => {
+          ctx.arc(0, 0, MARKER_HALF - 2, 0, Math.PI * 2, false);
+        },
+      });
+      clipGroup.add(avatarImage);
+
+      // Insert before the border so the border renders on top
+      group.add(clipGroup);
+      clipGroup.moveToBottom();
+      border.moveToTop();
+      layer.batchDraw();
+    };
+    img.onerror = () => {
+      pendingImages.delete(img);
+      // Keep initials fallback on error — nothing to do
+    };
+    img.src = thumbUrl;
+  } else {
+    // No avatar: render initials circle with fellowship name initial
+    const bgCircle = new Konva.Circle({
+      x: 0,
+      y: 0,
+      radius: MARKER_HALF - 2,
+      fill: getInitialsColor(fellowship.name),
+    });
+
+    const initial = new Konva.Text({
+      text: fellowship.name.charAt(0).toUpperCase(),
+      fontSize: 16,
+      fontFamily: 'system-ui, sans-serif',
+      fontStyle: 'bold',
+      fill: '#FFFFFF',
+      align: 'center',
+      verticalAlign: 'middle',
+      width: MARKER_SIZE,
+      height: MARKER_SIZE,
+      x: -MARKER_HALF,
+      y: -MARKER_HALF,
+    });
+
+    group.add(bgCircle);
+    group.add(initial);
+    group.add(border);
+  }
 
   // Tooltip (hidden by default)
   const tooltip = new Konva.Label({
@@ -234,6 +271,11 @@ export function createFellowshipMarkers(
   /** Map coordinates for each fellowship (for visibility culling). */
   const positions = new Map<number, Point>();
 
+  /** Track destruction state to guard async image loads. */
+  const destroyedRef = { current: false };
+  /** Track pending image loads for cleanup on destroy. */
+  const pendingImages = new Set<HTMLImageElement>();
+
   const nodes: FellowshipMarkerNodes = {
     layer,
     markers,
@@ -265,7 +307,7 @@ export function createFellowshipMarkers(
           group.scaleY(scale);
         } else {
           // Create new marker
-          const group = buildFellowshipMarkerGroup(fellowship, pos, scale);
+          const group = buildFellowshipMarkerGroup(fellowship, pos, scale, layer, destroyedRef, pendingImages);
           layer.add(group);
           markers.set(fellowship.party_id, group);
         }
@@ -307,6 +349,13 @@ export function createFellowshipMarkers(
     },
 
     destroy() {
+      destroyedRef.current = true;
+      // Null out pending image callbacks to prevent post-destroy access
+      for (const img of pendingImages) {
+        img.onload = null;
+        img.onerror = null;
+      }
+      pendingImages.clear();
       for (const group of markers.values()) {
         group.destroy();
       }

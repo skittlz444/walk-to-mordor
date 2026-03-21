@@ -16,6 +16,7 @@ interface PartyInfo {
   name: string;
   role: string;
   leave_distance_behavior: string;
+  avatar_id: string | null;
 }
 
 interface PartyProgressData {
@@ -44,6 +45,9 @@ export function PartyManageIsland() {
   // Settings form
   const [settingsName, setSettingsName] = useState('');
   const [settingsLeaveBehavior, setSettingsLeaveBehavior] = useState('keep');
+  const [settingsAvatarId, setSettingsAvatarId] = useState<string | null>(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [availableAvatars, setAvailableAvatars] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Kick state
@@ -85,6 +89,18 @@ export function PartyManageIsland() {
       setPartyInfo(info);
       setSettingsName(info.name);
       setSettingsLeaveBehavior(info.leave_distance_behavior);
+      setSettingsAvatarId(info.avatar_id ?? null);
+
+      // Fetch available avatars for the icon picker
+      try {
+        const avatarsRes = await fetch('/api/avatars', { headers });
+        if (avatarsRes.ok) {
+          const avatarsData = await avatarsRes.json();
+          setAvailableAvatars(avatarsData.avatars ?? []);
+        }
+      } catch {
+        // Non-critical: avatar picker will just be empty
+      }
 
       const progressRes = await fetch(`/api/party/${partyId}/progress`, { headers });
       if (progressRes.ok) {
@@ -113,12 +129,13 @@ export function PartyManageIsland() {
         body: JSON.stringify({
           name: settingsName.trim(),
           leave_distance_behavior: settingsLeaveBehavior,
+          avatar_id: settingsAvatarId,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update settings');
       setSuccessMsg('Settings updated!');
-      setPartyInfo(prev => prev ? { ...prev, name: settingsName.trim(), leave_distance_behavior: settingsLeaveBehavior } : prev);
+      setPartyInfo(prev => prev ? { ...prev, name: settingsName.trim(), leave_distance_behavior: settingsLeaveBehavior, avatar_id: settingsAvatarId } : prev);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update settings');
     } finally {
@@ -253,6 +270,64 @@ export function PartyManageIsland() {
               required
             />
           </label>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.35rem' }}>Fellowship Icon</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Avatar username={settingsName || 'F'} avatarId={settingsAvatarId} size={48} />
+              <button
+                type="button"
+                className="party-btn party-btn--secondary party-btn--small"
+                onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+              >
+                {showAvatarPicker ? 'Close' : 'Change Icon'}
+              </button>
+              {settingsAvatarId && (
+                <button
+                  type="button"
+                  className="party-btn party-btn--small"
+                  style={{ color: 'var(--text-muted)' }}
+                  onClick={() => setSettingsAvatarId(null)}
+                >
+                  Reset to Initials
+                </button>
+              )}
+            </div>
+            <span className="helper-text">
+              Shown on the map when your fellowship's position is displayed.
+            </span>
+            {showAvatarPicker && (
+              <div className="party-avatar-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))',
+                gap: '0.5rem',
+                marginTop: '0.5rem',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                padding: '0.5rem',
+                border: '1px solid var(--border-color, #333)',
+                borderRadius: '8px',
+                background: 'var(--bg-secondary, #1a1a2e)',
+              }}>
+                {availableAvatars.map(avatarId => (
+                  <button
+                    key={avatarId}
+                    type="button"
+                    onClick={() => { setSettingsAvatarId(avatarId); setShowAvatarPicker(false); }}
+                    style={{
+                      padding: '2px',
+                      border: settingsAvatarId === avatarId ? '2px solid var(--accent-color, #DAA520)' : '2px solid transparent',
+                      borderRadius: '50%',
+                      background: 'none',
+                      cursor: 'pointer',
+                    }}
+                    title={avatarId}
+                  >
+                    <Avatar username={avatarId} avatarId={avatarId} size={40} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <label>
             When a Member Leaves
             <select value={settingsLeaveBehavior} onChange={(e) => setSettingsLeaveBehavior((e.target as HTMLSelectElement).value)}>

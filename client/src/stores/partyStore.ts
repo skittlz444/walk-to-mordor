@@ -22,6 +22,7 @@ export interface Party {
   leave_distance_behavior: string;
   dissolved_at: string | null;
   active_member_count: number;
+  avatar_id: string | null;
 }
 
 export interface PartyMember {

@@ -52,7 +52,7 @@ describe('PartySelector', () => {
 
   it('renders selector when parties exist', async () => {
     userParties.value = [
-      { id: 1, name: 'Fellowship', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 3 },
+      { id: 1, name: 'Fellowship', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 3, avatar_id: null },
     ];
 
     const { container } = render(<PartySelector />);
@@ -69,7 +69,7 @@ describe('PartySelector', () => {
 
   it('shows member count inline when party is selected', async () => {
     userParties.value = [
-      { id: 1, name: 'The Shire Walkers', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 4 },
+      { id: 1, name: 'The Shire Walkers', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 4, avatar_id: null },
     ];
     selectedView.value = 1;
     partyProgress.value = {
@@ -91,7 +91,7 @@ describe('PartySelector', () => {
 
   it('hides member count in personal view', () => {
     userParties.value = [
-      { id: 1, name: 'Fellowship', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 2 },
+      { id: 1, name: 'Fellowship', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 2, avatar_id: null },
     ];
     selectedView.value = 'personal';
 
@@ -102,7 +102,7 @@ describe('PartySelector', () => {
 
   it('applies journey variant class', () => {
     userParties.value = [
-      { id: 1, name: 'Test', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1 },
+      { id: 1, name: 'Test', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1, avatar_id: null },
     ];
 
     const { container } = render(<PartySelector variant="journey" />);
@@ -112,7 +112,7 @@ describe('PartySelector', () => {
 
   it('applies map variant class', () => {
     userParties.value = [
-      { id: 1, name: 'Test', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1 },
+      { id: 1, name: 'Test', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1, avatar_id: null },
     ];
 
     const { container } = render(<PartySelector variant="map" />);
@@ -122,7 +122,7 @@ describe('PartySelector', () => {
 
   it('shows loading spinner when progress is loading', () => {
     userParties.value = [
-      { id: 1, name: 'Test', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1 },
+      { id: 1, name: 'Test', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1, avatar_id: null },
     ];
     progressLoading.value = true;
 
@@ -133,7 +133,7 @@ describe('PartySelector', () => {
 
   it('shows singular member text for 1 member', () => {
     userParties.value = [
-      { id: 1, name: 'Solo', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1 },
+      { id: 1, name: 'Solo', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1, avatar_id: null },
     ];
     selectedView.value = 1;
     partyProgress.value = {
@@ -153,7 +153,7 @@ describe('PartySelector', () => {
 
   it('auto-applies persisted party view after parties load', async () => {
     const partyList = [
-      { id: 5, name: 'Shire Walkers', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 3 },
+      { id: 5, name: 'Shire Walkers', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 3, avatar_id: null },
     ];
 
     const progressData = {

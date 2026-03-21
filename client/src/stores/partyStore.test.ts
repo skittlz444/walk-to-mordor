@@ -50,7 +50,7 @@ describe('partyStore computed signals', () => {
   });
 
   it('hasParties is true when parties exist', () => {
-    userParties.value = [{ id: 1, name: 'Fellowship', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 3 }];
+    userParties.value = [{ id: 1, name: 'Fellowship', role: 'leader', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 3, avatar_id: null }];
     expect(hasParties.value).toBe(true);
   });
 
@@ -63,14 +63,14 @@ describe('partyStore computed signals', () => {
   });
 
   it('selectedParty returns matching party', () => {
-    const party = { id: 7, name: 'Shire Walkers', role: 'member', distance_mode: 'cumulative', leave_distance_behavior: 'remove', dissolved_at: null, active_member_count: 2 };
+    const party = { id: 7, name: 'Shire Walkers', role: 'member', distance_mode: 'cumulative', leave_distance_behavior: 'remove', dissolved_at: null, active_member_count: 2, avatar_id: null };
     userParties.value = [party];
     selectedView.value = 7;
     expect(selectedParty.value).toEqual(party);
   });
 
   it('selectedParty returns null for personal view', () => {
-    userParties.value = [{ id: 1, name: 'Test', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1 }];
+    userParties.value = [{ id: 1, name: 'Test', role: 'member', distance_mode: 'incremental', leave_distance_behavior: 'keep', dissolved_at: null, active_member_count: 1, avatar_id: null }];
     selectedView.value = 'personal';
     expect(selectedParty.value).toBeNull();
   });

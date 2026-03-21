@@ -70,7 +70,7 @@ describe('handlePartyPositions (GET /api/user/parties/positions)', () => {
     mockDB.prepare.mockReturnValueOnce(createChainableMock({
       all: jest.fn().mockResolvedValue({
         results: [
-          { party_id: 1, name: 'Fellowship A', distance_mode: 'incremental' },
+          { party_id: 1, name: 'Fellowship A', distance_mode: 'incremental', avatar_id: null },
         ],
       }),
     }));
@@ -100,7 +100,7 @@ describe('handlePartyPositions (GET /api/user/parties/positions)', () => {
     mockDB.prepare.mockReturnValueOnce(createChainableMock({
       all: jest.fn().mockResolvedValue({
         results: [
-          { party_id: 2, name: 'Fellowship B', distance_mode: 'cumulative' },
+          { party_id: 2, name: 'Fellowship B', distance_mode: 'cumulative', avatar_id: null },
         ],
       }),
     }));
@@ -130,7 +130,7 @@ describe('handlePartyPositions (GET /api/user/parties/positions)', () => {
     mockDB.prepare.mockReturnValueOnce(createChainableMock({
       all: jest.fn().mockResolvedValue({
         results: [
-          { party_id: 3, name: 'Fellowship C', distance_mode: 'incremental' },
+          { party_id: 3, name: 'Fellowship C', distance_mode: 'incremental', avatar_id: null },
         ],
       }),
     }));
@@ -157,8 +157,8 @@ describe('handlePartyPositions (GET /api/user/parties/positions)', () => {
     mockDB.prepare.mockReturnValueOnce(createChainableMock({
       all: jest.fn().mockResolvedValue({
         results: [
-          { party_id: 1, name: 'Party Alpha', distance_mode: 'incremental' },
-          { party_id: 2, name: 'Party Beta', distance_mode: 'cumulative' },
+          { party_id: 1, name: 'Party Alpha', distance_mode: 'incremental', avatar_id: null },
+          { party_id: 2, name: 'Party Beta', distance_mode: 'cumulative', avatar_id: null },
         ],
       }),
     }));
@@ -196,7 +196,7 @@ describe('handlePartyPositions (GET /api/user/parties/positions)', () => {
     mockDB.prepare.mockReturnValueOnce(createChainableMock({
       all: jest.fn().mockResolvedValue({
         results: [
-          { party_id: 1, name: 'Fellowship', distance_mode: 'incremental' },
+          { party_id: 1, name: 'Fellowship', distance_mode: 'incremental', avatar_id: null },
         ],
       }),
     }));

@@ -28,6 +28,7 @@ interface PartyRow {
   distance_mode: string;
   leave_distance_behavior: string;
   dissolved_at: string | null;
+  avatar_id: string | null;
 }
 
 /** D1 result row for party_members table */
@@ -405,7 +406,7 @@ export async function handleGetUserParties(request: Request, db: DbClient, allow
     if (includeDissolved) {
       query = `
         SELECT p.id, p.name, pm.role, p.distance_mode, p.leave_distance_behavior, p.dissolved_at,
-               p.invite_code, p.leader_id,
+               p.invite_code, p.leader_id, p.avatar_id,
                (SELECT COUNT(*) FROM party_members pm2 WHERE pm2.party_id = p.id AND pm2.status = 'active') as active_member_count
         FROM party_members pm
         JOIN parties p ON pm.party_id = p.id
@@ -414,7 +415,7 @@ export async function handleGetUserParties(request: Request, db: DbClient, allow
     } else {
       query = `
         SELECT p.id, p.name, pm.role, p.distance_mode, p.leave_distance_behavior, p.dissolved_at,
-               p.invite_code, p.leader_id,
+               p.invite_code, p.leader_id, p.avatar_id,
                (SELECT COUNT(*) FROM party_members pm2 WHERE pm2.party_id = p.id AND pm2.status = 'active') as active_member_count
         FROM party_members pm
         JOIN parties p ON pm.party_id = p.id
@@ -875,7 +876,7 @@ export async function handleUpdatePartySettings(
       return createErrorResponse('Only the party leader can update settings', 403);
     }
 
-    const { name, leave_distance_behavior, distance_mode } = body || {};
+    const { name, leave_distance_behavior, distance_mode, avatar_id } = body || {};
 
     // Reject distance_mode changes
     if (distance_mode !== undefined) {
@@ -883,8 +884,8 @@ export async function handleUpdatePartySettings(
     }
 
     // Validate at least one field to update
-    if (name === undefined && leave_distance_behavior === undefined) {
-      return createErrorResponse('No valid fields to update. Provide name or leave_distance_behavior.', 400);
+    if (name === undefined && leave_distance_behavior === undefined && avatar_id === undefined) {
+      return createErrorResponse('No valid fields to update. Provide name, leave_distance_behavior, or avatar_id.', 400);
     }
 
     // Validate name if provided
@@ -909,6 +910,13 @@ export async function handleUpdatePartySettings(
       }
     }
 
+    // Validate avatar_id if provided (must be a string or null to clear)
+    if (avatar_id !== undefined && avatar_id !== null) {
+      if (typeof avatar_id !== 'string' || avatar_id.trim().length === 0) {
+        return createErrorResponse('avatar_id must be a non-empty string or null', 400);
+      }
+    }
+
     // Build dynamic update
     const setClauses: string[] = [];
     const bindValues: unknown[] = [];
@@ -921,6 +929,10 @@ export async function handleUpdatePartySettings(
       setClauses.push('leave_distance_behavior = ?');
       bindValues.push(leave_distance_behavior);
     }
+    if (avatar_id !== undefined) {
+      setClauses.push('avatar_id = ?');
+      bindValues.push(avatar_id === null ? null : (avatar_id as string).trim());
+    }
 
     bindValues.push(partyId);
 
@@ -930,8 +942,8 @@ export async function handleUpdatePartySettings(
 
     // Fetch updated party
     const updated = await db.read.prepare(
-      'SELECT id, name, leader_id, distance_mode, leave_distance_behavior FROM parties WHERE id = ?'
-    ).bind(partyId).first<Pick<PartyRow, 'id' | 'name' | 'leader_id' | 'distance_mode' | 'leave_distance_behavior'>>();
+      'SELECT id, name, leader_id, distance_mode, leave_distance_behavior, avatar_id FROM parties WHERE id = ?'
+    ).bind(partyId).first<Pick<PartyRow, 'id' | 'name' | 'leader_id' | 'distance_mode' | 'leave_distance_behavior' | 'avatar_id'>>();
 
     return createSuccessResponse(updated);
   } catch (error: unknown) {
@@ -1234,6 +1246,7 @@ interface PartyPositionRow {
   party_id: number;
   name: string;
   distance_mode: string;
+  avatar_id: string | null;
 }
 
 /** D1 result row for party member distance (for position calculation) */
@@ -1263,7 +1276,7 @@ export async function handlePartyPositions(request: Request, db: DbClient, allow
   try {
     // Get all active parties the user belongs to
     const { results: parties } = await db.read.prepare(`
-      SELECT p.id as party_id, p.name, p.distance_mode
+      SELECT p.id as party_id, p.name, p.distance_mode, p.avatar_id
       FROM party_members pm
       JOIN parties p ON pm.party_id = p.id
       WHERE pm.user_id = ? AND pm.status = 'active' AND p.dissolved_at IS NULL
@@ -1273,7 +1286,7 @@ export async function handlePartyPositions(request: Request, db: DbClient, allow
       return createSuccessResponse({ fellowships: [] });
     }
 
-    const fellowships: Array<{ party_id: number; name: string; total_distance: number }> = [];
+    const fellowships: Array<{ party_id: number; name: string; total_distance: number; avatar_id: string | null }> = [];
 
     for (const party of parties) {
       // Get all members (active + departed with kept contributions)
@@ -1303,6 +1316,7 @@ export async function handlePartyPositions(request: Request, db: DbClient, allow
         party_id: party.party_id,
         name: party.name,
         total_distance: totalDistance,
+        avatar_id: party.avatar_id ?? null,
       });
     }
 
