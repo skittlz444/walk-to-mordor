@@ -479,12 +479,13 @@ function renderSheetWeekView(grid, title, closeSheetFn) {
 
 function renderSheetMonthView(grid, title, closeSheetFn) {
   const formatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
-  title.textContent = formatter.format(currentDate);
-
   const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-  const startPadding = firstDay.getDay();
-  const totalDays = lastDay.getDate();
+  title.textContent = formatter.format(firstDay);
+
+  // Start from the Sunday on or before the first day of the month
+  const startDate = new Date(firstDay);
+  startDate.setDate(startDate.getDate() - firstDay.getDay());
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   let html = '<div class="month-view">';
@@ -495,25 +496,35 @@ function renderSheetMonthView(grid, title, closeSheetFn) {
   html += '</div>';
 
   html += '<div class="month-grid">';
-  for (let i = 0; i < startPadding; i++) {
-    html += '<div class="calendar-cell empty"></div>';
+  let currentCellDate = new Date(startDate);
+
+  for (let week = 0; week < 6; week++) {
+    html += '<div class="week-row">';
+    for (let day = 0; day < 7; day++) {
+      const event = getEventForDate(currentCellDate);
+      const isCurrentDay = isToday(currentCellDate);
+      const isCurrentMonth = currentCellDate.getMonth() === currentDate.getMonth();
+      const midnightTimestamp = getDateAtMidnight(currentCellDate);
+
+      html += `
+        <div class="calendar-cell month-cell ${isCurrentDay ? 'today' : ''} ${!isCurrentMonth ? 'other-month' : ''}"
+             data-date="${formatDate(currentCellDate)}"
+             data-timestamp="${midnightTimestamp.getTime()}">
+          <div class="day-number">${currentCellDate.getDate()}</div>
+          ${event ? `<div class="event-label">${event.title}</div>` : ''}
+          ${isCurrentDay ? '<div class="today-indicator"></div>' : ''}
+        </div>
+      `;
+
+      currentCellDate.setDate(currentCellDate.getDate() + 1);
+    }
+    html += '</div>';
+
+    if (currentCellDate > lastDay) {
+      break;
+    }
   }
 
-  for (let day = 1; day <= totalDays; day++) {
-    const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    const event = getEventForDate(cellDate);
-    const isCurrentDay = isToday(cellDate);
-    const midnightTimestamp = getDateAtMidnight(cellDate);
-    
-    html += `
-      <div class="calendar-cell month-cell ${isCurrentDay ? 'today' : ''}"
-           data-date="${formatDate(cellDate)}"
-           data-timestamp="${midnightTimestamp.getTime()}">
-        <div class="day-number">${day}</div>
-        ${event ? `<div class="event-label">${event.title}</div>` : ''}
-      </div>
-    `;
-  }
   html += '</div></div>';
   grid.innerHTML = html;
 
