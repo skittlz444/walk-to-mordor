@@ -984,7 +984,8 @@ test.describe('Story 3-6: Party Selector on Map Page', () => {
     await expect(partyOption).toBeVisible({ timeout: 10000 });
     await partyOption.click();
 
-    await expect.poll(async () => await getCurrentLocationTooltipText(page), { timeout: 15000 }).toBe('Current Location: 705 km');
+    // User marker stays at personal distance; fellowship view is active via localStorage
+    await expect.poll(async () => await getCurrentLocationTooltipText(page), { timeout: 15000 }).toBe('Current Location: 305 km');
     await expect.poll(async () => await page.evaluate(() => localStorage.getItem('wtm_party_view')), { timeout: 15000 }).toBe(String(party.id));
 
     await logDistance(request, leader1Token, '2026-02-20', 308);
@@ -992,7 +993,8 @@ test.describe('Story 3-6: Party Selector on Map Page', () => {
       window.updateMapDistance?.(308);
     });
 
-    await expect.poll(async () => await getCurrentLocationTooltipText(page), { timeout: 15000 }).toBe('Current Location: 708 km');
+    // After walk save, personal marker updates but fellowship view persists
+    await expect.poll(async () => await getCurrentLocationTooltipText(page), { timeout: 15000 }).toBe('Current Location: 308 km');
     await expect.poll(async () => await page.evaluate(() => localStorage.getItem('wtm_party_view')), { timeout: 15000 }).toBe(String(party.id));
   });
 });

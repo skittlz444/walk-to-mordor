@@ -358,9 +358,12 @@ function showCalendarSheetWithData() {
 
   function closeSheet(wasDismissed = true) {
     sheet.classList.remove('open');
-    sheet.addEventListener('transitionend', () => {
-      sheet.remove();
-    }, { once: true });
+    const removeSheet = () => {
+      if (sheet.parentNode) sheet.remove();
+    };
+    sheet.addEventListener('transitionend', removeSheet, { once: true });
+    // Fallback: guarantee removal if transitionend does not fire (e.g. mobile)
+    setTimeout(removeSheet, 400);
     document.removeEventListener('keydown', handleEscape);
     if (wasDismissed && calendarModalDismissCallback) {
       calendarModalDismissCallback();
