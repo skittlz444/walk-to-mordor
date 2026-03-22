@@ -32,7 +32,7 @@ import {
   validateAdminSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
-import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyProgress, handlePartyActivity, handleSendPartyMessage, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyPositions, handlePartyProgress, handlePartyActivity, handleSendPartyMessage, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile, handleFriendPositions } from "./friends-handlers";
 import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from "./fellowship-invite-handlers";
 import { renderPartyListPage } from "./renderPartyListPage";
@@ -264,6 +264,11 @@ export default {
       // GET /api/user/parties — list user's party memberships (auth required)
       if (url.pathname === "/api/user/parties" && method === "GET") {
         return handleGetUserParties(request, db, env.ALLOW_TEST_AUTH);
+      }
+
+      // GET /api/user/parties/positions — get fellowship positions for map display
+      if (url.pathname === "/api/user/parties/positions" && method === "GET") {
+        return handlePartyPositions(request, db, env.ALLOW_TEST_AUTH);
       }
 
       // GET /api/user/fellowship-invites — list pending fellowship invites
@@ -718,6 +723,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/avatars":
     case "/api/auth/confirm-email":
     case "/api/user/parties":
+    case "/api/user/parties/positions":
     case "/api/user/fellowship-invites":
     case "/api/friends":
     case "/api/friends/pending":

@@ -22,6 +22,7 @@ export interface Party {
   leave_distance_behavior: string;
   dissolved_at: string | null;
   active_member_count: number;
+  avatar_id: string | null;
 }
 
 export interface PartyMember {
@@ -35,6 +36,7 @@ export interface PartyMember {
 
 export interface PartyProgress {
   total_distance: number;
+  user_total_distance: number;
   member_count: number;
   calculated_position: { id: number; title: string; distance: number } | null;
   distance_mode: string;
