@@ -1,6 +1,7 @@
 // Party (Fellowship) API handlers
 import { validateSession } from "./auth-handlers";
 import { generateAlphanumericCode } from "./auth-utils";
+import { isValidAvatarSlug } from "./avatar-slugs";
 import { calculateTotalDistance } from "./goals-handlers";
 import { createErrorResponse, createSuccessResponse } from "./validators";
 import type { DbClient } from './db';
@@ -910,10 +911,10 @@ export async function handleUpdatePartySettings(
       }
     }
 
-    // Validate avatar_id if provided (must be a string or null to clear)
+    // Validate avatar_id if provided (must be a valid avatar slug or null to clear)
     if (avatar_id !== undefined && avatar_id !== null) {
-      if (typeof avatar_id !== 'string' || avatar_id.trim().length === 0) {
-        return createErrorResponse('avatar_id must be a non-empty string or null', 400);
+      if (typeof avatar_id !== 'string' || !isValidAvatarSlug(avatar_id)) {
+        return createErrorResponse('Invalid avatar_id', 400);
       }
     }
 
@@ -1262,8 +1263,9 @@ interface PartyMemberDistRow {
 /**
  * GET /api/user/parties/positions — Get positions of all user's active fellowships for map display.
  *
- * Returns { fellowships: [{ party_id, name, total_distance }] }
- * where total_distance is in km (sum of member contributions based on distance_mode).
+ * Returns { fellowships: [{ party_id, name, total_distance, avatar_id }] }
+ * where total_distance is in km (sum of member contributions based on distance_mode),
+ * and avatar_id is the fellowship's avatar identifier (may be null).
  * Only returns active (non-dissolved) parties where user is an active member.
  */
 export async function handlePartyPositions(request: Request, db: DbClient, allowTestAuth?: string): Promise<Response> {

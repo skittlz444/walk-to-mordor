@@ -1798,7 +1798,11 @@ export function MapIsland() {
                   </label>
                 </div>
                 {showFellowshipsOnMap.value && fellowshipPositions.value.length === 0 && (
-                  <p className="friends-hint">Loading fellowship positions…</p>
+                  <p className="friends-hint">
+                    {fellowshipPositionsFetchedAt.value > 0
+                      ? 'No fellowship positions to show yet'
+                      : 'Loading fellowship positions…'}
+                  </p>
                 )}
               </>
             )}

@@ -139,6 +139,7 @@ function buildFellowshipMarkerGroup(
     // Async load avatar image, swap initials when loaded
     const thumbUrl = `/img/avatars/thumbs/${fellowship.avatar_id}.webp`;
     const img = new window.Image();
+    img.crossOrigin = 'anonymous';
     pendingImages.add(img);
     img.onload = () => {
       pendingImages.delete(img);
