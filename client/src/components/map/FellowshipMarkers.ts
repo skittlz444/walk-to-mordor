@@ -2,7 +2,7 @@
  * FellowshipMarkers – renders fellowship avatar markers on the Konva map.
  *
  * Follows the FriendMarkers.ts imperative Konva pattern.
- * Each fellowship is rendered as a 36px circular marker with either a leader-set
+ * Each fellowship is rendered as a 32px circular marker with either a leader-set
  * avatar image or an initials fallback (first letter of the fellowship name).
  * Markers live on a dedicated Konva layer.
  *
@@ -15,7 +15,7 @@ import type { PathNode } from '../../data/paths/fellowship-path';
 import { getUserPosition, markerScale, KM_TO_MILES, type Point } from '../../utils/map-utils';
 
 /** Visual size of fellowship markers in screen pixels. */
-const MARKER_SIZE = 36;
+const MARKER_SIZE = 32;
 const MARKER_HALF = MARKER_SIZE / 2;
 
 /** Viewport margin (px) for frustum culling. */
@@ -64,10 +64,11 @@ function getInitialsColor(name: string): string {
 
 /**
  * Calculate the fellowship marker scale factor.
- * Uses markerScale with slightly larger max than FriendMarkers (18 vs 16).
+ * Uses the same markerScale bounds as friend markers so all avatar markers
+ * keep the same on-screen footprint.
  */
 function fellowshipMarkerScale(stageScale: number): number {
-  return markerScale(stageScale, 6, 2, 18);
+  return markerScale(stageScale, 6, 2, 16);
 }
 
 /**
@@ -83,7 +84,7 @@ function createInitials(name: string): { bgCircle: Konva.Circle; initial: Konva.
 
   const initial = new Konva.Text({
     text: name.charAt(0).toUpperCase(),
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'system-ui, sans-serif',
     fontStyle: 'bold',
     fill: '#FFFFFF',
@@ -124,7 +125,7 @@ function buildFellowshipMarkerGroup(
     y: 0,
     radius: MARKER_HALF,
     stroke: MARKER_BORDER,
-    strokeWidth: 2.5,
+    strokeWidth: 2,
     fill: 'transparent',
   });
 

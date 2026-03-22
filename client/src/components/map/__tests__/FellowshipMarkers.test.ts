@@ -234,7 +234,7 @@ describe('FellowshipMarkers', () => {
       expect(getUserPosition).toHaveBeenCalledWith(pathNodes, expect.closeTo(124.2742, 2));
     });
 
-    it('calls markerScale with correct parameters (6, 2, 18)', () => {
+    it('calls markerScale with correct parameters (6, 2, 16)', () => {
       const nodes = createFellowshipMarkers(
         mockStage as unknown as Konva.Stage,
         mockMarkerLayer as unknown as Konva.Layer,
@@ -242,7 +242,7 @@ describe('FellowshipMarkers', () => {
 
       nodes.update(sampleFellowships, pathNodes, 1.5);
 
-      expect(markerScale).toHaveBeenCalledWith(1.5, 6, 2, 18);
+      expect(markerScale).toHaveBeenCalledWith(1.5, 6, 2, 16);
     });
 
     it('removes markers for fellowships no longer in the list', () => {
@@ -322,7 +322,7 @@ describe('FellowshipMarkers', () => {
       vi.mocked(markerScale).mockReturnValueOnce(0.75);
       nodes.setScale(2.0);
 
-      expect(markerScale).toHaveBeenCalledWith(2.0, 6, 2, 18);
+      expect(markerScale).toHaveBeenCalledWith(2.0, 6, 2, 16);
     });
   });
 

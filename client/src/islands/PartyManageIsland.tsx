@@ -28,6 +28,18 @@ interface PartyProgressData {
   members: PartyMember[];
 }
 
+function parseAvatarSlugs(payload: unknown): string[] {
+  if (Array.isArray(payload)) {
+    return payload.filter((slug): slug is string => typeof slug === 'string');
+  }
+
+  if (payload && typeof payload === 'object' && Array.isArray((payload as { avatars?: unknown }).avatars)) {
+    return (payload as { avatars: unknown[] }).avatars.filter((slug): slug is string => typeof slug === 'string');
+  }
+
+  return [];
+}
+
 function getPartyIdFromUrl(): number {
   const match = window.location.pathname.match(/^\/party\/(\d+)\/manage$/);
   return match ? parseInt(match[1], 10) : 0;
@@ -96,7 +108,7 @@ export function PartyManageIsland() {
         const avatarsRes = await fetch('/api/avatars', { headers });
         if (avatarsRes.ok) {
           const avatarsData = await avatarsRes.json();
-          setAvailableAvatars(avatarsData.avatars ?? []);
+          setAvailableAvatars(parseAvatarSlugs(avatarsData));
         }
       } catch {
         // Non-critical: avatar picker will just be empty

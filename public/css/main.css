@@ -394,6 +394,10 @@ h1 {
   gap: 10px;
 }
 
+.friends-toggle-row + .friends-toggle-row {
+  margin-top: 8px;
+}
+
 .friends-toggle-row span {
   font-size: 0.9rem;
   color: var(--text-primary);
