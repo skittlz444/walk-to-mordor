@@ -87,8 +87,8 @@
   "dependencies": {
     "@preact/signals": "^2.8.2",
     "dompurify": "^3.3.3",
-    "konva": "^10.2.1",
-    "marked": "^17.0.4",
+    "konva": "^10.2.3",
+    "marked": "^17.0.5",
     "preact": "^10.29.0"
   }
 }
