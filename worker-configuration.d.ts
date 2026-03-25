@@ -8,8 +8,6 @@ declare namespace Cloudflare {
 	interface Env {
 		DB: D1Database;
 		ASSETS: Fetcher;
-		ALLOW_TEST_AUTH?: string;
-		RESEND_API_KEY?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
