@@ -121,7 +121,9 @@ function formatDateDisplay(dateStr) {
   }
   
   try {
-    const date = new Date(dateStr);
+    // Parse with split to avoid timezone shift from new Date("YYYY-MM-DD") being UTC
+    const parts = dateStr.split('-');
+    const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
