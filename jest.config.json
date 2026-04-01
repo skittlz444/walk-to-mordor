@@ -48,7 +48,7 @@
   "setupFilesAfterEnv": [],
   "transform": {
     "^.+\\.ts$": ["ts-jest", {
-      "tsconfig": "tsconfig.json"
+      "tsconfig": "tsconfig.jest.json"
     }]
   },
   "moduleFileExtensions": ["ts", "js", "json"],
