@@ -36,22 +36,22 @@
     "@types/supertest": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",
-    "@vitest/coverage-v8": "^4.1.0",
+    "@vitest/coverage-v8": "^4.1.2",
     "concurrently": "^9.2.1",
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
-    "happy-dom": "^20.8.4",
+    "happy-dom": "^20.8.9",
     "jest": "^30.3.0",
     "jest-environment-miniflare": "^2.14.4",
     "jest-junit": "^16.0.0",
-    "pnpm": "^10.32.1",
+    "pnpm": "^10.33.0",
     "sharp": "^0.34.5",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.6",
     "typescript": "6.0.2",
-    "vite": "^8.0.1",
+    "vite": "^8.0.3",
     "vitest": "^4.0.17",
-    "wrangler": "^4.76.0"
+    "wrangler": "^4.78.0"
   },
   "scripts": {
     "cf-typegen": "wrangler types",
@@ -85,7 +85,7 @@
     "tile:map": "node scripts/tile-map-image.js"
   },
   "dependencies": {
-    "@preact/signals": "^2.8.2",
+    "@preact/signals": "^2.9.0",
     "dompurify": "^3.3.3",
     "konva": "^10.2.3",
     "marked": "^17.0.5",
