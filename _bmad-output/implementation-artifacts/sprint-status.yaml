@@ -160,7 +160,7 @@ development_status:
   epic-10: in-progress
   10-1-the-palantir-weekly-insight-orb: ready-for-dev
   10-2-walk-streak-heatmap-calendar: ready-for-dev
-  10-3-walk-to-mordor-wrapped-year-end-review: backlog
+  10-3-walk-to-mordor-wrapped-year-end-review: ready-for-dev
   10-4-offline-write-queue-with-d1-sync: backlog
   epic-10-retrospective: optional
 
