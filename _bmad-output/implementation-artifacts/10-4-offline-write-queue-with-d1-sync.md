@@ -218,13 +218,13 @@ Note: the existing `notifyClients(url)` passes a URL string. The new signature n
 Background Sync (`self.registration.sync`) is supported in Chrome/Edge but NOT Firefox/Safari. The fallback `online` event listener in the client is essential for cross-browser support.
 
 #### No New Dependencies
-Do NOT add `idb`, `workbox`, or any IndexedDB wrapper library. Use raw `indexedDB` API with a small promisified helper (~30 lines) inline in `sw.js`. This matches the project's lightweight dependency philosophy.
+Do NOT add new runtime/client dependencies such as `idb`, `workbox`, or any IndexedDB wrapper/offline helper library. Use raw `indexedDB` API with a small promisified helper (~30 lines) inline in `sw.js`. Dev-only test dependencies are acceptable if needed for testing (for example, `fake-indexeddb`), because they do not ship in production. This matches the project's lightweight runtime dependency philosophy.
 
-[Source: package.json dependencies — no IndexedDB or offline libraries present]
+[Source: package.json runtime dependencies — no IndexedDB or offline libraries present]
 
 ### Project Structure Notes
 
-All changes for this story are **client-side only** — no server/worker changes needed:
+All changes for this story are **client-side only** — no server-side (Cloudflare Worker) changes needed:
 
 | File | Action | Purpose |
 |---|---|---|

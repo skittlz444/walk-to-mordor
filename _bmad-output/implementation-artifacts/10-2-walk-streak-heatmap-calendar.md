@@ -52,7 +52,7 @@ so that I feel achievement from consistency and can see patterns in my activity.
 ### Project Structure Notes
 
 - Client components belong in `client/src/components/`.
-- Tests for backend: `tests/`. Tests for client: `client/test-results/` (Vitest).
+- Tests for backend: `tests/`. Vitest client test results/artifacts: `test-results/client/junit.xml`.
 
 ### References
 
@@ -62,7 +62,7 @@ so that I feel achievement from consistency and can see patterns in my activity.
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Not recorded.
 
 ### Debug Log References
 
