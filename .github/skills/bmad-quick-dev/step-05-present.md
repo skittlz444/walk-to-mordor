@@ -12,7 +12,9 @@
 
 ### Generate Suggested Review Order
 
-Read `{baseline_commit}` from `{spec_file}` frontmatter and construct the diff of all changes since that commit.
+Read `{baseline_commit}` from `{spec_file}` frontmatter.
+- If `{baseline_commit}` is a usable commit, construct the diff of all changes since that commit.
+- If `{baseline_commit}` is `NO_VCS` (or version control is otherwise unavailable), use a best-effort fallback: derive the changed-file set from the current task/spec context and any files edited during implementation, then build the review order from those files without relying on git diff.
 
 Append the review order as a `## Suggested Review Order` section to `{spec_file}` **after the last existing section**. Do not modify the Code Map.
 
