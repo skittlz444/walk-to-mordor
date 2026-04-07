@@ -48,7 +48,10 @@
   "setupFilesAfterEnv": [],
   "transform": {
     "^.+\\.ts$": ["ts-jest", {
-      "tsconfig": "tsconfig.jest.json"
+      "tsconfig": "tsconfig.jest.json",
+      "diagnostics": {
+        "ignoreCodes": [5107]
+      }
     }]
   },
   "moduleFileExtensions": ["ts", "js", "json"],
