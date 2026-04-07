@@ -38,7 +38,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-04-05
+last_updated: 2026-04-07
 project: walk-to-mordor
 project_key: NOKEY
 tracking_system: file-system
@@ -158,7 +158,7 @@ development_status:
   # Dependency: Story 10.4 depends on Epic 8 Story 8.3
   # ============================================
   epic-10: in-progress
-  10-1-the-palantir-weekly-insight-orb: ready-for-dev
+  10-1-the-palantir-weekly-insight-orb: done
   10-2-walk-streak-heatmap-calendar: ready-for-dev
   10-3-walk-to-mordor-wrapped-year-end-review: ready-for-dev
   10-4-offline-write-queue-with-d1-sync: ready-for-dev

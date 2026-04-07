@@ -21,6 +21,8 @@ import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
 import { AdminUsersListIsland } from './islands/AdminUsersListIsland';
 import { AdminMetricsIsland } from './islands/AdminMetricsIsland';
 import { ProfileIsland } from './islands/ProfileIsland';
+import { PalantirIsland } from './islands/PalantirIsland';
+import { StatsIsland } from './islands/StatsIsland';
 import * as partyStore from './stores/partyStore';
 import { initializeAppStore } from './stores/appStore';
 
@@ -38,7 +40,9 @@ const autoHydratedIslands = {
   FriendProfileIsland,
   FriendsListIsland,
   MapIsland,
+  PalantirIsland,
   ProfileIsland,
+  StatsIsland,
   PartyListIsland,
   PartyDetailIsland,
   PartyManageIsland,

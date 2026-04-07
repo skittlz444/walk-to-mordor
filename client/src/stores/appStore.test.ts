@@ -13,6 +13,9 @@ import {
   isAuthenticated,
   preferences,
   currentMilestone,
+  lastPalantirViewTs,
+  palantirCooldownElapsed,
+  markPalantirViewed,
   initializeAppStore,
   resetAppStore,
   startPreferenceBridge,
@@ -212,6 +215,33 @@ describe('appStore', () => {
       expect(totalDistance.value).toBe(125.5);
       expect(storeInitialized.value).toBe(true);
       expect(storeError.value).toBeNull();
+    });
+
+    it('hydrates the Palantír cooldown from the current user key', async () => {
+      store['sessionToken'] = 'test-token';
+      store['wtm_palantir_last_view:42'] = '1712448000000';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          userId: 42,
+          username: 'Frodo',
+          avatarId: 'avatar-123',
+          isAdmin: false,
+          showFutureGoalsUnlocked: false,
+          defaultViewMap: true,
+        }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalDistance: 125.5 }),
+      });
+
+      await initializeAppStore();
+      await flushPromises();
+
+      expect(lastPalantirViewTs.value).toBe(1712448000000);
     });
 
     it('sends correct authorization header', async () => {
@@ -652,6 +682,59 @@ describe('appStore', () => {
 
       totalDistance.value = 500;
       expect(currentMilestone.value).toEqual({ totalDistance: 500 });
+    });
+  });
+
+  describe('Palantír cooldown', () => {
+    it('lastPalantirViewTs starts null when localStorage has no entry', () => {
+      expect(lastPalantirViewTs.value).toBeNull();
+    });
+
+    it('palantirCooldownElapsed is true when lastPalantirViewTs is null', () => {
+      lastPalantirViewTs.value = null;
+      expect(palantirCooldownElapsed.value).toBe(true);
+    });
+
+    it('palantirCooldownElapsed is false when viewed less than 7 days ago', () => {
+      const recentTs = Date.now() - 1 * 24 * 60 * 60 * 1000; // 1 day ago
+      lastPalantirViewTs.value = recentTs;
+      expect(palantirCooldownElapsed.value).toBe(false);
+    });
+
+    it('palantirCooldownElapsed is true when viewed more than 7 days ago', () => {
+      const oldTs = Date.now() - 8 * 24 * 60 * 60 * 1000; // 8 days ago
+      lastPalantirViewTs.value = oldTs;
+      expect(palantirCooldownElapsed.value).toBe(true);
+    });
+
+    it('markPalantirViewed updates lastPalantirViewTs and persists to localStorage', () => {
+      userId.value = 42;
+      const beforeCall = Date.now();
+      markPalantirViewed();
+      const afterCall = Date.now();
+
+      expect(lastPalantirViewTs.value).not.toBeNull();
+      expect(lastPalantirViewTs.value!).toBeGreaterThanOrEqual(beforeCall);
+      expect(lastPalantirViewTs.value!).toBeLessThanOrEqual(afterCall);
+
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'wtm_palantir_last_view:42',
+        expect.any(String),
+      );
+    });
+
+    it('markPalantirViewed causes palantirCooldownElapsed to become false', () => {
+      userId.value = 42;
+      expect(palantirCooldownElapsed.value).toBe(true);
+      markPalantirViewed();
+      expect(palantirCooldownElapsed.value).toBe(false);
+    });
+
+    it('markPalantirViewed is a no-op when there is no authenticated user', () => {
+      markPalantirViewed();
+
+      expect(lastPalantirViewTs.value).toBeNull();
+      expect(localStorage.setItem).not.toHaveBeenCalled();
     });
   });
 });

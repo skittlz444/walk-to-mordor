@@ -193,6 +193,7 @@ export function DrawerIsland() {
             Friends
             {pendingFriendsCount > 0 && <span className="drawer-badge">{pendingFriendsCount}</span>}
           </a>
+          <a className="drawer-link" href="/stats" onClick={closeDrawer}>Stats</a>
           {isAdmin && <a className="drawer-link" href="/admin" onClick={closeDrawer}>Admin</a>}
           <a className="drawer-link drawer-profile" href="/profile" onClick={closeDrawer}>Profile</a>
         </nav>

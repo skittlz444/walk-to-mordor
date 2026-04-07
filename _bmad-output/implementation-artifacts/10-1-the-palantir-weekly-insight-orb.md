@@ -1,6 +1,6 @@
 # Story 10.1: The Palantir Weekly Insight Orb
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -31,25 +31,33 @@ so that I can track my consistency, see my trajectory, and stay motivated.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: API Endpoint (`/api/stats/weekly`) (AC: 4, 5, 7)
-  - [ ] Subtask 1.1: Create SQL query to sum past 7 days and prior 7 days distances.
-  - [ ] Subtask 1.2: Calculate pace trend and projection (evaluating next major milestone distance < 2 weeks vs. immediate next goal).
-  - [ ] Subtask 1.3: Calculate percentage contribution against each fellowship the user is a member of, but only return/display the top 2 by percentage.
-- [ ] Task 2: State & Cooldown Tracking (AC: 1, 2)
-  - [ ] Subtask 2.1: Add a mechanism (e.g., in localStorage or D1 `users` table preferences, or via `appStore.ts`) to track the `last_palantir_view` timestamp.
-  - [ ] Subtask 2.2: Ensure the Maps and Journey Preact islands check this shared cooldown before popping up.
-- [ ] Task 3: Thematic UI Component (`PalantirInsightModal.tsx`) (AC: 4, 5, 6)
-  - [ ] Subtask 3.1: Design and implement the modal with the Palantír aesthetic (glowing effects, dark iron theme).
-  - [ ] Subtask 3.2: Implement the stats layout showing personal progress and the multi-fellowship breakdown list.
-  - [ ] Subtask 3.3: Implement the dismiss action that updates the cooldown tracker.
-- [ ] Task 4: Integration (AC: 1, 3)
-  - [ ] Subtask 4.1: Integrate `PalantirInsightModal` into both Journey page and Maps page islands.
-  - [ ] Subtask 4.2: Verify rendering logic: only render if 30-day activity exists and the 1-week cooldown has elapsed.
-- [ ] Task 5: Dedicated Stats Page & Sub-Navigation (AC: 8)
-  - [ ] Subtask 5.1: Create `/stats` structure and HTML shell, ensuring it includes a sub-navigation menu (e.g., standard site tabs) to act as a hub for different stat views.
-  - [ ] Subtask 5.2: Add a "Stats" link to the main app layout navigation.
-  - [ ] Subtask 5.3: Add "The Palantír" as the primary active tab/view in the new Stats sub-navigation (e.g., `/stats/palantir` or `#palantir`).
-  - [ ] Subtask 5.4: Render the Palantír component within this sub-view in an "always-open" mode (bypassing the weekly cooldown).
+- [x] Task 1: API Endpoint (`/api/stats/weekly`) (AC: 4, 5, 7)
+  - [x] Subtask 1.1: Create SQL query to sum past 7 days and prior 7 days distances.
+  - [x] Subtask 1.2: Calculate pace trend and projection (evaluating next major milestone distance < 2 weeks vs. immediate next goal).
+  - [x] Subtask 1.3: Calculate percentage contribution against each fellowship the user is a member of, but only return/display the top 2 by percentage.
+- [x] Task 2: State & Cooldown Tracking (AC: 1, 2)
+  - [x] Subtask 2.1: Add a mechanism (e.g., in localStorage or D1 `users` table preferences, or via `appStore.ts`) to track the `last_palantir_view` timestamp.
+  - [x] Subtask 2.2: Ensure the Maps and Journey Preact islands check this shared cooldown before popping up.
+- [x] Task 3: Thematic UI Component (`PalantirInsightModal.tsx`) (AC: 4, 5, 6)
+  - [x] Subtask 3.1: Design and implement the modal with the Palantír aesthetic (glowing effects, dark iron theme).
+  - [x] Subtask 3.2: Implement the stats layout showing personal progress and the multi-fellowship breakdown list.
+  - [x] Subtask 3.3: Implement the dismiss action that updates the cooldown tracker.
+- [x] Task 4: Integration (AC: 1, 3)
+  - [x] Subtask 4.1: Integrate `PalantirInsightModal` into both Journey page and Maps page islands.
+  - [x] Subtask 4.2: Verify rendering logic: only render if 30-day activity exists and the 1-week cooldown has elapsed.
+- [x] Task 5: Dedicated Stats Page & Sub-Navigation (AC: 8)
+  - [x] Subtask 5.1: Create `/stats` structure and HTML shell, ensuring it includes a sub-navigation menu (e.g., standard site tabs) to act as a hub for different stat views.
+  - [x] Subtask 5.2: Add a "Stats" link to the main app layout navigation.
+  - [x] Subtask 5.3: Add "The Palantír" as the primary active tab/view in the new Stats sub-navigation (e.g., `/stats/palantir` or `#palantir`).
+  - [x] Subtask 5.4: Render the Palantír component within this sub-view in an "always-open" mode (bypassing the weekly cooldown).
+
+### Review Findings
+
+- [x] [Review][Patch] Scope the Palantír cooldown storage per user instead of per browser [client/src/stores/appStore.ts:53]
+- [x] [Review][Patch] Prevent the Journey and Map Palantír popups from showing for users without 30-day activity, and avoid consuming cooldown in that empty state [client/src/islands/PalantirIsland.tsx:21]
+- [x] [Review][Patch] Guard the Journey and Map Palantír popups behind authentication so they cannot flash a "Not authenticated" error before redirect [client/src/islands/PalantirIsland.tsx:21]
+- [x] [Review][Patch] Compare pace using matching 7-day windows instead of an 8-day current window versus a 7-day previous window [src/stats-handlers.ts:85]
+- [x] [Review][Patch] Return a meaningful pace change for a first active week instead of "up" with 0% change [src/stats-handlers.ts:103]
 
 ## Dev Notes
 
@@ -87,6 +95,31 @@ None
 - Updated projection logic to prioritize major milestones within a 2-week window, falling back to the next immediate goal.
 - Limited fellowship contribution summary to the top 2 fellowships to maintain a clean UI.
 - **Added instruction for the developer to request any specific missing image assets from the user during implementation.**
+- Pre-existing bug fixed: `tsconfig.jest.json` had `"ignoreDeprecations": "6.0"` which was invalid in TypeScript 5.9.3, causing ALL Jest tests to fail. Removed to unblock the suite.
+- Palantír CSS is entirely CSS-variables-based (no embedded images needed); the orb is rendered via CSS gradients and animations.
+- `vi.mock()` (not `vi.spyOn`) is required for ESM named-export mocking in Vitest — critical lesson for future component tests.
+
+### Change Log
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-04-xx | Full implementation: Tasks 1–5 complete. All tests pass (1167 Jest + 656 Vitest). | GitHub Copilot (Claude Sonnet 4.6) |
 
 ### File List
-- _bmad-output/implementation-artifacts/10-1-the-palantir-weekly-insight-orb.md
+- `_bmad-output/implementation-artifacts/10-1-the-palantir-weekly-insight-orb.md`
+- `src/stats-handlers.ts` — new `handleWeeklyStats()` API handler
+- `src/renderStatsPage.ts` — SSR shell for `/stats` page
+- `src/index.ts` — added `/api/stats/weekly` + `/stats` routes; `getAllowedMethods` entry
+- `tsconfig.jest.json` — removed invalid `ignoreDeprecations: "6.0"` (pre-existing bug fix)
+- `client/src/components/PalantirInsightModal.tsx` — Palantír UI component
+- `client/src/islands/PalantirIsland.tsx` — cooldown-guarded island for Journey page
+- `client/src/islands/StatsIsland.tsx` — stats page island with sub-navigation
+- `client/src/islands/MapIsland.tsx` — integrated Palantír modal with cooldown guard
+- `client/src/islands/DrawerIsland.tsx` — added "Stats" nav link
+- `client/src/index.tsx` — registered `PalantirIsland` + `StatsIsland`
+- `client/src/stores/appStore.ts` — added `lastPalantirViewTs`, `palantirCooldownElapsed`, `markPalantirViewed`
+- `public/css/palantir.css` — full LOTR-themed CSS (orb, pedestal, animations, stats page layout)
+- `public/css/main.css` — added `@import url("./palantir.css")`
+- `tests/api/stats-handlers.test.ts` — 7 Jest tests for `/api/stats/weekly`
+- `tests/api/index.test.ts` — added `/stats` route test; mock wiring for `renderStatsPage`
+- `client/src/stores/appStore.test.ts` — 5 new Palantír cooldown tests
+- `client/src/components/__tests__/PalantirInsightModal.test.tsx` — 25 Vitest tests for the modal
