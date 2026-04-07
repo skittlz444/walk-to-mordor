@@ -29,6 +29,12 @@ interface FellowshipContributionRow {
   party_week_km: number | null;
 }
 
+function subtractDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() - days);
+  return result;
+}
+
 /**
  * GET /api/stats/weekly — Weekly stats summary for the Palantír insight component.
  *
@@ -55,24 +61,19 @@ export async function handleWeeklyStats(
 
   try {
     // Dates for time-range calculations (formatted as YYYY-MM-DD for SQLite `date` comparison)
+    // Current week includes today plus the previous 6 days; previous week is the 7 days before that.
     const now = new Date();
     const todayStr = formatDate(now);
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    const sevenDaysAgoStr = formatDate(sevenDaysAgo);
-    const fourteenDaysAgo = new Date(now);
-    fourteenDaysAgo.setDate(now.getDate() - 14);
-    const fourteenDaysAgoStr = formatDate(fourteenDaysAgo);
-    const thirtyDaysAgo = new Date(now);
-    thirtyDaysAgo.setDate(now.getDate() - 30);
-    const thirtyDaysAgoStr = formatDate(thirtyDaysAgo);
+    const thisWeekStartStr = formatDate(subtractDays(now, 6));
+    const prevWeekStartStr = formatDate(subtractDays(now, 13));
+    const thirtyDayStartStr = formatDate(subtractDays(now, 29));
 
     // Subtask 1.1a: Check 30-day activity pre-requisite
     const activityRow = await db.read
       .prepare(
         `SELECT COUNT(*) as count FROM progress WHERE user_id = ? AND date >= ? AND date <= ?`,
       )
-      .bind(userId, thirtyDaysAgoStr, todayStr)
+      .bind(userId, thirtyDayStartStr, todayStr)
       .first<ActivityCountRow>();
 
     if (!activityRow || activityRow.count === 0) {
@@ -84,22 +85,22 @@ export async function handleWeeklyStats(
       .prepare(
         `SELECT COALESCE(SUM(distance), 0) as total FROM progress WHERE user_id = ? AND date >= ? AND date <= ?`,
       )
-      .bind(userId, sevenDaysAgoStr, todayStr)
+      .bind(userId, thisWeekStartStr, todayStr)
       .first<DistanceSumRow>();
     const thisWeekKm = Number((thisWeekRow?.total ?? 0).toFixed(2));
 
-    // Subtask 1.1c: Previous week's distance (8–14 days ago)
+    // Subtask 1.1c: Previous week's distance (the 7 days before the current week window)
     const prevWeekRow = await db.read
       .prepare(
         `SELECT COALESCE(SUM(distance), 0) as total FROM progress WHERE user_id = ? AND date >= ? AND date < ?`,
       )
-      .bind(userId, fourteenDaysAgoStr, sevenDaysAgoStr)
+      .bind(userId, prevWeekStartStr, thisWeekStartStr)
       .first<DistanceSumRow>();
     const prevWeekKm = Number((prevWeekRow?.total ?? 0).toFixed(2));
 
     // Subtask 1.2a: Pace trend
     let paceTrend: 'up' | 'down' | 'same' = 'same';
-    let paceChangePct = 0;
+    let paceChangePct: number | null = null;
     if (prevWeekKm === 0) {
       paceTrend = thisWeekKm > 0 ? 'up' : 'same';
     } else {
@@ -161,7 +162,7 @@ export async function handleWeeklyStats(
          WHERE pm.user_id = ? AND pm.status = 'active' AND p.dissolved_at IS NULL
          GROUP BY p.id, p.name`,
       )
-      .bind(userId, sevenDaysAgoStr, todayStr, userId)
+      .bind(userId, thisWeekStartStr, todayStr, userId)
       .all<FellowshipContributionRow>();
 
     const fellowships = fellowshipRows

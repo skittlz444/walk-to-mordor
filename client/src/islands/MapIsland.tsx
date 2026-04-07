@@ -51,11 +51,13 @@ import { MapWalkIsland } from './MapWalkIsland';
 import { userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
 import {
   avatarId as appAvatarId,
+  isAuthenticated,
   totalDistance as appTotalDistance,
   storeInitialized,
   palantirCooldownElapsed,
 } from '../stores/appStore';
 import { PalantirInsightModal } from '../components/PalantirInsightModal';
+import { fetchPalantirWeeklyStats, type WeeklyStatsData } from '../utils/palantir';
 import {
   createMemberPaths,
   updateMemberPaths,
@@ -256,6 +258,7 @@ function loadTileImage(src: string): Promise<HTMLImageElement> {
 export function MapIsland() {
   // Palantír: local dismissed flag to hide the modal for this map session
   const palantirDismissed = useSignal(false);
+  const palantirInitialStats = useSignal<WeeklyStatsData | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const layerRef = useRef<Konva.Layer | null>(null);
@@ -324,6 +327,40 @@ export function MapIsland() {
   const partyMilestoneGoal = useSignal<Goal | null>(null);
 
   const partyViewActive = useComputed(() => isPartyView.value);
+
+  useEffect(() => {
+    palantirInitialStats.value = null;
+
+    if (
+      !storeInitialized.value
+      || !isAuthenticated.value
+      || !palantirCooldownElapsed.value
+      || palantirDismissed.value
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchPalantirWeeklyStats()
+      .then((data) => {
+        if (cancelled) return;
+        palantirInitialStats.value = data.has_activity ? data : null;
+      })
+      .catch(() => {
+        if (cancelled) return;
+        palantirInitialStats.value = null;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isAuthenticated.value,
+    palantirCooldownElapsed.value,
+    palantirDismissed.value,
+    storeInitialized.value,
+  ]);
 
   /** Close the waypoint popup. */
   const closePopup = useCallback(() => {
@@ -1869,8 +1906,9 @@ export function MapIsland() {
         <MapWalkIsland currentDistanceKm={userDistance.value * MILES_TO_KM} />
       )}
       {/* Palantír Weekly Insight Orb — shown once per week if cooldown elapsed */}
-      {!loading.value && storeInitialized.value && palantirCooldownElapsed.value && !palantirDismissed.value && (
+      {!loading.value && storeInitialized.value && isAuthenticated.value && palantirCooldownElapsed.value && !palantirDismissed.value && palantirInitialStats.value && (
         <PalantirInsightModal
+          initialStats={palantirInitialStats.value}
           onDismiss={() => { palantirDismissed.value = true; }}
         />
       )}

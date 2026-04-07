@@ -1,6 +1,6 @@
 # Story 10.1: The Palantir Weekly Insight Orb
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -50,6 +50,14 @@ so that I can track my consistency, see my trajectory, and stay motivated.
   - [x] Subtask 5.2: Add a "Stats" link to the main app layout navigation.
   - [x] Subtask 5.3: Add "The Palantír" as the primary active tab/view in the new Stats sub-navigation (e.g., `/stats/palantir` or `#palantir`).
   - [x] Subtask 5.4: Render the Palantír component within this sub-view in an "always-open" mode (bypassing the weekly cooldown).
+
+### Review Findings
+
+- [x] [Review][Patch] Scope the Palantír cooldown storage per user instead of per browser [client/src/stores/appStore.ts:53]
+- [x] [Review][Patch] Prevent the Journey and Map Palantír popups from showing for users without 30-day activity, and avoid consuming cooldown in that empty state [client/src/islands/PalantirIsland.tsx:21]
+- [x] [Review][Patch] Guard the Journey and Map Palantír popups behind authentication so they cannot flash a "Not authenticated" error before redirect [client/src/islands/PalantirIsland.tsx:21]
+- [x] [Review][Patch] Compare pace using matching 7-day windows instead of an 8-day current window versus a 7-day previous window [src/stats-handlers.ts:85]
+- [x] [Review][Patch] Return a meaningful pace change for a first active week instead of "up" with 0% change [src/stats-handlers.ts:103]
 
 ## Dev Notes
 

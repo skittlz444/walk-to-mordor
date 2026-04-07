@@ -50,23 +50,31 @@ export const storeError = signal<string | null>(null);
 // Palantír Cooldown
 // ============================================================================
 
-const PALANTIR_COOLDOWN_KEY = 'wtm_palantir_last_view';
+const PALANTIR_COOLDOWN_KEY_PREFIX = 'wtm_palantir_last_view';
 const PALANTIR_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
+
+function getPalantirCooldownKey(currentUserId: number | null): string | null {
+  if (currentUserId === null) return null;
+  return `${PALANTIR_COOLDOWN_KEY_PREFIX}:${currentUserId}`;
+}
+
+function readPalantirViewedAt(currentUserId: number | null): number | null {
+  if (typeof localStorage === 'undefined') return null;
+
+  const key = getPalantirCooldownKey(currentUserId);
+  if (!key) return null;
+
+  const raw = localStorage.getItem(key);
+  const parsed = raw ? parseInt(raw, 10) : NaN;
+  return isNaN(parsed) ? null : parsed;
+}
 
 /**
  * Unix timestamp (ms) of the last time the Palantír insight was shown.
- * Persisted in localStorage under wtm_palantir_last_view.
+ * Persisted in localStorage under a user-scoped key.
  * null means it has never been shown.
  */
-export const lastPalantirViewTs = signal<number | null>(
-  typeof localStorage !== 'undefined'
-    ? (() => {
-        const raw = localStorage.getItem(PALANTIR_COOLDOWN_KEY);
-        const parsed = raw ? parseInt(raw, 10) : NaN;
-        return isNaN(parsed) ? null : parsed;
-      })()
-    : null,
-);
+export const lastPalantirViewTs = signal<number | null>(null);
 
 /**
  * Whether the Palantír cooldown has elapsed (i.e., it's safe to show again).
@@ -80,10 +88,15 @@ export const palantirCooldownElapsed = computed<boolean>(() => {
 
 /** Mark the Palantír as viewed now; persists to localStorage. */
 export function markPalantirViewed(): void {
+  const key = getPalantirCooldownKey(userId.value);
+  if (!key) {
+    return;
+  }
+
   const now = Date.now();
   lastPalantirViewTs.value = now;
   try {
-    localStorage.setItem(PALANTIR_COOLDOWN_KEY, String(now));
+    localStorage.setItem(key, String(now));
   } catch {
     // localStorage may be unavailable — silently ignore
   }
@@ -235,6 +248,7 @@ async function hydrateTotalDistance(token: string): Promise<void> {
 export async function initializeAppStore(): Promise<void> {
   storeError.value = null;
   totalDistance.value = null;
+  lastPalantirViewTs.value = null;
 
   // Refresh token signal from localStorage
   sessionToken.value = localStorage.getItem('sessionToken') || null;
@@ -263,6 +277,7 @@ export async function initializeAppStore(): Promise<void> {
         username.value = data.username;
         avatarId.value = data.avatarId;
         isAdmin.value = data.isAdmin;
+        lastPalantirViewTs.value = readPalantirViewedAt(data.userId);
         showFutureGoalsUnlocked.value =
           typeof data.showFutureGoalsUnlocked === 'boolean'
             ? data.showFutureGoalsUnlocked

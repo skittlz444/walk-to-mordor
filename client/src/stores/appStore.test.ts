@@ -217,6 +217,33 @@ describe('appStore', () => {
       expect(storeError.value).toBeNull();
     });
 
+    it('hydrates the Palantír cooldown from the current user key', async () => {
+      store['sessionToken'] = 'test-token';
+      store['wtm_palantir_last_view:42'] = '1712448000000';
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          userId: 42,
+          username: 'Frodo',
+          avatarId: 'avatar-123',
+          isAdmin: false,
+          showFutureGoalsUnlocked: false,
+          defaultViewMap: true,
+        }),
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ totalDistance: 125.5 }),
+      });
+
+      await initializeAppStore();
+      await flushPromises();
+
+      expect(lastPalantirViewTs.value).toBe(1712448000000);
+    });
+
     it('sends correct authorization header', async () => {
       store['sessionToken'] = 'my-secret-token';
 
@@ -681,6 +708,7 @@ describe('appStore', () => {
     });
 
     it('markPalantirViewed updates lastPalantirViewTs and persists to localStorage', () => {
+      userId.value = 42;
       const beforeCall = Date.now();
       markPalantirViewed();
       const afterCall = Date.now();
@@ -690,15 +718,23 @@ describe('appStore', () => {
       expect(lastPalantirViewTs.value!).toBeLessThanOrEqual(afterCall);
 
       expect(localStorage.setItem).toHaveBeenCalledWith(
-        'wtm_palantir_last_view',
+        'wtm_palantir_last_view:42',
         expect.any(String),
       );
     });
 
     it('markPalantirViewed causes palantirCooldownElapsed to become false', () => {
+      userId.value = 42;
       expect(palantirCooldownElapsed.value).toBe(true);
       markPalantirViewed();
       expect(palantirCooldownElapsed.value).toBe(false);
+    });
+
+    it('markPalantirViewed is a no-op when there is no authenticated user', () => {
+      markPalantirViewed();
+
+      expect(lastPalantirViewTs.value).toBeNull();
+      expect(localStorage.setItem).not.toHaveBeenCalled();
     });
   });
 });

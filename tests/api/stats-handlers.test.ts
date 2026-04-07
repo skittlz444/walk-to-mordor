@@ -22,6 +22,7 @@ describe('Stats Handlers – handleWeeklyStats', () => {
   }
 
   beforeEach(() => {
+    jest.useRealTimers();
     jest.clearAllMocks();
     (validateSession as jest.Mock).mockResolvedValue({ valid: true, userId: 1 });
 
@@ -157,6 +158,61 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     expect(data.projection).not.toBeNull();
     expect(data.projection?.title).toBe('Rivendell');
     expect(data.fellowships).toEqual([]);
+  });
+
+  it('uses matching 7-day windows for current and previous week queries', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-04-07T12:00:00Z'));
+
+    const activityCheck = createChainableMock({ first: jest.fn().mockResolvedValue({ count: 10 }) });
+    const thisWeek = createChainableMock({ first: jest.fn().mockResolvedValue({ total: 12 }) });
+    const prevWeek = createChainableMock({ first: jest.fn().mockResolvedValue({ total: 8 }) });
+    const totalDistance = createChainableMock({ first: jest.fn().mockResolvedValue({ total: 120 }) });
+    const goals = createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) });
+    const fellowships = createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) });
+
+    mockDB.prepare
+      .mockReturnValueOnce(activityCheck)
+      .mockReturnValueOnce(thisWeek)
+      .mockReturnValueOnce(prevWeek)
+      .mockReturnValueOnce(totalDistance)
+      .mockReturnValueOnce(goals)
+      .mockReturnValueOnce(fellowships);
+
+    await handleWeeklyStats(mockRequest, mockDb);
+
+    expect(activityCheck.bind).toHaveBeenCalledWith(1, '2026-03-09', '2026-04-07');
+    expect(thisWeek.bind).toHaveBeenCalledWith(1, '2026-04-01', '2026-04-07');
+    expect(prevWeek.bind).toHaveBeenCalledWith(1, '2026-03-25', '2026-04-01');
+  });
+
+  it('returns a null pace change for a first active week', async () => {
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ count: 10 }) }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ total: 18 }) }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ total: 0 }) }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ total: 120 }) }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
+    );
+
+    const res = await handleWeeklyStats(mockRequest, mockDb);
+    const data = await res.json() as {
+      pace_trend: 'up' | 'down' | 'same';
+      pace_change_pct: number | null;
+    };
+
+    expect(data.pace_trend).toBe('up');
+    expect(data.pace_change_pct).toBeNull();
   });
 
   it('projects to major milestone when it is within 2 weeks', async () => {

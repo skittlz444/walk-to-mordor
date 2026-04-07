@@ -26,7 +26,7 @@ afterEach(() => {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function mockFetch(data: unknown, status = 200) {
-  global.fetch = vi.fn().mockResolvedValueOnce({
+  globalThis.fetch = vi.fn().mockResolvedValueOnce({
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(data),
@@ -53,7 +53,7 @@ describe('PalantirInsightModal', () => {
   describe('rendering states', () => {
     it('shows loading message while fetching', async () => {
       // Never resolves within the test
-      global.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
+      globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
 
       const { container } = render(<PalantirInsightModal />);
       expect(container.querySelector('.palantir-loading')).not.toBeNull();
@@ -72,7 +72,7 @@ describe('PalantirInsightModal', () => {
     });
 
     it('shows error when fetch fails', async () => {
-      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
+      globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
 
       const { container } = render(<PalantirInsightModal />);
 
@@ -112,6 +112,17 @@ describe('PalantirInsightModal', () => {
         expect(container.querySelector('.palantir-no-walks')).not.toBeNull();
       });
       expect(container.querySelector('.palantir-no-walks')!.textContent).toMatch(/no movement/i);
+    });
+
+    it('renders supplied initial stats without fetching again', async () => {
+      globalThis.fetch = vi.fn();
+
+      const { container } = render(<PalantirInsightModal initialStats={FULL_STATS} />);
+
+      await waitFor(() => {
+        expect(container.querySelector('.palantir-stats')).not.toBeNull();
+      });
+      expect(globalThis.fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -159,6 +170,22 @@ describe('PalantirInsightModal', () => {
         expect(container.querySelector('.pace-same')).not.toBeNull();
       });
       expect(container.querySelector('.pace-same')!.textContent).toMatch(/→/);
+    });
+
+    it('renders first-active-week copy when previous week had no distance', async () => {
+      mockFetch({
+        ...FULL_STATS,
+        prev_week_km: 0,
+        pace_trend: 'up',
+        pace_change_pct: null,
+      });
+
+      const { container } = render(<PalantirInsightModal />);
+
+      await waitFor(() => {
+        expect(container.querySelector('.pace-up')).not.toBeNull();
+      });
+      expect(container.querySelector('.pace-up')!.textContent).toContain('First active week');
     });
 
     it('renders projection milestone and days away', async () => {
@@ -253,6 +280,22 @@ describe('PalantirInsightModal', () => {
       expect(onDismiss).toHaveBeenCalledTimes(1);
     });
 
+    it('does not mark the Palantír viewed when dismissing a no-activity state', async () => {
+      mockFetch({ has_activity: false });
+      const onDismiss = vi.fn();
+
+      const { container } = render(<PalantirInsightModal onDismiss={onDismiss} />);
+
+      await waitFor(() => {
+        expect(container.querySelector('.palantir-dismiss-btn')).not.toBeNull();
+      });
+
+      fireEvent.click(container.querySelector('.palantir-dismiss-btn')!);
+
+      expect(appStore.markPalantirViewed).not.toHaveBeenCalled();
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
     it('dismisses on Escape key press', async () => {
       mockFetch(FULL_STATS);
       const onDismiss = vi.fn();
@@ -261,7 +304,7 @@ describe('PalantirInsightModal', () => {
 
       await waitFor(() => {
         // wait for loading to finish so Escape listener is attached
-        expect(global.fetch).toHaveBeenCalled();
+        expect(globalThis.fetch).toHaveBeenCalled();
       });
 
       fireEvent.keyDown(document, { key: 'Escape' });
@@ -319,7 +362,7 @@ describe('PalantirInsightModal', () => {
       render(<PalantirInsightModal alwaysOpen onDismiss={onDismiss} />);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled();
+        expect(globalThis.fetch).toHaveBeenCalled();
       });
 
       fireEvent.keyDown(document, { key: 'Escape' });
@@ -358,7 +401,7 @@ describe('PalantirInsightModal', () => {
       render(<PalantirInsightModal />);
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(globalThis.fetch).toHaveBeenCalledWith(
           '/api/stats/weekly',
           expect.objectContaining({
             headers: expect.objectContaining({

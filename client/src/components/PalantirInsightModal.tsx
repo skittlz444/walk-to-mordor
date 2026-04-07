@@ -1,32 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { useSignal } from '@preact/signals';
 import { markPalantirViewed } from '../stores/appStore';
-
-// ── API response types ─────────────────────────────────────────────────────
-
-interface FellowshipContrib {
-  party_id: number;
-  party_name: string;
-  contribution_pct: number;
-}
-
-interface ProjectionData {
-  title: string;
-  distance: number;
-  km_to_next?: number;
-  days_away: number;
-}
-
-interface WeeklyStatsData {
-  has_activity: boolean;
-  no_walks_this_week?: boolean;
-  this_week_km?: number;
-  prev_week_km?: number;
-  pace_trend?: 'up' | 'down' | 'same';
-  pace_change_pct?: number;
-  projection?: ProjectionData | null;
-  fellowships?: FellowshipContrib[];
-}
+import { fetchPalantirWeeklyStats, type WeeklyStatsData } from '../utils/palantir';
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +18,11 @@ export interface PalantirInsightModalProps {
    * No cooldown is applied in this mode.
    */
   alwaysOpen?: boolean;
+  /**
+   * Optional pre-fetched stats used by popup wrappers so the modal does not
+   * perform a second request after the eligibility check.
+   */
+  initialStats?: WeeklyStatsData | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -61,7 +41,11 @@ function paceClass(trend: 'up' | 'down' | 'same'): string {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export function PalantirInsightModal({ onDismiss, alwaysOpen = false }: PalantirInsightModalProps) {
+export function PalantirInsightModal({
+  onDismiss,
+  alwaysOpen = false,
+  initialStats = null,
+}: PalantirInsightModalProps) {
   const stats = useSignal<WeeklyStatsData | null>(null);
   const loading = useSignal(true);
   const error = useSignal<string | null>(null);
@@ -69,29 +53,35 @@ export function PalantirInsightModal({ onDismiss, alwaysOpen = false }: Palantir
 
   // Fetch weekly stats on mount
   useEffect(() => {
-    const token = localStorage.getItem('sessionToken');
-    if (!token) {
+    if (initialStats) {
+      stats.value = initialStats;
       loading.value = false;
-      error.value = 'Not authenticated';
+      error.value = null;
       return;
     }
 
-    fetch('/api/stats/weekly', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<WeeklyStatsData>;
-      })
+    let cancelled = false;
+    loading.value = true;
+    error.value = null;
+
+    fetchPalantirWeeklyStats()
       .then((data) => {
+        if (cancelled) return;
         stats.value = data;
         loading.value = false;
       })
-      .catch(() => {
-        error.value = 'The Palantír clouds over… try again later.';
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        error.value = err instanceof Error && err.message === 'Not authenticated'
+          ? 'Not authenticated'
+          : 'The Palantír clouds over… try again later.';
         loading.value = false;
       });
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialStats]);
 
   // Trap focus & handle Escape (only in modal/popup mode)
   useEffect(() => {
@@ -109,7 +99,9 @@ export function PalantirInsightModal({ onDismiss, alwaysOpen = false }: Palantir
   }, [alwaysOpen]);
 
   function handleDismiss() {
-    markPalantirViewed();
+    if (!alwaysOpen && stats.value?.has_activity) {
+      markPalantirViewed();
+    }
     onDismiss?.();
   }
 
@@ -168,11 +160,17 @@ export function PalantirInsightModal({ onDismiss, alwaysOpen = false }: Palantir
     }
 
     const trend = data.pace_trend ?? 'same';
-    const pct = data.pace_change_pct ?? 0;
+    const pct = data.pace_change_pct;
+    const isFirstActiveWeek = trend === 'up'
+      && (data.prev_week_km ?? 0) === 0
+      && (data.this_week_km ?? 0) > 0
+      && pct === null;
     const trendLabel =
       trend === 'same'
         ? `${paceArrow(trend)} Same pace`
-        : `${paceArrow(trend)} ${Math.abs(pct)}% vs last week`;
+        : isFirstActiveWeek
+          ? `${paceArrow(trend)} First active week`
+          : `${paceArrow(trend)} ${Math.abs(pct ?? 0)}% vs last week`;
 
     return (
       <>
