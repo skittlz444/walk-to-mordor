@@ -185,7 +185,6 @@ export function DrawerIsland() {
         <nav className="drawer-nav">
           <a className="drawer-link" href="/journey" onClick={closeDrawer}>Journey</a>
           <a className="drawer-link" href="/map" onClick={closeDrawer}>Map</a>
-          <a className="drawer-link" href="/stats" onClick={closeDrawer}>Stats</a>
           <a className="drawer-link" href="/party" onClick={closeDrawer}>
             Fellowships
             {pendingInvitesCount > 0 && <span className="drawer-badge">{pendingInvitesCount}</span>}
@@ -194,6 +193,7 @@ export function DrawerIsland() {
             Friends
             {pendingFriendsCount > 0 && <span className="drawer-badge">{pendingFriendsCount}</span>}
           </a>
+          <a className="drawer-link" href="/stats" onClick={closeDrawer}>Stats</a>
           {isAdmin && <a className="drawer-link" href="/admin" onClick={closeDrawer}>Admin</a>}
           <a className="drawer-link drawer-profile" href="/profile" onClick={closeDrawer}>Profile</a>
         </nav>
