@@ -31,6 +31,7 @@ jest.mock('../../src/renderPartyJoinPage');
 jest.mock('../../src/renderFriendsPage');
 jest.mock('../../src/renderFriendAddPage');
 jest.mock('../../src/renderFriendProfilePage');
+jest.mock('../../src/renderStatsPage');
 jest.mock('../../src/renderProfilePage');
 jest.mock('../../src/renderAdminPage');
 jest.mock('../../src/renderAdminGoalsPage');
@@ -51,6 +52,7 @@ import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
 import { renderFriendsPage } from '../../src/renderFriendsPage';
 import { renderFriendAddPage } from '../../src/renderFriendAddPage';
 import { renderFriendProfilePage } from '../../src/renderFriendProfilePage';
+import { renderStatsPage } from '../../src/renderStatsPage';
 import { renderProfilePage } from '../../src/renderProfilePage';
 import { renderAdminPage } from '../../src/renderAdminPage';
 import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
@@ -92,6 +94,7 @@ const mockRenderPartyJoinPage = jest.mocked(renderPartyJoinPage);
 const mockRenderFriendsPage = jest.mocked(renderFriendsPage);
 const mockRenderFriendAddPage = jest.mocked(renderFriendAddPage);
 const mockRenderFriendProfilePage = jest.mocked(renderFriendProfilePage);
+const mockRenderStatsPage = jest.mocked(renderStatsPage);
 const mockRenderProfilePage = jest.mocked(renderProfilePage);
 const mockRenderAdminPage = jest.mocked(renderAdminPage);
 const mockRenderAdminGoalsPage = jest.mocked(renderAdminGoalsPage);
@@ -201,6 +204,7 @@ describe('Cloudflare Worker Index', () => {
     mockRenderFriendsPage.mockReturnValue('<html>Friends</html>');
     mockRenderFriendAddPage.mockReturnValue('<html>Friend Add</html>');
     mockRenderFriendProfilePage.mockReturnValue('<html>Friend Profile</html>');
+    mockRenderStatsPage.mockReturnValue('<html>Stats</html>');
     mockRenderAdminPage.mockReturnValue('<html>Admin Dashboard</html>');
     mockRenderAdminGoalsPage.mockReturnValue('<html>Admin Goals</html>');
     mockRenderAdminGoalAddPage.mockReturnValue('<html>Admin Goal Add</html>');
@@ -957,6 +961,16 @@ describe('Cloudflare Worker Index', () => {
     const response = await worker.fetch(request, mockEnv);
 
     expect(mockRenderProfilePage).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('text/html');
+  });
+
+  // Stats page routing test
+  it('should render stats page for /stats route', async () => {
+    const request = createRequest('https://example.com/stats');
+    const response = await worker.fetch(request, mockEnv);
+
+    expect(mockRenderStatsPage).toHaveBeenCalled();
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('text/html');
   });

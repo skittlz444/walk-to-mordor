@@ -13,6 +13,9 @@ import {
   isAuthenticated,
   preferences,
   currentMilestone,
+  lastPalantirViewTs,
+  palantirCooldownElapsed,
+  markPalantirViewed,
   initializeAppStore,
   resetAppStore,
   startPreferenceBridge,
@@ -652,6 +655,50 @@ describe('appStore', () => {
 
       totalDistance.value = 500;
       expect(currentMilestone.value).toEqual({ totalDistance: 500 });
+    });
+  });
+
+  describe('Palantír cooldown', () => {
+    it('lastPalantirViewTs starts null when localStorage has no entry', () => {
+      expect(lastPalantirViewTs.value).toBeNull();
+    });
+
+    it('palantirCooldownElapsed is true when lastPalantirViewTs is null', () => {
+      lastPalantirViewTs.value = null;
+      expect(palantirCooldownElapsed.value).toBe(true);
+    });
+
+    it('palantirCooldownElapsed is false when viewed less than 7 days ago', () => {
+      const recentTs = Date.now() - 1 * 24 * 60 * 60 * 1000; // 1 day ago
+      lastPalantirViewTs.value = recentTs;
+      expect(palantirCooldownElapsed.value).toBe(false);
+    });
+
+    it('palantirCooldownElapsed is true when viewed more than 7 days ago', () => {
+      const oldTs = Date.now() - 8 * 24 * 60 * 60 * 1000; // 8 days ago
+      lastPalantirViewTs.value = oldTs;
+      expect(palantirCooldownElapsed.value).toBe(true);
+    });
+
+    it('markPalantirViewed updates lastPalantirViewTs and persists to localStorage', () => {
+      const beforeCall = Date.now();
+      markPalantirViewed();
+      const afterCall = Date.now();
+
+      expect(lastPalantirViewTs.value).not.toBeNull();
+      expect(lastPalantirViewTs.value!).toBeGreaterThanOrEqual(beforeCall);
+      expect(lastPalantirViewTs.value!).toBeLessThanOrEqual(afterCall);
+
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'wtm_palantir_last_view',
+        expect.any(String),
+      );
+    });
+
+    it('markPalantirViewed causes palantirCooldownElapsed to become false', () => {
+      expect(palantirCooldownElapsed.value).toBe(true);
+      markPalantirViewed();
+      expect(palantirCooldownElapsed.value).toBe(false);
     });
   });
 });

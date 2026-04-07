@@ -9,6 +9,7 @@ export function renderHtml() {
         <div id="total-distance-value">Loading...</div>
         <div id="last-goal"></div>`,
     mainContent: `
+        <div data-island="PalantirIsland"></div>
         <div id="party-selector-mount"></div>
         <section id="goals-section">
           <div id="goals-list"></div>

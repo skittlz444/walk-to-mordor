@@ -46,6 +46,49 @@ export const storeInitialized = signal<boolean>(false);
 /** Error from initialization. null when successful. */
 export const storeError = signal<string | null>(null);
 
+// ============================================================================
+// Palantír Cooldown
+// ============================================================================
+
+const PALANTIR_COOLDOWN_KEY = 'wtm_palantir_last_view';
+const PALANTIR_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
+
+/**
+ * Unix timestamp (ms) of the last time the Palantír insight was shown.
+ * Persisted in localStorage under wtm_palantir_last_view.
+ * null means it has never been shown.
+ */
+export const lastPalantirViewTs = signal<number | null>(
+  typeof localStorage !== 'undefined'
+    ? (() => {
+        const raw = localStorage.getItem(PALANTIR_COOLDOWN_KEY);
+        const parsed = raw ? parseInt(raw, 10) : NaN;
+        return isNaN(parsed) ? null : parsed;
+      })()
+    : null,
+);
+
+/**
+ * Whether the Palantír cooldown has elapsed (i.e., it's safe to show again).
+ * Returns true if never shown or last shown more than 1 week ago.
+ */
+export const palantirCooldownElapsed = computed<boolean>(() => {
+  const last = lastPalantirViewTs.value;
+  if (last === null) return true;
+  return Date.now() - last >= PALANTIR_COOLDOWN_MS;
+});
+
+/** Mark the Palantír as viewed now; persists to localStorage. */
+export function markPalantirViewed(): void {
+  const now = Date.now();
+  lastPalantirViewTs.value = now;
+  try {
+    localStorage.setItem(PALANTIR_COOLDOWN_KEY, String(now));
+  } catch {
+    // localStorage may be unavailable — silently ignore
+  }
+}
+
 /**
  * Session token signal wrapper.
  * Reads from localStorage on initialization but stays as a signal
@@ -262,6 +305,7 @@ export function resetAppStore(): void {
   storeInitialized.value = false;
   storeError.value = null;
   sessionToken.value = null;
+  lastPalantirViewTs.value = null;
 
   stopPreferenceListener();
 
