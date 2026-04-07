@@ -191,10 +191,7 @@ export async function handleWeeklyStats(
   }
 }
 
-/** Format a Date as YYYY-MM-DD for SQLite date comparisons */
+/** Format a Date as YYYY-MM-DD in UTC for stable SQLite date comparisons */
 function formatDate(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return d.toISOString().slice(0, 10);
 }

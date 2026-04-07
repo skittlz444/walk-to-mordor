@@ -1,12 +1,10 @@
-import { useEffect } from 'preact/hooks';
-import { useSignal } from '@preact/signals';
 import {
   isAuthenticated,
   palantirCooldownElapsed,
   storeInitialized,
 } from '../stores/appStore';
 import { PalantirInsightModal } from '../components/PalantirInsightModal';
-import { fetchPalantirWeeklyStats, type WeeklyStatsData } from '../utils/palantir';
+import { usePalantirWeeklyPopupState } from '../hooks/usePalantirWeeklyPopupState';
 
 /**
  * PalantirIsland — mounted via data-island="PalantirIsland" on the Journey page.
@@ -18,39 +16,7 @@ import { fetchPalantirWeeklyStats, type WeeklyStatsData } from '../utils/palanti
  * The has_activity (30-day walks) check is enforced by the API inside the modal.
  */
 export function PalantirIsland() {
-  // Local dismissed flag: once the user clicks "Cast aside" we remove the modal
-  // for this session even if they navigate without the cooldown ticking.
-  const dismissed = useSignal(false);
-  const initialStats = useSignal<WeeklyStatsData | null>(null);
-
-  useEffect(() => {
-    initialStats.value = null;
-
-    if (
-      !storeInitialized.value
-      || !isAuthenticated.value
-      || !palantirCooldownElapsed.value
-      || dismissed.value
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-
-    void fetchPalantirWeeklyStats()
-      .then((data) => {
-        if (cancelled) return;
-        initialStats.value = data.has_activity ? data : null;
-      })
-      .catch(() => {
-        if (cancelled) return;
-        initialStats.value = null;
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [dismissed.value, isAuthenticated.value, palantirCooldownElapsed.value, storeInitialized.value]);
+  const { dismissed, initialStats } = usePalantirWeeklyPopupState();
 
   // Do not render until the store has hydrated (prevents flash on cold load where
   // cooldown appears elapsed while localStorage hasn't been read yet).

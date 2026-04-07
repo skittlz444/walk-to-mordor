@@ -83,7 +83,7 @@ export function PalantirInsightModal({
     };
   }, [initialStats]);
 
-  // Trap focus & handle Escape (only in modal/popup mode)
+  // Handle Escape key and initial focus (only in modal/popup mode)
   useEffect(() => {
     if (alwaysOpen) return;
 

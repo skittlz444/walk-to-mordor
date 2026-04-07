@@ -21,16 +21,17 @@ beforeEach(() => {
 
 afterEach(() => {
   localStorage.clear();
+  vi.unstubAllGlobals();
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function mockFetch(data: unknown, status = 200) {
-  globalThis.fetch = vi.fn().mockResolvedValueOnce({
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(data),
-  } as Response);
+  } as Response));
 }
 
 const FULL_STATS = {
@@ -53,7 +54,7 @@ describe('PalantirInsightModal', () => {
   describe('rendering states', () => {
     it('shows loading message while fetching', async () => {
       // Never resolves within the test
-      globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
+      vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})));
 
       const { container } = render(<PalantirInsightModal />);
       expect(container.querySelector('.palantir-loading')).not.toBeNull();
@@ -72,7 +73,7 @@ describe('PalantirInsightModal', () => {
     });
 
     it('shows error when fetch fails', async () => {
-      globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error('Network error')));
 
       const { container } = render(<PalantirInsightModal />);
 
@@ -115,7 +116,7 @@ describe('PalantirInsightModal', () => {
     });
 
     it('renders supplied initial stats without fetching again', async () => {
-      globalThis.fetch = vi.fn();
+      vi.stubGlobal('fetch', vi.fn());
 
       const { container } = render(<PalantirInsightModal initialStats={FULL_STATS} />);
 

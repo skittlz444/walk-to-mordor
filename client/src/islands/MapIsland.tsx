@@ -57,7 +57,7 @@ import {
   palantirCooldownElapsed,
 } from '../stores/appStore';
 import { PalantirInsightModal } from '../components/PalantirInsightModal';
-import { fetchPalantirWeeklyStats, type WeeklyStatsData } from '../utils/palantir';
+import { usePalantirWeeklyPopupState } from '../hooks/usePalantirWeeklyPopupState';
 import {
   createMemberPaths,
   updateMemberPaths,
@@ -256,9 +256,8 @@ function loadTileImage(src: string): Promise<HTMLImageElement> {
 }
 
 export function MapIsland() {
-  // Palantír: local dismissed flag to hide the modal for this map session
-  const palantirDismissed = useSignal(false);
-  const palantirInitialStats = useSignal<WeeklyStatsData | null>(null);
+  // Palantír: shared hook manages dismissed flag and pre-fetched stats
+  const { dismissed: palantirDismissed, initialStats: palantirInitialStats } = usePalantirWeeklyPopupState();
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const layerRef = useRef<Konva.Layer | null>(null);
@@ -327,40 +326,6 @@ export function MapIsland() {
   const partyMilestoneGoal = useSignal<Goal | null>(null);
 
   const partyViewActive = useComputed(() => isPartyView.value);
-
-  useEffect(() => {
-    palantirInitialStats.value = null;
-
-    if (
-      !storeInitialized.value
-      || !isAuthenticated.value
-      || !palantirCooldownElapsed.value
-      || palantirDismissed.value
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-
-    void fetchPalantirWeeklyStats()
-      .then((data) => {
-        if (cancelled) return;
-        palantirInitialStats.value = data.has_activity ? data : null;
-      })
-      .catch(() => {
-        if (cancelled) return;
-        palantirInitialStats.value = null;
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isAuthenticated.value,
-    palantirCooldownElapsed.value,
-    palantirDismissed.value,
-    storeInitialized.value,
-  ]);
 
   /** Close the waypoint popup. */
   const closePopup = useCallback(() => {
