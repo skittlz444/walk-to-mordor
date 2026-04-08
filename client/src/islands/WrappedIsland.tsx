@@ -11,8 +11,6 @@ type WrappedState = 'idle' | 'loading' | 'loaded' | 'error';
  */
 function WrappedMilestoneImage({ m }: { m: WrappedMilestone }) {
   const highResLoaded = useSignal(false);
-  const thumbFormat = useSignal<'webp' | 'jpg'>('webp');
-  const highResFormat = useSignal<'webp' | 'jpg'>('webp');
 
   const handleHighResLoad = () => {
     highResLoaded.value = true;
@@ -20,41 +18,33 @@ function WrappedMilestoneImage({ m }: { m: WrappedMilestone }) {
 
   const handleThumbError = (e: preact.JSX.TargetedEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget as HTMLImageElement;
-    if (thumbFormat.value === 'webp') {
-      thumbFormat.value = 'jpg';
-      img.src = `/img/thumbs/${m.image_id}-thumb.jpg`;
-    } else if (!img.src.endsWith('0-thumb.webp')) {
+    if (!img.src.endsWith('0-thumb.webp')) {
       img.src = '/img/thumbs/0-thumb.webp';
     }
   };
 
   const handleHighResError = (e: preact.JSX.TargetedEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget as HTMLImageElement;
-    if (highResFormat.value === 'webp') {
-      highResFormat.value = 'jpg';
-      img.src = `/img/highres/${m.image_id}.jpg`;
-    } else if (!img.src.endsWith('0.webp')) {
+    if (!img.src.endsWith('0.webp')) {
       img.src = '/img/highres/0.webp';
     }
   };
 
   return (
-    <div class="wrapped-milestone-img" style={{ position: 'relative', margin: '0 auto 15px', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', margin: '0 auto 15px' }}>
       <img
-        src={`/img/thumbs/${m.image_id}-thumb.${thumbFormat.value}`}
+        class="wrapped-milestone-img"
+        src={`/img/thumbs/${m.image_id}-thumb.webp`}
         alt=""
         style={{
-          width: '100%',
-          height: '100%',
           filter: highResLoaded.value ? 'none' : 'blur(2px)',
           transition: 'filter 0.3s ease',
-          objectFit: 'cover'
         }}
         onError={handleThumbError}
         loading="lazy"
       />
       <img
-        src={`/img/highres/${m.image_id}.${highResFormat.value}`}
+        src={`/img/highres/${m.image_id}.webp`}
         alt=""
         style={{
           position: 'absolute',
@@ -63,6 +53,7 @@ function WrappedMilestoneImage({ m }: { m: WrappedMilestone }) {
           width: '100%',
           height: '100%',
           objectFit: 'cover',
+          borderRadius: '8px',
           opacity: highResLoaded.value ? '1' : '0',
           transition: 'opacity 0.5s ease'
         }}

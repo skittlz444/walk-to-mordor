@@ -72,10 +72,10 @@ export async function handleWeeklyStats(
     const prevWeekStartStr = formatDate(subtractDays(now, 13));
     const thirtyDayStartStr = formatDate(subtractDays(now, 29));
 
-    // Subtask 1.1a: Check 30-day activity pre-requisite
+    // Subtask 1.1a: Check 30-day activity pre-requisite (only count walks with actual distance)
     const activityRow = await db.read
       .prepare(
-        `SELECT COUNT(*) as count FROM progress WHERE user_id = ? AND date >= ? AND date <= ?`,
+        `SELECT COUNT(*) as count FROM progress WHERE user_id = ? AND date >= ? AND date <= ? AND distance > 0`,
       )
       .bind(userId, thirtyDayStartStr, todayStr)
       .first<ActivityCountRow>();
