@@ -204,9 +204,7 @@ export function startPreferenceListener(): void {
 }
 
 export function stopPreferenceListener(): void {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('preferenceChanged', onPreferenceChangedEvent);
-  }
+  window.removeEventListener('preferenceChanged', onPreferenceChangedEvent);
   _preferenceListenerBound = false;
 }
 
