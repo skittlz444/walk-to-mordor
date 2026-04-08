@@ -31,12 +31,14 @@ function WrappedMilestoneImage({ m }: { m: WrappedMilestone }) {
   };
 
   return (
-    <div style={{ position: 'relative', margin: '0 auto 15px' }}>
+    <div style={{ position: 'relative', margin: '0 auto 15px', overflow: 'hidden' }}>
       <img
         class="wrapped-milestone-img"
         src={`/img/thumbs/${m.image_id}-thumb.webp`}
         alt=""
         style={{
+          width: '100%',
+          height: '100%',
           filter: highResLoaded.value ? 'none' : 'blur(2px)',
           transition: 'filter 0.3s ease',
         }}
