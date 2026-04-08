@@ -157,11 +157,11 @@ development_status:
   # EPIC 10: Stats, Insights & Offline Writing (Phase 7)
   # Dependency: Story 10.4 depends on Epic 8 Story 8.3
   # ============================================
-  epic-10: in-progress
+  epic-10: done
   10-1-the-palantir-weekly-insight-orb: done
   10-2-walk-streak-heatmap-calendar: done
   10-3-walk-to-mordor-wrapped-year-end-review: done
-  10-4-offline-write-queue-with-d1-sync: ready-for-dev
+  10-4-offline-write-queue-with-d1-sync: cancelled
   epic-10-retrospective: optional
 
   # ============================================

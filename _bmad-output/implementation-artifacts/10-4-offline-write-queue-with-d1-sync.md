@@ -1,6 +1,10 @@
 # Story 10.4: Offline Write Queue with D1 Sync
 
-Status: ready-for-dev
+Status: cancelled
+
+## Cancellation Note
+
+**Cancelled 2026-04-08.** Implementation was attempted on branch `feat/epic-10-story-4` and all unit tests passed (100 tests across 3 suites). However, the Service Worker offline intercept could not be reliably verified in real browser testing — despite the SW being active and controlling, actual offline save/edit/delete flows did not produce the expected user-facing behaviour. After multiple rounds of debugging (SW activation, navigator.onLine guards, PUT/DELETE queue extension, DistanceModal loading race, skipWaiting/clients.claim), the feature was deemed too fragile for production. Branch discarded.
 
 ## Story
 

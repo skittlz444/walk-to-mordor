@@ -665,7 +665,9 @@ So that I can celebrate my annual achievements and share my journey highlights w
 
 ---
 
-#### Story 10.4: Offline Write Queue with D1 Sync
+#### Story 10.4: Offline Write Queue with D1 Sync — CANCELLED
+
+**Status:** Cancelled 2026-04-08. SW offline intercept could not be reliably verified in real browser testing despite passing unit tests. Feature deemed too fragile for production.
 
 **Priority:** P1
 
