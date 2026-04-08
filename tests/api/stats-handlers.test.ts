@@ -316,6 +316,7 @@ describe('Stats Handlers – handleWeeklyStats', () => {
 });
 
 describe('Stats Handlers – handleHeatmap', () => {
+  const fixedNow = new Date('2026-04-08T12:00:00Z');
   let mockDB: Record<string, jest.Mock>;
   let mockDb: DbClient;
   let mockRequest: Request;
@@ -333,7 +334,8 @@ describe('Stats Handlers – handleHeatmap', () => {
   }
 
   beforeEach(() => {
-    jest.useRealTimers();
+    jest.useFakeTimers();
+    jest.setSystemTime(fixedNow);
     jest.clearAllMocks();
     (validateSession as jest.Mock).mockResolvedValue({ valid: true, userId: 1 });
 
@@ -349,6 +351,10 @@ describe('Stats Handlers – handleHeatmap', () => {
     mockRequest = new Request('https://example.com/api/stats/heatmap', {
       headers: { Authorization: 'Bearer test-token' },
     });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('returns 401 when session is invalid', async () => {
@@ -499,6 +505,47 @@ describe('Stats Handlers – handleHeatmap', () => {
     const data = await res.json() as { currentStreak: number; longestStreak: number };
     expect(data.currentStreak).toBe(1);
     expect(data.longestStreak).toBe(5);
+  });
+
+  it('ignores future-dated walks when calculating streak metrics', async () => {
+    const today = new Date();
+    const formatD = (d: Date) => d.toISOString().slice(0, 10);
+    const day = (offset: number) => {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - offset);
+      return formatD(d);
+    };
+
+    const windowQuery = createChainableMock({
+      all: jest.fn().mockResolvedValue({
+        results: [
+          { date: day(1), distance: 4.0 },
+          { date: day(0), distance: 3.0 },
+        ],
+      }),
+    });
+    const allTimeQuery = createChainableMock({
+      all: jest.fn().mockResolvedValue({
+        results: [
+          { date: day(1) },
+          { date: day(0) },
+          { date: day(-1) },
+          { date: day(-2) },
+        ],
+      }),
+    });
+
+    mockDB.prepare
+      .mockReturnValueOnce(windowQuery)
+      .mockReturnValueOnce(allTimeQuery)
+      .mockReturnValueOnce(createChainableMock({ first: jest.fn().mockResolvedValue({ created_at: day(30) }) }));
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    const data = await res.json() as { currentStreak: number; longestStreak: number };
+
+    expect(allTimeQuery.bind).toHaveBeenCalledWith(1, day(0));
+    expect(data.currentStreak).toBe(2);
+    expect(data.longestStreak).toBe(2);
   });
 
   it('does not cap current streak at the 365-day heatmap window', async () => {

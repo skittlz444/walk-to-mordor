@@ -181,7 +181,7 @@ describe('HeatmapCalendar', () => {
       });
 
       // Find a cell with data
-      const cell = container.querySelector(`[data-date="${today()}"]`);
+      const cell = container.querySelector(`button[data-date="${today()}"]`);
       expect(cell).not.toBeNull();
 
       fireEvent.mouseEnter(cell!);
@@ -203,7 +203,7 @@ describe('HeatmapCalendar', () => {
         expect(container.querySelector('.heatmap-grid')).not.toBeNull();
       });
 
-      const cell = container.querySelector(`[data-date="${today()}"]`);
+      const cell = container.querySelector(`button[data-date="${today()}"]`);
       fireEvent.mouseEnter(cell!);
 
       await waitFor(() => {
@@ -226,11 +226,36 @@ describe('HeatmapCalendar', () => {
         expect(container.querySelector('.heatmap-grid')).not.toBeNull();
       });
 
-      const cell = container.querySelector(`[data-date="${today()}"]`);
+      const cell = container.querySelector(`button[data-date="${today()}"]`);
       fireEvent.click(cell!);
 
       await waitFor(() => {
         expect(container.querySelector('.heatmap-tooltip')).not.toBeNull();
+      });
+    });
+
+    it('shows tooltip on keyboard focus and hides it on blur', async () => {
+      mockFetch(SAMPLE_DATA);
+
+      const { container } = render(<HeatmapCalendar />);
+
+      await waitFor(() => {
+        expect(container.querySelector('.heatmap-grid')).not.toBeNull();
+      });
+
+      const cell = container.querySelector(`button[data-date="${today()}"]`);
+      expect(cell).not.toBeNull();
+
+      fireEvent.focus(cell!);
+
+      await waitFor(() => {
+        expect(container.querySelector('.heatmap-tooltip')).not.toBeNull();
+      });
+
+      fireEvent.blur(cell!);
+
+      await waitFor(() => {
+        expect(container.querySelector('.heatmap-tooltip')).toBeNull();
       });
     });
   });
@@ -278,6 +303,18 @@ describe('HeatmapCalendar', () => {
           Authorization: 'Bearer test-token-123',
         }),
       });
+    });
+
+    it('renders interactive heatmap cells as buttons', async () => {
+      mockFetch(SAMPLE_DATA);
+
+      const { container } = render(<HeatmapCalendar />);
+
+      await waitFor(() => {
+        expect(container.querySelector('.heatmap-grid')).not.toBeNull();
+      });
+
+      expect(container.querySelectorAll('.heatmap-grid button[data-date]').length).toBeGreaterThan(0);
     });
   });
 });

@@ -234,15 +234,17 @@ export async function handleHeatmap(
 
     const days = rows.map((r) => ({ date: r.date, distance: Number(r.distance) }));
 
-    // Longest streak and uncapped current streak both need all-time walked dates.
+    // Longest streak and uncapped current streak both need all-time walked dates,
+    // but future-dated rows must be ignored so streaks cannot be inflated.
     const { results: allRows } = await db.read
       .prepare(
-        `SELECT date FROM progress WHERE user_id = ? AND distance > 0 ORDER BY date ASC`,
+        `SELECT date FROM progress WHERE user_id = ? AND distance > 0 AND date <= ? ORDER BY date ASC`,
       )
-      .bind(userId)
+      .bind(userId, todayStr)
       .all<{ date: string }>();
 
-    const walkedDates = new Set(allRows.map((row) => row.date));
+    const walkedRows = allRows.filter((row) => row.date <= todayStr);
+    const walkedDates = new Set(walkedRows.map((row) => row.date));
 
     let currentStreak = 0;
     const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -255,7 +257,7 @@ export async function handleHeatmap(
     let streak = 0;
     let prevDate: Date | null = null;
 
-    for (const row of allRows) {
+    for (const row of walkedRows) {
       const d = new Date(row.date + 'T00:00:00Z');
       if (prevDate) {
         const diff = (d.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);

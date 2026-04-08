@@ -531,13 +531,29 @@
 .heatmap-cell {
   aspect-ratio: 1;
   border-radius: 3px;
-  cursor: default;
   transition: outline 0.15s ease;
+}
+
+.heatmap-cell-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  font: inherit;
 }
 
 .heatmap-cell:hover:not(.heatmap-cell-empty) {
   outline: 2px solid var(--accent-gold);
   outline-offset: -1px;
+}
+
+.heatmap-cell-button:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 1px;
 }
 
 .heatmap-cell-empty {

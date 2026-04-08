@@ -112,9 +112,9 @@ export function HeatmapCalendar() {
     return () => { cancelled = true; };
   }, []);
 
-  function handleCellEnter(e: MouseEvent, date: string, distance: number) {
-    if (!date) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  function showTooltip(target: EventTarget | null, date: string, distance: number) {
+    if (!date || !(target instanceof HTMLElement)) return;
+    const rect = target.getBoundingClientRect();
     tooltip.value = { x: rect.left + rect.width / 2, y: rect.top, date, distance };
   }
 
@@ -197,16 +197,18 @@ export function HeatmapCalendar() {
                 }
                 const level = intensityLevel(cell.distance);
                 return (
-                  <span
+                  <button
                     key={col}
-                    class={`heatmap-cell heatmap-level-${level}`}
+                    type="button"
+                    class={`heatmap-cell heatmap-cell-button heatmap-level-${level}`}
                     data-date={cell.date}
                     data-distance={cell.distance}
-                    onMouseEnter={(e: MouseEvent) => handleCellEnter(e, cell.date, cell.distance)}
+                    onMouseEnter={(e) => showTooltip(e.currentTarget, cell.date, cell.distance)}
                     onMouseLeave={handleCellLeave}
-                    onClick={(e: MouseEvent) => handleCellEnter(e, cell.date, cell.distance)}
-                    role="gridcell"
-                    aria-label={`${cell.date}: ${cell.distance.toFixed(1)} km`}
+                    onFocus={(e) => showTooltip(e.currentTarget, cell.date, cell.distance)}
+                    onBlur={handleCellLeave}
+                    onClick={(e) => showTooltip(e.currentTarget, cell.date, cell.distance)}
+                    aria-label={`View walk details for ${formatTooltipDate(cell.date)}: ${cell.distance.toFixed(1)} km`}
                   />
                 );
               })}
