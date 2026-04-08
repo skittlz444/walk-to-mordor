@@ -303,7 +303,7 @@ interface MonthDistanceRow {
 
 /** Row for the first walk date query */
 interface FirstWalkRow {
-  first_date: string;
+  first_date: string | null;
 }
 
 /** Row for milestones unlocked during the year */

@@ -91,7 +91,7 @@ export function WrappedIsland() {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
-  const year = useSignal(new Date().getFullYear());
+  const year = useSignal(new Date().getUTCFullYear());
 
   const cards = useComputed(() => {
     if (!data.value) return [];
@@ -103,7 +103,7 @@ export function WrappedIsland() {
   useEffect(() => {
     if (!storeInitialized.value || !isAuthenticated.value || !isAdmin.value) return;
     loadData();
-  }, []);
+  }, [storeInitialized.value, isAuthenticated.value, isAdmin.value]);
 
   function loadData() {
     state.value = 'loading';
@@ -184,7 +184,7 @@ export function WrappedIsland() {
     );
   }
 
-  if (!data.value || cards.value.length === 0) {
+  if (!data.value || data.value.walk_count === 0) {
     return (
       <div class="wrapped-empty" data-testid="wrapped-empty">
         <p>No walking data found for {year.value}.</p>

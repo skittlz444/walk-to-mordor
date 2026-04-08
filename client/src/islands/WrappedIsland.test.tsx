@@ -124,7 +124,7 @@ describe('WrappedIsland', () => {
   it('disables prev button on first card and next on last card', async () => {
     const dataWithMinimal: WrappedData = {
       ...mockWrappedData,
-      walk_count: 0,
+      walk_count: 1,
       best_streak: 0,
       favorite_month: null,
       milestones: [],
@@ -233,8 +233,8 @@ describe('WrappedIsland', () => {
     const { getByTestId } = render(<WrappedIsland />);
 
     await waitFor(() => {
-      // Should still render since there's at least the hero + narrative card
-      expect(getByTestId('wrapped-container')).toBeTruthy();
+      // Should render empty state when walk_count is 0
+      expect(getByTestId('wrapped-empty')).toBeTruthy();
     });
   });
 
@@ -282,6 +282,7 @@ describe('renderShareImage', () => {
     };
 
     const mockLink = { href: '', download: '', click: vi.fn() };
+    const originalCreateElement = document.createElement.bind(document);
     const createElementSpy = vi.spyOn(document, 'createElement');
     createElementSpy.mockImplementation((tag: string) => {
       if (tag === 'canvas') {
@@ -295,11 +296,13 @@ describe('renderShareImage', () => {
       if (tag === 'a') {
         return mockLink as unknown as HTMLAnchorElement;
       }
-      return document.createElement(tag);
+      return originalCreateElement(tag);
     });
 
     const mockCreateObjectURL = vi.fn(() => 'blob:test-url');
     const mockRevokeObjectURL = vi.fn();
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
     URL.createObjectURL = mockCreateObjectURL;
     URL.revokeObjectURL = mockRevokeObjectURL;
 
@@ -311,6 +314,8 @@ describe('renderShareImage', () => {
     expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:test-url');
 
     createElementSpy.mockRestore();
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
   });
 
   it('renders active days instead of km per walk when walk count is zero', () => {
@@ -343,6 +348,7 @@ describe('renderShareImage', () => {
     };
 
     const mockLink = { href: '', download: '', click: vi.fn() };
+    const originalCreateElement = document.createElement.bind(document);
     const createElementSpy = vi.spyOn(document, 'createElement');
     createElementSpy.mockImplementation((tag: string) => {
       if (tag === 'canvas') {
@@ -356,11 +362,13 @@ describe('renderShareImage', () => {
       if (tag === 'a') {
         return mockLink as unknown as HTMLAnchorElement;
       }
-      return document.createElement(tag);
+      return originalCreateElement(tag);
     });
 
     const mockCreateObjectURL = vi.fn(() => 'blob:test-url');
     const mockRevokeObjectURL = vi.fn();
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
     URL.createObjectURL = mockCreateObjectURL;
     URL.revokeObjectURL = mockRevokeObjectURL;
 
@@ -370,5 +378,7 @@ describe('renderShareImage', () => {
     expect(mockContext.fillText).not.toHaveBeenCalledWith(expect.stringContaining('km/walk'), 300, 210);
 
     createElementSpy.mockRestore();
+    URL.createObjectURL = originalCreateObjectURL;
+    URL.revokeObjectURL = originalRevokeObjectURL;
   });
 });
