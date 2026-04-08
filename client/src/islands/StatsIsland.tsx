@@ -1,5 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { PalantirInsightModal } from '../components/PalantirInsightModal';
+import { HeatmapCalendar } from '../components/HeatmapCalendar';
 
 type StatsTab = 'palantir' | 'heatmap';
 
@@ -44,10 +45,8 @@ export function StatsIsland() {
           class={`stats-subnav-tab${activeTab.value === 'heatmap' ? ' active' : ''}`}
           onClick={() => selectTab('heatmap')}
           aria-current={activeTab.value === 'heatmap' ? 'page' : undefined}
-          disabled
         >
           Heatmap
-          <span class="stats-subnav-coming-soon">Coming soon</span>
         </button>
       </nav>
 
@@ -57,9 +56,7 @@ export function StatsIsland() {
           <PalantirInsightModal alwaysOpen />
         )}
         {activeTab.value === 'heatmap' && (
-          <div class="stats-coming-soon">
-            <p>The Heatmap is being forged in the fires of Mount Doom…</p>
-          </div>
+          <HeatmapCalendar />
         )}
       </div>
     </div>

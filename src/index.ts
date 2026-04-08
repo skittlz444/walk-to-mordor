@@ -67,7 +67,7 @@ import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 import { renderAdminUsersPage } from "./renderAdminUsersPage";
 import { renderAdminMetricsPage } from "./renderAdminMetricsPage";
 import { createDbClient } from './db';
-import { handleWeeklyStats } from './stats-handlers';
+import { handleWeeklyStats, handleHeatmap } from './stats-handlers';
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -526,6 +526,8 @@ export default {
         return handleGoalsGet(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/stats/weekly" && method === "GET") {
         return handleWeeklyStats(request, db, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/stats/heatmap" && method === "GET") {
+        return handleHeatmap(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/total-distance") {
         // Validate session first
         const sessionValidation = await validateSession(request, db, env.ALLOW_TEST_AUTH);
@@ -729,6 +731,7 @@ function getAllowedMethods(pathname: string): string[] {
       return ['GET', 'POST', 'PUT', 'DELETE'];
     case "/api/goals":
     case "/api/stats/weekly":
+    case "/api/stats/heatmap":
     case "/api/total-distance":
     case "/api/session":
     case "/api/avatars":
