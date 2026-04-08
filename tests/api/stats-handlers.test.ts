@@ -1,4 +1,4 @@
-import { handleWeeklyStats } from '../../src/stats-handlers';
+import { handleWeeklyStats, handleHeatmap } from '../../src/stats-handlers';
 import { validateSession } from '../../src/auth-handlers';
 import { DbClient } from '../../src/db';
 
@@ -312,5 +312,342 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     expect(res.status).toBe(500);
     const data = await res.json() as { error: string };
     expect(data.error).toBe('Internal server error while retrieving weekly stats');
+  });
+});
+
+describe('Stats Handlers – handleHeatmap', () => {
+  let mockDB: Record<string, jest.Mock>;
+  let mockDb: DbClient;
+  let mockRequest: Request;
+
+  function createChainableMock(overrides?: {
+    first?: jest.Mock;
+    all?: jest.Mock;
+    run?: jest.Mock;
+  }) {
+    const first = overrides?.first ?? jest.fn().mockResolvedValue(null);
+    const all = overrides?.all ?? jest.fn().mockResolvedValue({ results: [] });
+    const run = overrides?.run ?? jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+    const bind = jest.fn(() => ({ run, all, first }));
+    return { bind, run, all, first };
+  }
+
+  beforeEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+    (validateSession as jest.Mock).mockResolvedValue({ valid: true, userId: 1 });
+
+    mockDB = {
+      prepare: jest.fn(() => createChainableMock()),
+      batch: jest.fn().mockResolvedValue([]),
+    };
+    mockDb = {
+      read: mockDB as unknown as D1Database,
+      write: mockDB as unknown as D1Database,
+    };
+
+    mockRequest = new Request('https://example.com/api/stats/heatmap', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+  });
+
+  it('returns 401 when session is invalid', async () => {
+    (validateSession as jest.Mock).mockResolvedValue({
+      valid: false,
+      error: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      }),
+    });
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns empty days and zero streaks when no data exists', async () => {
+    // 365-day progress query
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
+    );
+    // All-time dates for longest streak
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
+    );
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    expect(res.status).toBe(200);
+    const data = await res.json() as { days: unknown[]; currentStreak: number; longestStreak: number };
+    expect(data.days).toEqual([]);
+    expect(data.currentStreak).toBe(0);
+    expect(data.longestStreak).toBe(0);
+  });
+
+  it('calculates current streak correctly for consecutive days ending today', async () => {
+    const today = new Date();
+    const formatD = (d: Date) => d.toISOString().slice(0, 10);
+    const day = (offset: number) => {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - offset);
+      return formatD(d);
+    };
+
+    // Progress for last 365 days — 3 consecutive days ending today
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(2), distance: 5.0 },
+            { date: day(1), distance: 3.2 },
+            { date: day(0), distance: 7.1 },
+          ],
+        }),
+      }),
+    );
+    // All-time dates for longest streak — same 3 days
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(2) },
+            { date: day(1) },
+            { date: day(0) },
+          ],
+        }),
+      }),
+    );
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    expect(res.status).toBe(200);
+    const data = await res.json() as { days: unknown[]; currentStreak: number; longestStreak: number };
+    expect(data.currentStreak).toBe(3);
+    expect(data.longestStreak).toBe(3);
+    expect(data.days).toHaveLength(3);
+  });
+
+  it('breaks current streak when yesterday is missing', async () => {
+    const today = new Date();
+    const formatD = (d: Date) => d.toISOString().slice(0, 10);
+    const day = (offset: number) => {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - offset);
+      return formatD(d);
+    };
+
+    // Today walked, yesterday NOT, day before walked
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(2), distance: 5.0 },
+            { date: day(0), distance: 7.1 },
+          ],
+        }),
+      }),
+    );
+    // All-time data with a gap
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(2) },
+            { date: day(0) },
+          ],
+        }),
+      }),
+    );
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    const data = await res.json() as { currentStreak: number; longestStreak: number };
+    expect(data.currentStreak).toBe(1); // only today
+    expect(data.longestStreak).toBe(1); // no consecutive days
+  });
+
+  it('calculates longest streak across all time, not just 365-day window', async () => {
+    const today = new Date();
+    const formatD = (d: Date) => d.toISOString().slice(0, 10);
+    const day = (offset: number) => {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - offset);
+      return formatD(d);
+    };
+
+    // 365-day window only shows today
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [{ date: day(0), distance: 2.0 }],
+        }),
+      }),
+    );
+    // All-time includes a historical 5-day streak (days 400-396 ago)
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(400) },
+            { date: day(399) },
+            { date: day(398) },
+            { date: day(397) },
+            { date: day(396) },
+            { date: day(0) },
+          ],
+        }),
+      }),
+    );
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    const data = await res.json() as { currentStreak: number; longestStreak: number };
+    expect(data.currentStreak).toBe(1);
+    expect(data.longestStreak).toBe(5);
+  });
+
+  it('does not cap current streak at the 365-day heatmap window', async () => {
+    const today = new Date();
+    const formatD = (d: Date) => d.toISOString().slice(0, 10);
+    const day = (offset: number) => {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - offset);
+      return formatD(d);
+    };
+
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: Array.from({ length: 365 }, (_, index) => ({
+            date: day(364 - index),
+            distance: 1.0,
+          })),
+        }),
+      }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: Array.from({ length: 366 }, (_, index) => ({
+            date: day(365 - index),
+          })),
+        }),
+      }),
+    );
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    const data = await res.json() as { currentStreak: number; longestStreak: number };
+    expect(data.currentStreak).toBe(366);
+    expect(data.longestStreak).toBe(366);
+  });
+
+  it('returns a startDate clamped to account creation when the account is newer than one year', async () => {
+    const today = new Date();
+    const formatD = (d: Date) => d.toISOString().slice(0, 10);
+    const day = (offset: number) => {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - offset);
+      return formatD(d);
+    };
+
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(2), distance: 2.5 },
+            { date: day(0), distance: 1.0 },
+          ],
+        }),
+      }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(2) },
+            { date: day(0) },
+          ],
+        }),
+      }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        first: jest.fn().mockResolvedValue({ created_at: day(30) }),
+      }),
+    );
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    const data = await res.json() as { startDate: string };
+    expect(data.startDate).toBe(day(30));
+  });
+
+  it('returns current streak of 0 when user did not walk today', async () => {
+    const today = new Date();
+    const formatD = (d: Date) => d.toISOString().slice(0, 10);
+    const day = (offset: number) => {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - offset);
+      return formatD(d);
+    };
+
+    // Walked yesterday and the day before but not today
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(2), distance: 3.0 },
+            { date: day(1), distance: 4.0 },
+          ],
+        }),
+      }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [
+            { date: day(2) },
+            { date: day(1) },
+          ],
+        }),
+      }),
+    );
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    const data = await res.json() as { currentStreak: number; longestStreak: number };
+    expect(data.currentStreak).toBe(0);
+    expect(data.longestStreak).toBe(2);
+  });
+
+  it('returns a single-day streak when only today has data', async () => {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [{ date: todayStr, distance: 1.5 }],
+        }),
+      }),
+    );
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: [{ date: todayStr }],
+        }),
+      }),
+    );
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    const data = await res.json() as { currentStreak: number; longestStreak: number };
+    expect(data.currentStreak).toBe(1);
+    expect(data.longestStreak).toBe(1);
+  });
+
+  it('returns 500 on database error', async () => {
+    mockDB.prepare.mockReturnValueOnce({
+      bind: jest.fn().mockReturnValue({
+        all: jest.fn().mockRejectedValue(new Error('DB failure')),
+      }),
+    });
+
+    const res = await handleHeatmap(mockRequest, mockDb);
+    expect(res.status).toBe(500);
+    const data = await res.json() as { error: string };
+    expect(data.error).toBe('Internal server error while retrieving heatmap stats');
   });
 });

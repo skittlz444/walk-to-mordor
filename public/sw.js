@@ -1,6 +1,6 @@
 // Build timestamp - this should be replaced during build process
-const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}';
-const CACHE_NAME = `walk-to-mordor-{{BUILD_TIMESTAMP}}`;
+const BUILD_TIMESTAMP = '20260407-225215';
+const CACHE_NAME = `walk-to-mordor-20260407-225215`;
 const urlsToCache = [
   '/css/main.css',
   '/css/mobiscroll.javascript.min.css',
@@ -11,7 +11,7 @@ const urlsToCache = [
 
 // SWR (Stale-While-Revalidate) API caching
 const SWR_CACHE_NAME = 'walk-to-mordor-api-swr';
-const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}';
+const SWR_CACHE_VERSION = '20260407-225215';
 const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
 const SWR_TTL_MS = 300000; // 5 minutes
 const SWR_UNSAFE_CACHE_HEADERS = [

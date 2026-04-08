@@ -29,9 +29,13 @@ interface FellowshipContributionRow {
   party_week_km: number | null;
 }
 
+interface UserCreatedAtRow {
+  created_at: string | null;
+}
+
 function subtractDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() - days);
+  const result = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  result.setUTCDate(result.getUTCDate() - days);
   return result;
 }
 
@@ -188,6 +192,100 @@ export async function handleWeeklyStats(
   } catch (error: unknown) {
     console.error('Database error during weekly stats retrieval:', error);
     return createErrorResponse('Internal server error while retrieving weekly stats', 500);
+  }
+}
+
+/** Row returned from the heatmap progress query */
+interface HeatmapDayRow {
+  date: string;
+  distance: number;
+}
+
+/**
+ * GET /api/stats/heatmap — Walk heatmap data and streak information.
+ *
+ * Returns:
+ * - days: array of { date, distance } for the past 365 days
+ * - currentStreak: number of consecutive days (up to today) with ≥ 1 walk
+ * - longestStreak: longest-ever consecutive-day streak
+ */
+export async function handleHeatmap(
+  request: Request,
+  db: DbClient,
+  allowTestAuth?: string,
+): Promise<Response> {
+  const sessionValidation = await validateSession(request, db, allowTestAuth);
+  if (!sessionValidation.valid) {
+    return sessionValidation.error;
+  }
+  const userId = sessionValidation.userId;
+
+  try {
+    const now = new Date();
+    const todayStr = formatDate(now);
+    const yearAgoStr = formatDate(subtractDays(now, 364));
+
+    const { results: rows } = await db.read
+      .prepare(
+        `SELECT date, distance FROM progress WHERE user_id = ? AND date >= ? AND date <= ? ORDER BY date ASC`,
+      )
+      .bind(userId, yearAgoStr, todayStr)
+      .all<HeatmapDayRow>();
+
+    const days = rows.map((r) => ({ date: r.date, distance: Number(r.distance) }));
+
+    // Longest streak and uncapped current streak both need all-time walked dates.
+    const { results: allRows } = await db.read
+      .prepare(
+        `SELECT date FROM progress WHERE user_id = ? AND distance > 0 ORDER BY date ASC`,
+      )
+      .bind(userId)
+      .all<{ date: string }>();
+
+    const walkedDates = new Set(allRows.map((row) => row.date));
+
+    let currentStreak = 0;
+    const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    while (walkedDates.has(formatDate(cursor))) {
+      currentStreak++;
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+
+    let longestStreak = 0;
+    let streak = 0;
+    let prevDate: Date | null = null;
+
+    for (const row of allRows) {
+      const d = new Date(row.date + 'T00:00:00Z');
+      if (prevDate) {
+        const diff = (d.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (diff === 1) {
+          streak++;
+        } else {
+          streak = 1;
+        }
+      } else {
+        streak = 1;
+      }
+      if (streak > longestStreak) {
+        longestStreak = streak;
+      }
+      prevDate = d;
+    }
+
+    const userRow = await db.read
+      .prepare(`SELECT date(created_at) as created_at FROM users WHERE id = ?`)
+      .bind(userId)
+      .first<UserCreatedAtRow>();
+
+    const startDate = userRow?.created_at && userRow.created_at > yearAgoStr
+      ? userRow.created_at
+      : yearAgoStr;
+
+    return createSuccessResponse({ days, currentStreak, longestStreak, startDate });
+  } catch (error: unknown) {
+    console.error('Database error during heatmap stats retrieval:', error);
+    return createErrorResponse('Internal server error while retrieving heatmap stats', 500);
   }
 }
 
