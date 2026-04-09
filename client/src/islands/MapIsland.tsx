@@ -51,8 +51,13 @@ import { MapWalkIsland } from './MapWalkIsland';
 import { userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
 import {
   avatarId as appAvatarId,
+  isAuthenticated,
   totalDistance as appTotalDistance,
+  storeInitialized,
+  palantirCooldownElapsed,
 } from '../stores/appStore';
+import { PalantirInsightModal } from '../components/PalantirInsightModal';
+import { usePalantirWeeklyPopupState } from '../hooks/usePalantirWeeklyPopupState';
 import {
   createMemberPaths,
   updateMemberPaths,
@@ -251,6 +256,8 @@ function loadTileImage(src: string): Promise<HTMLImageElement> {
 }
 
 export function MapIsland() {
+  // Palantír: shared hook manages dismissed flag and pre-fetched stats
+  const { dismissed: palantirDismissed, initialStats: palantirInitialStats } = usePalantirWeeklyPopupState();
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const layerRef = useRef<Konva.Layer | null>(null);
@@ -1862,6 +1869,13 @@ export function MapIsland() {
       {/* Walk logging FAB and congratulations flow (Story 2.8) */}
       {!loading.value && (
         <MapWalkIsland currentDistanceKm={userDistance.value * MILES_TO_KM} />
+      )}
+      {/* Palantír Weekly Insight Orb — shown once per week if cooldown elapsed */}
+      {!loading.value && storeInitialized.value && isAuthenticated.value && palantirCooldownElapsed.value && !palantirDismissed.value && palantirInitialStats.value && (
+        <PalantirInsightModal
+          initialStats={palantirInitialStats.value}
+          onDismiss={() => { palantirDismissed.value = true; }}
+        />
       )}
     </div>
   );

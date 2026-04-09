@@ -1,0 +1,634 @@
+/* Palantír Insight Orb — LOTR-themed weekly stats modal
+ * Animations: palantir-pulse (orb glow), palantir-nebula (inner swirl), palantir-fade-in (dialog)
+ * Relies on CSS custom properties from main.css
+ */
+
+/* ── Keyframe Animations ────────────────────────────────────────────────── */
+
+@keyframes palantir-pulse {
+  0%, 100% {
+    box-shadow:
+      inset -18px -18px 45px rgba(0, 0, 0, 0.85),
+      inset 12px 12px 30px rgba(255, 255, 255, 0.2),
+      0 0 0 1px rgba(80, 130, 200, 0.15),
+      0 0 18px 4px rgba(60, 100, 200, 0.35),
+      0 0 45px 12px rgba(30, 60, 160, 0.28),
+      0 0 90px 25px rgba(255, 100, 0, 0.13),
+      0 0 140px 50px rgba(20, 40, 120, 0.18),
+      inset 0 0 35px rgba(8, 18, 80, 0.85),
+      inset 0 0 70px rgba(4, 8, 35, 0.9);
+  }
+  50% {
+    box-shadow:
+      inset -18px -18px 45px rgba(0, 0, 0, 0.7),
+      inset 12px 12px 30px rgba(255, 255, 255, 0.3),
+      0 0 0 2px rgba(110, 170, 255, 0.28),
+      0 0 30px 8px rgba(90, 150, 255, 0.55),
+      0 0 65px 22px rgba(55, 100, 230, 0.38),
+      0 0 115px 40px rgba(255, 130, 0, 0.22),
+      0 0 180px 70px rgba(35, 70, 200, 0.22),
+      inset 0 0 45px rgba(15, 40, 130, 0.7),
+      inset 0 0 90px rgba(6, 14, 55, 0.88);
+  }
+}
+
+@keyframes palantir-nebula {
+  0%   { transform: rotate(0deg) scale(1);    opacity: 0.72; }
+  25%  { transform: rotate(90deg) scale(1.05); opacity: 0.9; }
+  50%  { transform: rotate(180deg) scale(0.97); opacity: 0.78; }
+  75%  { transform: rotate(270deg) scale(1.04); opacity: 0.88; }
+  100% { transform: rotate(360deg) scale(1);    opacity: 0.72; }
+}
+
+@keyframes palantir-fade-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Modal Overlay ──────────────────────────────────────────────────────── */
+
+.palantir-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.palantir-dialog {
+  background: linear-gradient(160deg, #0a0a14 0%, #111120 60%, #0d0d1c 100%);
+  border: 1px solid var(--gold-border-light);
+  border-radius: 12px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: palantir-fade-in 0.35s ease-out;
+  box-shadow:
+    0 0 40px rgba(255, 180, 0, 0.12),
+    0 8px 32px rgba(0, 0, 0, 0.6);
+  padding: 0 0 1.5rem 0;
+}
+
+/* ── Orb Header ─────────────────────────────────────────────────────────── */
+
+.palantir-orb-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1.5rem 1rem;
+  position: relative;
+}
+
+.palantir-orb {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(75, 135, 230, 0.2) 0%, transparent 20%),
+    radial-gradient(circle at 65% 65%, rgba(130, 65, 200, 0.2) 0%, transparent 15%),
+    radial-gradient(circle at 20% 75%, rgba(255, 110, 0, 0.2) 0%, transparent 10%),
+    radial-gradient(circle at 80% 25%, rgba(60, 160, 255, 0.2) 0%, transparent 15%),
+    radial-gradient(circle at 45% 45%, rgba(40, 50, 95, 0.3) 0%, rgba(10, 15, 35, 0.3) 50%, rgba(2, 4, 10, 1) 100%);
+  border: 1px solid rgba(80, 140, 230, 0.28);
+  box-shadow: 
+    inset -18px -18px 45px rgba(0, 0, 0, 0.85),
+    inset 12px 12px 30px rgba(255, 255, 255, 0.2);
+  position: relative;
+  animation: palantir-pulse 4s ease-in-out infinite;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.palantir-orb::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 35% 28%, rgba(90, 150, 255, 0.10) 0%, transparent 22%),
+    radial-gradient(ellipse at 68% 70%, rgba(170, 85, 255, 0.10) 0%, transparent 18%),
+    radial-gradient(ellipse at 48% 55%, rgba(255, 130, 0, 0.10) 0%, transparent 15%),
+    radial-gradient(ellipse at 20% 55%, rgba(60, 200, 255, 0.10) 0%, transparent 15%),
+    radial-gradient(circle at 50% 50%, rgba(18, 38, 110, 0.10) 0%, transparent 30%);
+  animation: palantir-nebula 12s linear infinite;
+  mix-blend-mode: screen;
+}
+
+.palantir-orb::after {
+  content: '';
+  position: absolute;
+  top: 9%;
+  left: 16%;
+  width: 38%;
+  height: 24%;
+  border-radius: 50%;
+  background: radial-gradient( ellipse at 50% 50%, rgba(225, 240, 255, 0.40) 0%, rgba(190, 215, 255, 0.12) 40%, transparent 70% );
+  filter: blur(4px);
+  transform: rotate(-28deg);
+  pointer-events: none;
+}
+
+/* Pedestal */
+.palantir-pedestal {
+  width: 70px;
+  height: 12px;
+  background: linear-gradient(180deg, #3a3040 0%, #1a1020 100%);
+  border-radius: 50%;
+  margin-top: -4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+}
+
+.palantir-pedestal-base {
+  width: 50px;
+  height: 6px;
+  background: linear-gradient(180deg, #252030 0%, #0f0a18 100%);
+  border-radius: 50%;
+  margin: 2px auto 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+
+.palantir-title {
+  margin: 1rem 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  text-shadow: 0 0 12px var(--gold-glow-medium);
+  text-align: center;
+}
+
+.palantir-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+/* ── Divider ────────────────────────────────────────────────────────────── */
+
+.palantir-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-border-light), transparent);
+  margin: 0.75rem 1.5rem;
+}
+
+/* ── Stats Body ─────────────────────────────────────────────────────────── */
+
+.palantir-stats {
+  padding: 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.palantir-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.palantir-stat-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.palantir-stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+  text-align: right;
+}
+
+.palantir-stat-value.pace-up {
+  color: var(--status-success-light);
+}
+
+.palantir-stat-value.pace-down {
+  color: var(--status-warning);
+}
+
+.palantir-stat-value.pace-same {
+  color: var(--text-secondary);
+}
+
+/* ── No-walks Banner ────────────────────────────────────────────────────── */
+
+.palantir-no-walks {
+  padding: 0 1.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+/* ── Projection Block ───────────────────────────────────────────────────── */
+
+.palantir-projection {
+  background: rgba(15, 52, 96, 0.25);
+  border: 1px solid rgba(0, 123, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.palantir-projection strong {
+  color: var(--accent-gold);
+}
+
+/* ── Fellowships Block ──────────────────────────────────────────────────── */
+
+.palantir-fellowships {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.palantir-fellowship-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.palantir-fellowship-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 0.5rem;
+}
+
+.palantir-fellowship-pct {
+  font-weight: 600;
+  color: var(--accent-gold);
+  flex-shrink: 0;
+}
+
+/* ── Footer / Dismiss ───────────────────────────────────────────────────── */
+
+.palantir-footer {
+  display: flex;
+  justify-content: center;
+  padding: 1.25rem 1.5rem 0;
+}
+
+.palantir-dismiss-btn {
+  background: transparent;
+  border: 1px solid var(--gold-border-light);
+  color: var(--accent-gold);
+  border-radius: 6px;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.palantir-dismiss-btn:hover,
+.palantir-dismiss-btn:focus-visible {
+  background: var(--gold-glow-light);
+  box-shadow: 0 0 8px var(--gold-glow-medium);
+  outline: none;
+}
+
+/* ── Inline (always-open) variation for /stats page ─────────────────────── */
+
+.palantir-inline .palantir-overlay {
+  position: static;
+  background: none;
+  padding: 0;
+}
+
+.palantir-inline .palantir-dialog {
+  max-width: 100%;
+  animation: none;
+}
+
+/* ── Loading / Error states ─────────────────────────────────────────────── */
+
+.palantir-loading,
+.palantir-error {
+  text-align: center;
+  padding: 0 1.5rem 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+/* ── Reduced-motion support ─────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .palantir-orb {
+    animation: none;
+    box-shadow:
+      inset -18px -18px 45px rgba(0, 0, 0, 0.85),
+      inset 12px 12px 30px rgba(255, 255, 255, 0.2),
+      0 0 45px 12px rgba(30, 60, 160, 0.28),
+      0 0 90px 25px rgba(255, 100, 0, 0.13);
+  }
+  .palantir-orb::before {
+    animation: none;
+  }
+  .palantir-dialog {
+    animation: none;
+  }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .palantir-dialog {
+    margin: 0.5rem;
+    max-height: 95vh;
+  }
+}
+
+/* ── Stats Page Layout ──────────────────────────────────────────────────── */
+
+.stats-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Sub-navigation tabs */
+.stats-subnav {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--gold-border-light, rgba(255, 215, 0, 0.2));
+  margin-bottom: 1.5rem;
+}
+
+.stats-subnav-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  letter-spacing: 0.04em;
+  position: relative;
+  top: 1px; /* overlap the bottom border */
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stats-subnav-tab:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.stats-subnav-tab.active {
+  color: var(--accent-gold);
+  border-bottom-color: var(--accent-gold);
+}
+
+.stats-subnav-tab:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.stats-subnav-coming-soon {
+  font-size: 0.68rem;
+  background: rgba(255, 215, 0, 0.1);
+  color: var(--accent-gold);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stats-panel {
+  /* Room for the panel content */
+}
+
+/* Inline Palantír variant (no overlay) used on /stats */
+.palantir-inline {
+  display: flex;
+  justify-content: center;
+}
+
+.palantir-inline .palantir-dialog {
+  position: static;
+  animation: none;
+  width: 100%;
+  max-width: 480px;
+}
+
+/* Coming-soon placeholder for Heatmap tab */
+.stats-coming-soon {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Heatmap Calendar ──────────────────────────────────────────────────── */
+
+.heatmap-container {
+  max-width: 100%;
+}
+
+/* Streak cards */
+.heatmap-streaks {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.heatmap-streak-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--gold-border-light, rgba(255, 215, 0, 0.2));
+  background: var(--bg-dark-alt);
+}
+
+.heatmap-streak-icon {
+  font-size: 1.4rem;
+}
+
+.heatmap-streak-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.heatmap-streak-label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+/* Vertical grid layout — 7 day columns filling width */
+.heatmap-grid-area {
+  width: 100%;
+}
+
+/* Day-of-week header row */
+.heatmap-day-header {
+  display: grid;
+  grid-template-columns: 36px repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 3px;
+}
+
+.heatmap-day-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+
+/* Grid of week rows */
+.heatmap-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.heatmap-row {
+  display: grid;
+  grid-template-columns: 36px repeat(7, 1fr);
+  gap: 3px;
+}
+
+/* Month label column */
+.heatmap-month-col {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+  min-width: 36px;
+  letter-spacing: 0.03em;
+}
+
+/* Individual cells */
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  transition: outline 0.15s ease;
+}
+
+.heatmap-cell-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  font: inherit;
+}
+
+.heatmap-cell:hover:not(.heatmap-cell-empty) {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: -1px;
+}
+
+.heatmap-cell-button:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 1px;
+}
+
+.heatmap-cell-empty {
+  background: transparent;
+}
+
+/* Intensity levels — Middle-earth palette */
+.heatmap-level-0 {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.heatmap-level-1 {
+  background: #2d4a22;
+}
+
+.heatmap-level-2 {
+  background: #3d7a2a;
+}
+
+.heatmap-level-3 {
+  background: #5cb338;
+}
+
+.heatmap-level-4 {
+  background: #d4a017;
+}
+
+/* Legend */
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+  padding-right: 0.25rem;
+}
+
+.heatmap-legend .heatmap-cell {
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  min-height: 12px;
+}
+
+.heatmap-legend-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  padding: 0 0.2rem;
+}
+
+/* Tooltip */
+.heatmap-tooltip {
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid var(--gold-border-light, rgba(255, 215, 0, 0.3));
+  border-radius: 6px;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.heatmap-tooltip strong {
+  color: var(--accent-gold);
+}
+
+/* Loading / Error states */
+.heatmap-loading,
+.heatmap-error {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+

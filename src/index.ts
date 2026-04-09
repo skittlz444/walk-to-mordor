@@ -40,6 +40,7 @@ import { renderPartyDetailPage } from "./renderPartyDetailPage";
 import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
 import { renderFriendsPage } from "./renderFriendsPage";
+import { renderStatsPage } from "./renderStatsPage";
 import { renderFriendAddPage } from "./renderFriendAddPage";
 import { renderFriendProfilePage } from "./renderFriendProfilePage";
 import { renderProfilePage } from "./renderProfilePage";
@@ -66,6 +67,7 @@ import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 import { renderAdminUsersPage } from "./renderAdminUsersPage";
 import { renderAdminMetricsPage } from "./renderAdminMetricsPage";
 import { createDbClient } from './db';
+import { handleWeeklyStats, handleHeatmap, handleWrappedStats } from './stats-handlers';
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -522,6 +524,12 @@ export default {
         return handleProgressGet(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/goals") {
         return handleGoalsGet(request, db, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/stats/weekly" && method === "GET") {
+        return handleWeeklyStats(request, db, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/stats/heatmap" && method === "GET") {
+        return handleHeatmap(request, db, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/stats/wrapped" && method === "GET") {
+        return handleWrappedStats(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/total-distance") {
         // Validate session first
         const sessionValidation = await validateSession(request, db, env.ALLOW_TEST_AUTH);
@@ -665,6 +673,12 @@ export default {
       });
     }
 
+    if (url.pathname === "/stats") {
+      return new Response(renderStatsPage(), {
+        headers: { 'content-type': 'text/html' },
+      });
+    }
+
     const friendAddPageParams = matchRoute(url.pathname, '/friends/add/:friendCode');
     if (friendAddPageParams) {
       return new Response(renderFriendAddPage(), {
@@ -718,6 +732,9 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/calendar-progress":
       return ['GET', 'POST', 'PUT', 'DELETE'];
     case "/api/goals":
+    case "/api/stats/weekly":
+    case "/api/stats/heatmap":
+    case "/api/stats/wrapped":
     case "/api/total-distance":
     case "/api/session":
     case "/api/avatars":

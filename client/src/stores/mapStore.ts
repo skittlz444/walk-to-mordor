@@ -22,6 +22,7 @@ import type {
 } from '../types/map';
 import { getUserPosition, type Point } from '../utils/map-utils';
 import { fellowshipPath } from '../data/paths/fellowship-path';
+import { getWaypointCoordinates } from '../data/waypoints';
 import { showFutureGoalsUnlocked as appShowFutureGoalsUnlocked } from './appStore';
 
 // ============================================================================
@@ -227,9 +228,6 @@ export async function fetchMilestones(): Promise<Milestone[]> {
   }
 
   const goals = (await response.json()) as GoalResponse[];
-
-  // Import dynamically to avoid circular dependencies
-  const { getWaypointCoordinates } = await import('../data/waypoints');
 
   const waypoints = getWaypointCoordinates(fellowshipPath, goals);
 

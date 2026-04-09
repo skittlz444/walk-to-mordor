@@ -46,6 +46,62 @@ export const storeInitialized = signal<boolean>(false);
 /** Error from initialization. null when successful. */
 export const storeError = signal<string | null>(null);
 
+// ============================================================================
+// Palantír Cooldown
+// ============================================================================
+
+const PALANTIR_COOLDOWN_KEY_PREFIX = 'wtm_palantir_last_view';
+const PALANTIR_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
+
+function getPalantirCooldownKey(currentUserId: number | null): string | null {
+  if (currentUserId === null) return null;
+  return `${PALANTIR_COOLDOWN_KEY_PREFIX}:${currentUserId}`;
+}
+
+function readPalantirViewedAt(currentUserId: number | null): number | null {
+  if (typeof localStorage === 'undefined') return null;
+
+  const key = getPalantirCooldownKey(currentUserId);
+  if (!key) return null;
+
+  const raw = localStorage.getItem(key);
+  const parsed = raw ? parseInt(raw, 10) : NaN;
+  return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Unix timestamp (ms) of the last time the Palantír insight was shown.
+ * Persisted in localStorage under a user-scoped key.
+ * null means it has never been shown.
+ */
+export const lastPalantirViewTs = signal<number | null>(null);
+
+/**
+ * Whether the Palantír cooldown has elapsed (i.e., it's safe to show again).
+ * Returns true if never shown or last shown more than 1 week ago.
+ */
+export const palantirCooldownElapsed = computed<boolean>(() => {
+  const last = lastPalantirViewTs.value;
+  if (last === null) return true;
+  return Date.now() - last >= PALANTIR_COOLDOWN_MS;
+});
+
+/** Mark the Palantír as viewed now; persists to localStorage. */
+export function markPalantirViewed(): void {
+  const key = getPalantirCooldownKey(userId.value);
+  if (!key) {
+    return;
+  }
+
+  const now = Date.now();
+  lastPalantirViewTs.value = now;
+  try {
+    localStorage.setItem(key, String(now));
+  } catch {
+    // localStorage may be unavailable — silently ignore
+  }
+}
+
 /**
  * Session token signal wrapper.
  * Reads from localStorage on initialization but stays as a signal
@@ -148,7 +204,9 @@ export function startPreferenceListener(): void {
 }
 
 export function stopPreferenceListener(): void {
-  window.removeEventListener('preferenceChanged', onPreferenceChangedEvent);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('preferenceChanged', onPreferenceChangedEvent);
+  }
   _preferenceListenerBound = false;
 }
 
@@ -192,6 +250,7 @@ async function hydrateTotalDistance(token: string): Promise<void> {
 export async function initializeAppStore(): Promise<void> {
   storeError.value = null;
   totalDistance.value = null;
+  lastPalantirViewTs.value = null;
 
   // Refresh token signal from localStorage
   sessionToken.value = localStorage.getItem('sessionToken') || null;
@@ -220,6 +279,7 @@ export async function initializeAppStore(): Promise<void> {
         username.value = data.username;
         avatarId.value = data.avatarId;
         isAdmin.value = data.isAdmin;
+        lastPalantirViewTs.value = readPalantirViewedAt(data.userId);
         showFutureGoalsUnlocked.value =
           typeof data.showFutureGoalsUnlocked === 'boolean'
             ? data.showFutureGoalsUnlocked
@@ -262,6 +322,7 @@ export function resetAppStore(): void {
   storeInitialized.value = false;
   storeError.value = null;
   sessionToken.value = null;
+  lastPalantirViewTs.value = null;
 
   stopPreferenceListener();
 

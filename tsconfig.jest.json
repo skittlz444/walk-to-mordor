@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "commonjs",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "ignoreDeprecations": "6.0"
   },
   "include": ["src", "tests", "worker-configuration.d.ts"]
