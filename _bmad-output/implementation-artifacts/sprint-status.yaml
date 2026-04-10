@@ -1,5 +1,5 @@
 # generated: 2026-03-17
-# last_updated: 2026-04-08
+# last_updated: 2026-04-10
 # project: walk-to-mordor
 # project_key: NOKEY
 # tracking_system: file-system
@@ -38,7 +38,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-04-08
+last_updated: 2026-04-10
 project: walk-to-mordor
 project_key: NOKEY
 tracking_system: file-system
@@ -167,10 +167,10 @@ development_status:
   # ============================================
   # EPIC 11: Push Notifications & Re-engagement (Phase 8)
   # ============================================
-  epic-11: backlog
-  11-1-web-push-api-infrastructure: backlog
-  11-2-one-more-mile-daily-push-notification: backlog
-  11-3-gandalfs-absence-arc-narrative-re-engagement: backlog
+  epic-11: in-progress
+  11-1-web-push-api-infrastructure: ready-for-dev
+  11-2-one-more-mile-push-notification: ready-for-dev
+  11-3-gandalfs-absence-arc-narrative-re-engagement: ready-for-dev
   11-4-the-dead-marshes-inactive-friends-on-map: backlog
   epic-11-retrospective: optional
 
