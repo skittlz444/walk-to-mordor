@@ -3,10 +3,19 @@ import { useEffect, useState, useRef } from 'preact/hooks';
 const DISMISS_KEY = 'wtm_pwa_install_dismissed';
 const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
+/**
+ * How long to wait for a `beforeinstallprompt` event before falling back
+ * to manual "Add to Home Screen" instructions.
+ */
+const NATIVE_PROMPT_WAIT_MS = 3000;
+
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
+
+/** Banner mode: native prompt available vs manual instructions. */
+export type BannerMode = 'native' | 'ios' | 'manual';
 
 /**
  * Detect whether the current browser is running on a mobile device.
@@ -17,6 +26,14 @@ export function isMobileDevice(): boolean {
   return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent,
   );
+}
+
+/**
+ * Detect whether the user is on iOS (iPhone, iPad, iPod).
+ */
+export function isIOSDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
 /**
@@ -46,9 +63,20 @@ export function isDismissCooldownActive(): boolean {
   }
 }
 
+/**
+ * Determine the fallback banner mode when `beforeinstallprompt` is unavailable.
+ * - iOS → show Share-based instructions
+ * - Other mobile → show generic menu-based instructions
+ */
+export function getFallbackMode(): BannerMode {
+  return isIOSDevice() ? 'ios' : 'manual';
+}
+
 export function PwaInstallBanner() {
   const [visible, setVisible] = useState(false);
+  const [mode, setMode] = useState<BannerMode>('native');
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Gate: only mobile, not standalone, and cooldown expired
@@ -56,14 +84,41 @@ export function PwaInstallBanner() {
       return;
     }
 
+    let cancelled = false;
+
     function handleBeforeInstall(e: Event) {
       e.preventDefault();
       deferredPromptRef.current = e as BeforeInstallPromptEvent;
-      setVisible(true);
+      // Cancel fallback timer — native prompt is available
+      if (fallbackTimerRef.current !== null) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+      if (!cancelled) {
+        setMode('native');
+        setVisible(true);
+      }
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    // Start fallback timer: if beforeinstallprompt doesn't fire within
+    // NATIVE_PROMPT_WAIT_MS, show manual instructions instead.
+    fallbackTimerRef.current = setTimeout(() => {
+      if (!cancelled && !deferredPromptRef.current) {
+        setMode(getFallbackMode());
+        setVisible(true);
+      }
+    }, NATIVE_PROMPT_WAIT_MS);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      if (fallbackTimerRef.current !== null) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+    };
   }, []);
 
   function handleInstall() {
@@ -94,18 +149,32 @@ export function PwaInstallBanner() {
     <div className="pwa-install-banner" role="banner" aria-label="Install app">
       <div className="pwa-install-banner__content">
         <i className="fas fa-mobile-alt pwa-install-banner__icon" aria-hidden="true"></i>
-        <span className="pwa-install-banner__text">
-          Install Walk to Mordor for a better experience!
-        </span>
+        {mode === 'native' && (
+          <span className="pwa-install-banner__text">
+            Install Walk to Mordor for a better experience!
+          </span>
+        )}
+        {mode === 'ios' && (
+          <span className="pwa-install-banner__text">
+            Tap <i className="fas fa-share-from-square" aria-hidden="true"></i> Share then &quot;Add to Home Screen&quot; to install
+          </span>
+        )}
+        {mode === 'manual' && (
+          <span className="pwa-install-banner__text">
+            Tap <i className="fas fa-ellipsis-vertical" aria-hidden="true"></i> Menu then &quot;Install&quot; or &quot;Add to Home Screen&quot;
+          </span>
+        )}
       </div>
       <div className="pwa-install-banner__actions">
-        <button
-          type="button"
-          className="pwa-install-banner__install"
-          onClick={handleInstall}
-        >
-          Install
-        </button>
+        {mode === 'native' && (
+          <button
+            type="button"
+            className="pwa-install-banner__install"
+            onClick={handleInstall}
+          >
+            Install
+          </button>
+        )}
         <button
           type="button"
           className="pwa-install-banner__dismiss"
