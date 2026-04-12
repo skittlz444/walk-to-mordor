@@ -15,7 +15,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 /** Banner mode: native prompt available vs manual instructions. */
-export type BannerMode = 'native' | 'ios' | 'manual';
+export type BannerMode = 'native' | 'ios' | 'firefox' | 'manual';
 
 /**
  * Detect whether the current browser is running on a mobile device.
@@ -34,6 +34,14 @@ export function isMobileDevice(): boolean {
 export function isIOSDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+/**
+ * Detect whether the user is on Firefox mobile.
+ */
+export function isFirefoxMobile(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Firefox/i.test(navigator.userAgent) && /Android|Mobile/i.test(navigator.userAgent);
 }
 
 /**
@@ -66,10 +74,13 @@ export function isDismissCooldownActive(): boolean {
 /**
  * Determine the fallback banner mode when `beforeinstallprompt` is unavailable.
  * - iOS → show Share-based instructions
+ * - Firefox mobile → show Menu → More instructions
  * - Other mobile → show generic menu-based instructions
  */
 export function getFallbackMode(): BannerMode {
-  return isIOSDevice() ? 'ios' : 'manual';
+  if (isIOSDevice()) return 'ios';
+  if (isFirefoxMobile()) return 'firefox';
+  return 'manual';
 }
 
 export function PwaInstallBanner() {
@@ -157,6 +168,11 @@ export function PwaInstallBanner() {
         {mode === 'ios' && (
           <span className="pwa-install-banner__text">
             Tap <i className="fas fa-share-from-square" aria-hidden="true"></i> Share then &quot;Add to Home Screen&quot; to install
+          </span>
+        )}
+        {mode === 'firefox' && (
+          <span className="pwa-install-banner__text">
+            Tap <i className="fas fa-ellipsis-vertical" aria-hidden="true"></i> Menu &rarr; More &rarr; &quot;Add to Home Screen&quot;
           </span>
         )}
         {mode === 'manual' && (

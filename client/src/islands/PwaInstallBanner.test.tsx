@@ -7,6 +7,7 @@ import {
   PwaInstallBanner,
   isMobileDevice,
   isIOSDevice,
+  isFirefoxMobile,
   isStandaloneMode,
   isDismissCooldownActive,
   getFallbackMode,
@@ -137,6 +138,31 @@ describe('isIOSDevice', () => {
   });
 });
 
+describe('isFirefoxMobile', () => {
+  it('returns true for Firefox on Android', () => {
+    stubFirefoxMobile();
+    expect(isFirefoxMobile()).toBe(true);
+  });
+
+  it('returns false for Android Chrome', () => {
+    stubMobile();
+    expect(isFirefoxMobile()).toBe(false);
+  });
+
+  it('returns false for iOS Safari', () => {
+    stubIOSSafari();
+    expect(isFirefoxMobile()).toBe(false);
+  });
+
+  it('returns false for desktop Firefox', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0',
+      configurable: true,
+    });
+    expect(isFirefoxMobile()).toBe(false);
+  });
+});
+
 describe('isStandaloneMode', () => {
   it('returns true when display-mode is standalone', () => {
     stubStandalone(true);
@@ -185,12 +211,12 @@ describe('getFallbackMode', () => {
     expect(getFallbackMode()).toBe<BannerMode>('ios');
   });
 
-  it('returns "manual" on Android Firefox', () => {
+  it('returns "firefox" on Firefox mobile', () => {
     stubFirefoxMobile();
-    expect(getFallbackMode()).toBe<BannerMode>('manual');
+    expect(getFallbackMode()).toBe<BannerMode>('firefox');
   });
 
-  it('returns "manual" on Android Chrome (non-iOS)', () => {
+  it('returns "manual" on Android Chrome (non-iOS, non-Firefox)', () => {
     stubMobile();
     expect(getFallbackMode()).toBe<BannerMode>('manual');
   });
@@ -288,7 +314,7 @@ describe('PwaInstallBanner — Chromium native prompt', () => {
 });
 
 describe('PwaInstallBanner — fallback for non-Chromium browsers', () => {
-  it('shows manual instructions after timeout on Firefox mobile', async () => {
+  it('shows Firefox-specific instructions after timeout on Firefox mobile', async () => {
     stubFirefoxMobile();
     const { container } = render(<PwaInstallBanner />);
     // No beforeinstallprompt fires on Firefox
@@ -298,9 +324,10 @@ describe('PwaInstallBanner — fallback for non-Chromium browsers', () => {
     await waitFor(() => {
       expect(container.querySelector('.pwa-install-banner')).not.toBeNull();
     });
-    // Should show menu instructions, no Install button
+    // Should show Firefox menu instructions, no Install button
     expect(container.querySelector('.pwa-install-banner__install')).toBeNull();
     expect(container.textContent).toContain('Menu');
+    expect(container.textContent).toContain('More');
     expect(container.textContent).toContain('Add to Home Screen');
   });
 
