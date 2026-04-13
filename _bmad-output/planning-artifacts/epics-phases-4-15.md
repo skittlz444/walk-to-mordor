@@ -1555,7 +1555,7 @@ So that milestones become shared storytelling moments in our journey.
 | Epic 8: Architecture & Performance | 5 | 3 | P1 | None |
 | Epic 9: Journey UX Enhancement | 6 | 2 | P1 | None |
 | Epic 10: Stats, Insights & Offline | 7 | 4 | P1–P2 | Epic 8 (Story 10.4 depends on 8.3) |
-| Epic 11: Push Notifications | 8 | 3 (1 cancelled) | P0–P1 | None (internal: 11.2–11.3 depend on 11.1) |
+| Epic 11: Push Notifications | 8 | 3 (1 cancelled) | P0–P2 | None (internal: 11.2–11.3 depend on 11.1) |
 | Epic 12: Events & Challenges | 9 | 3 | P0–P1 | None (internal: 12.2–12.3 depend on 12.1) |
 | Epic 13: AI Narration | 10 | 2 | P1 | None (internal: 13.2 depends on 13.1) |
 | Epic 14: Distance Lending | 11 | 2 | P1 | None (internal: 14.2 depends on 14.1) |
