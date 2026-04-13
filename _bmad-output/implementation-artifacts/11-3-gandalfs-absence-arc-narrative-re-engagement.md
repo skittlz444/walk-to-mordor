@@ -219,18 +219,18 @@ SELECT
   ud.total_distance,
   g.title AS next_goal_title
 FROM user_distances ud
-INNER JOIN goals g ON g.distance > ud.total_distance
+INNER JOIN goals g ON g.distance = (
+  SELECT MIN(g2.distance) FROM goals g2 WHERE g2.distance > ud.total_distance
+)
 WHERE EXISTS (
   SELECT 1 FROM push_subscriptions ps WHERE ps.user_id = ud.user_id
 )
-GROUP BY ud.user_id
-HAVING g.distance = MIN(g.distance)
 LIMIT 100 OFFSET ?;
 ```
 
 **Key notes:**
 - `INNER JOIN progress` in `user_last_walk` ensures users with zero walks are excluded (dormant account exclusion).
-- `INNER JOIN goals g ON g.distance > ud.total_distance` ensures users who completed the journey are excluded (no goal beyond their distance).
+- The correlated subquery `SELECT MIN(g2.distance) ... WHERE g2.distance > ud.total_distance` returns NULL when no goal lies ahead, so the `INNER JOIN` silently drops users who completed the journey.
 - `julianday('now') - julianday(MAX(p.date))` computes days since last walk.
 - Batch with LIMIT/OFFSET like the One More Mile query pattern.
 
