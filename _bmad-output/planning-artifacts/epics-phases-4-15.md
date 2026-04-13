@@ -826,7 +826,7 @@ So that I'm drawn back to the app in a way that feels immersive rather than nagg
 **Technical Notes:**
 - Add `last_walk_date` (computed or cached) and `reengage_tier_sent` INTEGER (0–4) to track state
 - The scheduled Worker already runs daily (Story 11.2) — add re-engagement as a second pass in the same handler
-- Query: `SELECT user_id FROM users WHERE last_walk_date < date('now', '-3 days') AND reengage_tier_sent < 4`
+- Query: `SELECT user_id FROM users WHERE last_walk_date < date('now', '-6 days') AND reengage_tier_sent < 4`
 - Tier thresholds: `[6, 10, 15, 25]` days since last walk → tier `[1, 2, 3, 4]`
 - Reset `reengage_tier_sent = 0` when a new walk is logged (add to walk logging handler)
 
