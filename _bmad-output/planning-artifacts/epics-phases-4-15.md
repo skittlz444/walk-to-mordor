@@ -106,7 +106,7 @@ Each epic is designed to be independently deliverable (with noted exceptions for
 | FR_PUSH_01 | Epic 11 | Web Push infrastructure |
 | FR_PUSH_02 | Epic 11 | "One More Mile" daily notification |
 | FR_ENGAGE_01 | Epic 11 | Gandalf's Absence Arc |
-| FR_ENGAGE_02 | Epic 11 | The Dead Marshes |
+| ~~FR_ENGAGE_02~~ | ~~Epic 11~~ | ~~The Dead Marshes~~ — CANCELLED |
 | FR_EVENT_01 | Epic 12 | Event engine schema & lifecycle |
 | FR_EVENT_02 | Epic 12 | Nazgûl Pursuit personal challenges |
 | FR_EVENT_03 | Epic 12 | Community Milestones |
@@ -172,7 +172,7 @@ Each epic is designed to be independently deliverable (with noted exceptions for
 
 **Goal:** Themed, respectful nudges bring users back — daily distance reminders, narrative re-engagement arcs after inactivity, and social encouragement for inactive friends on the map.
 
-**FRs Covered:** FR_PUSH_01, FR_PUSH_02, FR_ENGAGE_01, FR_ENGAGE_02
+**FRs Covered:** FR_PUSH_01, FR_PUSH_02, FR_ENGAGE_01, ~~FR_ENGAGE_02~~ (cancelled)
 
 **NFRs:** NFR_PUSH_01, NFR_REENGAGE_01
 
@@ -801,7 +801,7 @@ So that I'm reminded to walk and motivated by seeing the finish line.
 
 **Priority:** P2
 
-**Description:** After 3+ days of inactivity, send a sequence of Tolkien-themed push notifications that follow a narrative arc — from gentle encouragement to dramatic urgency — to bring the user back.
+**Description:** After 6+ days of inactivity, send a sequence of Tolkien-themed push notifications that follow a narrative arc — from gentle encouragement to dramatic urgency — to bring the user back.
 
 As an inactive user,
 I want to receive themed narrative nudges that feel like part of the story,
@@ -809,13 +809,13 @@ So that I'm drawn back to the app in a way that feels immersive rather than nagg
 
 **Acceptance Criteria:**
 
-**Given** a user has not logged a walk in 3 or more consecutive days and has an active push subscription
+**Given** a user has not logged a walk in 6 or more consecutive days and has an active push subscription
 **When** the daily scheduled Worker runs
 **Then** the user receives a push notification from a tiered narrative sequence:
-- **Day 3**: Gentle ("Gandalf notices you've paused. 'Even the smallest step counts,' he says.")
-- **Day 5**: Concerned ("The Fellowship grows worried. Sam keeps glancing back down the road…")
-- **Day 7**: Urgent ("Darkness spreads. Without you, the journey may be lost. Return, friend!")
-- **Day 14+**: Dramatic final ("A moth finds you with a message from Gandalf: 'It is not too late.'")
+- **Day 6**: Gentle ("Gandalf notices you've paused. 'Even the smallest step counts,' he says.")
+- **Day 10**: Concerned ("The Fellowship grows worried. Sam keeps glancing back down the road…")
+- **Day 15**: Urgent ("Darkness spreads. Without you, the journey may be lost. Return, friend!")
+- **Day 25+**: Dramatic final ("A moth finds you with a message from Gandalf: 'It is not too late.'")
 **And** each tier is sent only once (tracked via a `last_reengage_tier` column or similar on users/push_subscriptions)
 **And** the tier resets when the user logs a new walk (activity resumes)
 **And** the notification deep-links to the journey page
@@ -826,8 +826,8 @@ So that I'm drawn back to the app in a way that feels immersive rather than nagg
 **Technical Notes:**
 - Add `last_walk_date` (computed or cached) and `reengage_tier_sent` INTEGER (0–4) to track state
 - The scheduled Worker already runs daily (Story 11.2) — add re-engagement as a second pass in the same handler
-- Query: `SELECT user_id FROM users WHERE last_walk_date < date('now', '-3 days') AND reengage_tier_sent < 4`
-- Tier thresholds: `[3, 5, 7, 14]` days since last walk → tier `[1, 2, 3, 4]`
+- Query: `SELECT user_id FROM users WHERE last_walk_date < date('now', '-6 days') AND reengage_tier_sent < 4`
+- Tier thresholds: `[6, 10, 15, 25]` days since last walk → tier `[1, 2, 3, 4]`
 - Reset `reengage_tier_sent = 0` when a new walk is logged (add to walk logging handler)
 
 **FRs:** FR_ENGAGE_01 | **NFRs:** NFR_REENGAGE_01
@@ -836,7 +836,9 @@ So that I'm drawn back to the app in a way that feels immersive rather than nagg
 
 ---
 
-#### Story 11.4: The Dead Marshes — Inactive Friends on Map
+#### ~~Story 11.4: The Dead Marshes — Inactive Friends on Map~~ — CANCELLED
+
+**Status:** Cancelled — redundant with existing notification patterns; may revisit later.
 
 **Priority:** P2
 
@@ -1553,7 +1555,7 @@ So that milestones become shared storytelling moments in our journey.
 | Epic 8: Architecture & Performance | 5 | 3 | P1 | None |
 | Epic 9: Journey UX Enhancement | 6 | 2 | P1 | None |
 | Epic 10: Stats, Insights & Offline | 7 | 4 | P1–P2 | Epic 8 (Story 10.4 depends on 8.3) |
-| Epic 11: Push Notifications | 8 | 4 | P0–P2 | None (internal: 11.2–11.4 depend on 11.1) |
+| Epic 11: Push Notifications | 8 | 3 (1 cancelled) | P0–P2 | None (internal: 11.2–11.3 depend on 11.1) |
 | Epic 12: Events & Challenges | 9 | 3 | P0–P1 | None (internal: 12.2–12.3 depend on 12.1) |
 | Epic 13: AI Narration | 10 | 2 | P1 | None (internal: 13.2 depends on 13.1) |
 | Epic 14: Distance Lending | 11 | 2 | P1 | None (internal: 14.2 depends on 14.1) |
@@ -1561,7 +1563,7 @@ So that milestones become shared storytelling moments in our journey.
 | Epic 16: Campfire Stories & Lore | 13 | 3 | P0–P2 | None (internal: 16.2–16.3 depend on 16.1) |
 | Epic 17: Field Guide | 14 | 2 | P1 | None (internal: 17.2 depends on 17.1) |
 | Epic 18: Milestone Journals | 15 | 2 | P1 | None (internal: 18.2 depends on 18.1) |
-| **Total** | | **32** | | |
+| **Total** | | **31** (1 cancelled) | | |
 
 ### Dependency Map
 
