@@ -172,7 +172,7 @@ Each epic is designed to be independently deliverable (with noted exceptions for
 
 **Goal:** Themed, respectful nudges bring users back — daily distance reminders, narrative re-engagement arcs after inactivity, and social encouragement for inactive friends on the map.
 
-**FRs Covered:** FR_PUSH_01, FR_PUSH_02, FR_ENGAGE_01 ~~FR_ENGAGE_02~~ (cancelled)
+**FRs Covered:** FR_PUSH_01, FR_PUSH_02, FR_ENGAGE_01, ~~FR_ENGAGE_02~~ (cancelled)
 
 **NFRs:** NFR_PUSH_01, NFR_REENGAGE_01
 
