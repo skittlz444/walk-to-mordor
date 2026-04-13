@@ -104,6 +104,8 @@ ${extraStylesheets}
       <!-- Scripts -->
 ${extraScripts}
 ${config.publicPage ? '' : '      <script src="/js/main.js"></script>'}
+      <!-- PWA Install Banner (mobile only, handled by Preact island) -->
+      <div data-island="PwaInstallBanner"></div>
       </body>
     </html>
 `;
