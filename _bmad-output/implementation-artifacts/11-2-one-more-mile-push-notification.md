@@ -170,8 +170,7 @@ export default {
     // ... existing router ...
   },
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    const db = createDbClient(env.DB);
-    ctx.waitUntil(handleOneMoreMileCron(db, env));
+    ctx.waitUntil(handleOneMoreMileCron(env));
   }
 } satisfies ExportedHandler<Env>;
 ```
