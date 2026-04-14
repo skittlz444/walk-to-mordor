@@ -14,6 +14,10 @@ const SWR_CACHE_NAME = 'walk-to-mordor-api-swr';
 const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}';
 const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
 const SWR_TTL_MS = 300000; // 5 minutes
+const PUSH_CONFIG_CACHE_NAME = 'walk-to-mordor-push-config';
+const PUSH_CONFIG_KEY = '/__wtm_push_config__';
+const DEFAULT_PUSH_URL = '/journey';
+const DEFAULT_PUSH_ICON = '/icons/icon-192x192.png';
 const SWR_UNSAFE_CACHE_HEADERS = [
   'content-encoding',
   'content-length',
@@ -51,6 +55,166 @@ function getCurrentSWRMutationVersion() {
 function bumpSWRMutationVersion() {
   swrMutationVersion += 1;
   return swrMutationVersion;
+}
+
+function urlBase64ToUint8Array(base64String) {
+  var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var rawData = atob(base64);
+  var outputArray = new Uint8Array(rawData.length);
+
+  for (var i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
+async function persistPushAuth(sessionToken) {
+  var cache = await caches.open(PUSH_CONFIG_CACHE_NAME);
+
+  if (!sessionToken) {
+    await cache.delete(PUSH_CONFIG_KEY);
+    return;
+  }
+
+  await cache.put(
+    PUSH_CONFIG_KEY,
+    new Response(JSON.stringify({ sessionToken: sessionToken }), {
+      headers: { 'content-type': 'application/json' }
+    })
+  );
+}
+
+async function readPushAuth() {
+  var cache = await caches.open(PUSH_CONFIG_CACHE_NAME);
+  var response = await cache.match(PUSH_CONFIG_KEY);
+
+  if (!response) {
+    return null;
+  }
+
+  try {
+    return await response.json();
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function broadcastToClients(message) {
+  var clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  clientList.forEach(function(client) {
+    client.postMessage(message);
+  });
+}
+
+async function fetchPushVapidKey() {
+  var response = await fetch('/api/push/vapid-key');
+  if (!response.ok) {
+    throw new Error('Unable to fetch VAPID key');
+  }
+
+  var payload = await response.json();
+  var vapidPublicKey = payload && payload.data ? payload.data.vapidPublicKey : null;
+  if (!vapidPublicKey) {
+    throw new Error('Push notifications are not configured');
+  }
+
+  return vapidPublicKey;
+}
+
+function normalizePushPayload(rawPayload) {
+  var payload = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+  return {
+    title: typeof payload.title === 'string' && payload.title ? payload.title : 'Walk to Mordor',
+    body: typeof payload.body === 'string' ? payload.body : '',
+    url: typeof payload.url === 'string' && payload.url ? payload.url : DEFAULT_PUSH_URL,
+    icon: typeof payload.icon === 'string' && payload.icon ? payload.icon : DEFAULT_PUSH_ICON,
+  };
+}
+
+async function handlePushEvent(event) {
+  var rawPayload = {};
+
+  if (event.data) {
+    try {
+      rawPayload = await event.data.json();
+    } catch (_error) {
+      rawPayload = {
+        title: 'Walk to Mordor',
+        body: await event.data.text(),
+      };
+    }
+  }
+
+  var payload = normalizePushPayload(rawPayload);
+  await self.registration.showNotification(payload.title, {
+    body: payload.body,
+    icon: payload.icon,
+    data: { url: payload.url },
+  });
+}
+
+async function handleNotificationClick(event) {
+  var notificationUrl = event.notification && event.notification.data && typeof event.notification.data.url === 'string'
+    ? event.notification.data.url
+    : DEFAULT_PUSH_URL;
+  var targetUrl = new URL(notificationUrl, self.location.origin).toString();
+  var clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+  for (var i = 0; i < clientList.length; i += 1) {
+    var client = clientList[i];
+    if (client.url === targetUrl && typeof client.focus === 'function') {
+      await client.focus();
+      return;
+    }
+  }
+
+  if (typeof self.clients.openWindow === 'function') {
+    await self.clients.openWindow(targetUrl);
+  }
+}
+
+async function handlePushSubscriptionChange() {
+  var pushAuth = await readPushAuth();
+  if (!pushAuth || !pushAuth.sessionToken) {
+    await broadcastToClients({ type: 'sw-push-resubscribe-required' });
+    return;
+  }
+
+  try {
+    var vapidPublicKey = await fetchPushVapidKey();
+    var subscription = await self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+    });
+
+    var json = subscription.toJSON();
+    if (!json.keys || !json.keys.auth || !json.keys.p256dh) {
+      throw new Error('Push subscription is missing required keys');
+    }
+
+    var response = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: 'Bearer ' + pushAuth.sessionToken,
+      },
+      body: JSON.stringify({
+        endpoint: subscription.endpoint,
+        keys: {
+          auth: json.keys && json.keys.auth,
+          p256dh: json.keys && json.keys.p256dh,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Unable to sync refreshed push subscription');
+    }
+  } catch (_error) {
+    await broadcastToClients({ type: 'sw-push-resubscribe-required' });
+  }
 }
 
 function getCacheKey(request) {
@@ -154,6 +318,19 @@ self.addEventListener('activate', (event) => {
       })()
     ])
   );
+});
+
+self.addEventListener('push', function(event) {
+  event.waitUntil(handlePushEvent(event));
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(handleNotificationClick(event));
+});
+
+self.addEventListener('pushsubscriptionchange', function(event) {
+  event.waitUntil(handlePushSubscriptionChange());
 });
 
 // Fetch event - serve from cache when offline, fallback to network
@@ -287,5 +464,15 @@ self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'sw-clear-cache') {
     bumpSWRMutationVersion();
     event.waitUntil(caches.delete(SWR_CACHE_NAME));
+    return;
+  }
+
+  if (event.data && event.data.type === 'sw-set-push-auth') {
+    event.waitUntil(persistPushAuth(event.data.sessionToken));
+    return;
+  }
+
+  if (event.data && event.data.type === 'sw-clear-push-auth') {
+    event.waitUntil(persistPushAuth(''));
   }
 });

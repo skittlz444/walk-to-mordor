@@ -6,6 +6,11 @@ export function renderProfilePage(): string {
     description: 'Manage your profile settings',
     stylesheets: ['/css/profile.css'],
     headerContent: '<h1>User Profile</h1>',
-    mainContent: '<div data-island="ProfileIsland"></div>',
+    mainContent: [
+      '<div class="profile-islands">',
+      '<div data-island="ProfileIsland"></div>',
+      '<div data-island="PushPermissionIsland"></div>',
+      '</div>',
+    ].join(''),
   });
 }

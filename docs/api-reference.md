@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-03-17
+Last updated: 2026-04-14
 
 ## Conventions
 
@@ -18,6 +18,7 @@ Last updated: 2026-03-17
 | Domain | File |
 |---|---|
 | Auth & Profile | `src/auth-handlers.ts` |
+| Push | `src/push-handlers.ts` |
 | Progress | `src/progress-handlers.ts` |
 | Goals | `src/goals-handlers.ts` |
 | Party (Fellowship) | `src/party-handlers.ts` |
@@ -44,6 +45,20 @@ Last updated: 2026-03-17
 
 - `avatarId` in preferences must be a valid slug or `null`. Invalid → `400 "Invalid avatar_id"`.
 - Session response uses **camelCase** — differs from other endpoints that use snake_case.
+
+## Push Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/push/vapid-key` | No | Returns `{ status: 'success', data: { vapidPublicKey } }` when configured |
+| POST | `/api/push/subscribe` | Yes | Body: `{ endpoint, keys: { p256dh, auth } }`. Same-user endpoint updates in place; different-user endpoint → `409` |
+| DELETE | `/api/push/subscribe` | Yes | Body: `{ endpoint }`. Removes only the current user's matching device subscription |
+| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled } }` |
+| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled: boolean }`. Global server-side delivery toggle |
+
+- Subscription endpoints must be valid `https://` URLs.
+- `notificationsEnabled` controls whether server-side jobs send push notifications to the user. It does not change browser permission state or remove stored subscriptions.
+- Invalid or expired subscriptions are cleaned up when a push send later receives `404` or `410` from the push service.
 
 ## Progress Endpoints
 

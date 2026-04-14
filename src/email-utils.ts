@@ -30,6 +30,10 @@ export interface EmailResult {
   messageId?: string;
 }
 
+interface EmailEnv {
+  RESEND_API_KEY?: string;
+}
+
 // Resend API Response Types
 interface ResendSuccess {
   id: string;
@@ -46,7 +50,7 @@ interface ResendError {
  * Uses fetch() for Edge compatibility
  */
 export async function sendEmail(
-  env: Env,
+  env: EmailEnv,
   options: EmailOptions
 ): Promise<EmailResult> {
   try {
@@ -125,7 +129,7 @@ export async function sendEmail(
  * @param recipientName - Currently unused but maintained for API compatibility and future personalization
  */
 export async function sendPasswordResetEmail(
-  env: Env,
+  env: EmailEnv,
   recipientEmail: string,
   recipientName: string,
   resetToken: string,
@@ -156,7 +160,7 @@ export async function sendPasswordResetEmail(
  * Send email confirmation link
  */
 export async function sendConfirmationEmail(
-  env: Env,
+  env: EmailEnv,
   recipientEmail: string,
   confirmLink: string
 ): Promise<{ success: boolean; error?: string }> {

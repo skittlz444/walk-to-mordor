@@ -21,6 +21,7 @@ import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
 import { AdminUsersListIsland } from './islands/AdminUsersListIsland';
 import { AdminMetricsIsland } from './islands/AdminMetricsIsland';
 import { ProfileIsland } from './islands/ProfileIsland';
+import { PushPermissionIsland } from './islands/PushPermissionIsland';
 import { PwaInstallBanner } from './islands/PwaInstallBanner';
 import { PalantirIsland } from './islands/PalantirIsland';
 import { StatsIsland } from './islands/StatsIsland';
@@ -43,6 +44,7 @@ const autoHydratedIslands = {
   MapIsland,
   PalantirIsland,
   ProfileIsland,
+  PushPermissionIsland,
   PwaInstallBanner,
   StatsIsland,
   PartyListIsland,
@@ -69,6 +71,7 @@ const allIslands = {
   MapIsland,
   NextGoalCard,
   ProfileIsland,
+  PushPermissionIsland,
   PwaInstallBanner,
   PartyDetailIsland,
   PartyJoinIsland,
