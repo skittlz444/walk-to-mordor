@@ -1,6 +1,6 @@
 # Story 11.1: Web Push API Infrastructure
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -65,69 +65,78 @@ so that I can receive timely walking reminders and engagement nudges.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Database migrations (AC: #1, #2, #3)
-  - [ ] 1.1: Create `migrations/0126_create_push_subscriptions.sql` with `push_subscriptions` table
-  - [ ] 1.2: Create `migrations/0127_add_notifications_enabled.sql` adding `notifications_enabled` column to `users`
-  - [ ] 1.3: Update `docs/data-models.md` with new table and column
+- [x] Task 1: Database migrations (AC: #1, #2, #3)
+  - [x] 1.1: Create `migrations/0126_create_push_subscriptions.sql` with `push_subscriptions` table
+  - [x] 1.2: Create `migrations/0127_add_notifications_enabled.sql` adding `notifications_enabled` column to `users`
+  - [x] 1.3: Update `docs/data-models.md` with new table and column
 
-- [ ] Task 2: VAPID key generation and secrets setup (AC: #1)
-  - [ ] 2.1: Generate VAPID key pair using `npx web-push generate-vapid-keys`
-  - [ ] 2.2: Store keys as Wrangler secrets: `npx wrangler secret put VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (should be `mailto:` URI)
-  - [ ] 2.3: Update `worker-configuration.d.ts` to declare `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` on the `Env` interface
-  - [ ] 2.4: Add a `GET /api/push/vapid-key` public endpoint that returns the VAPID public key (needed by client for `pushManager.subscribe()`)
+- [x] Task 2: VAPID key generation and secrets setup (AC: #1)
+  - [x] 2.1: Generate VAPID key pair using `npx web-push generate-vapid-keys`
+  - [x] 2.2: Store keys as Wrangler secrets: `npx wrangler secret put VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (should be `mailto:` URI)
+  - [x] 2.3: Update `worker-configuration.d.ts` to declare `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` on the `Env` interface
+  - [x] 2.4: Add a `GET /api/push/vapid-key` public endpoint that returns the VAPID public key (needed by client for `pushManager.subscribe()`)
 
-- [ ] Task 3: Push utility module — `src/push-utils.ts` (AC: #11)
-  - [ ] 3.1: Implement `sendPushNotification(db, endpoint, keys, payload, env)` — constructs VAPID JWT, encrypts payload per RFC 8291/8188, POSTs to subscription endpoint
-  - [ ] 3.2: Implement `sendPushToUser(db, userId, payload, env)` — queries all active subscriptions for user where `users.notifications_enabled = 1`, calls `sendPushNotification` for each, cleans up 404/410 responses
-  - [ ] 3.3: Implement `cleanupExpiredSubscription(db, endpoint)` — deletes subscription by endpoint
-  - [ ] 3.4: Define `PushPayload` interface: `{ title: string; body: string; url?: string; icon?: string }`
+- [x] Task 3: Push utility module — `src/push-utils.ts` (AC: #11)
+  - [x] 3.1: Implement `sendPushNotification(db, endpoint, keys, payload, env)` — constructs VAPID JWT, encrypts payload per RFC 8291/8188, POSTs to subscription endpoint
+  - [x] 3.2: Implement `sendPushToUser(db, userId, payload, env)` — queries all active subscriptions for user where `users.notifications_enabled = 1`, calls `sendPushNotification` for each, cleans up 404/410 responses
+  - [x] 3.3: Implement `cleanupExpiredSubscription(db, endpoint)` — deletes subscription by endpoint
+  - [x] 3.4: Define `PushPayload` interface: `{ title: string; body: string; url?: string; icon?: string }`
 
-- [ ] Task 4: Push API handlers — `src/push-handlers.ts` (AC: #4, #5, #6, #7, #12)
-  - [ ] 4.1: `handlePushSubscribe(request, db, body, allowTestAuth)` — validate session, validate body shape, upsert subscription
-  - [ ] 4.2: `handlePushUnsubscribe(request, db, body, allowTestAuth)` — validate session, validate body has `endpoint`, delete matching subscription
-  - [ ] 4.3: `handlePushStatus(request, db, allowTestAuth)` — validate session, query subscription count + `notifications_enabled` flag
-  - [ ] 4.4: `handlePushSettings(request, db, body, allowTestAuth)` — validate session, validate `notificationsEnabled` is boolean, update `users.notifications_enabled`
-  - [ ] 4.5: `handleVapidKey(env)` — public endpoint, returns `{ status: 'success', data: { vapidPublicKey: env.VAPID_PUBLIC_KEY } }`
+- [x] Task 4: Push API handlers — `src/push-handlers.ts` (AC: #4, #5, #6, #7, #12)
+  - [x] 4.1: `handlePushSubscribe(request, db, body, allowTestAuth)` — validate session, validate body shape, upsert subscription
+  - [x] 4.2: `handlePushUnsubscribe(request, db, body, allowTestAuth)` — validate session, validate body has `endpoint`, delete matching subscription
+  - [x] 4.3: `handlePushStatus(request, db, allowTestAuth)` — validate session, query subscription count + `notifications_enabled` flag
+  - [x] 4.4: `handlePushSettings(request, db, body, allowTestAuth)` — validate session, validate `notificationsEnabled` is boolean, update `users.notifications_enabled`
+  - [x] 4.5: `handleVapidKey(env)` — public endpoint, returns `{ status: 'success', data: { vapidPublicKey: env.VAPID_PUBLIC_KEY } }`
 
-- [ ] Task 5: Wire routes in `src/index.ts` (AC: #4, #5, #6, #7, #12)
-  - [ ] 5.1: Import push handlers
-  - [ ] 5.2: Add route matching for `POST /api/push/subscribe`, `DELETE /api/push/subscribe`, `GET /api/push/status`, `PUT /api/push/settings`, `GET /api/push/vapid-key`
-  - [ ] 5.3: Update `getAllowedMethods()` for each push endpoint
-  - [ ] 5.4: `GET /api/push/vapid-key` is public (no auth), all others require `validateSession()`
+- [x] Task 5: Wire routes in `src/index.ts` (AC: #4, #5, #6, #7, #12)
+  - [x] 5.1: Import push handlers
+  - [x] 5.2: Add route matching for `POST /api/push/subscribe`, `DELETE /api/push/subscribe`, `GET /api/push/status`, `PUT /api/push/settings`, `GET /api/push/vapid-key`
+  - [x] 5.3: Update `getAllowedMethods()` for each push endpoint
+  - [x] 5.4: `GET /api/push/vapid-key` is public (no auth), all others require `validateSession()`
 
-- [ ] Task 6: Service Worker push handlers — `public/sw.js` (AC: #9, #10)
-  - [ ] 6.1: Add `self.addEventListener('push', ...)` — parse `event.data.json()`, call `self.registration.showNotification()`
-  - [ ] 6.2: Add `self.addEventListener('notificationclick', ...)` — close notification, `clients.openWindow(url)` or focus existing tab
-  - [ ] 6.3: Add `self.addEventListener('pushsubscriptionchange', ...)` — re-subscribe and POST new subscription to server (handles browser-side subscription rotation)
+- [x] Task 6: Service Worker push handlers — `public/sw.js` (AC: #9, #10)
+  - [x] 6.1: Add `self.addEventListener('push', ...)` — parse `event.data.json()`, call `self.registration.showNotification()`
+  - [x] 6.2: Add `self.addEventListener('notificationclick', ...)` — close notification, `clients.openWindow(url)` or focus existing tab
+  - [x] 6.3: Add `self.addEventListener('pushsubscriptionchange', ...)` — re-subscribe and POST new subscription to server; clears stale auth on 401/403 response
 
-- [ ] Task 7: Client-side push utilities — `client/src/utils/push-client.ts` (AC: #8)
-  - [ ] 7.1: `urlBase64ToUint8Array(base64String)` — convert VAPID public key for `applicationServerKey`
-  - [ ] 7.2: `subscribeToPush(sessionToken)` — full subscribe flow: get SW registration, call `pushManager.subscribe()`, POST to API
-  - [ ] 7.3: `unsubscribeFromPush(sessionToken)` — get existing subscription, call `.unsubscribe()`, DELETE from API
-  - [ ] 7.4: `getPushStatus(sessionToken)` — fetch `GET /api/push/status`
-  - [ ] 7.5: `updateNotificationSettings(sessionToken, enabled)` — PUT to `/api/push/settings`
-  - [ ] 7.6: `fetchVapidKey()` — GET `/api/push/vapid-key` (cached after first fetch)
+- [x] Task 7: Client-side push utilities — `client/src/utils/push-client.ts` (AC: #8)
+  - [x] 7.1: `urlBase64ToUint8Array(base64String)` — convert VAPID public key for `applicationServerKey`
+  - [x] 7.2: `subscribeToPush(sessionToken)` — full subscribe flow: get SW registration, call `pushManager.subscribe()`, POST to API
+  - [x] 7.3: `unsubscribeFromPush(sessionToken)` — get existing subscription, call `.unsubscribe()`, DELETE from API
+  - [x] 7.4: `getPushStatus(sessionToken)` — fetch `GET /api/push/status`
+  - [x] 7.5: `updateNotificationSettings(sessionToken, enabled)` — PUT to `/api/push/settings`
+  - [x] 7.6: `fetchVapidKey()` — GET `/api/push/vapid-key` (cached after first fetch)
 
-- [ ] Task 8: PushPermission Preact island — `client/src/islands/PushPermissionIsland.tsx` (AC: #8)
-  - [ ] 8.1: Check browser support (`'PushManager' in window`, `'Notification' in window`)
-  - [ ] 8.2: Display current notification permission state (`Notification.permission`)
-  - [ ] 8.3: Global enable/disable toggle — calls `PUT /api/push/settings` (this controls server-side cron delivery for ALL devices, not per-device permission)
-  - [ ] 8.4: "Enable on this device" button — triggers permission request + subscription flow
-  - [ ] 8.5: "Disable on this device" button — unsubscribes this browser's push subscription
-  - [ ] 8.6: Show subscription count ("Enabled on N devices")
-  - [ ] 8.7: Show unsupported browser message gracefully
-  - [ ] 8.8: Read `sessionToken` from `appStore` signals
-  - [ ] 8.9: Register island in `client/src/index.tsx` auto-hydration map
+- [x] Task 8: PushPermission Preact island — `client/src/islands/PushPermissionIsland.tsx` (AC: #8)
+  - [x] 8.1: Check browser support (`'PushManager' in window`, `'Notification' in window`)
+  - [x] 8.2: Display current notification permission state (`Notification.permission`)
+  - [x] 8.3: Global enable/disable toggle — calls `PUT /api/push/settings` (this controls server-side cron delivery for ALL devices, not per-device permission)
+  - [x] 8.4: "Enable on this device" button — triggers permission request + subscription flow
+  - [x] 8.5: "Disable on this device" button — unsubscribes this browser's push subscription
+  - [x] 8.6: Show subscription count ("Enabled on N devices")
+  - [x] 8.7: Show unsupported browser message gracefully
+  - [x] 8.8: Read `sessionToken` from `appStore` signals
+  - [x] 8.9: Register island in `client/src/index.tsx` auto-hydration map
+  - [x] 8.10: Call `clearPushAuthContext()` when session token goes falsy to evict stale SW bearer token
 
-- [ ] Task 9: Integrate into profile/settings page
-  - [ ] 9.1: Add `PushPermissionIsland` mount point (`<div data-island="PushPermissionIsland"></div>`) to the profile page render (`src/renderProfilePage.ts`)
-  - [ ] 9.2: Add CSS for the push permission component in `public/css/profile.css` (or existing stylesheet for profile)
+- [x] Task 9: Integrate into profile/settings page
+  - [x] 9.1: Add `PushPermissionIsland` mount point (`<div data-island="PushPermissionIsland"></div>`) to the profile page render (`src/renderProfilePage.ts`)
+  - [x] 9.2: Add CSS for the push permission component in `public/css/profile.css`
 
-- [ ] Task 10: Tests (AC: all)
-  - [ ] 10.1: Backend tests in `tests/api/push-handlers.test.ts` — subscribe, unsubscribe, status, settings, vapid-key, auth rejection, upsert logic, cleanup
-  - [ ] 10.2: Client unit tests in `client/src/islands/PushPermissionIsland.test.tsx` — all permission states, toggle behavior, browser support detection
-  - [ ] 10.3: Client utility tests in `client/src/utils/push-client.test.ts` — all utility functions, error handling
-  - [ ] 10.4: Service worker push handler tests (if feasible with current test setup — mock `PushEvent` in jest)
+- [x] Task 10: Tests (AC: all)
+  - [x] 10.1: Backend tests in `tests/api/push-handlers.test.ts` — subscribe, unsubscribe, status, settings, vapid-key, auth rejection, upsert logic, cleanup
+  - [x] 10.2: Client unit tests in `client/src/islands/PushPermissionIsland.test.tsx` — all permission states, toggle behavior, browser support detection, stale-auth clearing
+  - [x] 10.3: Client utility tests in `client/src/utils/push-client.test.ts` — all utility functions, error handling
+  - [x] 10.4: Service worker push handler tests in `tests/api/sw-push.test.js` — push event, notificationclick, pushsubscriptionchange, auth clearing on 401/403
+
+- [x] Task 11: Push notification nudge banner
+  - [x] 11.1: `PushNudgeBanner` Preact island — bottom banner styled identically to `PwaInstallBanner`
+  - [x] 11.2: Gate: standalone/installed-PWA only (`isStandaloneMode()`), push supported, permission not denied, not already subscribed, 2-week dismiss cooldown (`wtm_push_nudge_dismissed` in localStorage)
+  - [x] 11.3: "Enable" triggers `Notification.requestPermission()` → `subscribeToPush()`, banner hides on success or denied
+  - [x] 11.4: "Dismiss" stores 2-week cooldown timestamp in localStorage
+  - [x] 11.5: Register in `client/src/index.tsx` and add mount point in `src/renderLayout.ts`
+  - [x] 11.6: 22 Vitest tests covering all gate conditions and flows
 
 ## Dev Notes
 
@@ -272,10 +281,41 @@ Claude Opus 4.6 (GitHub Copilot)
 - Story created: 2026-04-10
 - Ultimate context engine analysis completed — comprehensive developer guide created
 - Key design decision: Global notifications_enabled toggle on users table controls server-side delivery, NOT per-device browser permissions
-- Key technical constraint: Cloudflare Workers cannot use `web-push` npm library (Node.js crypto) — must implement VAPID JWT + payload encryption using Web Crypto API
+- Key technical constraint: Cloudflare Workers cannot use `web-push` npm library (Node.js crypto) — implemented VAPID JWT + payload encryption using Web Crypto API in `src/push-utils.ts`
+- **Implementation complete**: 2026-04-15 — all tasks delivered, 779 client tests + backend tests passing
+- AC #8 extended: `clearPushAuthContext()` called from `PushPermissionIsland` whenever session token goes falsy, preventing stale bearer token from being used in SW `pushsubscriptionchange` retries
+- AC #9/10 extended: SW clears persisted push auth on 401/403 responses during `pushsubscriptionchange` re-sync (stops retrying with revoked/expired tokens)
+- Task 11 added post-spec: `PushNudgeBanner` — contextual opt-in nudge for installed-PWA users only, 2-week dismiss cooldown, same UX pattern as `PwaInstallBanner`
 - This story is a P0 blocker for stories 11.2, 11.3, and 11.4
-- No `scheduled()` handler is needed in this story — that comes in Story 11.2 for daily cron notifications
 
 ### File List
 
-<!-- To be filled by dev agent -->
+**New files:**
+- `migrations/0126_create_push_subscriptions.sql`
+- `migrations/0127_add_notifications_enabled.sql`
+- `src/push-handlers.ts`
+- `src/push-utils.ts`
+- `client/src/islands/PushPermissionIsland.tsx`
+- `client/src/islands/PushPermissionIsland.test.tsx`
+- `client/src/islands/PushNudgeBanner.tsx`
+- `client/src/islands/PushNudgeBanner.test.tsx`
+- `client/src/utils/push-client.ts`
+- `client/src/utils/push-client.test.ts`
+- `tests/api/push-handlers.test.ts`
+- `tests/api/push-routes.test.ts`
+- `tests/api/push-utils.test.ts`
+- `tests/api/sw-push.test.js`
+
+**Modified files:**
+- `src/index.ts` — route wiring + imports
+- `src/renderProfilePage.ts` — `PushPermissionIsland` mount point
+- `src/renderLayout.ts` — `PushNudgeBanner` mount point
+- `public/sw.js` — push, notificationclick, pushsubscriptionchange, message handlers
+- `public/css/profile.css` — push permission component styles
+- `worker-configuration.d.ts` — VAPID secrets on Env interface
+- `client/src/index.tsx` — register `PushPermissionIsland` and `PushNudgeBanner`
+- `docs/data-models.md` — `push_subscriptions` table + `notifications_enabled` column
+- `docs/api-reference.md` — push API endpoints
+- `eslint.config.mjs` — eslint ignore for push test helper
+- `package.json` / `package-lock.json` — added `@types/web-push` dev dependency
+- `tests/ui/preference-toggle.spec.js` — updated E2E test for new profile card layout
