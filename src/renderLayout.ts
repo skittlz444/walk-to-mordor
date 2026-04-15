@@ -106,6 +106,8 @@ ${extraScripts}
 ${config.publicPage ? '' : '      <script src="/js/main.js"></script>'}
       <!-- PWA Install Banner (mobile only, handled by Preact island) -->
       <div data-island="PwaInstallBanner"></div>
+      <!-- Push Notification Nudge (installed PWA only, handled by Preact island) -->
+      <div data-island="PushNudgeBanner"></div>
       </body>
     </html>
 `;
