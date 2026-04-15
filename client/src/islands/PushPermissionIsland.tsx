@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { sessionToken } from '../stores/appStore';
 import {
+  clearPushAuthContext,
   getDevicePushSubscription,
   getPushStatus,
   subscribeToPush,
@@ -69,6 +70,12 @@ export function PushPermissionIsland() {
   useEffect(() => {
     void refreshState();
   }, [refreshState]);
+
+  useEffect(() => {
+    if (!token) {
+      void clearPushAuthContext();
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!supported || !token || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {

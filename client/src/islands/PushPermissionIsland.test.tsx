@@ -3,6 +3,7 @@ import { fireEvent, render, waitFor } from '@testing-library/preact';
 import { PushPermissionIsland } from './PushPermissionIsland';
 import { resetAppStore, sessionToken } from '../stores/appStore';
 import {
+  clearPushAuthContext,
   getDevicePushSubscription,
   getPushStatus,
   subscribeToPush,
@@ -13,6 +14,7 @@ import {
 } from '../utils/push-client';
 
 vi.mock('../utils/push-client', () => ({
+  clearPushAuthContext: vi.fn(),
   getDevicePushSubscription: vi.fn(),
   getPushStatus: vi.fn(),
   subscribeToPush: vi.fn(),
@@ -152,6 +154,20 @@ describe('PushPermissionIsland', () => {
 
     await waitFor(() => {
       expect(unsubscribeFromPush).toHaveBeenCalledWith('test-token');
+    });
+  });
+
+  it('clears the service worker push auth when the session token is removed', async () => {
+    render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(vi.mocked(syncPushAuthContext)).toHaveBeenCalledWith('test-token');
+    });
+
+    sessionToken.value = '';
+
+    await waitFor(() => {
+      expect(vi.mocked(clearPushAuthContext)).toHaveBeenCalled();
     });
   });
 });
