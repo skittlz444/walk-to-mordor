@@ -210,6 +210,9 @@ async function handlePushSubscriptionChange() {
     });
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        await persistPushAuth('');
+      }
       throw new Error('Unable to sync refreshed push subscription');
     }
   } catch (_error) {
@@ -474,5 +477,6 @@ self.addEventListener('message', function(event) {
 
   if (event.data && event.data.type === 'sw-clear-push-auth') {
     event.waitUntil(persistPushAuth(''));
+    return;
   }
 });

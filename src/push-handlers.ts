@@ -7,10 +7,6 @@ interface PushStatusRow {
   subscription_count: number;
 }
 
-interface ExistingPushSubscriptionRow {
-  user_id: number;
-}
-
 interface VapidKeyEnv {
   VAPID_PUBLIC_KEY?: string;
 }
@@ -80,35 +76,23 @@ export async function handlePushSubscribe(
   }
 
   try {
-    const existing = await db.read.prepare(
-      'SELECT user_id FROM push_subscriptions WHERE endpoint = ?'
-    ).bind(subscription.endpoint).first<ExistingPushSubscriptionRow>();
+    const result = await db.write.prepare(
+      `INSERT INTO push_subscriptions (user_id, endpoint, keys_p256dh, keys_auth, last_used_at)
+       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(endpoint) DO UPDATE SET
+         keys_p256dh = excluded.keys_p256dh,
+         keys_auth = excluded.keys_auth,
+         last_used_at = CURRENT_TIMESTAMP
+       WHERE push_subscriptions.user_id = excluded.user_id`
+    ).bind(
+      sessionValidation.userId,
+      subscription.endpoint,
+      subscription.keys.p256dh,
+      subscription.keys.auth,
+    ).run();
 
-    if (existing && existing.user_id !== sessionValidation.userId) {
+    if ((result.meta?.changes ?? 0) === 0) {
       return createErrorResponse('Push subscription endpoint is already registered to another user', 409);
-    }
-
-    if (existing) {
-      await db.write.prepare(
-        `UPDATE push_subscriptions
-         SET keys_p256dh = ?, keys_auth = ?, last_used_at = CURRENT_TIMESTAMP
-         WHERE endpoint = ? AND user_id = ?`
-      ).bind(
-        subscription.keys.p256dh,
-        subscription.keys.auth,
-        subscription.endpoint,
-        sessionValidation.userId,
-      ).run();
-    } else {
-      await db.write.prepare(
-        `INSERT INTO push_subscriptions (user_id, endpoint, keys_p256dh, keys_auth, last_used_at)
-         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`
-      ).bind(
-        sessionValidation.userId,
-        subscription.endpoint,
-        subscription.keys.p256dh,
-        subscription.keys.auth,
-      ).run();
     }
 
     return createSuccessResponse({ status: 'success' });

@@ -149,6 +149,31 @@ describe('push-client', () => {
     expect(mockControllerPostMessage).toHaveBeenLastCalledWith({ type: 'sw-clear-push-auth' });
   });
 
+  it('clears stored service worker auth even when browser unsubscribe fails after server delete', async () => {
+    const pushClient = await import('./push-client');
+    const mockSubscription = {
+      endpoint: 'https://push.example/sub-3',
+      toJSON: () => ({
+        endpoint: 'https://push.example/sub-3',
+        keys: { auth: 'auth-key', p256dh: 'p256dh-key' },
+      }),
+      unsubscribe: mockUnsubscribe.mockRejectedValue(new Error('unsubscribe failed')),
+    };
+
+    mockGetSubscription.mockResolvedValue(mockSubscription);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'success' }),
+    });
+
+    await expect(pushClient.unsubscribeFromPush('test-token')).rejects.toThrow('unsubscribe failed');
+    expect(mockFetch).toHaveBeenCalledWith('/api/push/subscribe', expect.objectContaining({
+      method: 'DELETE',
+      body: JSON.stringify({ endpoint: 'https://push.example/sub-3' }),
+    }));
+    expect(mockControllerPostMessage).toHaveBeenLastCalledWith({ type: 'sw-clear-push-auth' });
+  });
+
   it('returns the authenticated push status payload', async () => {
     const pushClient = await import('./push-client');
     mockFetch.mockResolvedValue({

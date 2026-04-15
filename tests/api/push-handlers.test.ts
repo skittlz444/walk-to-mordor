@@ -69,10 +69,8 @@ describe('Push Handlers', () => {
   });
 
   it('inserts a new push subscription when the endpoint is unused', async () => {
-    const existing = createChainableMock();
-    const insert = createChainableMock();
-    mockReadDb.prepare.mockReturnValueOnce(existing);
-    mockWriteDb.prepare.mockReturnValueOnce(insert);
+    const upsert = createChainableMock({ run: { meta: { changes: 1 } } });
+    mockWriteDb.prepare.mockReturnValueOnce(upsert);
 
     const response = await handlePushSubscribe(request, mockDb, {
       endpoint: 'https://push.example/sub-1',
@@ -80,8 +78,7 @@ describe('Push Handlers', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(existing.bind).toHaveBeenCalledWith('https://push.example/sub-1');
-    expect(insert.bind).toHaveBeenCalledWith(
+    expect(upsert.bind).toHaveBeenCalledWith(
       7,
       'https://push.example/sub-1',
       'p256dh-key',
@@ -90,10 +87,8 @@ describe('Push Handlers', () => {
   });
 
   it('updates an existing push subscription when the same user re-subscribes', async () => {
-    const existing = createChainableMock({ first: { user_id: 7 } });
-    const update = createChainableMock();
-    mockReadDb.prepare.mockReturnValueOnce(existing);
-    mockWriteDb.prepare.mockReturnValueOnce(update);
+    const upsert = createChainableMock({ run: { meta: { changes: 1 } } });
+    mockWriteDb.prepare.mockReturnValueOnce(upsert);
 
     const response = await handlePushSubscribe(request, mockDb, {
       endpoint: 'https://push.example/sub-2',
@@ -101,17 +96,17 @@ describe('Push Handlers', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(update.bind).toHaveBeenCalledWith(
+    expect(upsert.bind).toHaveBeenCalledWith(
+      7,
+      'https://push.example/sub-2',
       'new-p256dh',
       'new-auth',
-      'https://push.example/sub-2',
-      7,
     );
   });
 
   it('rejects an existing endpoint that belongs to another user', async () => {
-    const existing = createChainableMock({ first: { user_id: 99 } });
-    mockReadDb.prepare.mockReturnValueOnce(existing);
+    const upsert = createChainableMock({ run: { meta: { changes: 0 } } });
+    mockWriteDb.prepare.mockReturnValueOnce(upsert);
 
     const response = await handlePushSubscribe(request, mockDb, {
       endpoint: 'https://push.example/sub-3',
@@ -122,6 +117,19 @@ describe('Push Handlers', () => {
     await expect(response.json()).resolves.toEqual({
       error: 'Push subscription endpoint is already registered to another user',
     });
+  });
+
+  it('handles concurrent same-user subscribe races without returning 500', async () => {
+    const upsert = createChainableMock({ run: { meta: { changes: 1 } } });
+    mockWriteDb.prepare.mockReturnValueOnce(upsert);
+
+    const response = await handlePushSubscribe(request, mockDb, {
+      endpoint: 'https://push.example/sub-race',
+      keys: { auth: 'auth-key', p256dh: 'p256dh-key' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(upsert.run).toHaveBeenCalled();
   });
 
   it('deletes the current user subscription on unsubscribe', async () => {

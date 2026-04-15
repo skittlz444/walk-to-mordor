@@ -214,9 +214,11 @@ export async function unsubscribeFromPush(sessionToken: string): Promise<boolean
     throw new Error(await readErrorMessage(response, 'Unable to remove push subscription'));
   }
 
-  await subscription.unsubscribe();
-  await clearPushAuthContext();
-  return true;
+  try {
+    return await subscription.unsubscribe();
+  } finally {
+    await clearPushAuthContext();
+  }
 }
 
 export async function getPushStatus(sessionToken: string): Promise<PushStatusData> {

@@ -173,6 +173,18 @@ describe('Service Worker Push Handlers', () => {
     await expect(sw.readPushAuth()).resolves.toEqual({ sessionToken: 'test-token' });
   });
 
+  test('message events clear persisted push auth', async () => {
+    await sw.persistPushAuth('test-token');
+
+    await runServiceWorkerEvent(sw.messageCallback, {
+      data: {
+        type: 'sw-clear-push-auth',
+      },
+    });
+
+    await expect(sw.readPushAuth()).resolves.toBeNull();
+  });
+
   test('pushsubscriptionchange re-subscribes and syncs the new subscription when auth is available', async () => {
     await sw.persistPushAuth('test-token');
     sw.globalFetch
@@ -189,6 +201,23 @@ describe('Service Worker Push Handlers', () => {
       method: 'POST',
       headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
     }));
+  });
+
+  test('pushsubscriptionchange clears persisted auth when subscription sync is unauthorized', async () => {
+    const postMessage = jest.fn();
+    sw.mockClients.push({ postMessage });
+    await sw.persistPushAuth('test-token');
+    sw.globalFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        status: 'success',
+        data: { vapidPublicKey: 'SGVsbG8' },
+      }), { status: 200, headers: { 'content-type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }));
+
+    await runServiceWorkerEvent(sw.pushSubscriptionChangeCallback, {});
+
+    await expect(sw.readPushAuth()).resolves.toBeNull();
+    expect(postMessage).toHaveBeenCalledWith({ type: 'sw-push-resubscribe-required' });
   });
 
   test('pushsubscriptionchange asks pages to resubscribe when auth is unavailable', async () => {
