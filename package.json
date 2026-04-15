@@ -85,6 +85,7 @@
     "tile:map": "node scripts/tile-map-image.js"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "^1.0.2",
     "@preact/signals": "^2.9.0",
     "dompurify": "^3.3.3",
     "konva": "^10.2.5",

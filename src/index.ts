@@ -68,6 +68,13 @@ import { renderAdminUsersPage } from "./renderAdminUsersPage";
 import { renderAdminMetricsPage } from "./renderAdminMetricsPage";
 import { createDbClient } from './db';
 import { handleWeeklyStats, handleHeatmap, handleWrappedStats } from './stats-handlers';
+import {
+  handlePushSubscribe,
+  handlePushUnsubscribe,
+  handlePushStatus,
+  handlePushSettings,
+  handleVapidKey,
+} from './push-handlers';
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -165,6 +172,8 @@ export default {
         return handleConfirmEmail(request, db);
       } else if (url.pathname === "/api/auth/resend-confirmation" && method === "POST") {
         return handleResendConfirmation(request, db, body, env);
+      } else if (url.pathname === "/api/push/vapid-key" && method === "GET") {
+        return handleVapidKey(env);
       }
       
       // Protected endpoints (authentication required)
@@ -530,6 +539,14 @@ export default {
         return handleHeatmap(request, db, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/stats/wrapped" && method === "GET") {
         return handleWrappedStats(request, db, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/push/subscribe" && method === "POST") {
+        return handlePushSubscribe(request, db, body, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/push/subscribe" && method === "DELETE") {
+        return handlePushUnsubscribe(request, db, body, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/push/status" && method === "GET") {
+        return handlePushStatus(request, db, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/push/settings" && method === "PUT") {
+        return handlePushSettings(request, db, body, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/total-distance") {
         // Validate session first
         const sessionValidation = await validateSession(request, db, env.ALLOW_TEST_AUTH);
@@ -738,6 +755,8 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/total-distance":
     case "/api/session":
     case "/api/avatars":
+    case "/api/push/status":
+    case "/api/push/vapid-key":
     case "/api/auth/confirm-email":
     case "/api/user/parties":
     case "/api/user/parties/positions":
@@ -765,8 +784,11 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/friends/request":
     case "/api/friends/request/code":
       return ['POST'];
+    case "/api/push/subscribe":
+      return ['POST', 'DELETE'];
     case "/api/profile":
     case "/api/user/preferences":
+    case "/api/push/settings":
       return ['PUT'];
     default:
       // Admin API routes

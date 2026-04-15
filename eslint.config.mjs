@@ -26,6 +26,7 @@ export default [
       "playwright-report/",
       "test-results/",
       "_bmad*/",
+      "_bmad*/**",
       "raw_assets/",
       "screenshots/",
       "client/test-results/",

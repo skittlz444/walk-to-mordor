@@ -269,9 +269,9 @@ test.describe('User Goal Visibility Preference', () => {
     test('should display default view toggle on profile page', async ({ page }) => {
       await navigateToProfile(page);
 
-      // Toggle switch container should be visible (use auto-retrying assertion)
-      const toggleSwitches = page.locator('.toggle-switch');
-      await expect(toggleSwitches).toHaveCount(2, { timeout: 10000 });
+      // The default-view toggle should be rendered inside its own toggle group.
+      const toggleSwitch = page.locator('.toggle-group:has(#default-view-toggle) .toggle-switch');
+      await expect(toggleSwitch).toHaveCount(1, { timeout: 10000 });
 
       // Label should be present
       await expect(page.locator('label[for="default-view-toggle"]')).toContainText('Default to map view');

@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-03-17 · Migrations: 0001–0124 · Full DDL: `migrations/`
+> Last updated: 2026-04-14 · Migrations: 0001–0127 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -24,6 +24,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `friendships` | Mutual friend relationships (pending → accepted) | 0020+ |
 | `fellowship_invites` | Friend-based party invitations | 0020+ |
 | `party_messages` | Fellowship chat messages for unified activity feed | 0124 |
+| `push_subscriptions` | Per-device browser push subscriptions for authenticated users | 0126 |
 
 ## Key Constraints & Invariants
 
@@ -33,6 +34,12 @@ These are rules the schema enforces or that the application layer must uphold �
 - `is_admin` toggled via admin UI (`PUT /api/admin/users/:id/admin`). Admins cannot revoke their own admin status.
 - `avatar_id` must be NULL or a valid slug from `src/avatar-slugs.ts` (validated by `isValidAvatarSlug` on PUT).
 - `friend_code`: 8-char cryptographically random; backfill logic in `src/auth-utils.ts`.
+- `notifications_enabled` is a global delivery toggle for server-side push sends. It does not revoke browser permissions or delete device subscriptions.
+
+### push_subscriptions
+- Stores one row per browser/device subscription endpoint. Multiple rows per user are expected.
+- `endpoint` is globally unique. Application logic rejects an endpoint if it is already attached to a different user.
+- `last_used_at` is updated when the app refreshes or successfully uses a subscription, and stale endpoints are deleted on HTTP `404`/`410` push responses.
 
 ### parties
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.

@@ -349,7 +349,7 @@ export async function handleAdminUserResetPassword(
     ).bind(userId, token, expiresAt).run();
 
     const origin = new URL(request.url).origin;
-    const emailResult = await sendPasswordResetEmail({ RESEND_API_KEY: resendApiKey } as Env, user.email, user.username, token, origin);
+    const emailResult = await sendPasswordResetEmail({ RESEND_API_KEY: resendApiKey }, user.email, user.username, token, origin);
 
     if (!emailResult.success) {
       await db.write.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run();
