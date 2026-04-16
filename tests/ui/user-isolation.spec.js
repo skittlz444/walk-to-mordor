@@ -5,7 +5,7 @@
  * These tests verify that different users cannot see or modify each other's data
  * at the end-to-end level with real API and database interactions.
  */
-const { test, expect, createTestEvent, generateRealisticTestDistance } = require('./helpers/common');
+const { test, expect, createTestEvent, generateRealisticTestDistance, navigateAuthenticated, waitForJourneyReady } = require('./helpers/common');
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
@@ -42,8 +42,8 @@ async function createAuthenticatedContext(browser, username) {
          }
     });
     const page = await context.newPage();
-    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('domcontentloaded');
+    await navigateAuthenticated(page, authToken, '/journey');
+    await waitForJourneyReady(page);
     
     // Close existing popups if any (similar to setupTest)
     try {
@@ -87,8 +87,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             const user2Event = await createTestEvent(page2, user2Distance);
             
             // Verify User 1 sees their own distance but not User 2's
-            await page1.reload();
-            await page1.waitForLoadState('domcontentloaded');
+            await page1.reload({ waitUntil: 'domcontentloaded' });
+            await waitForJourneyReady(page1);
             
             await expect(page1.locator('#total-distance-value')).toContainText(`${user1Distance}`);
 
@@ -99,8 +99,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             expect(user1Progress.some((entry) => entry.start === user1Event.dateInfo.date)).toBe(true);
             
             // Verify User 2 sees their own distance but not User 1's
-            await page2.reload();
-            await page2.waitForLoadState('domcontentloaded');
+            await page2.reload({ waitUntil: 'domcontentloaded' });
+            await waitForJourneyReady(page2);
             
             await expect(page2.locator('#total-distance-value')).toContainText(`${user2Distance}`);
 
@@ -185,15 +185,11 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             await createProgress(context2, authToken2, tomorrowDateInfo.date, user2Distance2);
             
             // Reload and wait for totals to update
-            await page1.reload();
-            await page1.waitForLoadState('domcontentloaded');
-            await page1.locator('#total-distance-value').waitFor({ state: 'visible', timeout: 5000 });
-            await expect(page1.locator('#total-distance-value')).not.toHaveText('Loading...');
+            await page1.reload({ waitUntil: 'domcontentloaded' });
+            await waitForJourneyReady(page1);
             
-            await page2.reload();
-            await page2.waitForLoadState('domcontentloaded');
-            await page2.locator('#total-distance-value').waitFor({ state: 'visible', timeout: 5000 });
-            await expect(page2.locator('#total-distance-value')).not.toHaveText('Loading...');
+            await page2.reload({ waitUntil: 'domcontentloaded' });
+            await waitForJourneyReady(page2);
             
             // User 1's total should be 8.7 km (5.5 + 3.2)
             const user1Total = await page1.locator('#total-distance-value').textContent();
@@ -238,7 +234,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             };
             
             await createTestEvent(page1, originalDistance, nextWeekDateInfo);
-            await page1.waitForLoadState('domcontentloaded');
+            await waitForJourneyReady(page1);
             
             // User 2 attempts to modify User 1's entry via API
             // (Direct API call since UI doesn't show other users' data)
@@ -257,8 +253,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             expect(response.status()).toBe(404);
             
             // Verify User 1's entry is unchanged
-            await page1.reload();
-            await page1.waitForLoadState('domcontentloaded');
+            await page1.reload({ waitUntil: 'domcontentloaded' });
+            await waitForJourneyReady(page1);
 
             await expect(page1.locator('#total-distance-value')).toContainText(`${originalDistance}`);
 
@@ -309,14 +305,14 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             };
             
             await createTestEvent(page1, user1Distance, nextWeekDateInfo);
-            await page1.waitForLoadState('domcontentloaded');
+            await waitForJourneyReady(page1);
             
             await createTestEvent(page2, user2Distance, nextWeekDateInfo);
-            await page2.waitForLoadState('domcontentloaded');
+            await waitForJourneyReady(page2);
             
             // Both should succeed without conflicts
-            await page1.reload();
-            await page1.waitForLoadState('domcontentloaded');
+            await page1.reload({ waitUntil: 'domcontentloaded' });
+            await waitForJourneyReady(page1);
             await expect(page1.locator('#total-distance-value')).toContainText(`${user1Distance}`);
 
             const user1Progress = await getCalendarProgress(context1, authToken1);
@@ -324,8 +320,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             expect(user1Entry).toBeTruthy();
             expect(Number(user1Entry.title)).toBe(user1Distance);
             
-            await page2.reload();
-            await page2.waitForLoadState('domcontentloaded');
+            await page2.reload({ waitUntil: 'domcontentloaded' });
+            await waitForJourneyReady(page2);
             await expect(page2.locator('#total-distance-value')).toContainText(`${user2Distance}`);
 
             const user2Progress = await getCalendarProgress(context2, authToken2);

@@ -2,6 +2,7 @@ interface PushStatusData {
   hasSubscriptions: boolean;
   subscriptionCount: number;
   notificationsEnabled: boolean;
+  oneMoreMileEnabled: boolean;
 }
 
 interface PushStatusResponse {
@@ -234,11 +235,23 @@ export async function getPushStatus(sessionToken: string): Promise<PushStatusDat
   return payload.data;
 }
 
-export async function updateNotificationSettings(sessionToken: string, enabled: boolean): Promise<void> {
+export interface NotificationSettingsPayload {
+  notificationsEnabled?: boolean;
+  oneMoreMileEnabled?: boolean;
+}
+
+export async function updateNotificationSettings(
+  sessionToken: string,
+  enabledOrSettings: boolean | NotificationSettingsPayload,
+): Promise<void> {
+  const payload = typeof enabledOrSettings === 'boolean'
+    ? { notificationsEnabled: enabledOrSettings }
+    : enabledOrSettings;
+
   const response = await fetch('/api/push/settings', {
     method: 'PUT',
     headers: getAuthHeaders(sessionToken),
-    body: JSON.stringify({ notificationsEnabled: enabled }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {

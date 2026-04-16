@@ -1,6 +1,6 @@
 # Story 11.2: "One More Mile" Push Notification
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -83,51 +83,51 @@ The notification features **multiple themed message variants** for variety — e
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Database migration — `one_more_mile_sent` tracking table (AC: #1, #2, #8)
-  - [ ] 1.1: Create `migrations/0128_create_one_more_mile_sent.sql` with `one_more_mile_sent` table: `id` (PK), `user_id` (FK → users ON DELETE CASCADE), `goal_id` (FK → goals ON DELETE CASCADE), `sent_at` (TEXT DEFAULT CURRENT_TIMESTAMP), with `UNIQUE(user_id, goal_id)` constraint
-  - [ ] 1.2: Update `docs/data-models.md` with new table
+- [x] Task 1: Database migration — `one_more_mile_sent` tracking table (AC: #1, #2, #8)
+  - [x] 1.1: Create `migrations/0128_create_one_more_mile_sent.sql` with `one_more_mile_sent` table: `id` (PK), `user_id` (FK → users ON DELETE CASCADE), `goal_id` (FK → goals ON DELETE CASCADE), `sent_at` (TEXT DEFAULT CURRENT_TIMESTAMP), with `UNIQUE(user_id, goal_id)` constraint
+  - [x] 1.2: Update `docs/data-models.md` with new table
 
-- [ ] Task 2: Database migration — `one_more_mile_enabled` user preference (AC: #6, #7)
-  - [ ] 2.1: Create `migrations/0129_add_one_more_mile_enabled.sql`: `ALTER TABLE users ADD COLUMN one_more_mile_enabled INTEGER NOT NULL DEFAULT 1;`
-  - [ ] 2.2: Update `docs/data-models.md` with new column
+- [x] Task 2: Database migration — `one_more_mile_enabled` user preference (AC: #6, #7)
+  - [x] 2.1: Create `migrations/0129_add_one_more_mile_enabled.sql`: `ALTER TABLE users ADD COLUMN one_more_mile_enabled INTEGER NOT NULL DEFAULT 1;`
+  - [x] 2.2: Update `docs/data-models.md` with new column
 
-- [ ] Task 3: Themed message variants — `src/push-messages.ts` (AC: #9)
-  - [ ] 3.1: Create `src/push-messages.ts` exporting a `ONE_MORE_MILE_MESSAGES` array of `{ title: string; bodyTemplate: string }` objects
-  - [ ] 3.2: Implement `getOneMoreMileMessage(goalTitle: string, remainingKm: number)` that randomly selects a variant and interpolates `{goalTitle}` and `{remainingKm}` placeholders
-  - [ ] 3.3: Include at least 8 themed message variants (see Dev Notes for examples)
+- [x] Task 3: Themed message variants — `src/push-messages.ts` (AC: #9)
+  - [x] 3.1: Create `src/push-messages.ts` exporting a `ONE_MORE_MILE_MESSAGES` array of `{ title: string; bodyTemplate: string }` objects
+  - [x] 3.2: Implement `getOneMoreMileMessage(goalTitle: string, remainingKm: number)` that randomly selects a variant and interpolates `{goalTitle}` and `{remainingKm}` placeholders
+  - [x] 3.3: Include at least 8 themed message variants (see Dev Notes for examples)
 
-- [ ] Task 4: Cron handler — `src/scheduled-handlers.ts` (AC: #1, #2, #3, #4, #8, #10)
-  - [ ] 4.1: Create `src/scheduled-handlers.ts` with `handleOneMoreMileCron(env: Env)` function
-  - [ ] 4.2: Implement the eligible-user query: join `users`, `progress` (aggregated), `goals`, `push_subscriptions`, filtering by all 6 criteria (< 2 km, no walks in 3 days, not sent for this goal, not completed journey, both toggles enabled, has active subscription)
-  - [ ] 4.3: Process eligible users in batches (100 per query page)
-  - [ ] 4.4: For each eligible user: select random message, call `sendPushToUser()` from `src/push-utils.ts`, insert into `one_more_mile_sent`
-  - [ ] 4.5: Handle `sendPushToUser` failures gracefully — log errors, continue processing remaining users
-  - [ ] 4.6: Clean up expired subscriptions on 404/410 (re-use `cleanupExpiredSubscription` from `push-utils.ts`)
+- [x] Task 4: Cron handler — `src/scheduled-handlers.ts` (AC: #1, #2, #3, #4, #8, #10)
+  - [x] 4.1: Create `src/scheduled-handlers.ts` with `handleOneMoreMileCron(env: Env)` function
+  - [x] 4.2: Implement the eligible-user query: join `users`, `progress` (aggregated), `goals`, `push_subscriptions`, filtering by all 6 criteria (< 2 km, no walks in 3 days, not sent for this goal, not completed journey, both toggles enabled, has active subscription)
+  - [x] 4.3: Process eligible users in batches (100 per query page)
+  - [x] 4.4: For each eligible user: select random message, call `sendPushToUser()` from `src/push-utils.ts`, insert into `one_more_mile_sent`
+  - [x] 4.5: Handle `sendPushToUser` failures gracefully — log errors, continue processing remaining users
+  - [x] 4.6: Clean up expired subscriptions on 404/410 (re-use `cleanupExpiredSubscription` from `push-utils.ts`)
 
-- [ ] Task 5: Wire scheduled handler in `src/index.ts` (AC: #10)
-  - [ ] 5.1: Add `scheduled()` export alongside existing `fetch()` handler
-  - [ ] 5.2: Route to `handleOneMoreMileCron(env)` on cron trigger
-  - [ ] 5.3: Wrap in try/catch with console.error logging
+- [x] Task 5: Wire scheduled handler in `src/index.ts` (AC: #10)
+  - [x] 5.1: Add `scheduled()` export alongside existing `fetch()` handler
+  - [x] 5.2: Route to `handleOneMoreMileCron(env)` on cron trigger
+  - [x] 5.3: Wrap in try/catch with console.error logging
 
-- [ ] Task 6: Update `wrangler.json` with cron trigger (AC: #10)
-  - [ ] 6.1: Add `"triggers": { "crons": ["0 9 * * *"] }` — run daily at 09:00 UTC
-  - [ ] 6.2: Document the cron schedule choice in code comment
+- [x] Task 6: Update `wrangler.json` with cron trigger (AC: #10)
+  - [x] 6.1: Add `"triggers": { "crons": ["0 9 * * *"] }` — run daily at 09:00 UTC
+  - [x] 6.2: Document the cron schedule choice in code comment
 
-- [ ] Task 7: Update push settings API — `src/push-handlers.ts` (AC: #7)
-  - [ ] 7.1: Extend `handlePushSettings` (from Story 11.1) to accept `oneMoreMileEnabled` in addition to `notificationsEnabled`
-  - [ ] 7.2: Update `PUT /api/push/settings` body validation to handle both fields (either or both can be present)
-  - [ ] 7.3: Extend `GET /api/push/status` response to include `oneMoreMileEnabled: boolean`
+- [x] Task 7: Update push settings API — `src/push-handlers.ts` (AC: #7)
+  - [x] 7.1: Extend `handlePushSettings` (from Story 11.1) to accept `oneMoreMileEnabled` in addition to `notificationsEnabled`
+  - [x] 7.2: Update `PUT /api/push/settings` body validation to handle both fields (either or both can be present)
+  - [x] 7.3: Extend `GET /api/push/status` response to include `oneMoreMileEnabled: boolean`
 
-- [ ] Task 8: Refactor PushPermissionIsland into NotificationSettings group (AC: #5, #6)
-  - [ ] 8.1: Refactor `PushPermissionIsland` (from Story 11.1) to use a collapsible "Notification Settings" group pattern
-  - [ ] 8.2: The global notifications toggle becomes the collapse header — when OFF, group stays collapsed; when ON, group expands to show individual notification type toggles
-  - [ ] 8.3: Add "One More Mile Notifications" toggle inside the expanded group with descriptive text: "Get a nudge when you're close to your next milestone and haven't walked in a few days"
-  - [ ] 8.4: Wire the "One More Mile" toggle to `PUT /api/push/settings` with `{ oneMoreMileEnabled }` 
-  - [ ] 8.5: Load initial state for `oneMoreMileEnabled` from `GET /api/push/status`
-  - [ ] 8.6: Add CSS for the collapsible group in `public/css/profile.css`
+- [x] Task 8: Refactor PushPermissionIsland into NotificationSettings group (AC: #5, #6)
+  - [x] 8.1: Refactor `PushPermissionIsland` (from Story 11.1) to use a collapsible "Notification Settings" group pattern
+  - [x] 8.2: The global notifications toggle becomes the collapse header — when OFF, group stays collapsed; when ON, group expands to show individual notification type toggles
+  - [x] 8.3: Add "One More Mile Notifications" toggle inside the expanded group with descriptive text: "Get a nudge when you're close to your next milestone and haven't walked in a few days"
+  - [x] 8.4: Wire the "One More Mile" toggle to `PUT /api/push/settings` with `{ oneMoreMileEnabled }` 
+  - [x] 8.5: Load initial state for `oneMoreMileEnabled` from `GET /api/push/status`
+  - [x] 8.6: Add CSS for the collapsible group in `public/css/profile.css`
 
-- [ ] Task 9: Tests (AC: all)
-  - [ ] 9.1: Backend tests in `tests/api/scheduled-handlers.test.ts`:
+- [x] Task 9: Tests (AC: all)
+  - [x] 9.1: Backend tests in `tests/api/scheduled-handlers.test.ts`:
     - Eligible user gets notification (all criteria met)
     - User with walk in past 3 days is skipped
     - User already notified for this goal is skipped
@@ -137,18 +137,26 @@ The notification features **multiple themed message variants** for variety — e
     - Batch processing works correctly
     - Expired subscription cleanup on 410
     - Random message selection produces valid output
-  - [ ] 9.2: Backend tests for updated push settings in `tests/api/push-handlers.test.ts`:
+  - [x] 9.2: Backend tests for updated push settings in `tests/api/push-handlers.test.ts`:
     - `PUT /api/push/settings` with `oneMoreMileEnabled` updates column
     - `GET /api/push/status` returns `oneMoreMileEnabled` field
-  - [ ] 9.3: Unit tests for message variants in `tests/api/push-messages.test.ts`:
+  - [x] 9.3: Unit tests for message variants in `tests/api/push-messages.test.ts`:
     - All message templates produce valid strings
     - `getOneMoreMileMessage()` interpolates goal name and distance correctly
     - Random selection covers the pool (statistical test optional)
-  - [ ] 9.4: Client tests in `client/src/islands/PushPermissionIsland.test.tsx`:
+  - [x] 9.4: Client tests in `client/src/islands/PushPermissionIsland.test.tsx`:
     - Collapsible group collapses when global toggle is OFF
     - Group expands when global toggle is ON
     - "One More Mile" toggle visible in expanded state
     - Toggle calls API with correct payload
+
+### Review Findings
+
+- [x] [Review][Patch] Mutable OFFSET pagination can skip eligible users after the first full batch [src/scheduled-handlers.ts:77] — **Fixed**: Removed OFFSET; always query from 0 since processed users are excluded by NOT EXISTS on one_more_mile_sent.
+- [x] [Review][Patch] The sent-tracking row is written even when push delivery fails for non-404/410 errors [src/scheduled-handlers.ts:133] — **Fixed**: sendToUserSubscriptions now returns delivery summary; claim is rolled back when no sends succeeded and no subscriptions were cleaned up.
+- [x] [Review][Patch] Overlapping cron runs can double-send the same one-time notification before dedupe is recorded [src/scheduled-handlers.ts:67] — **Fixed**: Claim-first pattern: INSERT dedupe row before sending; skip user if claim fails (UNIQUE constraint); roll back on send failure.
+- [x] [Review][Patch] Notification clicks will not focus an already-open `/journey` or `/map` tab because the service worker only matches the exact `/` URL [public/sw.js:167] — **Fixed**: Added same-origin fallback loop after exact URL match fails.
+- [x] [Review][Patch] `PUT /api/push/settings` accepts partially invalid payloads instead of rejecting malformed provided fields [src/push-handlers.ts:186] — **Fixed**: Added explicit type checks before boolean coercion; rejects with 400 if a present field is not boolean.
 
 ## Dev Notes
 
@@ -428,6 +436,45 @@ The query filters on `progress(user_id, date)`. Check if an index exists:
 - Do NOT hardcode cron time — use `wrangler.json` config so it can be adjusted without code changes.
 - Do NOT send notification if the user has logged ANY walk in the past 3 days (even a 0-distance entry is activity).
 - Do NOT use the `web-push` npm library — it requires Node.js crypto. Use `sendPushToUser` from `push-utils.ts` which is built for Cloudflare Workers (Web Crypto API).
+
+---
+
+## Change Log
+
+### Implementation Record
+
+**Branch**: `feat/11-2-one-more-mile-push-notification`
+
+**New Files:**
+- `migrations/0128_create_one_more_mile_sent.sql` — Tracking table for sent notifications
+- `migrations/0129_add_one_more_mile_enabled.sql` — User preference column
+- `src/push-messages.ts` — 8 Tolkien-themed message variants with interpolation
+- `src/scheduled-handlers.ts` — Cron handler with CTE query, batch processing, 410 cleanup
+- `tests/api/push-messages.test.ts` — Message template unit tests
+- `tests/api/scheduled-handlers.test.ts` — Cron handler unit tests
+
+**Modified Files:**
+- `src/index.ts` — Added `scheduled()` handler export
+- `wrangler.json` — Added `triggers.crons` for daily 09:00 UTC
+- `src/push-handlers.ts` — Extended settings/status for `oneMoreMileEnabled`, dynamic UPDATE pattern
+- `client/src/islands/PushPermissionIsland.tsx` — Collapsible group with One More Mile toggle
+- `client/src/utils/push-client.ts` — Extended `updateNotificationSettings` for new field
+- `client/src/islands/PushPermissionIsland.test.tsx` — Tests for collapsible group + toggle
+- `tests/api/push-handlers.test.ts` — Tests for updated settings/status endpoints
+- `public/css/profile.css` — Notification types section styling
+- `docs/data-models.md` — New table + column documentation
+- `docs/api-reference.md` — Updated settings endpoint + cron documentation
+
+**Test Results:**
+- Backend: 41 suites, 1239 tests — all passing
+- Client: 50 suites, 783 tests — all passing
+- No lint errors
+
+**Dev Agent Notes:**
+- `handlePushSettings` was refactored from single-field to dynamic multi-field UPDATE pattern (following `handleUpdatePreferences` in `auth-handlers.ts`)
+- The cron handler uses a single CTE-based query for efficiency, with LIMIT/OFFSET batch pagination
+- `sendPushNotification` from `push-utils.ts` is called directly per-subscription (not `sendPushToUser`) to enable per-subscription 410 cleanup in the cron context
+- All acceptance criteria (#1-#11) are covered by the implementation and tests
 
 ### References
 

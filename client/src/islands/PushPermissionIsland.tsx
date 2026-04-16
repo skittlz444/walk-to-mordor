@@ -11,7 +11,7 @@ import {
   updateNotificationSettings,
 } from '../utils/push-client';
 
-type NotificationAction = 'enable-device' | 'disable-device' | 'toggle-global' | null;
+type NotificationAction = 'enable-device' | 'disable-device' | 'toggle-global' | 'toggle-one-more-mile' | null;
 
 function getPermissionLabel(permission: NotificationPermission): string {
   if (permission === 'granted') {
@@ -33,6 +33,7 @@ export function PushPermissionIsland() {
   const [deviceSubscribed, setDeviceSubscribed] = useState(false);
   const [subscriptionCount, setSubscriptionCount] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [oneMoreMileEnabled, setOneMoreMileEnabled] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [action, setAction] = useState<NotificationAction>(null);
@@ -59,6 +60,7 @@ export function PushPermissionIsland() {
       setDeviceSubscribed(Boolean(deviceSubscription));
       setSubscriptionCount(status.subscriptionCount);
       setNotificationsEnabled(status.notificationsEnabled);
+      setOneMoreMileEnabled(status.oneMoreMileEnabled);
       setErrorMessage('');
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to load push notification settings');
@@ -167,6 +169,30 @@ export function PushPermissionIsland() {
     }
   }, [refreshState, token]);
 
+  const handleOneMoreMileToggle = useCallback(async (event: Event) => {
+    if (!token) {
+      return;
+    }
+
+    const nextValue = (event.currentTarget as HTMLInputElement).checked;
+    setAction('toggle-one-more-mile');
+    setStatusMessage('');
+    setErrorMessage('');
+
+    try {
+      await updateNotificationSettings(token, { oneMoreMileEnabled: nextValue });
+      setOneMoreMileEnabled(nextValue);
+      setStatusMessage(nextValue
+        ? '"One More Mile" notifications are enabled.'
+        : '"One More Mile" notifications are disabled.');
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to update notification settings');
+      await refreshState();
+    } finally {
+      setAction(null);
+    }
+  }, [refreshState, token]);
+
   if (!token) {
     return null;
   }
@@ -245,6 +271,32 @@ export function PushPermissionIsland() {
             </label>
           </div>
         </div>
+
+        {notificationsEnabled ? (
+          <div className="push-notification-types">
+            <h3 className="push-notification-types-heading">Notification Types</h3>
+            <div className="form-group push-setting-group">
+              <div className="toggle-group">
+                <div className="toggle-label">
+                  <label htmlFor="push-one-more-mile-toggle">One More Mile</label>
+                  <small className="field-hint">
+                    Get a nudge when you&apos;re close to your next milestone and haven&apos;t walked in a few days.
+                  </small>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    id="push-one-more-mile-toggle"
+                    type="checkbox"
+                    checked={oneMoreMileEnabled}
+                    disabled={action === 'toggle-one-more-mile'}
+                    onChange={handleOneMoreMileToggle}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="push-permission-actions">
           <button

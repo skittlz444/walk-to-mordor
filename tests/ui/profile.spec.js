@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect, setupTest, waitForAuthenticated } = require('./helpers/common');
+const { test, expect, setupTest, waitForAuthenticated, dismissPwaInstallBanner } = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
@@ -73,12 +73,15 @@ test.describe('User Profile Page', () => {
         // Wait for navigation to /profile and island hydration
         await page.waitForURL('**/profile');
         await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+        await dismissPwaInstallBanner(page);
+        await waitForProfileFormReady(page);
     }
 
     async function navigateToProfile(page) {
         await page.goto(BASE_URL + '/profile');
         await waitForAuthenticated(page);
         await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+        await dismissPwaInstallBanner(page);
     }
 
     test.beforeEach(async ({ page, authToken }) => {

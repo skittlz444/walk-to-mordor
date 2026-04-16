@@ -4,33 +4,36 @@
  * Uses `eslint --print-config` subprocess to inspect the resolved config
  * for representative file paths (avoids ESM/CJS interop issues with Jest).
  */
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const ESLINT_BIN = path.join('.', 'node_modules', '.bin', 'eslint');
+const ESLINT_PACKAGE_JSON = require.resolve('eslint/package.json');
+const ESLINT_BIN = path.join(path.dirname(ESLINT_PACKAGE_JSON), 'bin', 'eslint.js');
+
+function runEslint(args, options = {}) {
+  return execFileSync(process.execPath, [ESLINT_BIN, ...args], {
+    cwd: ROOT,
+    encoding: 'utf-8',
+    timeout: 30000,
+    ...options,
+  });
+}
 
 /**
  * Get resolved ESLint config for a file path via --print-config.
  * Returns parsed JSON with { rules, languageOptions, ... }.
  */
 function configFor(relPath) {
-  const out = execSync(
-    `${ESLINT_BIN} --print-config ${relPath}`,
-    { cwd: ROOT, encoding: 'utf-8', timeout: 30000 }
-  );
+  const out = runEslint(['--print-config', relPath]);
   return JSON.parse(out);
 }
 
 /** Run eslint on the whole project and return { exitCode, errorCount, warningCount } */
 function lintAll() {
   try {
-    const out = execSync(`${ESLINT_BIN} . --format json`, {
-      cwd: ROOT,
-      encoding: 'utf-8',
-      timeout: 60000,
-    });
+    const out = runEslint(['.', '--format', 'json'], { timeout: 60000 });
     const results = JSON.parse(out);
     return {
       exitCode: 0,
@@ -200,9 +203,7 @@ describe('global ignores', () => {
     if (!fs.existsSync(abs)) {
       throw new Error(`Fixture file missing: ${relPath}`);
     }
-    const out = execSync(`${ESLINT_BIN} --print-config ${relPath}`, {
-      cwd: ROOT,
-      encoding: 'utf-8',
+    const out = runEslint(['--print-config', relPath], {
       timeout: 15000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });

@@ -3,6 +3,7 @@ const {
   test, 
   expect, 
   setupTest, 
+  waitForGoalsLoaded,
   generateRealisticTestDistance, 
   generateLargeTestDistance, 
   generateRandomTestDate, 
@@ -51,7 +52,7 @@ async function openFirstAvailableGoalPopup(page) {
   await page.waitForLoadState('domcontentloaded');
   
   // Wait for goals to load
-  await expect(page.locator('#goals-list')).toBeVisible();
+  await waitForGoalsLoaded(page);
   
   // Check if there are upcoming goals available first
   const upcomingGoals = page.locator('.upcoming-goal');
@@ -160,7 +161,7 @@ test.describe('Goals Functionality', () => {
     }
 
     // Verify page loaded with goals
-    await expect(page.locator('#goals-list')).toBeVisible();
+    await waitForGoalsLoaded(page);
 
     // Get the current goals to find the first upcoming goal
     const goals = await page.evaluate(async () => {
@@ -197,7 +198,7 @@ test.describe('Goals Functionality', () => {
     await addButton.click();
 
     // Wait for the distance input popup to close
-    await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
+    await expect(page.locator('#distance-input')).toBeHidden({ timeout: 10000 });
 
     // Wait for the congratulations popup to appear
     await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 10000 });
@@ -230,7 +231,7 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goals section renders and controls work', async ({ page }) => {
-    await expect(page.locator('#goals-list')).toBeVisible();
+    await waitForGoalsLoaded(page);
     await page.click('#toggle-completed-visibility');
     await expect(page.locator('#completed-goals-wrapper')).toBeHidden();
     await page.click('#toggle-completed-visibility');
@@ -245,7 +246,7 @@ test.describe('Goals Functionality', () => {
     await page.waitForLoadState('domcontentloaded');
     
     // Wait for goals to load and find the first visible goal (upcoming or any goal)
-    await expect(page.locator('#goals-list')).toBeVisible();
+    await waitForGoalsLoaded(page);
     
     // Try to find upcoming goals first, then fall back to any goal
     let goalToClick = page.locator('.upcoming-goal').first();
@@ -423,7 +424,7 @@ test.describe('Goals Functionality', () => {
       await cell.click();
 
       await page.fill('#distance-input', generateLargeTestDistance().toString()); // Use large distance to complete goals
-      await page.click('text=Add');
+      await page.click('#save-btn');
       
       // Click on header goal
       const newHeaderGoal = page.locator('.goal-header-main').first();
@@ -450,7 +451,7 @@ test.describe('Goals Functionality', () => {
     await page.waitForLoadState('domcontentloaded');
     
     // Check if there are upcoming goals available
-    await expect(page.locator('#goals-list')).toBeVisible();
+    await waitForGoalsLoaded(page);
     const upcomingGoals = page.locator('.upcoming-goal');
     
     if (await upcomingGoals.count() > 0) {
@@ -508,7 +509,7 @@ test.describe('Goals Functionality', () => {
     await page.waitForLoadState('domcontentloaded');
     
     // Test any available goal without adding distance first
-    await expect(page.locator('#goals-list')).toBeVisible();
+    await waitForGoalsLoaded(page);
     
     // Try upcoming goals first
     const upcomingGoals = page.locator('.upcoming-goal');
@@ -627,7 +628,7 @@ test.describe('Goals Functionality', () => {
     });
 
     await page.waitForLoadState('domcontentloaded');
-    await expect(page.locator('#goals-list')).toBeVisible();
+    await waitForGoalsLoaded(page);
     
     // Should have no image requests yet
     expect(imageRequestsMade.length).toBe(0);
@@ -707,7 +708,7 @@ test.describe('Goals Functionality', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // Wait for goals to load
-    await expect(page.locator('#goals-list')).toBeVisible();
+    await waitForGoalsLoaded(page);
 
     // Try to click on an upcoming goal directly
     const upcomingGoals = page.locator('.upcoming-goal');
@@ -784,7 +785,7 @@ test.describe('Goals Functionality', () => {
     await addButton.click();
 
     // Wait for the distance input popup to close
-    await expect(page.locator('#popup')).toBeHidden({ timeout: 10000 });
+    await expect(page.locator('#distance-input')).toBeHidden({ timeout: 10000 });
 
     // Wait for the congratulations popup to appear
     const goalPopup = page.locator('.modal-overlay');
@@ -810,7 +811,7 @@ test.describe('Goals Functionality', () => {
       await page.waitForLoadState('domcontentloaded');
       
       // Wait for goals to load
-      await expect(page.locator('#goals-list')).toBeVisible();
+      await waitForGoalsLoaded(page);
       
       // Check if there are upcoming goals
       const upcomingGoals = page.locator('.upcoming-goal');
@@ -840,7 +841,7 @@ test.describe('Goals Functionality', () => {
       await page.waitForLoadState('domcontentloaded');
       
       // Wait for goals to load
-      await expect(page.locator('#goals-list')).toBeVisible();
+      await waitForGoalsLoaded(page);
       
       // Get first upcoming goal
       const firstUpcomingGoal = page.locator('.upcoming-goal.next-goal').first();

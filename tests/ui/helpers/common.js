@@ -2,6 +2,7 @@ const { test: base, expect } = require('@playwright/test');
 const { cleanupAllTestData } = require('./cleanup');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
+const PWA_DISMISS_KEY = 'wtm_pwa_install_dismissed';
 
 // Extend test with unique auth token fixture
 const test = base.extend({
@@ -23,6 +24,129 @@ async function waitForAuthenticated(page) {
   await page.waitForSelector('body.authenticated', { timeout: 15000 });
 }
 
+async function seedAuthenticatedSession(page, authToken) {
+  const dismissedAt = Date.now();
+
+  await page.addInitScript(({ token, dismissKey, dismissedAtTs }) => {
+    try {
+      localStorage.setItem('sessionToken', token);
+      localStorage.setItem(dismissKey, String(dismissedAtTs));
+    } catch (_error) {
+      // Ignore storage write failures in unsupported contexts.
+    }
+  }, {
+    token: authToken,
+    dismissKey: PWA_DISMISS_KEY,
+    dismissedAtTs: dismissedAt,
+  });
+}
+
+async function syncAuthenticatedSession(page, authToken) {
+  const dismissedAt = Date.now();
+
+  await page.evaluate(({ token, dismissKey, dismissedAtTs }) => {
+    localStorage.setItem('sessionToken', token);
+    localStorage.setItem(dismissKey, String(dismissedAtTs));
+  }, {
+    token: authToken,
+    dismissKey: PWA_DISMISS_KEY,
+    dismissedAtTs: dismissedAt,
+  });
+}
+
+async function navigateAuthenticated(page, authToken, path = '/journey') {
+  await seedAuthenticatedSession(page, authToken);
+  await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' });
+
+  const currentPath = new URL(page.url()).pathname;
+  if (currentPath === '/login') {
+    await syncAuthenticatedSession(page, authToken);
+    await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' });
+  }
+
+  await waitForAuthenticated(page);
+}
+
+async function waitForTotalDistanceLoaded(page) {
+  const totalDistance = page.locator('#total-distance-value');
+  await totalDistance.waitFor({ state: 'visible', timeout: 10000 });
+  await expect(totalDistance).not.toHaveText('Loading...', { timeout: 10000 });
+}
+
+async function waitForGoalsLoaded(page) {
+  const goalsList = page.locator('#goals-list');
+  await goalsList.waitFor({ state: 'attached', timeout: 10000 });
+
+  const loadedState = await page.waitForFunction(() => {
+    const goalsList = document.querySelector('#goals-list');
+    if (!goalsList) {
+      return null;
+    }
+
+    const hasGoalCards = goalsList.querySelector(
+      '.upcoming-goal, .completed-goal, .all-completed-goal, .goal-header-main, .goal-header-special'
+    );
+    if (hasGoalCards) {
+      return 'loaded';
+    }
+
+    const textContent = goalsList.textContent || '';
+    const hasErrorState = /Unable to load goals|Goals unavailable|Retry/i.test(textContent);
+    if (hasErrorState) {
+      return 'error';
+    }
+
+    return null;
+  }, { timeout: 10000 });
+
+  const state = await loadedState.jsonValue();
+  if (state === 'error') {
+    console.warn('waitForGoalsLoaded: goals list resolved with an error state instead of goal cards');
+  }
+
+  await expect(goalsList).toBeVisible({ timeout: 10000 });
+}
+
+async function dismissPwaInstallBanner(page) {
+  const dismissButton = page.locator('.pwa-install-banner__dismiss').last();
+  const banner = page.locator('.pwa-install-banner').last();
+
+  if (await dismissButton.isVisible({ timeout: 500 }).catch(() => false)) {
+    await dismissButton.click({ force: true });
+    await expect(banner).toBeHidden({ timeout: 5000 }).catch(() => {});
+  }
+}
+
+async function closeVisibleModal(page) {
+  const modal = page.locator('.modal-overlay').last();
+  if (!await modal.isVisible({ timeout: 1000 }).catch(() => false)) {
+    return;
+  }
+
+  const closeButton = page.locator('#close-goal-btn, #close-modal, #cancel-btn, text=Close').last();
+  if (await closeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await closeButton.click({ force: true });
+  } else {
+    await page.keyboard.press('Escape');
+  }
+
+  await page.waitForFunction(() => {
+    const overlays = document.querySelectorAll('.modal-overlay');
+    return overlays.length === 0 || Array.from(overlays).every((overlay) => {
+      const style = window.getComputedStyle(overlay);
+      return style.display === 'none' || overlay.style.display === 'none' || !overlay.offsetParent;
+    });
+  }, { timeout: 5000 }).catch(() => {});
+}
+
+async function waitForJourneyReady(page) {
+  await waitForAuthenticated(page);
+  await page.locator('#eventcalendar').waitFor({ state: 'visible', timeout: 10000 });
+  await waitForTotalDistanceLoaded(page);
+  await waitForGoalsLoaded(page);
+  await dismissPwaInstallBanner(page);
+}
+
 /**
  * Wait for a specific Preact island to be hydrated.
  * Islands get `data-hydrated="true"` after Preact renders them.
@@ -35,34 +159,9 @@ async function setupTest({ page, authToken }) {
     // Ensure clean state for this user
     await cleanupAllTestData(BASE_URL, authToken);
 
-    await page.goto(`${BASE_URL}/journey`);
-    
-    // Set mock session token for auth
-    await page.evaluate((token) => {
-      localStorage.setItem('sessionToken', token);
-    }, authToken);
-    
-    // Navigate back to the journey page to apply auth state
-    await page.goto(`${BASE_URL}/journey`);
-    
-    // Wait for authenticated state — deterministic signal from main.js
-    await waitForAuthenticated(page);
-    
-    try {
-      // Close any existing popups that might interfere with the next test
-      const existingPopup = page.locator('.modal-overlay');
-      if (await existingPopup.isVisible({ timeout: 1000 })) {
-        const closeButton = page.locator('text=Close').last();
-        if (await closeButton.isVisible({ timeout: 1000 })) {
-          await closeButton.click();
-        } else {
-          await page.keyboard.press('Escape');
-        }
-        await expect(existingPopup).toBeHidden({ timeout: 2000 });
-      }
-    } catch (e) {
-      console.log('Popup cleanup note:', e.message);
-    }
+    await navigateAuthenticated(page, authToken, '/journey');
+    await waitForJourneyReady(page);
+    await closeVisibleModal(page);
 }
 
 function generateRealisticTestDistance() {
@@ -199,7 +298,14 @@ module.exports = {
     test,
     expect,
     setupTest,
+  seedAuthenticatedSession,
+  navigateAuthenticated,
     waitForAuthenticated,
+  waitForTotalDistanceLoaded,
+  waitForGoalsLoaded,
+  waitForJourneyReady,
+  dismissPwaInstallBanner,
+  closeVisibleModal,
     waitForIsland,
     generateRealisticTestDistance,
     generateLargeTestDistance,

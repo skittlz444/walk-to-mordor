@@ -75,6 +75,7 @@ import {
   handlePushSettings,
   handleVapidKey,
 } from './push-handlers';
+import { handleOneMoreMileCron } from './scheduled-handlers';
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -740,6 +741,10 @@ export default {
         "content-type": "text/html",
       },
     });
+  },
+
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+    await handleOneMoreMileCron(env);
   },
 } satisfies ExportedHandler<Env>;
 

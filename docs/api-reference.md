@@ -53,12 +53,19 @@ Last updated: 2026-04-14
 | GET | `/api/push/vapid-key` | No | Returns `{ status: 'success', data: { vapidPublicKey } }` when configured |
 | POST | `/api/push/subscribe` | Yes | Body: `{ endpoint, keys: { p256dh, auth } }`. Same-user endpoint updates in place; different-user endpoint → `409` |
 | DELETE | `/api/push/subscribe` | Yes | Body: `{ endpoint }`. Removes only the current user's matching device subscription |
-| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled } }` |
-| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled: boolean }`. Global server-side delivery toggle |
+| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled, oneMoreMileEnabled } }` |
+| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled?: boolean, oneMoreMileEnabled?: boolean }`. At least one field required. Updates global delivery toggle and/or per-feature toggles |
 
 - Subscription endpoints must be valid `https://` URLs.
 - `notificationsEnabled` controls whether server-side jobs send push notifications to the user. It does not change browser permission state or remove stored subscriptions.
+- `oneMoreMileEnabled` controls the "One More Mile" milestone nudge notification. When enabled, users within 2 km of their next goal who haven't walked in 3 days receive a one-time push notification.
 - Invalid or expired subscriptions are cleaned up when a push send later receives `404` or `410` from the push service.
+
+### Scheduled Handlers (Cron)
+
+| Cron | Handler | Notes |
+|---|---|---|
+| `0 9 * * *` (daily 09:00 UTC) | `handleOneMoreMileCron` | Sends "One More Mile" push notifications to eligible users. Criteria: within 2 km of next goal, no walks in 3 days, not already notified for this goal, journey not completed, both `notifications_enabled` and `one_more_mile_enabled` are on. Users processed in batches of 100. |
 
 ## Progress Endpoints
 

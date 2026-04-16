@@ -146,7 +146,7 @@ describe('Push Handlers', () => {
 
   it('returns subscription count and notificationsEnabled status', async () => {
     const statusQuery = createChainableMock({
-      first: { notifications_enabled: 0, subscription_count: 2 },
+      first: { notifications_enabled: 0, one_more_mile_enabled: 1, subscription_count: 2 },
     });
     mockReadDb.prepare.mockReturnValueOnce(statusQuery);
 
@@ -159,6 +159,7 @@ describe('Push Handlers', () => {
         hasSubscriptions: true,
         subscriptionCount: 2,
         notificationsEnabled: false,
+        oneMoreMileEnabled: true,
       },
     });
   });
@@ -175,9 +176,46 @@ describe('Push Handlers', () => {
     expect(update.bind).toHaveBeenCalledWith(0, 7);
   });
 
-  it('rejects non-boolean notificationsEnabled values', async () => {
+  it('updates oneMoreMileEnabled for the user', async () => {
+    const update = createChainableMock();
+    mockWriteDb.prepare.mockReturnValueOnce(update);
+
+    const response = await handlePushSettings(request, mockDb, {
+      oneMoreMileEnabled: false,
+    });
+
+    expect(response.status).toBe(200);
+    expect(update.bind).toHaveBeenCalledWith(0, 7);
+  });
+
+  it('updates both settings when both provided', async () => {
+    const update = createChainableMock();
+    mockWriteDb.prepare.mockReturnValueOnce(update);
+
+    const response = await handlePushSettings(request, mockDb, {
+      notificationsEnabled: true,
+      oneMoreMileEnabled: false,
+    });
+
+    expect(response.status).toBe(200);
+    expect(update.bind).toHaveBeenCalledWith(1, 0, 7);
+  });
+
+  it('rejects when no valid setting is provided', async () => {
     const response = await handlePushSettings(request, mockDb, {
       notificationsEnabled: 'yes',
+    } as unknown as Record<string, unknown>);
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'notificationsEnabled must be a boolean',
+    });
+  });
+
+  it('rejects partially invalid payloads where one field is malformed', async () => {
+    const response = await handlePushSettings(request, mockDb, {
+      notificationsEnabled: 'yes',
+      oneMoreMileEnabled: true,
     } as unknown as Record<string, unknown>);
 
     expect(response.status).toBe(400);

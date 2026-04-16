@@ -4,6 +4,7 @@ import { createErrorResponse, createSuccessResponse } from './validators';
 
 interface PushStatusRow {
   notifications_enabled: number;
+  one_more_mile_enabled: number;
   subscription_count: number;
 }
 
@@ -144,15 +145,17 @@ export async function handlePushStatus(
     const row = await db.read.prepare(
       `SELECT
          COALESCE(u.notifications_enabled, 1) AS notifications_enabled,
+         COALESCE(u.one_more_mile_enabled, 1) AS one_more_mile_enabled,
          COUNT(ps.id) AS subscription_count
        FROM users u
        LEFT JOIN push_subscriptions ps ON ps.user_id = u.id
        WHERE u.id = ?
-       GROUP BY u.id, u.notifications_enabled`
+       GROUP BY u.id, u.notifications_enabled, u.one_more_mile_enabled`
     ).bind(sessionValidation.userId).first<PushStatusRow>();
 
     const subscriptionCount = row?.subscription_count ?? 0;
     const notificationsEnabled = (row?.notifications_enabled ?? 1) === 1;
+    const oneMoreMileEnabled = (row?.one_more_mile_enabled ?? 1) === 1;
 
     return createSuccessResponse({
       status: 'success',
@@ -160,6 +163,7 @@ export async function handlePushStatus(
         hasSubscriptions: subscriptionCount > 0,
         subscriptionCount,
         notificationsEnabled,
+        oneMoreMileEnabled,
       },
     });
   } catch (error: unknown) {
@@ -179,14 +183,41 @@ export async function handlePushSettings(
     return sessionValidation.error;
   }
 
-  if (typeof body?.notificationsEnabled !== 'boolean') {
+  if (body?.notificationsEnabled !== undefined && typeof body.notificationsEnabled !== 'boolean') {
     return createErrorResponse('notificationsEnabled must be a boolean', 400);
   }
 
+  if (body?.oneMoreMileEnabled !== undefined && typeof body.oneMoreMileEnabled !== 'boolean') {
+    return createErrorResponse('oneMoreMileEnabled must be a boolean', 400);
+  }
+
+  const hasNotificationsEnabled = typeof body?.notificationsEnabled === 'boolean';
+  const hasOneMoreMileEnabled = typeof body?.oneMoreMileEnabled === 'boolean';
+
+  if (!hasNotificationsEnabled && !hasOneMoreMileEnabled) {
+    return createErrorResponse('At least one setting must be provided: notificationsEnabled or oneMoreMileEnabled', 400);
+  }
+
   try {
+    const updates: string[] = [];
+    const values: (number | string)[] = [];
+
+    if (hasNotificationsEnabled) {
+      updates.push('notifications_enabled = ?');
+      values.push(body!.notificationsEnabled ? 1 : 0);
+    }
+
+    if (hasOneMoreMileEnabled) {
+      updates.push('one_more_mile_enabled = ?');
+      values.push(body!.oneMoreMileEnabled ? 1 : 0);
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(sessionValidation.userId);
+
     await db.write.prepare(
-      'UPDATE users SET notifications_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(body.notificationsEnabled ? 1 : 0, sessionValidation.userId).run();
+      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
 
     return createSuccessResponse({ status: 'success' });
   } catch (error: unknown) {

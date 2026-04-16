@@ -162,6 +162,26 @@ describe('Service Worker Push Handlers', () => {
     expect(sw.self.clients.openWindow).toHaveBeenCalledWith('https://example.com/map');
   });
 
+  test('notification clicks focus a same-origin window when no exact URL match exists', async () => {
+    const focusMock = jest.fn(async () => {});
+    sw.self.clients.matchAll.mockResolvedValueOnce([
+      { url: 'https://example.com/journey', focus: focusMock },
+    ]);
+
+    const close = jest.fn();
+
+    await runServiceWorkerEvent(sw.notificationClickCallback, {
+      notification: {
+        data: { url: '/' },
+        close,
+      },
+    });
+
+    expect(close).toHaveBeenCalled();
+    expect(focusMock).toHaveBeenCalled();
+    expect(sw.self.clients.openWindow).not.toHaveBeenCalled();
+  });
+
   test('message events persist push auth for later subscription refreshes', async () => {
     await runServiceWorkerEvent(sw.messageCallback, {
       data: {

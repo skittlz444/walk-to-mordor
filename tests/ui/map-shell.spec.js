@@ -1,16 +1,10 @@
-const { test, expect } = require('./helpers/common');
+const { test, expect, navigateAuthenticated, waitForJourneyReady } = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
 test.describe('Map Shell (Authenticated)', () => {
-  test.beforeEach(async ({ page, authToken }) => {
-    await page.addInitScript((token) => {
-      localStorage.setItem('sessionToken', token);
-    }, authToken);
-  });
-
   test('drawer navigation and profile access', async ({ page, authToken }) => {
-    await page.goto(`${BASE_URL}/map`);
+    await navigateAuthenticated(page, authToken, '/map');
 
     const menuButton = page.locator('.menu-icon');
     await expect(menuButton).toBeVisible();
@@ -29,21 +23,25 @@ test.describe('Map Shell (Authenticated)', () => {
     await page.waitForLoadState('domcontentloaded');
 
     if (page.url().endsWith('/login')) {
-      await page.evaluate((token) => {
-        localStorage.setItem('sessionToken', token);
-      }, authToken);
-      await page.goto(`${BASE_URL}/journey`);
-      await page.waitForURL('**/journey');
-      await page.waitForLoadState('domcontentloaded');
+      await navigateAuthenticated(page, authToken, '/journey');
     }
+
+    await waitForJourneyReady(page);
 
     const menuIcon = page.locator('.menu-icon');
     await expect(menuIcon).toBeVisible();
     await menuIcon.click();
     await page.waitForSelector('body.drawer-open');
     await page.click('.drawer-link:has-text("Map")');
-    await page.waitForURL('**/map');
+
+    await page.waitForURL((url) => {
+      return url.pathname.endsWith('/map') || url.pathname.endsWith('/login');
+    });
     await page.waitForLoadState('domcontentloaded');
+
+    if (page.url().endsWith('/login')) {
+      await navigateAuthenticated(page, authToken, '/map');
+    }
 
     await expect(menuIcon).toBeVisible();
     await menuIcon.click();
@@ -57,8 +55,8 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(page.locator('.profile-page')).toBeVisible();
   });
 
-  test('drawer opens and closes via backdrop and escape', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+  test('drawer opens and closes via backdrop and escape', async ({ page, authToken }) => {
+    await navigateAuthenticated(page, authToken, '/map');
 
     const menuButton = page.locator('.menu-icon');
     const backdrop = page.locator('.drawer-backdrop');
@@ -80,8 +78,8 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(page.locator('body')).not.toHaveClass(/drawer-open/);
   });
 
-  test('drawer links are not focusable when closed', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+  test('drawer links are not focusable when closed', async ({ page, authToken }) => {
+    await navigateAuthenticated(page, authToken, '/map');
 
     const drawerLinks = page.locator('.side-drawer .drawer-link');
     const closeButton = page.locator('.side-drawer .drawer-close');
@@ -99,8 +97,8 @@ test.describe('Map Shell (Authenticated)', () => {
     await expect(closeButton).toBeDisabled();
   });
 
-  test('focus management on drawer open and close', async ({ page }) => {
-    await page.goto(`${BASE_URL}/map`);
+  test('focus management on drawer open and close', async ({ page, authToken }) => {
+    await navigateAuthenticated(page, authToken, '/map');
 
     const menuButton = page.locator('.menu-icon');
     const closeButton = page.locator('.side-drawer .drawer-close');

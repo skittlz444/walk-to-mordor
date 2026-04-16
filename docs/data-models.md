@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-04-14 · Migrations: 0001–0127 · Full DDL: `migrations/`
+> Last updated: 2026-04-16 · Migrations: 0001–0129 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -25,6 +25,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `fellowship_invites` | Friend-based party invitations | 0020+ |
 | `party_messages` | Fellowship chat messages for unified activity feed | 0124 |
 | `push_subscriptions` | Per-device browser push subscriptions for authenticated users | 0126 |
+| `one_more_mile_sent` | Tracks which "One More Mile" nudge notifications have been sent per user per goal | 0128 |
 
 ## Key Constraints & Invariants
 
@@ -35,11 +36,17 @@ These are rules the schema enforces or that the application layer must uphold �
 - `avatar_id` must be NULL or a valid slug from `src/avatar-slugs.ts` (validated by `isValidAvatarSlug` on PUT).
 - `friend_code`: 8-char cryptographically random; backfill logic in `src/auth-utils.ts`.
 - `notifications_enabled` is a global delivery toggle for server-side push sends. It does not revoke browser permissions or delete device subscriptions.
+- `one_more_mile_enabled` is a per-user toggle for the "One More Mile" milestone nudge notifications. Defaults to ON (`1`) for new users.
 
 ### push_subscriptions
 - Stores one row per browser/device subscription endpoint. Multiple rows per user are expected.
 - `endpoint` is globally unique. Application logic rejects an endpoint if it is already attached to a different user.
 - `last_used_at` is updated when the app refreshes or successfully uses a subscription, and stale endpoints are deleted on HTTP `404`/`410` push responses.
+
+### one_more_mile_sent
+- `UNIQUE(user_id, goal_id)` prevents the same nudge from being sent more than once per user per goal.
+- Rows are inserted after a successful push send — even if the push service returned 404/410 (to prevent re-targeting if the user re-subscribes).
+- Foreign keys cascade on user/goal deletion.
 
 ### parties
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.
@@ -94,6 +101,8 @@ erDiagram
     users ||--o{ friendships : "requests/receives"
     users ||--o{ fellowship_invites : "invites/receives"
     users ||--o{ party_messages : "sends"
+    users ||--o{ one_more_mile_sent : "receives"
+    goals ||--o{ one_more_mile_sent : "targets"
     parties ||--o{ party_members : "has"
     parties ||--o{ party_progress_log : "receives"
     parties ||--o{ fellowship_invites : "has"
