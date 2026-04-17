@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-04-14
+Last updated: 2026-04-17
 
 ## Conventions
 

@@ -51,7 +51,7 @@ close_users AS (
     (next_goal_distance - total_distance) AS remaining_km
   FROM user_next_goals
   WHERE rn = 1
-    AND (next_goal_distance - total_distance) < 2.0
+    AND (next_goal_distance - total_distance) <= 2.0
 )
 SELECT
   cu.user_id,
@@ -61,7 +61,8 @@ SELECT
   cu.next_goal_title,
   cu.remaining_km
 FROM close_users cu
-WHERE EXISTS (
+WHERE cu.user_id > ?
+AND EXISTS (
   SELECT 1 FROM push_subscriptions ps WHERE ps.user_id = cu.user_id
 )
 AND NOT EXISTS (
@@ -121,27 +122,18 @@ async function sendToUserSubscriptions(
 
 export async function handleOneMoreMileCron(env: Env): Promise<void> {
   const db = createDbClient(env.DB);
-  const attempted = new Set<string>();
+  let cursor = 0;
 
   for (;;) {
     const { results: eligibleUsers } = await db.read.prepare(ELIGIBLE_USER_QUERY)
-      .bind(BATCH_SIZE)
+      .bind(cursor, BATCH_SIZE)
       .all<EligibleUserRow>();
 
     if (eligibleUsers.length === 0) {
       break;
     }
 
-    let madeProgress = false;
-
     for (const user of eligibleUsers) {
-      const key = `${user.user_id}:${user.next_goal_id}`;
-      if (attempted.has(key)) {
-        continue;
-      }
-      attempted.add(key);
-      madeProgress = true;
-
       try {
         // Claim atomically to prevent duplicate sends across concurrent runs
         const claim = await db.write.prepare(
@@ -179,7 +171,10 @@ export async function handleOneMoreMileCron(env: Env): Promise<void> {
       }
     }
 
-    if (!madeProgress || eligibleUsers.length < BATCH_SIZE) {
+    // Advance cursor to the last user_id in this batch
+    cursor = eligibleUsers[eligibleUsers.length - 1].user_id;
+
+    if (eligibleUsers.length < BATCH_SIZE) {
       break;
     }
   }

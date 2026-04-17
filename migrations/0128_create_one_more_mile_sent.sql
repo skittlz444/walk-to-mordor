@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS one_more_mile_sent (
   sent_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, goal_id)
 );
-CREATE INDEX idx_one_more_mile_sent_user_goal ON one_more_mile_sent(user_id, goal_id);
+

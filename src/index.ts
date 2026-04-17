@@ -743,8 +743,16 @@ export default {
     });
   },
 
-  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-    await handleOneMoreMileCron(env);
+  async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+    const cronTask = handleOneMoreMileCron(env);
+    _ctx.waitUntil(cronTask);
+
+    try {
+      await cronTask;
+    } catch (error: unknown) {
+      console.error("Scheduled one-more-mile cron failed", error);
+      throw error;
+    }
   },
 } satisfies ExportedHandler<Env>;
 

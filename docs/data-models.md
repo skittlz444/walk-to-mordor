@@ -45,7 +45,7 @@ These are rules the schema enforces or that the application layer must uphold â€
 
 ### one_more_mile_sent
 - `UNIQUE(user_id, goal_id)` prevents the same nudge from being sent more than once per user per goal.
-- Rows are inserted after a successful push send â€” even if the push service returned 404/410 (to prevent re-targeting if the user re-subscribes).
+- Rows are kept when at least one push delivery succeeds or when a stale subscription is cleaned up after an HTTP `404`/`410`; otherwise the operation is rolled back so the nudge can be retried later.
 - Foreign keys cascade on user/goal deletion.
 
 ### parties
