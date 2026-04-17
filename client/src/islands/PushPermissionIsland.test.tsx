@@ -56,6 +56,7 @@ describe('PushPermissionIsland', () => {
       hasSubscriptions: true,
       subscriptionCount: 2,
       notificationsEnabled: true,
+      oneMoreMileEnabled: true,
     });
     vi.mocked(getDevicePushSubscription).mockResolvedValue({ endpoint: 'https://push.example/sub-1' } as PushSubscription);
     mockRequestPermission.mockResolvedValue('granted');
@@ -168,6 +169,59 @@ describe('PushPermissionIsland', () => {
 
     await waitFor(() => {
       expect(vi.mocked(clearPushAuthContext)).toHaveBeenCalled();
+    });
+  });
+
+  it('shows One More Mile toggle when global notifications are enabled', async () => {
+    const { getByText, container } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(getByText('One More Mile')).toBeTruthy();
+    });
+
+    const toggle = container.querySelector('#push-one-more-mile-toggle') as HTMLInputElement;
+    expect(toggle).toBeTruthy();
+    expect(toggle.checked).toBe(true);
+  });
+
+  it('hides One More Mile toggle when global notifications are disabled', async () => {
+    vi.mocked(getPushStatus).mockResolvedValue({
+      hasSubscriptions: true,
+      subscriptionCount: 2,
+      notificationsEnabled: false,
+      oneMoreMileEnabled: true,
+    });
+
+    const { container, queryByText } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(container.querySelector('#push-global-toggle')).toBeTruthy();
+    });
+
+    expect(queryByText('One More Mile')).toBeNull();
+  });
+
+  it('calls API with oneMoreMileEnabled when toggling One More Mile', async () => {
+    const { container } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(container.querySelector('#push-one-more-mile-toggle')).toBeTruthy();
+    });
+
+    const toggle = container.querySelector('#push-one-more-mile-toggle') as HTMLInputElement;
+    toggle.checked = false;
+    fireEvent.change(toggle);
+
+    await waitFor(() => {
+      expect(updateNotificationSettings).toHaveBeenCalledWith('test-token', { oneMoreMileEnabled: false });
+    });
+  });
+
+  it('shows Notification Types heading when expanded', async () => {
+    const { getByText } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(getByText('Notification Types')).toBeTruthy();
     });
   });
 });

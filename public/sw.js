@@ -160,6 +160,7 @@ async function handleNotificationClick(event) {
     ? event.notification.data.url
     : DEFAULT_PUSH_URL;
   var targetUrl = new URL(notificationUrl, self.location.origin).toString();
+  var targetOrigin = new URL(targetUrl).origin;
   var clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
 
   for (var i = 0; i < clientList.length; i += 1) {
@@ -167,6 +168,24 @@ async function handleNotificationClick(event) {
     if (client.url === targetUrl && typeof client.focus === 'function') {
       await client.focus();
       return;
+    }
+  }
+
+  // Fall back to any same-origin window — navigate it to the target URL then focus
+  for (var i = 0; i < clientList.length; i += 1) {
+    var client = clientList[i];
+    try {
+      if (new URL(client.url).origin === targetOrigin) {
+        if (typeof client.navigate === 'function') {
+          await client.navigate(targetUrl);
+        }
+        if (typeof client.focus === 'function') {
+          await client.focus();
+        }
+        return;
+      }
+    } catch (e) {
+      // skip clients with unparseable URLs
     }
   }
 
