@@ -37,6 +37,8 @@ These are rules the schema enforces or that the application layer must uphold â€
 - `friend_code`: 8-char cryptographically random; backfill logic in `src/auth-utils.ts`.
 - `notifications_enabled` is a global delivery toggle for server-side push sends. It does not revoke browser permissions or delete device subscriptions.
 - `one_more_mile_enabled` is a per-user toggle for the "One More Mile" milestone nudge notifications. Defaults to ON (`1`) for new users.
+- `inactivity_nudge_enabled` is a per-user toggle for "Gandalf's Absence Arc" re-engagement notifications. Defaults to ON (`1`) for new users.
+- `reengage_tier_sent` tracks the highest re-engagement notification tier sent during the current inactivity period (0 = none, 1â€“4 = tier reached). Resets to 0 when the user logs a new walk.
 
 ### push_subscriptions
 - Stores one row per browser/device subscription endpoint. Multiple rows per user are expected.

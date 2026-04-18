@@ -3,6 +3,7 @@ interface PushStatusData {
   subscriptionCount: number;
   notificationsEnabled: boolean;
   oneMoreMileEnabled: boolean;
+  inactivityNudgeEnabled: boolean;
 }
 
 interface PushStatusResponse {
@@ -238,6 +239,7 @@ export async function getPushStatus(sessionToken: string): Promise<PushStatusDat
 export interface NotificationSettingsPayload {
   notificationsEnabled?: boolean;
   oneMoreMileEnabled?: boolean;
+  inactivityNudgeEnabled?: boolean;
 }
 
 export async function updateNotificationSettings(

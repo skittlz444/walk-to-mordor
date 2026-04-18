@@ -146,7 +146,7 @@ describe('Push Handlers', () => {
 
   it('returns subscription count and notificationsEnabled status', async () => {
     const statusQuery = createChainableMock({
-      first: { notifications_enabled: 0, one_more_mile_enabled: 1, subscription_count: 2 },
+      first: { notifications_enabled: 0, one_more_mile_enabled: 1, inactivity_nudge_enabled: 1, subscription_count: 2 },
     });
     mockReadDb.prepare.mockReturnValueOnce(statusQuery);
 
@@ -160,6 +160,7 @@ describe('Push Handlers', () => {
         subscriptionCount: 2,
         notificationsEnabled: false,
         oneMoreMileEnabled: true,
+        inactivityNudgeEnabled: true,
       },
     });
   });

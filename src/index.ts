@@ -75,7 +75,7 @@ import {
   handlePushSettings,
   handleVapidKey,
 } from './push-handlers';
-import { handleOneMoreMileCron } from './scheduled-handlers';
+import { handleOneMoreMileCron, handleReengagementCron } from './scheduled-handlers';
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -744,14 +744,19 @@ export default {
   },
 
   async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
-    const cronTask = handleOneMoreMileCron(env);
-    _ctx.waitUntil(cronTask);
+    const oneMoreMileTask = handleOneMoreMileCron(env);
+    _ctx.waitUntil(oneMoreMileTask);
 
     try {
-      await cronTask;
+      await oneMoreMileTask;
     } catch (error: unknown) {
       console.error("Scheduled one-more-mile cron failed", error);
-      throw error;
+    }
+
+    try {
+      await handleReengagementCron(env);
+    } catch (error: unknown) {
+      console.error("Scheduled re-engagement cron failed", error);
     }
   },
 } satisfies ExportedHandler<Env>;
