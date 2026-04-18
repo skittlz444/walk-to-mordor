@@ -38,7 +38,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-17
-last_updated: 2026-04-10
+last_updated: 2026-04-18
 project: walk-to-mordor
 project_key: NOKEY
 tracking_system: file-system
@@ -170,7 +170,7 @@ development_status:
   epic-11: in-progress
   11-1-web-push-api-infrastructure: ready-for-dev
   11-2-one-more-mile-push-notification: done
-  11-3-gandalfs-absence-arc-narrative-re-engagement: ready-for-dev
+  11-3-gandalfs-absence-arc-narrative-re-engagement: review
   11-4-the-dead-marshes-inactive-friends-on-map: cancelled
   epic-11-retrospective: optional
 

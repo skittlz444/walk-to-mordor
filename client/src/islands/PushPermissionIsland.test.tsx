@@ -57,6 +57,7 @@ describe('PushPermissionIsland', () => {
       subscriptionCount: 2,
       notificationsEnabled: true,
       oneMoreMileEnabled: true,
+      inactivityNudgeEnabled: true,
     });
     vi.mocked(getDevicePushSubscription).mockResolvedValue({ endpoint: 'https://push.example/sub-1' } as PushSubscription);
     mockRequestPermission.mockResolvedValue('granted');
@@ -222,6 +223,70 @@ describe('PushPermissionIsland', () => {
 
     await waitFor(() => {
       expect(getByText('Notification Types')).toBeTruthy();
+    });
+  });
+
+  it('shows Inactivity Notifications toggle when global notifications are enabled', async () => {
+    const { getByText, container } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(getByText('Inactivity Notifications')).toBeTruthy();
+    });
+
+    const toggle = container.querySelector('#push-inactivity-nudge-toggle') as HTMLInputElement;
+    expect(toggle).toBeTruthy();
+    expect(toggle.checked).toBe(true);
+  });
+
+  it('hides Inactivity Notifications toggle when global notifications are disabled', async () => {
+    vi.mocked(getPushStatus).mockResolvedValue({
+      hasSubscriptions: true,
+      subscriptionCount: 2,
+      notificationsEnabled: false,
+      oneMoreMileEnabled: true,
+      inactivityNudgeEnabled: true,
+    });
+
+    const { container, queryByText } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(container.querySelector('#push-global-toggle')).toBeTruthy();
+    });
+
+    expect(queryByText('Inactivity Notifications')).toBeNull();
+  });
+
+  it('calls API with inactivityNudgeEnabled when toggling Inactivity Notifications', async () => {
+    const { container } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(container.querySelector('#push-inactivity-nudge-toggle')).toBeTruthy();
+    });
+
+    const toggle = container.querySelector('#push-inactivity-nudge-toggle') as HTMLInputElement;
+    toggle.checked = false;
+    fireEvent.change(toggle);
+
+    await waitFor(() => {
+      expect(updateNotificationSettings).toHaveBeenCalledWith('test-token', { inactivityNudgeEnabled: false });
+    });
+  });
+
+  it('reflects initial inactivityNudgeEnabled=false from API', async () => {
+    vi.mocked(getPushStatus).mockResolvedValue({
+      hasSubscriptions: true,
+      subscriptionCount: 2,
+      notificationsEnabled: true,
+      oneMoreMileEnabled: true,
+      inactivityNudgeEnabled: false,
+    });
+
+    const { container } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      const toggle = container.querySelector('#push-inactivity-nudge-toggle') as HTMLInputElement;
+      expect(toggle).toBeTruthy();
+      expect(toggle.checked).toBe(false);
     });
   });
 });

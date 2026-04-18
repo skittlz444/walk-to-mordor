@@ -1,6 +1,6 @@
 # Story 11.3: Gandalf's Absence Arc — Narrative Re-engagement
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -91,48 +91,48 @@ Key design principles:
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Database migration — `reengage_tier_sent` column on users (AC: #1, #3, #4)
-  - [ ] 1.1: Create `migrations/0130_add_reengage_tier_sent.sql`: `ALTER TABLE users ADD COLUMN reengage_tier_sent INTEGER NOT NULL DEFAULT 0;`
-  - [ ] 1.2: Update `docs/data-models.md` with new column description
+- [x] Task 1: Database migration — `reengage_tier_sent` column on users (AC: #1, #3, #4)
+  - [x] 1.1: Create `migrations/0130_add_reengage_tier_sent.sql`: `ALTER TABLE users ADD COLUMN reengage_tier_sent INTEGER NOT NULL DEFAULT 0;`
+  - [x] 1.2: Update `docs/data-models.md` with new column description
 
-- [ ] Task 2: Database migration — `inactivity_nudge_enabled` user preference (AC: #7, #8)
-  - [ ] 2.1: Create `migrations/0131_add_inactivity_nudge_enabled.sql`: `ALTER TABLE users ADD COLUMN inactivity_nudge_enabled INTEGER NOT NULL DEFAULT 1;`
-  - [ ] 2.2: Update `docs/data-models.md` with new column description
+- [x] Task 2: Database migration — `inactivity_nudge_enabled` user preference (AC: #7, #8)
+  - [x] 2.1: Create `migrations/0131_add_inactivity_nudge_enabled.sql`: `ALTER TABLE users ADD COLUMN inactivity_nudge_enabled INTEGER NOT NULL DEFAULT 1;`
+  - [x] 2.2: Update `docs/data-models.md` with new column description
 
-- [ ] Task 3: Themed message variants — add to `src/push-messages.ts` (AC: #10)
-  - [ ] 3.1: Export a `REENGAGE_MESSAGES` map keyed by tier (1–4), each tier containing an array of `{ title: string; bodyTemplate: string }` variants
-  - [ ] 3.2: Implement `getReengageMessage(tier: number, goalTitle: string)` that randomly selects a variant for the given tier and interpolates `{goalTitle}`
-  - [ ] 3.3: Include at least 4 variants per tier (16+ total messages)
+- [x] Task 3: Themed message variants — add to `src/push-messages.ts` (AC: #10)
+  - [x] 3.1: Export a `REENGAGE_MESSAGES` map keyed by tier (1–4), each tier containing an array of `{ title: string; bodyTemplate: string }` variants
+  - [x] 3.2: Implement `getReengageMessage(tier: number, goalTitle: string)` that randomly selects a variant for the given tier and interpolates `{goalTitle}`
+  - [x] 3.3: Include at least 4 variants per tier (16+ total messages)
 
-- [ ] Task 4: Re-engagement cron handler — add to `src/scheduled-handlers.ts` (AC: #1, #2, #3, #5, #6, #9, #11)
-  - [ ] 4.1: Add `handleReengagementCron(db: DbClient, env: Env)` function to `src/scheduled-handlers.ts`
-  - [ ] 4.2: Implement the eligible-user query: find users with `notifications_enabled = 1`, `inactivity_nudge_enabled = 1`, at least one progress row, has active push subscription, NOT completed journey, last walk date ≥ 6 days ago, and `reengage_tier_sent` < current applicable tier
-  - [ ] 4.3: Process eligible users in batches (100 per query page)
-  - [ ] 4.4: For each eligible user: determine correct tier from days-since-last-walk, select random message for that tier, call `sendPushToUser()` from `src/push-utils.ts` with URL `/`, update `reengage_tier_sent`
-  - [ ] 4.5: Handle `sendPushToUser` failures gracefully — log errors, continue processing remaining users
-  - [ ] 4.6: Clean up expired subscriptions on 404/410 (reuse `cleanupExpiredSubscription` from `push-utils.ts`)
+- [x] Task 4: Re-engagement cron handler — add to `src/scheduled-handlers.ts` (AC: #1, #2, #3, #5, #6, #9, #11)
+  - [x] 4.1: Add `handleReengagementCron(db: DbClient, env: Env)` function to `src/scheduled-handlers.ts`
+  - [x] 4.2: Implement the eligible-user query: find users with `notifications_enabled = 1`, `inactivity_nudge_enabled = 1`, at least one progress row, has active push subscription, NOT completed journey, last walk date ≥ 6 days ago, and `reengage_tier_sent` < current applicable tier
+  - [x] 4.3: Process eligible users in batches (100 per query page)
+  - [x] 4.4: For each eligible user: determine correct tier from days-since-last-walk, select random message for that tier, call `sendPushToUser()` from `src/push-utils.ts` with URL `/`, update `reengage_tier_sent`
+  - [x] 4.5: Handle `sendPushToUser` failures gracefully — log errors, continue processing remaining users
+  - [x] 4.6: Clean up expired subscriptions on 404/410 (reuse `cleanupExpiredSubscription` from `push-utils.ts`)
 
-- [ ] Task 5: Wire re-engagement handler in `src/index.ts` scheduled export (AC: #11)
-  - [ ] 5.1: Add `handleReengagementCron(db, env)` call inside the existing `scheduled()` handler, after `handleOneMoreMileCron`
-  - [ ] 5.2: Wrap in try/catch so a failure in re-engagement doesn't block or affect the One More Mile processing
+- [x] Task 5: Wire re-engagement handler in `src/index.ts` scheduled export (AC: #11)
+  - [x] 5.1: Add `handleReengagementCron(db, env)` call inside the existing `scheduled()` handler, after `handleOneMoreMileCron`
+  - [x] 5.2: Wrap in try/catch so a failure in re-engagement doesn't block or affect the One More Mile processing
 
-- [ ] Task 6: Reset `reengage_tier_sent` on walk log — `src/progress-handlers.ts` (AC: #4)
-  - [ ] 6.1: In `handleProgressPost`, after successful INSERT, add: `UPDATE users SET reengage_tier_sent = 0 WHERE id = ? AND reengage_tier_sent > 0`
-  - [ ] 6.2: The reset must NOT run on PUT (edit) or DELETE — only on new walk creation
+- [x] Task 6: Reset `reengage_tier_sent` on walk log — `src/progress-handlers.ts` (AC: #4)
+  - [x] 6.1: In `handleProgressPost`, after successful INSERT, add: `UPDATE users SET reengage_tier_sent = 0 WHERE id = ? AND reengage_tier_sent > 0`
+  - [x] 6.2: The reset must NOT run on PUT (edit) or DELETE — only on new walk creation
 
-- [ ] Task 7: Update push settings API — `src/push-handlers.ts` (AC: #8)
-  - [ ] 7.1: Extend `handlePushSettings` (from Stories 11.1/11.2) to accept `inactivityNudgeEnabled` in addition to existing fields
-  - [ ] 7.2: Update `PUT /api/push/settings` body validation to handle the new field (any combination of fields can be present)
-  - [ ] 7.3: Extend `GET /api/push/status` response to include `inactivityNudgeEnabled: boolean`
+- [x] Task 7: Update push settings API — `src/push-handlers.ts` (AC: #8)
+  - [x] 7.1: Extend `handlePushSettings` (from Stories 11.1/11.2) to accept `inactivityNudgeEnabled` in addition to existing fields
+  - [x] 7.2: Update `PUT /api/push/settings` body validation to handle the new field (any combination of fields can be present)
+  - [x] 7.3: Extend `GET /api/push/status` response to include `inactivityNudgeEnabled: boolean`
 
-- [ ] Task 8: Add "Inactivity Notifications" toggle to NotificationSettings UI (AC: #7)
-  - [ ] 8.1: In the `PushPermissionIsland` notification settings group (refactored in Story 11.2), add a new "Inactivity Notifications" toggle below the "One More Mile" toggle
-  - [ ] 8.2: Toggle label: "Inactivity Notifications" with description: "Receive themed reminders if you haven't walked in a while"
-  - [ ] 8.3: Wire the toggle to `PUT /api/push/settings` with `{ inactivityNudgeEnabled }` 
-  - [ ] 8.4: Load initial state for `inactivityNudgeEnabled` from `GET /api/push/status`
+- [x] Task 8: Add "Inactivity Notifications" toggle to NotificationSettings UI (AC: #7)
+  - [x] 8.1: In the `PushPermissionIsland` notification settings group (refactored in Story 11.2), add a new "Inactivity Notifications" toggle below the "One More Mile" toggle
+  - [x] 8.2: Toggle label: "Inactivity Notifications" with description: "Receive themed reminders if you haven't walked in a while"
+  - [x] 8.3: Wire the toggle to `PUT /api/push/settings` with `{ inactivityNudgeEnabled }` 
+  - [x] 8.4: Load initial state for `inactivityNudgeEnabled` from `GET /api/push/status`
 
-- [ ] Task 9: Tests (AC: all)
-  - [ ] 9.1: Backend tests in `tests/api/scheduled-handlers.test.ts` (extend existing file from Story 11.2):
+- [x] Task 9: Tests (AC: all)
+  - [x] 9.1: Backend tests in `tests/api/scheduled-handlers.test.ts` (extend existing file from Story 11.2):
     - Tier 1 notification sent at 6 days inactive
     - Tier 2 notification sent at 10 days (with reengage_tier_sent=1)
     - Tier 3 notification sent at 15 days (with reengage_tier_sent=2)
@@ -146,17 +146,17 @@ Key design principles:
     - reengage_tier_sent updated correctly after send
     - Batch processing works correctly
     - Expired subscription cleanup on 410
-  - [ ] 9.2: Backend test in `tests/api/progress-handlers.test.ts`:
+  - [x] 9.2: Backend test in `tests/api/progress-handlers.test.ts`:
     - reengage_tier_sent resets to 0 on new walk POST
     - reengage_tier_sent NOT reset on walk PUT or DELETE
-  - [ ] 9.3: Backend tests for updated push settings in `tests/api/push-handlers.test.ts`:
+  - [x] 9.3: Backend tests for updated push settings in `tests/api/push-handlers.test.ts`:
     - `PUT /api/push/settings` with `inactivityNudgeEnabled` updates column
     - `GET /api/push/status` returns `inactivityNudgeEnabled` field
-  - [ ] 9.4: Unit tests for message variants in `tests/api/push-messages.test.ts` (extend existing file from Story 11.2):
+  - [x] 9.4: Unit tests for message variants in `tests/api/push-messages.test.ts` (extend existing file from Story 11.2):
     - All 4 tiers have at least 4 message variants
     - `getReengageMessage()` interpolates goal title correctly
     - Invalid tier returns a safe fallback or throws
-  - [ ] 9.5: Client tests in `client/src/islands/PushPermissionIsland.test.tsx` (extend from Story 11.2):
+  - [x] 9.5: Client tests in `client/src/islands/PushPermissionIsland.test.tsx` (extend from Story 11.2):
     - "Inactivity Notifications" toggle visible in expanded notification settings
     - Toggle calls API with correct payload
     - Toggle reflects initial state from API
@@ -472,4 +472,19 @@ Claude Opus 4.6 (GitHub Copilot)
 
 ### File List
 
-<!-- To be filled by dev agent -->
+- `migrations/0130_add_reengage_tier_sent.sql` — NEW
+- `migrations/0131_add_inactivity_nudge_enabled.sql` — NEW
+- `src/push-messages.ts` — MODIFIED (added REENGAGE_MESSAGES, ReengageMessageTemplate, getReengageMessage)
+- `src/scheduled-handlers.ts` — MODIFIED (added handleReengagementCron, getReengageTier, REENGAGE_ELIGIBLE_QUERY)
+- `src/index.ts` — MODIFIED (wired handleReengagementCron in scheduled handler)
+- `src/progress-handlers.ts` — MODIFIED (added reengage_tier_sent reset on POST)
+- `src/push-handlers.ts` — MODIFIED (extended settings/status for inactivityNudgeEnabled)
+- `client/src/islands/PushPermissionIsland.tsx` — MODIFIED (added Inactivity Notifications toggle)
+- `client/src/utils/push-client.ts` — MODIFIED (extended interfaces for inactivityNudgeEnabled)
+- `client/src/islands/PushPermissionIsland.test.tsx` — MODIFIED (added 5 tests for new toggle)
+- `tests/api/scheduled-handlers.test.ts` — MODIFIED (added 14 re-engagement tests)
+- `tests/api/progress-handlers.test.ts` — MODIFIED (added 3 tests for tier reset)
+- `tests/api/push-handlers.test.ts` — MODIFIED (added 4 tests for inactivityNudgeEnabled)
+- `tests/api/push-messages.test.ts` — MODIFIED (added 8 tests for REENGAGE_MESSAGES/getReengageMessage)
+- `docs/data-models.md` — MODIFIED (documented new columns)
+- `docs/api-reference.md` — MODIFIED (documented updated endpoints and new cron handler)

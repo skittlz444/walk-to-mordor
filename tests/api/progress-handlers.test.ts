@@ -183,4 +183,43 @@ describe('Progress Handlers', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('reengage_tier_sent reset on POST', () => {
+    it('resets reengage_tier_sent to 0 on new walk POST', async () => {
+      const body = { start: '2024-01-01', title: '5.5' };
+      
+      const response = await handleProgressPost(mockRequest, mockDb, body);
+      
+      expect(response.status).toBe(201);
+      // The tier reset UPDATE should have been called
+      expect(mockDB.prepare).toHaveBeenCalledWith(
+        'UPDATE users SET reengage_tier_sent = 0 WHERE id = ? AND reengage_tier_sent > 0'
+      );
+    });
+
+    it('does NOT reset reengage_tier_sent on PUT (edit)', async () => {
+      const body = { start: '2024-01-01', title: '6.0' };
+      
+      const response = await handleProgressPut(mockRequest, mockDb, body);
+      
+      expect(response.status).toBe(200);
+      // The tier reset UPDATE should NOT have been called
+      const prepareCalls = mockDB.prepare.mock.calls.map((c: unknown[]) => c[0]);
+      expect(prepareCalls).not.toContain(
+        'UPDATE users SET reengage_tier_sent = 0 WHERE id = ? AND reengage_tier_sent > 0'
+      );
+    });
+
+    it('does NOT reset reengage_tier_sent on DELETE', async () => {
+      const body = { start: '2024-01-01' };
+      
+      const response = await handleProgressDelete(mockRequest, mockDb, body);
+      
+      expect(response.status).toBe(200);
+      const prepareCalls = mockDB.prepare.mock.calls.map((c: unknown[]) => c[0]);
+      expect(prepareCalls).not.toContain(
+        'UPDATE users SET reengage_tier_sent = 0 WHERE id = ? AND reengage_tier_sent > 0'
+      );
+    });
+  });
 });
