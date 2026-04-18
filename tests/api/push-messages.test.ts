@@ -89,6 +89,13 @@ describe('Push Messages', () => {
         expect(msg.bodyTemplate).toContain('{goalTitle}');
       }
     });
+
+    it.each([1, 2, 3, 4])('tier %i variants all contain {goalTitle} placeholder in title', (tier) => {
+      const messages = REENGAGE_MESSAGES.get(tier)!;
+      for (const msg of messages) {
+        expect(msg.title).toContain('{goalTitle}');
+      }
+    });
   });
 
   describe('getReengageMessage', () => {
@@ -96,6 +103,16 @@ describe('Push Messages', () => {
       const result = getReengageMessage(1, 'Weathertop');
       const combined = result.title + result.body;
       expect(combined).toContain('Weathertop');
+    });
+
+    it('interpolates goalTitle into the title specifically', () => {
+      const result = getReengageMessage(1, 'Weathertop');
+      expect(result.title).toContain('Weathertop');
+    });
+
+    it('interpolates goalTitle into the body specifically', () => {
+      const result = getReengageMessage(1, 'Weathertop');
+      expect(result.body).toContain('Weathertop');
     });
 
     it('does not leave unresolved {goalTitle} placeholders', () => {

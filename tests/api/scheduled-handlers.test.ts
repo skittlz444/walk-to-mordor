@@ -6,7 +6,7 @@ jest.mock('../../src/push-messages', () => ({
     body: 'You are just 1.5 km from Weathertop.',
   }),
   getReengageMessage: jest.fn().mockReturnValue({
-    title: 'Gandalf Notices Your Absence',
+    title: 'Gandalf Notices — Weathertop Awaits',
     body: 'The road to Weathertop grows no shorter on its own.',
   }),
 }));
@@ -315,7 +315,7 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
       expect.anything(),
       'https://push.example/sub-1',
       { p256dh: 'p256dh', auth: 'auth' },
-      expect.objectContaining({ title: 'Gandalf Notices Your Absence', url: '/' }),
+      expect.objectContaining({ title: 'Gandalf Notices — Weathertop Awaits', url: '/' }),
       mockEnv,
     );
     expect(updateTierMock.bind).toHaveBeenCalledWith(1, 1);
@@ -549,5 +549,24 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
 
     // Tier 1 for 7 days, but already sent tier 1, so skip
     expect(sendPushNotification).not.toHaveBeenCalled();
+  });
+
+  it('does NOT advance tier when delivery fails with no deletions', async () => {
+    (sendPushNotification as jest.Mock).mockResolvedValueOnce({ ok: false, status: 500, deleted: false });
+
+    const user = makeReengageUser({ days_inactive: 7, reengage_tier_sent: 0 });
+    const eligibleQuery = createChainableMock({ all: { results: [user] } });
+    const subQuery = createChainableMock({
+      all: { results: [{ endpoint: 'https://push.example/sub-1', keys_p256dh: 'p', keys_auth: 'a' }] },
+    });
+
+    mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
+    mockReadDb.prepare.mockReturnValueOnce(subQuery);
+
+    await handleReengagementCron(mockEnv);
+
+    expect(sendPushNotification).toHaveBeenCalled();
+    // reengage_tier_sent should NOT be updated since delivery failed
+    expect(mockWriteDb.prepare).not.toHaveBeenCalled();
   });
 });

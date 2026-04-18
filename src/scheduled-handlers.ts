@@ -270,11 +270,15 @@ export async function handleReengagementCron(env: Env): Promise<void> {
           icon: '/img/icons/icon-192x192.png',
         };
 
-        await sendToUserSubscriptions(db, user.user_id, payload, env);
+        const { delivered, deleted } = await sendToUserSubscriptions(db, user.user_id, payload, env);
 
-        await db.write.prepare(
-          'UPDATE users SET reengage_tier_sent = ? WHERE id = ?',
-        ).bind(tier, user.user_id).run();
+        // Only advance tier when at least one subscription received the notification,
+        // or when a subscription was cleaned up (410/404) per AC #9.
+        if (delivered > 0 || deleted > 0) {
+          await db.write.prepare(
+            'UPDATE users SET reengage_tier_sent = ? WHERE id = ?',
+          ).bind(tier, user.user_id).run();
+        }
       } catch (error: unknown) {
         console.error(`Re-engagement: failed for user ${user.user_id}:`, error);
       }

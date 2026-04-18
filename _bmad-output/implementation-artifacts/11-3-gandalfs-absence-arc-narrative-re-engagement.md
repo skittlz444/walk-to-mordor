@@ -1,6 +1,6 @@
 # Story 11.3: Gandalf's Absence Arc — Narrative Re-engagement
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -163,16 +163,18 @@ Key design principles:
 
 ### Review Findings
 
-- [ ] [Review][Patch] Re-engagement tiers advance even when nothing was actually delivered [src/scheduled-handlers.ts:273]
+- [x] [Review][Patch] Re-engagement tiers advance even when nothing was actually delivered [src/scheduled-handlers.ts:273]
   - `handleReengagementCron()` ignores the `delivered/deleted` outcome from the push send path and always updates `reengage_tier_sent` on the next line.
   - That means transient push failures (network/VAPID/5xx) still consume the user's current tier even though they never received that message.
   - It also bypasses the story's required `sendPushToUser()` helper, so a user who disables notifications after the batch query starts can still receive a push from a stale eligibility snapshot.
   - Violates AC #1 / AC #2 / AC #9 and Task 4.4's requirement to use `sendPushToUser()`.
+  - **Fix**: Tier now only advances when `delivered > 0 || deleted > 0`, matching the One More Mile delivery-gating pattern.
 
-- [ ] [Review][Patch] Re-engagement titles do not reference the user's next goal [src/push-messages.ts:61]
+- [x] [Review][Patch] Re-engagement titles do not reference the user's next goal [src/push-messages.ts:61]
   - AC #10 requires the selected variant to include both a `title` and `body` that reference the user's next goal name.
   - All current re-engagement bodies interpolate `{goalTitle}`, but the titles are static strings, so the goal name never appears in the notification title.
   - The current tests only assert the combined title+body contains the goal name, so this acceptance-criteria gap is not being caught.
+  - **Fix**: All 16 re-engagement titles now include `{goalTitle}` placeholder. Tests assert `{goalTitle}` in both title templates and interpolated title output.
 
 ## Dev Notes
 
