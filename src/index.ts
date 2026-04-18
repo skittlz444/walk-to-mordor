@@ -744,11 +744,9 @@ export default {
   },
 
   async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
-    const oneMoreMileTask = handleOneMoreMileCron(env);
-    _ctx.waitUntil(oneMoreMileTask);
-
+    // Run both independently — failure in one should not block the other
     try {
-      await oneMoreMileTask;
+      await handleOneMoreMileCron(env);
     } catch (error: unknown) {
       console.error("Scheduled one-more-mile cron failed", error);
     }
