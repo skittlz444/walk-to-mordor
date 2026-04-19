@@ -1,7 +1,7 @@
 import { createDbClient } from './db';
 import type { DbClient } from './db';
 import { getOneMoreMileMessage, getReengageMessage } from './push-messages';
-import { sendPushNotification, cleanupExpiredSubscription } from './push-utils';
+import { sendPushNotification, cleanupExpiredSubscription, sendPushToUser } from './push-utils';
 import type { PushDeliveryEnv, PushPayload } from './push-utils';
 
 interface EligibleUserRow {
@@ -222,8 +222,12 @@ SELECT
   ud.total_distance,
   g.title AS next_goal_title
 FROM user_distances ud
-INNER JOIN goals g ON g.distance = (
-  SELECT MIN(g2.distance) FROM goals g2 WHERE g2.distance > ud.total_distance
+INNER JOIN goals g ON g.id = (
+  SELECT g2.id
+  FROM goals g2
+  WHERE g2.distance > ud.total_distance
+  ORDER BY g2.distance ASC, g2.id ASC
+  LIMIT 1
 )
 WHERE EXISTS (
   SELECT 1 FROM push_subscriptions ps WHERE ps.user_id = ud.user_id
@@ -270,11 +274,13 @@ export async function handleReengagementCron(env: Env): Promise<void> {
           icon: '/img/icons/icon-192x192.png',
         };
 
-        const { delivered, deleted } = await sendToUserSubscriptions(db, user.user_id, payload, env);
+        const summary = await sendPushToUser(db, user.user_id, payload, env);
 
         // Only advance tier when at least one subscription received the notification,
         // or when a subscription was cleaned up (410/404) per AC #9.
-        if (delivered > 0 || deleted > 0) {
+        // sendPushToUser re-checks notifications_enabled at send time, preventing
+        // race conditions where a user disables notifications after the eligibility query.
+        if (summary.delivered > 0 || summary.cleanedUp > 0) {
           await db.write.prepare(
             'UPDATE users SET reengage_tier_sent = ? WHERE id = ?',
           ).bind(tier, user.user_id).run();

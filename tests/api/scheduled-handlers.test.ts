@@ -14,10 +14,11 @@ jest.mock('../../src/push-messages', () => ({
 jest.mock('../../src/push-utils', () => ({
   sendPushNotification: jest.fn().mockResolvedValue({ ok: true, status: 201, deleted: false }),
   cleanupExpiredSubscription: jest.fn().mockResolvedValue(undefined),
+  sendPushToUser: jest.fn().mockResolvedValue({ attempted: 1, delivered: 1, cleanedUp: 0, skipped: false }),
 }));
 
 import { getOneMoreMileMessage } from '../../src/push-messages';
-import { sendPushNotification, cleanupExpiredSubscription } from '../../src/push-utils';
+import { sendPushNotification, cleanupExpiredSubscription, sendPushToUser } from '../../src/push-utils';
 import { getReengageMessage } from '../../src/push-messages';
 
 function createChainableMock(overrides?: {
@@ -299,22 +300,17 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
   it('sends Tier 1 notification at 6 days inactive', async () => {
     const user = makeReengageUser({ days_inactive: 7, reengage_tier_sent: 0 });
     const eligibleQuery = createChainableMock({ all: { results: [user] } });
-    const subQuery = createChainableMock({
-      all: { results: [{ endpoint: 'https://push.example/sub-1', keys_p256dh: 'p256dh', keys_auth: 'auth' }] },
-    });
     const updateTierMock = createChainableMock();
 
     mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
-    mockReadDb.prepare.mockReturnValueOnce(subQuery);
     mockWriteDb.prepare.mockReturnValueOnce(updateTierMock);
 
     await handleReengagementCron(mockEnv);
 
     expect(getReengageMessage).toHaveBeenCalledWith(1, 'Weathertop');
-    expect(sendPushNotification).toHaveBeenCalledWith(
+    expect(sendPushToUser).toHaveBeenCalledWith(
       expect.anything(),
-      'https://push.example/sub-1',
-      { p256dh: 'p256dh', auth: 'auth' },
+      1,
       expect.objectContaining({ title: 'Gandalf Notices — Weathertop Awaits', url: '/' }),
       mockEnv,
     );
@@ -324,13 +320,9 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
   it('sends Tier 2 notification at 10 days (with reengage_tier_sent=1)', async () => {
     const user = makeReengageUser({ days_inactive: 10, reengage_tier_sent: 1 });
     const eligibleQuery = createChainableMock({ all: { results: [user] } });
-    const subQuery = createChainableMock({
-      all: { results: [{ endpoint: 'https://push.example/sub-1', keys_p256dh: 'p', keys_auth: 'a' }] },
-    });
     const updateTierMock = createChainableMock();
 
     mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
-    mockReadDb.prepare.mockReturnValueOnce(subQuery);
     mockWriteDb.prepare.mockReturnValueOnce(updateTierMock);
 
     await handleReengagementCron(mockEnv);
@@ -342,13 +334,9 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
   it('sends Tier 3 notification at 15 days (with reengage_tier_sent=2)', async () => {
     const user = makeReengageUser({ days_inactive: 15, reengage_tier_sent: 2 });
     const eligibleQuery = createChainableMock({ all: { results: [user] } });
-    const subQuery = createChainableMock({
-      all: { results: [{ endpoint: 'https://push.example/sub-1', keys_p256dh: 'p', keys_auth: 'a' }] },
-    });
     const updateTierMock = createChainableMock();
 
     mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
-    mockReadDb.prepare.mockReturnValueOnce(subQuery);
     mockWriteDb.prepare.mockReturnValueOnce(updateTierMock);
 
     await handleReengagementCron(mockEnv);
@@ -360,13 +348,9 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
   it('sends Tier 4 notification at 25 days (with reengage_tier_sent=3)', async () => {
     const user = makeReengageUser({ days_inactive: 25, reengage_tier_sent: 3 });
     const eligibleQuery = createChainableMock({ all: { results: [user] } });
-    const subQuery = createChainableMock({
-      all: { results: [{ endpoint: 'https://push.example/sub-1', keys_p256dh: 'p', keys_auth: 'a' }] },
-    });
     const updateTierMock = createChainableMock();
 
     mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
-    mockReadDb.prepare.mockReturnValueOnce(subQuery);
     mockWriteDb.prepare.mockReturnValueOnce(updateTierMock);
 
     await handleReengagementCron(mockEnv);
@@ -382,7 +366,7 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
 
     await handleReengagementCron(mockEnv);
 
-    expect(sendPushNotification).not.toHaveBeenCalled();
+    expect(sendPushToUser).not.toHaveBeenCalled();
   });
 
   it('does not send notification when reengage_tier_sent = 4 (arc complete)', async () => {
@@ -394,7 +378,7 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
     await handleReengagementCron(mockEnv);
 
     // Tier 4 = getReengageTier(30), user already at tier 4, so skip
-    expect(sendPushNotification).not.toHaveBeenCalled();
+    expect(sendPushToUser).not.toHaveBeenCalled();
   });
 
   it('does not send notification for user with no progress rows (dormant)', async () => {
@@ -404,7 +388,7 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
 
     await handleReengagementCron(mockEnv);
 
-    expect(sendPushNotification).not.toHaveBeenCalled();
+    expect(sendPushToUser).not.toHaveBeenCalled();
   });
 
   it('does not send notification for user who completed the journey', async () => {
@@ -414,7 +398,7 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
 
     await handleReengagementCron(mockEnv);
 
-    expect(sendPushNotification).not.toHaveBeenCalled();
+    expect(sendPushToUser).not.toHaveBeenCalled();
   });
 
   it('does not send notification when inactivity_nudge_enabled = 0', async () => {
@@ -424,7 +408,7 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
 
     await handleReengagementCron(mockEnv);
 
-    expect(sendPushNotification).not.toHaveBeenCalled();
+    expect(sendPushToUser).not.toHaveBeenCalled();
   });
 
   it('does not send notification when notifications_enabled = 0', async () => {
@@ -434,19 +418,15 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
 
     await handleReengagementCron(mockEnv);
 
-    expect(sendPushNotification).not.toHaveBeenCalled();
+    expect(sendPushToUser).not.toHaveBeenCalled();
   });
 
   it('updates reengage_tier_sent correctly after send', async () => {
     const user = makeReengageUser({ user_id: 5, days_inactive: 12, reengage_tier_sent: 1 });
     const eligibleQuery = createChainableMock({ all: { results: [user] } });
-    const subQuery = createChainableMock({
-      all: { results: [{ endpoint: 'https://push.example/sub-1', keys_p256dh: 'p', keys_auth: 'a' }] },
-    });
     const updateTierMock = createChainableMock();
 
     mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
-    mockReadDb.prepare.mockReturnValueOnce(subQuery);
     mockWriteDb.prepare.mockReturnValueOnce(updateTierMock);
 
     await handleReengagementCron(mockEnv);
@@ -465,10 +445,6 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
     mockReadDb.prepare.mockReturnValueOnce(batch1Query);
 
     for (let i = 0; i < 100; i++) {
-      const subQuery = createChainableMock({
-        all: { results: [{ endpoint: `https://push.example/sub-${i}`, keys_p256dh: 'p', keys_auth: 'a' }] },
-      });
-      mockReadDb.prepare.mockReturnValueOnce(subQuery);
       mockWriteDb.prepare.mockReturnValueOnce(createChainableMock());
     }
 
@@ -476,52 +452,39 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
 
     await handleReengagementCron(mockEnv);
 
-    expect(sendPushNotification).toHaveBeenCalledTimes(100);
+    expect(sendPushToUser).toHaveBeenCalledTimes(100);
   });
 
-  it('cleans up expired subscriptions on 410 and still updates tier', async () => {
-    (sendPushNotification as jest.Mock).mockResolvedValueOnce({ ok: false, status: 410, deleted: true });
+  it('still updates tier when subscription cleaned up on 410', async () => {
+    (sendPushToUser as jest.Mock).mockResolvedValueOnce({
+      attempted: 1, delivered: 0, cleanedUp: 1, skipped: false,
+    });
 
     const user = makeReengageUser({ days_inactive: 7, reengage_tier_sent: 0 });
     const eligibleQuery = createChainableMock({ all: { results: [user] } });
-    const subQuery = createChainableMock({
-      all: { results: [{ endpoint: 'https://push.example/gone', keys_p256dh: 'p', keys_auth: 'a' }] },
-    });
     const updateTierMock = createChainableMock();
 
     mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
-    mockReadDb.prepare.mockReturnValueOnce(subQuery);
     mockWriteDb.prepare.mockReturnValueOnce(updateTierMock);
 
     await handleReengagementCron(mockEnv);
 
-    expect(cleanupExpiredSubscription).toHaveBeenCalledWith(
-      expect.anything(),
-      'https://push.example/gone',
-    );
-    // reengage_tier_sent should still be updated
+    // reengage_tier_sent should still be updated when subscription was cleaned up
     expect(updateTierMock.bind).toHaveBeenCalledWith(1, 1);
   });
 
   it('continues processing other users when one fails', async () => {
+    (sendPushToUser as jest.Mock)
+      .mockRejectedValueOnce(new Error('Push service error'))
+      .mockResolvedValueOnce({ attempted: 1, delivered: 1, cleanedUp: 0, skipped: false });
+
     const user1 = makeReengageUser({ user_id: 1, days_inactive: 7 });
     const user2 = makeReengageUser({ user_id: 2, days_inactive: 10, reengage_tier_sent: 1 });
 
     const eligibleQuery = createChainableMock({ all: { results: [user1, user2] } });
-
-    // User 1: subscription query throws
-    const failingSubQuery = createChainableMock();
-    failingSubQuery.all.mockRejectedValueOnce(new Error('DB error'));
-
-    // User 2: normal processing
-    const subQuery2 = createChainableMock({
-      all: { results: [{ endpoint: 'https://push.example/sub-2', keys_p256dh: 'p', keys_auth: 'a' }] },
-    });
     const updateTier2 = createChainableMock();
 
     mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
-    mockReadDb.prepare.mockReturnValueOnce(failingSubQuery);
-    mockReadDb.prepare.mockReturnValueOnce(subQuery2);
     mockWriteDb.prepare.mockReturnValueOnce(updateTier2);
 
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
@@ -533,7 +496,7 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
       expect.any(Error),
     );
     // Second user should still be processed
-    expect(sendPushNotification).toHaveBeenCalledTimes(1);
+    expect(sendPushToUser).toHaveBeenCalledTimes(2);
     expect(updateTier2.bind).toHaveBeenCalledWith(2, 2);
 
     consoleSpy.mockRestore();
@@ -548,25 +511,40 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
     await handleReengagementCron(mockEnv);
 
     // Tier 1 for 7 days, but already sent tier 1, so skip
-    expect(sendPushNotification).not.toHaveBeenCalled();
+    expect(sendPushToUser).not.toHaveBeenCalled();
   });
 
-  it('does NOT advance tier when delivery fails with no deletions', async () => {
-    (sendPushNotification as jest.Mock).mockResolvedValueOnce({ ok: false, status: 500, deleted: false });
+  it('does NOT advance tier when delivery fails with no cleanups', async () => {
+    (sendPushToUser as jest.Mock).mockResolvedValueOnce({
+      attempted: 1, delivered: 0, cleanedUp: 0, skipped: false,
+    });
 
     const user = makeReengageUser({ days_inactive: 7, reengage_tier_sent: 0 });
     const eligibleQuery = createChainableMock({ all: { results: [user] } });
-    const subQuery = createChainableMock({
-      all: { results: [{ endpoint: 'https://push.example/sub-1', keys_p256dh: 'p', keys_auth: 'a' }] },
-    });
 
     mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
-    mockReadDb.prepare.mockReturnValueOnce(subQuery);
 
     await handleReengagementCron(mockEnv);
 
-    expect(sendPushNotification).toHaveBeenCalled();
+    expect(sendPushToUser).toHaveBeenCalled();
     // reengage_tier_sent should NOT be updated since delivery failed
+    expect(mockWriteDb.prepare).not.toHaveBeenCalled();
+  });
+
+  it('does NOT advance tier when sendPushToUser skips (last-moment opt-out)', async () => {
+    (sendPushToUser as jest.Mock).mockResolvedValueOnce({
+      attempted: 0, delivered: 0, cleanedUp: 0, skipped: true,
+    });
+
+    const user = makeReengageUser({ days_inactive: 7, reengage_tier_sent: 0 });
+    const eligibleQuery = createChainableMock({ all: { results: [user] } });
+
+    mockReadDb.prepare.mockReturnValueOnce(eligibleQuery);
+
+    await handleReengagementCron(mockEnv);
+
+    expect(sendPushToUser).toHaveBeenCalled();
+    // reengage_tier_sent should NOT be updated — user opted out after eligibility query
     expect(mockWriteDb.prepare).not.toHaveBeenCalled();
   });
 });

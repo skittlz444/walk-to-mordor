@@ -176,6 +176,12 @@ Key design principles:
   - The current tests only assert the combined title+body contains the goal name, so this acceptance-criteria gap is not being caught.
   - **Fix**: All 16 re-engagement titles now include `{goalTitle}` placeholder. Tests assert `{goalTitle}` in both title templates and interpolated title output.
 
+- [x] [Review][Patch] SQL next-goal join can return duplicate rows per user [src/scheduled-handlers.ts:225-226]
+  - `REENGAGE_ELIGIBLE_QUERY` joined on `g.distance = (SELECT MIN(g2.distance) ...)` which can produce duplicates if two goals share the same distance. Replaced with `ORDER BY g2.distance ASC, g2.id ASC LIMIT 1` to guarantee exactly one row per user.
+
+- [x] [Review][Patch] Re-engagement bypasses centralized sendPushToUser() [src/scheduled-handlers.ts:271-273]
+  - `handleReengagementCron()` called `sendToUserSubscriptions()` directly, bypassing `sendPushToUser()` which re-checks `notifications_enabled` at send time. Replaced with `sendPushToUser()` to prevent race conditions from stale eligibility snapshots. Added new test for last-moment opt-out scenario.
+
 ## Dev Notes
 
 ### Architecture & Patterns
