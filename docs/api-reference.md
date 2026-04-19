@@ -53,12 +53,13 @@ Last updated: 2026-04-17
 | GET | `/api/push/vapid-key` | No | Returns `{ status: 'success', data: { vapidPublicKey } }` when configured |
 | POST | `/api/push/subscribe` | Yes | Body: `{ endpoint, keys: { p256dh, auth } }`. Same-user endpoint updates in place; different-user endpoint → `409` |
 | DELETE | `/api/push/subscribe` | Yes | Body: `{ endpoint }`. Removes only the current user's matching device subscription |
-| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled, oneMoreMileEnabled } }` |
-| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled?: boolean, oneMoreMileEnabled?: boolean }`. At least one field required. Updates global delivery toggle and/or per-feature toggles |
+| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled, oneMoreMileEnabled, inactivityNudgeEnabled } }` |
+| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled?: boolean, oneMoreMileEnabled?: boolean, inactivityNudgeEnabled?: boolean }`. At least one field required. Updates global delivery toggle and/or per-feature toggles |
 
 - Subscription endpoints must be valid `https://` URLs.
 - `notificationsEnabled` controls whether server-side jobs send push notifications to the user. It does not change browser permission state or remove stored subscriptions.
 - `oneMoreMileEnabled` controls the "One More Mile" milestone nudge notification. When enabled, users within 2 km of their next goal who haven't walked in 3 days receive a one-time push notification.
+- `inactivityNudgeEnabled` controls the "Gandalf's Absence Arc" re-engagement notification series. When enabled, inactive users receive up to 4 themed notifications at escalating intervals (days 6, 10, 15, 25+).
 - Invalid or expired subscriptions are cleaned up when a push send later receives `404` or `410` from the push service.
 
 ### Scheduled Handlers (Cron)
@@ -66,6 +67,7 @@ Last updated: 2026-04-17
 | Cron | Handler | Notes |
 |---|---|---|
 | `0 9 * * *` (daily 09:00 UTC) | `handleOneMoreMileCron` | Sends "One More Mile" push notifications to eligible users. Criteria: within 2 km of next goal, no walks in 3 days, not already notified for this goal, journey not completed, both `notifications_enabled` and `one_more_mile_enabled` are on. Users processed in batches of 100. |
+| `0 9 * * *` (daily 09:00 UTC) | `handleReengagementCron` | Sends "Gandalf's Absence Arc" re-engagement push notifications to lapsed users. Tiered system: Tier 1 (day 6–9, gentle), Tier 2 (day 10–14, concerned), Tier 3 (day 15–24, urgent), Tier 4 (day 25+, dramatic final). Requires `notifications_enabled`, `inactivity_nudge_enabled`, at least one walk ever, journey not completed, active push subscription. Runs after `handleOneMoreMileCron` in same cron invocation. Users processed in batches of 100. |
 
 ## Progress Endpoints
 

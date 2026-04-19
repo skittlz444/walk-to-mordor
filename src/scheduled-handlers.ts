@@ -1,7 +1,7 @@
 import { createDbClient } from './db';
 import type { DbClient } from './db';
-import { getOneMoreMileMessage } from './push-messages';
-import { sendPushNotification, cleanupExpiredSubscription } from './push-utils';
+import { getOneMoreMileMessage, getReengageMessage } from './push-messages';
+import { sendPushNotification, cleanupExpiredSubscription, sendPushToUser } from './push-utils';
 import type { PushDeliveryEnv, PushPayload } from './push-utils';
 
 interface EligibleUserRow {
@@ -172,6 +172,124 @@ export async function handleOneMoreMileCron(env: Env): Promise<void> {
     }
 
     // Advance cursor to the last user_id in this batch
+    cursor = eligibleUsers[eligibleUsers.length - 1].user_id;
+
+    if (eligibleUsers.length < BATCH_SIZE) {
+      break;
+    }
+  }
+}
+
+// --- Re-engagement (Gandalf's Absence Arc) ---
+
+interface ReengageEligibleUserRow {
+  user_id: number;
+  days_inactive: number;
+  reengage_tier_sent: number;
+  total_distance: number;
+  next_goal_title: string;
+}
+
+const REENGAGE_ELIGIBLE_QUERY = `
+WITH user_last_walk AS (
+  SELECT
+    u.id AS user_id,
+    MAX(p.date) AS last_walk_date,
+    CAST(julianday('now') - julianday(MAX(p.date)) AS INTEGER) AS days_inactive,
+    u.reengage_tier_sent
+  FROM users u
+  INNER JOIN progress p ON p.user_id = u.id
+  WHERE u.notifications_enabled = 1
+    AND u.inactivity_nudge_enabled = 1
+  GROUP BY u.id
+  HAVING days_inactive >= 6
+),
+user_distances AS (
+  SELECT
+    ulw.user_id,
+    ulw.last_walk_date,
+    ulw.days_inactive,
+    ulw.reengage_tier_sent,
+    COALESCE(SUM(p.distance), 0) AS total_distance
+  FROM user_last_walk ulw
+  INNER JOIN progress p ON p.user_id = ulw.user_id
+  GROUP BY ulw.user_id
+)
+SELECT
+  ud.user_id,
+  ud.days_inactive,
+  ud.reengage_tier_sent,
+  ud.total_distance,
+  g.title AS next_goal_title
+FROM user_distances ud
+INNER JOIN goals g ON g.id = (
+  SELECT g2.id
+  FROM goals g2
+  WHERE g2.distance > ud.total_distance
+  ORDER BY g2.distance ASC, g2.id ASC
+  LIMIT 1
+)
+WHERE EXISTS (
+  SELECT 1 FROM push_subscriptions ps WHERE ps.user_id = ud.user_id
+)
+AND ud.user_id > ?
+ORDER BY ud.user_id
+LIMIT ?
+`;
+
+function getReengageTier(daysInactive: number): number {
+  if (daysInactive >= 25) return 4;
+  if (daysInactive >= 15) return 3;
+  if (daysInactive >= 10) return 2;
+  if (daysInactive >= 6) return 1;
+  return 0;
+}
+
+export async function handleReengagementCron(env: Env): Promise<void> {
+  const db = createDbClient(env.DB);
+  let cursor = 0;
+
+  for (;;) {
+    const { results: eligibleUsers } = await db.read.prepare(REENGAGE_ELIGIBLE_QUERY)
+      .bind(cursor, BATCH_SIZE)
+      .all<ReengageEligibleUserRow>();
+
+    if (eligibleUsers.length === 0) {
+      break;
+    }
+
+    for (const user of eligibleUsers) {
+      try {
+        const tier = getReengageTier(user.days_inactive);
+
+        if (tier <= user.reengage_tier_sent) {
+          continue;
+        }
+
+        const message = getReengageMessage(tier, user.next_goal_title);
+        const payload: PushPayload = {
+          title: message.title,
+          body: message.body,
+          url: '/',
+          icon: '/img/icons/icon-192x192.png',
+        };
+
+        const summary = await sendPushToUser(db, user.user_id, payload, env);
+
+        // Only advance tier when at least one subscription received the notification,
+        // or when a subscription was cleaned up (410/404) per AC #9.
+        // sendPushToUser re-checks notifications_enabled at send time, preventing
+        // race conditions where a user disables notifications after the eligibility query.
+        if (summary.delivered > 0 || summary.cleanedUp > 0) {
+          await db.write.prepare(
+            'UPDATE users SET reengage_tier_sent = ? WHERE id = ?',
+          ).bind(tier, user.user_id).run();
+        }
+      } catch (error: unknown) {
+        console.error(`Re-engagement: failed for user ${user.user_id}:`, error);
+      }
+    }
+
     cursor = eligibleUsers[eligibleUsers.length - 1].user_id;
 
     if (eligibleUsers.length < BATCH_SIZE) {

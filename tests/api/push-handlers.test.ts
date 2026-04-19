@@ -146,7 +146,7 @@ describe('Push Handlers', () => {
 
   it('returns subscription count and notificationsEnabled status', async () => {
     const statusQuery = createChainableMock({
-      first: { notifications_enabled: 0, one_more_mile_enabled: 1, subscription_count: 2 },
+      first: { notifications_enabled: 0, one_more_mile_enabled: 1, inactivity_nudge_enabled: 1, subscription_count: 2 },
     });
     mockReadDb.prepare.mockReturnValueOnce(statusQuery);
 
@@ -160,6 +160,7 @@ describe('Push Handlers', () => {
         subscriptionCount: 2,
         notificationsEnabled: false,
         oneMoreMileEnabled: true,
+        inactivityNudgeEnabled: true,
       },
     });
   });
@@ -239,5 +240,63 @@ describe('Push Handlers', () => {
     await expect(response.json()).resolves.toEqual({
       error: 'Push notifications are not configured',
     });
+  });
+
+  it('updates inactivityNudgeEnabled for the user', async () => {
+    const update = createChainableMock();
+    mockWriteDb.prepare.mockReturnValueOnce(update);
+
+    const response = await handlePushSettings(request, mockDb, {
+      inactivityNudgeEnabled: false,
+    });
+
+    expect(response.status).toBe(200);
+    expect(update.bind).toHaveBeenCalledWith(0, 7);
+  });
+
+  it('returns inactivityNudgeEnabled in push status', async () => {
+    const statusQuery = createChainableMock({
+      first: { notifications_enabled: 1, one_more_mile_enabled: 1, inactivity_nudge_enabled: 0, subscription_count: 1 },
+    });
+    mockReadDb.prepare.mockReturnValueOnce(statusQuery);
+
+    const response = await handlePushStatus(request, mockDb);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      status: 'success',
+      data: {
+        hasSubscriptions: true,
+        subscriptionCount: 1,
+        notificationsEnabled: true,
+        oneMoreMileEnabled: true,
+        inactivityNudgeEnabled: false,
+      },
+    });
+  });
+
+  it('rejects when inactivityNudgeEnabled is not a boolean', async () => {
+    const response = await handlePushSettings(request, mockDb, {
+      inactivityNudgeEnabled: 'yes',
+    } as unknown as Record<string, unknown>);
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'inactivityNudgeEnabled must be a boolean',
+    });
+  });
+
+  it('updates all three settings when all provided', async () => {
+    const update = createChainableMock();
+    mockWriteDb.prepare.mockReturnValueOnce(update);
+
+    const response = await handlePushSettings(request, mockDb, {
+      notificationsEnabled: true,
+      oneMoreMileEnabled: false,
+      inactivityNudgeEnabled: true,
+    });
+
+    expect(response.status).toBe(200);
+    expect(update.bind).toHaveBeenCalledWith(1, 0, 1, 7);
   });
 });

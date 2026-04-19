@@ -140,6 +140,15 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
     // Sync to party_progress_log for all active memberships (graceful degradation)
     await syncPartyProgressLog(db, userId!, start, Number(title), 'insert');
 
+    // Reset re-engagement tier on new walk (not on PUT/DELETE)
+    try {
+      await db.write.prepare(
+        'UPDATE users SET reengage_tier_sent = 0 WHERE id = ? AND reengage_tier_sent > 0'
+      ).bind(userId).run();
+    } catch (resetError: unknown) {
+      console.error('Failed to reset reengage_tier_sent:', resetError);
+    }
+
     return new Response(JSON.stringify({ 
       message: "Created successfully",
       date: start,

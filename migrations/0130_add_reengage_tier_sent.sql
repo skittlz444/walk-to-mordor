@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN reengage_tier_sent INTEGER NOT NULL DEFAULT 0;

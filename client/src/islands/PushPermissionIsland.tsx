@@ -11,7 +11,7 @@ import {
   updateNotificationSettings,
 } from '../utils/push-client';
 
-type NotificationAction = 'enable-device' | 'disable-device' | 'toggle-global' | 'toggle-one-more-mile' | null;
+type NotificationAction = 'enable-device' | 'disable-device' | 'toggle-global' | 'toggle-one-more-mile' | 'toggle-inactivity-nudge' | null;
 
 function getPermissionLabel(permission: NotificationPermission): string {
   if (permission === 'granted') {
@@ -34,6 +34,7 @@ export function PushPermissionIsland() {
   const [subscriptionCount, setSubscriptionCount] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [oneMoreMileEnabled, setOneMoreMileEnabled] = useState(true);
+  const [inactivityNudgeEnabled, setInactivityNudgeEnabled] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [action, setAction] = useState<NotificationAction>(null);
@@ -61,6 +62,7 @@ export function PushPermissionIsland() {
       setSubscriptionCount(status.subscriptionCount);
       setNotificationsEnabled(status.notificationsEnabled);
       setOneMoreMileEnabled(status.oneMoreMileEnabled);
+      setInactivityNudgeEnabled(status.inactivityNudgeEnabled);
       setErrorMessage('');
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to load push notification settings');
@@ -193,6 +195,30 @@ export function PushPermissionIsland() {
     }
   }, [refreshState, token]);
 
+  const handleInactivityNudgeToggle = useCallback(async (event: Event) => {
+    if (!token) {
+      return;
+    }
+
+    const nextValue = (event.currentTarget as HTMLInputElement).checked;
+    setAction('toggle-inactivity-nudge');
+    setStatusMessage('');
+    setErrorMessage('');
+
+    try {
+      await updateNotificationSettings(token, { inactivityNudgeEnabled: nextValue });
+      setInactivityNudgeEnabled(nextValue);
+      setStatusMessage(nextValue
+        ? 'Inactivity notifications are enabled.'
+        : 'Inactivity notifications are disabled.');
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to update notification settings');
+      await refreshState();
+    } finally {
+      setAction(null);
+    }
+  }, [refreshState, token]);
+
   if (!token) {
     return null;
   }
@@ -290,6 +316,26 @@ export function PushPermissionIsland() {
                     checked={oneMoreMileEnabled}
                     disabled={action === 'toggle-one-more-mile'}
                     onChange={handleOneMoreMileToggle}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            </div>
+            <div className="form-group push-setting-group">
+              <div className="toggle-group">
+                <div className="toggle-label">
+                  <label htmlFor="push-inactivity-nudge-toggle">Inactivity Notifications</label>
+                  <small className="field-hint">
+                    Receive themed reminders if you haven&apos;t walked in a while.
+                  </small>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    id="push-inactivity-nudge-toggle"
+                    type="checkbox"
+                    checked={inactivityNudgeEnabled}
+                    disabled={action === 'toggle-inactivity-nudge'}
+                    onChange={handleInactivityNudgeToggle}
                   />
                   <span className="toggle-slider" />
                 </label>
