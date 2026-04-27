@@ -43,7 +43,7 @@
     "happy-dom": "^20.9.0",
     "jest": "^30.3.0",
     "jest-environment-miniflare": "^2.14.4",
-    "jest-junit": "^16.0.0",
+    "jest-junit": "^17.0.0",
     "pnpm": "^10.33.2",
     "sharp": "^0.34.5",
     "supertest": "^7.2.2",
