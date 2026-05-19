@@ -27,11 +27,15 @@ export async function handleGoalsGet(request: Request, db: DbClient, allowTestAu
 }
 
 export async function calculateTotalDistance(db: DbClient, userId: number): Promise<number> {
-  const { results } = await db.read.prepare("SELECT * FROM progress WHERE user_id = ?").bind(userId).all();
-  return Number(
-    (results as Array<{ distance: number }>).reduce(
-      (acc, row) => acc + row.distance,
-      0
-    ).toFixed(2)
-  );
+  // Read the user's cumulative distance on their currently-active storyline.
+  // This is the single "personal total" the UI shows — the value is kept in
+  // sync with the `progress` table on every walk insert/update/delete and
+  // adjusts on storyline switches (keep carries it over, discard zeroes it).
+  // See migration 0132 and progress-handlers.syncActiveStorylineDistance.
+  const row = await db.read
+    .prepare('SELECT active_storyline_distance_km AS total FROM users WHERE id = ?')
+    .bind(userId)
+    .first<{ total: number | null }>();
+  const total = row?.total ?? 0;
+  return Number(Number(total).toFixed(2));
 }

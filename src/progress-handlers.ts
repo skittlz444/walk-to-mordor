@@ -12,6 +12,35 @@ interface ActiveMembershipRow {
 }
 
 /**
+ * Adjust the user's active-storyline distance counter by `delta` km.
+ * Maintains `users.active_storyline_distance_km` — the single "personal total"
+ * the UI shows on the active storyline (per multi-storyline foundation plan).
+ *
+ * `delta` may be negative (e.g. when a walk is edited down or deleted). The
+ * counter is clamped at 0 in SQL via MAX(..., 0) so a corrupted history (e.g.
+ * deleting more than was ever added because of a stale row) cannot drive the
+ * total negative.
+ *
+ * Graceful degradation: errors are logged but never propagated. The walk is
+ * the primary operation; the counter is recoverable from `progress` if it
+ * ever drifts.
+ */
+export async function syncActiveStorylineDistance(
+  db: DbClient,
+  userId: number,
+  delta: number
+): Promise<void> {
+  if (delta === 0) return;
+  try {
+    await db.write.prepare(
+      'UPDATE users SET active_storyline_distance_km = MAX(active_storyline_distance_km + ?, 0) WHERE id = ?'
+    ).bind(delta, userId).run();
+  } catch (error) {
+    console.error('Error syncing active_storyline_distance_km:', error);
+  }
+}
+
+/**
  * Sync a walk log entry to party_progress_log for all of the user's active party memberships.
  * Graceful degradation: errors are logged but never propagated (walk is the primary operation).
  */
@@ -137,6 +166,10 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
       .bind(start, Number(title), userId)
       .run();
 
+    // Maintain users.active_storyline_distance_km in sync with the new walk
+    // (per multi-storyline foundation plan — single personal total).
+    await syncActiveStorylineDistance(db, userId!, Number(title));
+
     // Sync to party_progress_log for all active memberships (graceful degradation)
     await syncPartyProgressLog(db, userId!, start, Number(title), 'insert');
 
@@ -233,6 +266,11 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
   }
 
   try {
+    // Read existing row so we can compute the storyline-distance delta.
+    const existing = await db.read.prepare(
+      'SELECT distance FROM progress WHERE date = ? AND user_id = ?'
+    ).bind(start, userId).first<{ distance: number }>();
+
     const result = await db.write.prepare("UPDATE progress SET distance = ? WHERE date = ? AND user_id = ?"
     )
       .bind(Number(title), start, userId)
@@ -245,6 +283,12 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
         status: 404,
         headers: { "content-type": "application/json" }
       });
+    }
+
+    // Maintain users.active_storyline_distance_km by the net change.
+    if (existing) {
+      const delta = Number(title) - Number(existing.distance);
+      await syncActiveStorylineDistance(db, userId!, delta);
     }
 
     // Sync to party_progress_log for all active memberships (graceful degradation)
@@ -300,6 +344,11 @@ export async function handleProgressDelete(request: Request, db: DbClient, body:
   }
 
   try {
+    // Read existing distance so we can decrement the storyline counter.
+    const existing = await db.read.prepare(
+      'SELECT distance FROM progress WHERE date = ? AND user_id = ?'
+    ).bind(start, userId).first<{ distance: number }>();
+
     const result = await db.write.prepare("DELETE FROM progress WHERE date = ? AND user_id = ?")
       .bind(start, userId)
       .run();
@@ -311,6 +360,11 @@ export async function handleProgressDelete(request: Request, db: DbClient, body:
         status: 404,
         headers: { "content-type": "application/json" }
       });
+    }
+
+    // Decrement users.active_storyline_distance_km by the deleted walk's distance.
+    if (existing) {
+      await syncActiveStorylineDistance(db, userId!, -Number(existing.distance));
     }
 
     // Sync to party_progress_log for all active memberships (graceful degradation)

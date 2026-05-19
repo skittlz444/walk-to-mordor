@@ -240,9 +240,11 @@ describe('Cloudflare Worker Index', () => {
         prepare: jest.fn(() => ({
           bind: jest.fn(() => ({
             run: jest.fn(() => Promise.resolve({ meta: { changes: 1 } })),
-            all: jest.fn(() => Promise.resolve({ results: [] }))
+            all: jest.fn(() => Promise.resolve({ results: [] })),
+            first: jest.fn(() => Promise.resolve(null))
           })),
-          all: jest.fn(() => Promise.resolve({ results: [] }))
+          all: jest.fn(() => Promise.resolve({ results: [] })),
+          first: jest.fn(() => Promise.resolve(null))
         }))
       },
       ASSETS: {
@@ -1305,7 +1307,8 @@ describe('Cloudflare Worker Index', () => {
     // Mock no changes in database
     mockEnv.DB.prepare.mockReturnValue({
       bind: jest.fn(() => ({
-        run: jest.fn(() => Promise.resolve({ meta: { changes: 0 } }))
+        run: jest.fn(() => Promise.resolve({ meta: { changes: 0 } })),
+        first: jest.fn(() => Promise.resolve(null))
       }))
     });
 
@@ -1354,7 +1357,8 @@ describe('Cloudflare Worker Index', () => {
     // Mock no changes in database
     mockEnv.DB.prepare.mockReturnValue({
       bind: jest.fn(() => ({
-        run: jest.fn(() => Promise.resolve({ meta: { changes: 0 } }))
+        run: jest.fn(() => Promise.resolve({ meta: { changes: 0 } })),
+        first: jest.fn(() => Promise.resolve(null))
       }))
     });
 

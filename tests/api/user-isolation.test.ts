@@ -42,6 +42,10 @@ describe('User Isolation', () => {
   const SQL_UPDATE_PROGRESS = 'UPDATE progress SET distance = ? WHERE date = ? AND user_id = ?';
   const SQL_DELETE_PROGRESS = 'DELETE FROM progress WHERE date = ? AND user_id = ?';
   const SQL_SELECT_PROGRESS = 'SELECT * FROM progress WHERE user_id = ?';
+  const SQL_SELECT_PROGRESS_ROW = 'SELECT distance FROM progress WHERE date = ? AND user_id = ?';
+  const SQL_UPDATE_USER_DISTANCE = 'UPDATE users SET active_storyline_distance_km = MAX(active_storyline_distance_km + ?, 0) WHERE id = ?';
+  const SQL_SELECT_USER_DISTANCE = 'SELECT active_storyline_distance_km AS total FROM users WHERE id = ?';
+  const SQL_SELECT_ACTIVE_MEMBERSHIPS = 'SELECT party_id FROM party_members WHERE user_id = ? AND status = ?';
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -52,6 +56,9 @@ describe('User Isolation', () => {
 
     // Simple in-memory database mock using structured composite keys
     mockDataStore = new Map();
+    // Per-user cumulative distance on their active storyline.
+    // Mirrors users.active_storyline_distance_km from the multi-storyline schema.
+    const userDistanceStore = new Map<number, number>();
 
     // Mock DB with in-memory storage
     mockDB = {
@@ -100,7 +107,15 @@ describe('User Isolation', () => {
                     }
                     return { meta: { changes: 0 } };
                   }
-                  
+
+                  // Simulate UPDATE users SET active_storyline_distance_km = ...
+                  if (sql === SQL_UPDATE_USER_DISTANCE) {
+                    const [delta, userId] = params;
+                    const current = userDistanceStore.get(userId) ?? 0;
+                    userDistanceStore.set(userId, Math.max(current + delta, 0));
+                    return { meta: { changes: 1 } };
+                  }
+
                   return { meta: { changes: 0 } };
                 }),
                 all: jest.fn(async () => {
@@ -116,9 +131,27 @@ describe('User Isolation', () => {
                     });
                     return { results };
                   }
+                  // Active party memberships — none in this isolation test.
+                  if (sql === SQL_SELECT_ACTIVE_MEMBERSHIPS) {
+                    return { results: [] };
+                  }
                   return { results: [] };
                 }),
-                first: jest.fn(async () => null)
+                first: jest.fn(async () => {
+                  // Pre-write read for delta computation in PUT/DELETE handlers.
+                  if (sql === SQL_SELECT_PROGRESS_ROW) {
+                    const [date, userId] = params;
+                    const key = createKey(userId, date);
+                    const entry = mockDataStore.get(key);
+                    return entry ? { distance: entry.distance } : null;
+                  }
+                  // Read of users.active_storyline_distance_km (calculateTotalDistance).
+                  if (sql === SQL_SELECT_USER_DISTANCE) {
+                    const [userId] = params;
+                    return { total: userDistanceStore.get(userId) ?? 0 };
+                  }
+                  return null;
+                })
               };
             })
           };
