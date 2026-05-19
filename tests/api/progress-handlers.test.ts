@@ -148,9 +148,10 @@ describe('Progress Handlers', () => {
       const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
+      const mockFirst = jest.fn().mockResolvedValue(null);
 
       mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun });
-      mockBind.mockReturnValue({ run: mockRun });
+      mockBind.mockReturnValue({ run: mockRun, first: mockFirst });
       mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
 
       const response = await handleProgressPut(mockRequest, mockDb, { start: '2024-01-01', title: '6.0' });
@@ -174,9 +175,10 @@ describe('Progress Handlers', () => {
       const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
       const mockRun = jest.fn();
+      const mockFirst = jest.fn().mockResolvedValue(null);
 
       mockPrepare.mockReturnValue({ bind: mockBind, run: mockRun });
-      mockBind.mockReturnValue({ run: mockRun });
+      mockBind.mockReturnValue({ run: mockRun, first: mockFirst });
       mockRun.mockResolvedValueOnce({ meta: { changes: 0 } });
 
       const response = await handleProgressDelete(mockRequest, mockDb, { start: '2024-01-01' });

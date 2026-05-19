@@ -91,33 +91,25 @@ describe('Goals Handlers', () => {
   });
 
   describe('calculateTotalDistance', () => {
-    it('should calculate total distance correctly', async () => {
-      const mockResults = [
-        { distance: 5.5 },
-        { distance: 3.2 },
-        { distance: 1.3 }
-      ];
-
+    it('should read users.active_storyline_distance_km for the user', async () => {
       mockDB.prepare.mockReturnValue({
         bind: jest.fn().mockReturnValue({
-          all: jest.fn(() => Promise.resolve({
-            results: mockResults
-          }))
+          first: jest.fn(() => Promise.resolve({ total: 10 }))
         })
       });
 
       const total = await calculateTotalDistance(mockDb, 1);
 
-      expect(total).toBe(10); // 5.5 + 3.2 + 1.3 = 10
-      expect(mockDB.prepare).toHaveBeenCalledWith("SELECT * FROM progress WHERE user_id = ?");
+      expect(total).toBe(10);
+      expect(mockDB.prepare).toHaveBeenCalledWith(
+        'SELECT active_storyline_distance_km AS total FROM users WHERE id = ?'
+      );
     });
 
-    it('should return 0 for no progress entries', async () => {
+    it('should return 0 when user row is missing or counter is null', async () => {
       mockDB.prepare.mockReturnValue({
         bind: jest.fn().mockReturnValue({
-          all: jest.fn(() => Promise.resolve({
-            results: []
-          }))
+          first: jest.fn(() => Promise.resolve(null))
         })
       });
 
@@ -126,18 +118,10 @@ describe('Goals Handlers', () => {
       expect(total).toBe(0);
     });
 
-    it('should handle decimal precision correctly', async () => {
-      const mockResults = [
-        { distance: 1.111 },
-        { distance: 2.222 },
-        { distance: 3.333 }
-      ];
-
+    it('should round the stored distance to two decimal places', async () => {
       mockDB.prepare.mockReturnValue({
         bind: jest.fn().mockReturnValue({
-          all: jest.fn(() => Promise.resolve({
-            results: mockResults
-          }))
+          first: jest.fn(() => Promise.resolve({ total: 6.666 }))
         })
       });
 

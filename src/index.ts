@@ -76,6 +76,11 @@ import {
   handleVapidKey,
 } from './push-handlers';
 import { handleOneMoreMileCron, handleReengagementCron } from './scheduled-handlers';
+import {
+  handleGetStorylines,
+  handleSetActiveStoryline,
+  handleSetPartyStoryline,
+} from './storyline-handlers';
 
 /**
  * Match a URL pathname against a parameterized route pattern.
@@ -271,6 +276,26 @@ export default {
       // Party (Fellowship) endpoints
       if (url.pathname === "/api/party" && method === "POST") {
         return handleCreateParty(request, db, body!, env.ALLOW_TEST_AUTH);
+      }
+
+      // Storyline endpoints (multi-storyline foundation)
+      if (url.pathname === "/api/storylines" && method === "GET") {
+        return handleGetStorylines(request, db, env.ALLOW_TEST_AUTH);
+      }
+      if (url.pathname === "/api/user/active-storyline" && method === "PUT") {
+        return handleSetActiveStoryline(request, db, body, env.ALLOW_TEST_AUTH);
+      }
+      const partyStorylineParams = matchRoute(url.pathname, '/api/party/:id/storyline');
+      if (partyStorylineParams && method === "PUT") {
+        const partyId = Number.parseInt(partyStorylineParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== partyStorylineParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleSetPartyStoryline(request, db, partyId, body, env.ALLOW_TEST_AUTH);
       }
 
       // GET /api/user/parties — list user's party memberships (auth required)
@@ -787,6 +812,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/admin/metrics/leaderboard":
     case "/api/admin/metrics/timeline":
     case "/api/admin/images":
+    case "/api/storylines":
       return ['GET'];
     case "/api/admin/goals":
       return ['GET', 'POST'];
@@ -805,6 +831,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/profile":
     case "/api/user/preferences":
     case "/api/push/settings":
+    case "/api/user/active-storyline":
       return ['PUT'];
     default:
       // Admin API routes
@@ -847,6 +874,9 @@ function getAllowedMethods(pathname: string): string[] {
       }
       if (matchRoute(pathname, '/api/party/:id/transfer-leadership')) {
         return ['POST'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/storyline')) {
+        return ['PUT'];
       }
       // Fellowship invite parameterized routes
       if (matchRoute(pathname, '/api/user/fellowship-invites/:inviteId/accept')) {
