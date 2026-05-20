@@ -2,6 +2,7 @@
 import { validateSession, validateAdminSession } from './auth-handlers';
 import { createErrorResponse, createSuccessResponse } from './validators';
 import type { DbClient } from './db';
+import { applyStorylineOffset, listStorylineGoals, resolveUserStoryline } from './storyline-utils';
 
 /** Row from the 30-day activity pre-requisite check */
 interface ActivityCountRow {
@@ -11,14 +12,6 @@ interface ActivityCountRow {
 /** Row from weekly distance summation queries */
 interface DistanceSumRow {
   total: number | null;
-}
-
-/** Row from the goals table for projection calculation */
-interface GoalRow {
-  id: number;
-  title: string;
-  distance: number;
-  special: string | null;
 }
 
 /** Row from the fellowship contribution query */
@@ -114,20 +107,19 @@ export async function handleWeeklyStats(
       else if (paceChangePct < 0) paceTrend = 'down';
     }
 
-    // Subtask 1.2b: Total distance for projection base
+    // Subtask 1.2b: Displayed storyline distance for projection base
     const totalDistRow = await db.read
       .prepare(`SELECT COALESCE(SUM(distance), 0) as total FROM progress WHERE user_id = ?`)
       .bind(userId)
       .first<DistanceSumRow>();
-    const totalKm = Number((totalDistRow?.total ?? 0).toFixed(2));
+    const rawTotalKm = Number((totalDistRow?.total ?? 0).toFixed(2));
+    const storylineContext = await resolveUserStoryline(db, userId);
+    const totalKm = applyStorylineOffset(rawTotalKm, storylineContext.distanceOffset);
 
-    // Subtask 1.2c: Projection — evaluate goals ahead of user
-    const { results: allGoals } = await db.read
-      .prepare(
-        `SELECT id, title, distance, special FROM goals WHERE distance > ? ORDER BY distance ASC`,
-      )
-      .bind(totalKm)
-      .all<GoalRow>();
+    // Subtask 1.2c: Projection — evaluate goals ahead on the user's active storyline
+    const allGoals = (await listStorylineGoals(db, storylineContext.storyline.id))
+      .filter((goal) => goal.distance > totalKm)
+      .sort((a, b) => a.distance - b.distance || a.sort_order - b.sort_order || a.id - b.id);
 
     // Pace is based solely on the last 7 days; if no walks this week there is no projection.
     const weeklyPace = thisWeekKm; // km/week

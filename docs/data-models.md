@@ -41,11 +41,12 @@ These are rules the schema enforces or that the application layer must uphold â€
 - `one_more_mile_enabled` is a per-user toggle for the "One More Mile" milestone nudge notifications. Defaults to ON (`1`) for new users.
 - `inactivity_nudge_enabled` is a per-user toggle for "Gandalf's Absence Arc" re-engagement notifications. Defaults to ON (`1`) for new users.
 - `reengage_tier_sent` tracks the highest re-engagement notification tier sent during the current inactivity period (0 = none, 1â€“4 = tier reached). Resets to 0 when the user logs a new walk.
-- `active_storyline_id` selects the user's current journey. If null or inactive, handlers fall back to the default `frodo-sam` storyline.
+- `active_storyline_id` selects the user's current journey. If null, inactive, or no longer visible to the user, handlers fall back to the default `frodo-sam` storyline.
 - `storyline_distance_offset` is applied to raw progress for display: `max(0, raw_distance + offset)`. Switching with carry preserves displayed distance; switching with reset stores `-raw_distance`.
 
 ### storylines / storyline_goals
 - `storylines.slug` is unique and uses lowercase hyphenated slugs. The default seeded storyline is `frodo-sam` with `path_key = 'fellowship'`.
+- `storylines.admin_only = 1` keeps an active storyline visible to admins only while it is being built. Public list/switch handlers exclude admin-only storylines for regular users.
 - `path_key` lets future storylines select a map path dataset. Unknown client path keys must fall back to the fellowship path until a new path is registered.
 - `storyline_goals` reuses rows from `goals` and stores the storyline-specific `distance` and `sort_order`. This allows the same goal content to appear in multiple routes at different distances.
 - Existing goals are backfilled into `storyline_goals` for `frodo-sam`, preserving current behavior for existing users.
@@ -65,7 +66,7 @@ These are rules the schema enforces or that the application layer must uphold â€
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.
 - `leave_distance_behavior` (`keep` | `remove`): leader-updatable.
 - `dissolved_at` set when all members depart â€” dissolved parties cannot be rejoined.
-- `active_storyline_id` and `storyline_distance_offset` mirror the user storyline model for fellowship views. Member contributions remain raw and are not changed by storyline reset.
+- `active_storyline_id` can be set at creation and later changed by the leader. It mirrors the user storyline model for fellowship views. Member contributions remain raw and are not changed by storyline reset.
 
 ### party_members
 - **Leader invariant:** `role = 'leader'` must match `parties.leader_id`. Leader transfers must update both atomically in a transaction.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 
 interface StorylineSummary {
   id: number;
@@ -8,6 +8,7 @@ interface StorylineSummary {
   path_key: string;
   sort_order: number;
   is_active: boolean;
+  admin_only: boolean;
   goal_count: number;
   min_distance: number | null;
   max_distance: number | null;
@@ -30,6 +31,18 @@ interface StorylineDetailResponse {
   goals: StorylineGoal[];
 }
 
+interface AdminGoalOption {
+  id: number;
+  title: string;
+  distance: number;
+}
+
+interface AdminGoalsListResponse {
+  goals: AdminGoalOption[];
+  page: number;
+  totalPages: number;
+}
+
 interface StorylineFormState {
   slug: string;
   title: string;
@@ -37,6 +50,7 @@ interface StorylineFormState {
   pathKey: string;
   sortOrder: number;
   isActive: boolean;
+  adminOnly: boolean;
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -54,7 +68,18 @@ function toFormState(storyline: StorylineSummary): StorylineFormState {
     pathKey: storyline.path_key,
     sortOrder: storyline.sort_order,
     isActive: storyline.is_active,
+    adminOnly: storyline.admin_only,
   };
+}
+
+function getStatusLabel(storyline: StorylineSummary): string {
+  if (!storyline.is_active) return 'Hidden';
+  return storyline.admin_only ? 'Admin only' : 'Active';
+}
+
+function getStatusClass(storyline: StorylineSummary): string {
+  if (!storyline.is_active) return 'admin-badge--neutral';
+  return storyline.admin_only ? 'admin-badge--warning' : 'admin-badge--success';
 }
 
 function formatRange(storyline: StorylineSummary): string {
@@ -69,8 +94,11 @@ export function AdminStorylinesIsland() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [form, setForm] = useState<StorylineFormState | null>(null);
   const [goals, setGoals] = useState<StorylineGoal[]>([]);
+  const [availableGoals, setAvailableGoals] = useState<AdminGoalOption[]>([]);
+  const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [loadingGoals, setLoadingGoals] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [savingMetadata, setSavingMetadata] = useState(false);
@@ -83,6 +111,7 @@ export function AdminStorylinesIsland() {
     pathKey: 'fellowship',
     sortOrder: 10,
     isActive: true,
+    adminOnly: false,
   });
   const [copyFromStorylineId, setCopyFromStorylineId] = useState<number | null>(null);
 
@@ -123,7 +152,35 @@ export function AdminStorylinesIsland() {
     }
   }, []);
 
-  useEffect(() => { void fetchStorylines(); }, [fetchStorylines]);
+  const fetchAvailableGoals = useCallback(async () => {
+    setLoadingGoals(true);
+    try {
+      const allGoals: AdminGoalOption[] = [];
+      let page = 1;
+      let totalPages = 1;
+
+      do {
+        const res = await fetch(`/api/admin/goals?page=${page}&pageSize=100`, { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('Failed to load available goals');
+        const data: AdminGoalsListResponse = await res.json();
+        allGoals.push(...data.goals);
+        totalPages = data.totalPages;
+        page += 1;
+      } while (page <= totalPages);
+
+      setAvailableGoals(allGoals);
+      setSelectedGoalId((current) => current ?? allGoals[0]?.id ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load available goals');
+    } finally {
+      setLoadingGoals(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchStorylines();
+    void fetchAvailableGoals();
+  }, [fetchAvailableGoals, fetchStorylines]);
 
   useEffect(() => {
     if (selectedId !== null) {
@@ -132,6 +189,16 @@ export function AdminStorylinesIsland() {
   }, [fetchDetail, selectedId]);
 
   const selectedStoryline = storylines.find((storyline) => storyline.id === selectedId) ?? null;
+  const addableGoals = useMemo(() => {
+    const mappedGoalIds = new Set(goals.map((goal) => goal.goal_id));
+    return availableGoals.filter((goal) => !mappedGoalIds.has(goal.id));
+  }, [availableGoals, goals]);
+
+  useEffect(() => {
+    setSelectedGoalId((current) => current !== null && addableGoals.some((goal) => goal.id === current)
+      ? current
+      : addableGoals[0]?.id ?? null);
+  }, [addableGoals]);
 
   const updateForm = useCallback(<K extends keyof StorylineFormState>(key: K, value: StorylineFormState[K]) => {
     setForm((current) => current ? { ...current, [key]: value } : current);
@@ -156,7 +223,7 @@ export function AdminStorylinesIsland() {
       if (!res.ok || !data.storyline) throw new Error(data.error || 'Failed to create storyline');
       setNotice('Storyline created');
       setShowCreate(false);
-      setCreateForm({ slug: '', title: '', description: '', pathKey: 'fellowship', sortOrder: 10, isActive: true });
+      setCreateForm({ slug: '', title: '', description: '', pathKey: 'fellowship', sortOrder: 10, isActive: true, adminOnly: false });
       setSelectedId(data.storyline.id);
       await fetchStorylines();
     } catch (err) {
@@ -219,6 +286,34 @@ export function AdminStorylinesIsland() {
     }
   }, [fetchStorylines, goals, selectedId]);
 
+  const handleAddGoal = useCallback(() => {
+    if (selectedGoalId === null) return;
+    const goalToAdd = availableGoals.find((goal) => goal.id === selectedGoalId);
+    if (!goalToAdd) return;
+
+    setGoals((current) => {
+      if (current.some((goal) => goal.goal_id === goalToAdd.id)) return current;
+      const nextSortOrder = current.reduce((maxSortOrder, goal) => Math.max(maxSortOrder, goal.sort_order), 0) + 1;
+      return [
+        ...current,
+        {
+          // Negative sentinel: no real storyline_goal_id yet — will be assigned on save.
+          // handleSaveGoals only sends goal_id/distance/sortOrder, so the sentinel is never sent to the API.
+          storyline_goal_id: -goalToAdd.id,
+          goal_id: goalToAdd.id,
+          title: goalToAdd.title,
+          distance: goalToAdd.distance,
+          sort_order: nextSortOrder,
+        },
+      ].sort((a, b) => a.distance - b.distance || a.sort_order - b.sort_order || a.goal_id - b.goal_id);
+    });
+    setSelectedGoalId(null);
+  }, [availableGoals, selectedGoalId]);
+
+  const handleRemoveGoal = useCallback((goalId: number) => {
+    setGoals((current) => current.filter((goal) => goal.goal_id !== goalId));
+  }, []);
+
   if (loading && storylines.length === 0) {
     return <div className="admin-loading"><i className="fas fa-spinner fa-spin" aria-hidden="true"></i> Loading storylines...</div>;
   }
@@ -248,9 +343,11 @@ export function AdminStorylinesIsland() {
             <label>Sort Order<input type="number" value={createForm.sortOrder} onInput={(e) => updateCreateForm('sortOrder', Number((e.target as HTMLInputElement).value))} /></label>
             <label className="admin-storyline-form__wide">Description<textarea value={createForm.description} onInput={(e) => updateCreateForm('description', (e.target as HTMLTextAreaElement).value)} rows={3}></textarea></label>
             <label>Copy Goals From<select value={copyFromStorylineId ?? ''} onChange={(e) => setCopyFromStorylineId(Number((e.target as HTMLSelectElement).value) || null)}>
+              <option value="">No goals</option>
               {storylines.map((storyline) => <option key={storyline.id} value={storyline.id}>{storyline.title}</option>)}
             </select></label>
             <label className="admin-storyline-checkbox"><input type="checkbox" checked={createForm.isActive} onChange={(e) => updateCreateForm('isActive', (e.target as HTMLInputElement).checked)} /> Active</label>
+            <label className="admin-storyline-checkbox"><input type="checkbox" checked={createForm.adminOnly} onChange={(e) => updateCreateForm('adminOnly', (e.target as HTMLInputElement).checked)} /> Admin only</label>
           </div>
           <button type="submit" className="admin-btn admin-btn-primary" disabled={savingMetadata}>Create Storyline</button>
         </form>
@@ -273,7 +370,7 @@ export function AdminStorylinesIsland() {
                   <td className="admin-goals-cell--title">{storyline.title}<span className="admin-storyline-slug">{storyline.slug}</span></td>
                   <td>{storyline.goal_count}</td>
                   <td>{formatRange(storyline)}</td>
-                  <td><span className={`admin-badge ${storyline.is_active ? 'admin-badge--success' : ''}`}>{storyline.is_active ? 'Active' : 'Hidden'}</span></td>
+                  <td><span className={`admin-badge ${getStatusClass(storyline)}`}>{getStatusLabel(storyline)}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -296,6 +393,7 @@ export function AdminStorylinesIsland() {
                   <label>Sort Order<input type="number" value={form.sortOrder} onInput={(e) => updateForm('sortOrder', Number((e.target as HTMLInputElement).value))} /></label>
                   <label className="admin-storyline-form__wide">Description<textarea value={form.description} onInput={(e) => updateForm('description', (e.target as HTMLTextAreaElement).value)} rows={3}></textarea></label>
                   <label className="admin-storyline-checkbox"><input type="checkbox" checked={form.isActive} onChange={(e) => updateForm('isActive', (e.target as HTMLInputElement).checked)} /> Active</label>
+                  <label className="admin-storyline-checkbox"><input type="checkbox" checked={form.adminOnly} onChange={(e) => updateForm('adminOnly', (e.target as HTMLInputElement).checked)} /> Admin only</label>
                 </div>
                 <button type="submit" className="admin-btn admin-btn-primary" disabled={savingMetadata}>Save Metadata</button>
               </form>
@@ -307,6 +405,19 @@ export function AdminStorylinesIsland() {
                     <p>{goals.length} mapped goals</p>
                   </div>
                   <button type="button" className="admin-btn admin-btn-secondary" onClick={handleSaveGoals} disabled={savingGoals}>Save Distances</button>
+                </div>
+                <div className="admin-storyline-goal-add">
+                  <select
+                    value={selectedGoalId ?? ''}
+                    onChange={(e) => setSelectedGoalId(Number((e.target as HTMLSelectElement).value) || null)}
+                    disabled={loadingGoals || addableGoals.length === 0}
+                  >
+                    <option value="">{loadingGoals ? 'Loading goals...' : 'Select a goal'}</option>
+                    {addableGoals.map((goal) => (
+                      <option key={goal.id} value={goal.id}>{goal.title} ({goal.distance.toFixed(2)} km)</option>
+                    ))}
+                  </select>
+                  <button type="button" className="admin-btn admin-btn-secondary" onClick={handleAddGoal} disabled={selectedGoalId === null || savingGoals}>Add Goal</button>
                 </div>
                 <div className="admin-storyline-goal-list">
                   {goals.map((goal, index) => (
@@ -322,6 +433,7 @@ export function AdminStorylinesIsland() {
                           setGoals((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, distance } : item));
                         }}
                       />
+                      <button type="button" className="admin-btn admin-btn-secondary" onClick={() => handleRemoveGoal(goal.goal_id)}>Remove</button>
                     </div>
                   ))}
                 </div>

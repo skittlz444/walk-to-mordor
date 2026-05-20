@@ -5,7 +5,9 @@ import { isValidAvatarSlug } from "./avatar-slugs";
 import { calculateTotalDistance } from "./goals-handlers";
 import {
   applyStorylineOffset,
+  isUserAdmin,
   listStorylineGoals,
+  requireActiveStoryline,
   resolvePartyStoryline,
   toStorylineResponse,
   type StorylineGoal,
@@ -25,6 +27,7 @@ interface PartyRow {
   invite_code: string;
   distance_mode: string;
   leave_distance_behavior: string;
+  active_storyline_id: number | null;
   dissolved_at: string | null;
   avatar_id: string | null;
 }
@@ -55,7 +58,7 @@ export function generateInviteCode(): string {
 /**
  * POST /api/party — Create a new Fellowship (party).
  *
- * Request body: { name: string, distance_mode?: 'cumulative' | 'incremental', leave_distance_behavior?: 'keep' | 'remove' }
+ * Request body: { name: string, distance_mode?: 'cumulative' | 'incremental', leave_distance_behavior?: 'keep' | 'remove', storylineId?: number }
  * Returns the created party details including invite code and configured settings.
  */
 export async function handleCreateParty(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string): Promise<Response> {
@@ -66,7 +69,7 @@ export async function handleCreateParty(request: Request, db: DbClient, body: Re
   }
   const userId = sessionValidation.userId;
 
-  const { name, distance_mode, leave_distance_behavior } = body || {};
+  const { name, distance_mode, leave_distance_behavior, storylineId } = body || {};
 
   // Validate name: required, string, max 50 chars
   if (!name || typeof name !== 'string') {
@@ -94,7 +97,21 @@ export async function handleCreateParty(request: Request, db: DbClient, body: Re
     return createErrorResponse("Invalid leave_distance_behavior. Must be 'keep' or 'remove'", 400);
   }
 
+  let resolvedStorylineId: number | null = null;
+  if (storylineId !== undefined && storylineId !== null) {
+    if (typeof storylineId !== 'number' || !Number.isInteger(storylineId) || storylineId <= 0) {
+      return createErrorResponse('storylineId must be a positive integer', 400);
+    }
+    resolvedStorylineId = storylineId;
+  }
+
   try {
+    let activeStorylineId: number | null = null;
+    if (resolvedStorylineId !== null) {
+      const includeAdminOnly = await isUserAdmin(db, userId);
+      activeStorylineId = (await requireActiveStoryline(db, resolvedStorylineId, { includeAdminOnly })).id;
+    }
+
     // Get user's current total distance for distance_at_join
     const totalDistance = await calculateTotalDistance(db, userId);
 
@@ -117,9 +134,13 @@ export async function handleCreateParty(request: Request, db: DbClient, body: Re
       }
 
       // Use D1 batch for atomic party + member creation
-      const insertPartyStmt = db.write.prepare(
-        'INSERT INTO parties (name, leader_id, invite_code, distance_mode, leave_distance_behavior) VALUES (?, ?, ?, ?, ?)'
-      ).bind(trimmedName, userId, inviteCode, resolvedDistanceMode, resolvedLeaveBehavior);
+      const insertPartyStmt = activeStorylineId === null
+        ? db.write.prepare(
+          'INSERT INTO parties (name, leader_id, invite_code, distance_mode, leave_distance_behavior) VALUES (?, ?, ?, ?, ?)'
+        ).bind(trimmedName, userId, inviteCode, resolvedDistanceMode, resolvedLeaveBehavior)
+        : db.write.prepare(
+          'INSERT INTO parties (name, leader_id, invite_code, distance_mode, leave_distance_behavior, active_storyline_id) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(trimmedName, userId, inviteCode, resolvedDistanceMode, resolvedLeaveBehavior, activeStorylineId);
 
       // Use subquery to reference the party by invite_code so both inserts are in one atomic batch
       const insertMemberStmt = db.write.prepare(
@@ -134,7 +155,7 @@ export async function handleCreateParty(request: Request, db: DbClient, body: Re
 
         // Fetch the created party to return full details
         const party = await db.read.prepare(
-          'SELECT id, name, leader_id, created_at, invite_code, distance_mode, leave_distance_behavior FROM parties WHERE id = ?'
+          'SELECT id, name, leader_id, created_at, invite_code, distance_mode, leave_distance_behavior, active_storyline_id FROM parties WHERE id = ?'
         ).bind(partyId).first<PartyRow>();
 
         if (!party) {
@@ -149,6 +170,7 @@ export async function handleCreateParty(request: Request, db: DbClient, body: Re
           invite_code: party.invite_code,
           distance_mode: party.distance_mode,
           leave_distance_behavior: party.leave_distance_behavior,
+          active_storyline_id: party.active_storyline_id,
         }, 201);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -172,6 +194,9 @@ export async function handleCreateParty(request: Request, db: DbClient, body: Re
     // Should not reach here, but treat as server error if it does
     return createErrorResponse('Internal server error while creating party', 500);
   } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Storyline not found') {
+      return createErrorResponse('Storyline not found', 404);
+    }
     console.error('Database error during party creation:', error);
     return createErrorResponse('Internal server error while creating party', 500);
   }
@@ -583,7 +608,7 @@ export async function handlePartyProgress(request: Request, db: DbClient, partyI
     // Round to 2 decimal places to avoid floating point drift
     rawTotalDistance = Number(rawTotalDistance.toFixed(2));
 
-    const storylineContext = await resolvePartyStoryline(db, partyId);
+    const storylineContext = await resolvePartyStoryline(db, partyId, userId);
     const totalDistance = applyStorylineOffset(rawTotalDistance, storylineContext.distanceOffset);
     const storylineGoals = await listStorylineGoals(db, storylineContext.storyline.id);
 

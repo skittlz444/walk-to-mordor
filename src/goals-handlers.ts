@@ -2,6 +2,7 @@
 import { validateSession } from "./auth-handlers";
 import {
   applyStorylineOffset,
+  isUserAdmin,
   listStorylineGoals,
   requireActiveStoryline,
   resolveUserStoryline,
@@ -29,7 +30,8 @@ export async function handleGoalsGet(request: Request, db: DbClient, allowTestAu
           headers: { "content-type": "application/json" },
         });
       }
-      storylineId = (await requireActiveStoryline(db, parsedStorylineId)).id;
+      const includeAdminOnly = await isUserAdmin(db, sessionValidation.userId);
+      storylineId = (await requireActiveStoryline(db, parsedStorylineId, { includeAdminOnly })).id;
     } else {
       storylineId = (await resolveUserStoryline(db, sessionValidation.userId)).storyline.id;
     }

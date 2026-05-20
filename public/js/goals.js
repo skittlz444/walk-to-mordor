@@ -1,4 +1,13 @@
 // Goals domain functions
+const GOAL_COMPLETION_EPSILON_KM = 0.005;
+
+function isGoalCompleted(goal, currentDistance) {
+  return Number(currentDistance) + GOAL_COMPLETION_EPSILON_KM >= goal.distance;
+}
+
+function getRemainingKm(goal, currentDistance) {
+  return Math.max(0, goal.distance - Number(currentDistance));
+}
 
 function showGoalModal(goal, currentDistance, isCongratulations = false, locked = false) {
   // Prevent stacking modals - if one is already open, don't open another
@@ -87,8 +96,8 @@ function renderGoals(currentDistance, storylineId) {
         throw new Error('Invalid goals data: expected array');
       }
       goals.sort((a, b) => a.distance - b.distance);
-      const completed = goals.filter(g => Number(currentDistance) >= g.distance);
-      const upcoming = goals.filter(g => Number(currentDistance) < g.distance);
+      const completed = goals.filter(g => isGoalCompleted(g, currentDistance));
+      const upcoming = goals.filter(g => !isGoalCompleted(g, currentDistance));
       const lastCompleted = completed.slice(-3);
       let html = '';
       
@@ -241,7 +250,7 @@ function renderGoals(currentDistance, storylineId) {
                 '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal next-goal" data-goal-index="0">' +
                 (nextGoal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + nextGoal.special + '</span>' : '') +
                 '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + (!prefUnlocked ? '<i class="fas fa-lock" style="margin-right:0.4em;font-size:0.85em;color:#888;"></i>' : '') + nextGoal.title + '</span>' +
-                '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + nextGoal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (nextGoal.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
+                '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + nextGoal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + getRemainingKm(nextGoal, currentDistance).toFixed(2) + ' km to go)</span></span>' +
                 '<div class="goal-progress-track" style="width:100%;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;margin-top:0.6em;overflow:hidden;">' +
                   '<div class="goal-progress-fill" style="width:' + percentage.toFixed(1) + '%;min-width:' + fillMinWidth + ';height:100%;background:#FFD700;transition:width 0.3s ease;"></div>' +
                 '</div>' +
@@ -312,7 +321,7 @@ function renderGoals(currentDistance, storylineId) {
                 '<div style="margin:0.7em 0;padding:0.7em 1em;background:rgba(40,40,40,0.95);border-radius:12px;box-shadow:0 2px 8px #222;display:flex;flex-direction:column;align-items:center;word-break:break-word;cursor:pointer;" class="upcoming-goal' + lockedClass + '" data-goal-index="' + (index + 1) + '">' +
                 (goal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + goal.special + '</span>' : '') +
                 '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + (!prefUnlocked ? '<i class="fas fa-lock" style="margin-right:0.4em;font-size:0.85em;color:#888;"></i>' : '') + goal.title + '</span>' +
-                '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + goal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + (goal.distance-Number(currentDistance)).toFixed(2) + ' km to go)</span></span>' +
+                '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + goal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + getRemainingKm(goal, currentDistance).toFixed(2) + ' km to go)</span></span>' +
                 '</div>';
 
               // Make fallback always clickable

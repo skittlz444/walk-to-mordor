@@ -170,6 +170,34 @@ describe('Party Handlers', () => {
       expect(data.error).toContain('Invalid leave_distance_behavior');
     });
 
+    it('should return 400 if storylineId is invalid', async () => {
+      const response = await handleCreateParty(mockRequest, mockDb, {
+        name: 'Test Party',
+        storylineId: 'shortcut'
+      });
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toBe('storylineId must be a positive integer');
+    });
+
+    it('should return 404 if selected storyline is not visible to the creator', async () => {
+      const mockFirst = jest.fn()
+        .mockResolvedValueOnce({ is_admin: 0 })
+        .mockResolvedValueOnce(null);
+      const mockBind = jest.fn().mockReturnValue({ first: mockFirst });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
+
+      const response = await handleCreateParty(mockRequest, mockDb, {
+        name: 'Test Party',
+        storylineId: 7
+      });
+
+      expect(response.status).toBe(404);
+      const data = await response.json();
+      expect(data.error).toBe('Storyline not found');
+      expect(calculateTotalDistance).not.toHaveBeenCalled();
+    });
+
     it('should default distance_mode to incremental when not provided', async () => {
       const mockParty = {
         id: 1,
@@ -320,6 +348,58 @@ describe('Party Handlers', () => {
       expect(data.distance_mode).toBe('cumulative');
       expect(data.leave_distance_behavior).toBe('remove');
       expect(data.created_at).toBeDefined();
+    });
+
+    it('should create party with a selected storyline', async () => {
+      const mockParty = {
+        id: 1,
+        name: 'The Fellowship',
+        leader_id: 1,
+        created_at: '2026-01-01T00:00:00Z',
+        invite_code: 'XyZ12345',
+        distance_mode: 'incremental',
+        leave_distance_behavior: 'keep',
+        active_storyline_id: 7
+      };
+      const mockStoryline = {
+        id: 7,
+        slug: 'shortcut',
+        title: 'Shortcut to Mount Doom',
+        description: null,
+        path_key: 'shortcut',
+        sort_order: 1,
+        is_active: 1,
+        admin_only: 0
+      };
+
+      const mockFirst = jest.fn()
+        .mockResolvedValueOnce({ is_admin: 0 })
+        .mockResolvedValueOnce(mockStoryline)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(mockParty);
+      const mockBind = jest.fn().mockReturnValue({
+        run: jest.fn().mockResolvedValue({ meta: { changes: 1 } }),
+        all: jest.fn().mockResolvedValue({ results: [] }),
+        first: mockFirst
+      });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
+
+      const response = await handleCreateParty(mockRequest, mockDb, {
+        name: 'The Fellowship',
+        storylineId: 7
+      });
+
+      expect(response.status).toBe(201);
+      const data = await response.json();
+      expect(data.active_storyline_id).toBe(7);
+      expect(mockBind).toHaveBeenCalledWith(
+        'The Fellowship',
+        1,
+        expect.any(String),
+        'incremental',
+        'keep',
+        7
+      );
     });
 
     it('should call calculateTotalDistance for distance_at_join', async () => {

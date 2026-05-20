@@ -40,6 +40,7 @@ describe('Admin Storyline Handlers', () => {
     path_key: 'fellowship',
     sort_order: 0,
     is_active: 1,
+    admin_only: 0,
     goal_count: 3,
     min_distance: 100,
     max_distance: 1779,
@@ -118,6 +119,7 @@ describe('Admin Storyline Handlers', () => {
       expect(data.storylines).toHaveLength(1);
       expect(data.storylines[0].slug).toBe('frodo-sam');
       expect(data.storylines[0].is_active).toBe(true);
+      expect(data.storylines[0].admin_only).toBe(false);
     });
 
     it('returns 500 on database error', async () => {
@@ -204,6 +206,51 @@ describe('Admin Storyline Handlers', () => {
       expect(response.status).toBe(201);
     });
 
+    it('creates an explicitly empty storyline when copy source is null', async () => {
+      // INSERT storyline (no copy-from lookup when caller explicitly requests no goals)
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({ run: jest.fn(() => Promise.resolve({ meta: { last_row_id: 3 } })) }),
+      });
+      mockLogAdminAction();
+      mockGetAdminStorylineSummary({ ...mockStorylineDbRow, id: 3, slug: 'empty-path', title: 'Empty Path' });
+
+      const response = await handleAdminStorylineCreate(
+        mockRequest,
+        mockDb,
+        { ...validBody, slug: 'empty-path', title: 'Empty Path', copyFromStorylineId: null },
+        adminUserId,
+      );
+
+      expect(response.status).toBe(201);
+      expect(mockDB.prepare).not.toHaveBeenCalledWith(expect.stringContaining('SELECT id FROM storylines'));
+    });
+
+    it('creates an admin-only storyline', async () => {
+      mockDB.prepare.mockReturnValueOnce({
+        first: jest.fn(() => Promise.resolve({ id: 1 })),
+      });
+      const insertRun = jest.fn(() => Promise.resolve({ meta: { last_row_id: 4 } }));
+      const insertBind = jest.fn().mockReturnValue({ run: insertRun });
+      mockDB.prepare.mockReturnValueOnce({ bind: insertBind });
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({ run: jest.fn(() => Promise.resolve({})) }),
+      });
+      mockLogAdminAction();
+      mockGetAdminStorylineSummary({ ...mockStorylineDbRow, id: 4, slug: 'draft-path', title: 'Draft Path', admin_only: 1 });
+
+      const response = await handleAdminStorylineCreate(
+        mockRequest,
+        mockDb,
+        { ...validBody, slug: 'draft-path', title: 'Draft Path', adminOnly: true },
+        adminUserId,
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(201);
+      expect(insertBind).toHaveBeenCalledWith('draft-path', 'Draft Path', null, 'fellowship', 1, 1, 1);
+      expect(data.storyline.admin_only).toBe(true);
+    });
+
     it('returns 400 for invalid slug', async () => {
       const response = await handleAdminStorylineCreate(
         mockRequest, mockDb, { ...validBody, slug: 'INVALID_SLUG' }, adminUserId,
@@ -250,6 +297,27 @@ describe('Admin Storyline Handlers', () => {
 
       expect(response.status).toBe(200);
       expect(data.storyline.title).toBe('Frodo & Sam Updated');
+    });
+
+    it('updates admin-only visibility', async () => {
+      mockGetAdminStorylineSummary(mockStorylineDbRow);
+      const updateBind = jest.fn().mockReturnValue({ run: jest.fn(() => Promise.resolve({})) });
+      mockDB.prepare.mockReturnValueOnce({ bind: updateBind });
+      mockLogAdminAction();
+      mockGetAdminStorylineSummary({ ...mockStorylineDbRow, admin_only: 1 });
+
+      const response = await handleAdminStorylineUpdate(
+        mockRequest,
+        mockDb,
+        1,
+        { ...validBody, adminOnly: true },
+        adminUserId,
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(updateBind).toHaveBeenCalledWith('frodo-sam', 'Frodo & Sam Updated', null, 'fellowship', 0, 1, 1, 1);
+      expect(data.storyline.admin_only).toBe(true);
     });
 
     it('returns 404 when storyline not found', async () => {

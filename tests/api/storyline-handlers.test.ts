@@ -45,11 +45,21 @@ describe('Storyline Handlers', () => {
     path_key: 'fellowship',
     sort_order: 0,
     is_active: 1,
+    admin_only: 0,
     storyline_distance_offset: 0,
   };
 
+  function mockAdminStatus(isAdmin = false) {
+    mockDB.prepare.mockReturnValueOnce({
+      bind: jest.fn().mockReturnValue({
+        first: jest.fn(() => Promise.resolve({ is_admin: isAdmin ? 1 : 0 })),
+      }),
+    });
+  }
+
   describe('handleStorylinesList', () => {
     it('returns a list of active storylines', async () => {
+      mockAdminStatus(false);
       mockDB.prepare.mockReturnValueOnce({
         all: jest.fn(() => Promise.resolve({ results: [mockStorylineRow] })),
       });
@@ -61,6 +71,21 @@ describe('Storyline Handlers', () => {
       expect(data.storylines).toHaveLength(1);
       expect(data.storylines[0].slug).toBe('frodo-sam');
       expect(data.storylines[0].pathKey).toBe('fellowship');
+      expect(data.storylines[0].adminOnly).toBe(false);
+    });
+
+    it('includes admin-only storylines for admins', async () => {
+      mockAdminStatus(true);
+      mockDB.prepare.mockReturnValueOnce({
+        all: jest.fn(() => Promise.resolve({ results: [mockStorylineRow, { ...mockStorylineRow, id: 2, slug: 'draft', admin_only: 1 }] })),
+      });
+
+      const response = await handleStorylinesList(mockRequest, mockDb);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.storylines).toHaveLength(2);
+      expect(data.storylines[1].adminOnly).toBe(true);
     });
 
     it('returns 401 when session is invalid', async () => {
@@ -74,6 +99,7 @@ describe('Storyline Handlers', () => {
     });
 
     it('returns 500 on database error', async () => {
+      mockAdminStatus(false);
       mockDB.prepare.mockReturnValueOnce({
         all: jest.fn(() => Promise.reject(new Error('DB error'))),
       });
@@ -85,6 +111,8 @@ describe('Storyline Handlers', () => {
 
   describe('handleUpdateUserStoryline', () => {
     function setupUserStorylineSwitch() {
+      // isUserAdmin
+      mockAdminStatus(false);
       // requireActiveStoryline
       mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
@@ -121,6 +149,7 @@ describe('Storyline Handlers', () => {
 
     it('switches storyline with carry mode (displayed distance preserved)', async () => {
       // Set up offset of -10 meaning displayed = 90
+      mockAdminStatus(false);
       mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
           first: jest.fn(() => Promise.resolve(mockStorylineRow)),
@@ -151,6 +180,7 @@ describe('Storyline Handlers', () => {
     });
 
     it('returns 404 when storyline not found', async () => {
+      mockAdminStatus(false);
       mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({ first: jest.fn(() => Promise.resolve(null)) }),
       });
@@ -159,6 +189,32 @@ describe('Storyline Handlers', () => {
         mockRequest, mockDb, { storylineId: 99, mode: 'reset' },
       );
       expect(response.status).toBe(404);
+    });
+
+    it('lets admins switch to admin-only storylines', async () => {
+      mockAdminStatus(true);
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          first: jest.fn(() => Promise.resolve({ ...mockStorylineRow, id: 2, slug: 'draft', admin_only: 1 })),
+        }),
+      });
+      (calculateTotalDistance as jest.Mock).mockResolvedValue(100);
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          first: jest.fn(() => Promise.resolve({ ...mockStorylineRow, storyline_distance_offset: 0 })),
+        }),
+      });
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({ run: jest.fn(() => Promise.resolve({})) }),
+      });
+
+      const response = await handleUpdateUserStoryline(
+        mockRequest, mockDb, { storylineId: 2, mode: 'reset' },
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.activeStoryline.adminOnly).toBe(true);
     });
   });
 
@@ -172,6 +228,8 @@ describe('Storyline Handlers', () => {
           })),
         }),
       });
+      // isUserAdmin
+      mockAdminStatus(false);
       // requireActiveStoryline
       mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({

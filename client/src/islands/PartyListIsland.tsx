@@ -28,6 +28,13 @@ interface FellowshipInvite {
   created_at: string;
 }
 
+interface StorylineOption {
+  id: number;
+  title: string;
+  description: string | null;
+  adminOnly?: boolean;
+}
+
 export function PartyListIsland() {
   const [parties, setParties] = useState<Party[]>([]);
   const [invites, setInvites] = useState<FellowshipInvite[]>([]);
@@ -40,6 +47,8 @@ export function PartyListIsland() {
 
   // Create form state
   const [createName, setCreateName] = useState('');
+  const [storylines, setStorylines] = useState<StorylineOption[]>([]);
+  const [selectedStorylineId, setSelectedStorylineId] = useState('');
   const [distanceMode, setDistanceMode] = useState('incremental');
   const [leaveBehavior, setLeaveBehavior] = useState('keep');
   const [creating, setCreating] = useState(false);
@@ -58,9 +67,10 @@ export function PartyListIsland() {
     setError(null);
     try {
       const headers = getAuthHeaders();
-      const [res, invitesRes] = await Promise.all([
+      const [res, invitesRes, storylinesRes] = await Promise.all([
         fetch('/api/user/parties?include_dissolved=true', { headers }),
         fetch('/api/user/fellowship-invites', { headers }),
+        fetch('/api/storylines', { headers }),
       ]);
       if (!res.ok) {
         if (res.status === 401) {
@@ -75,6 +85,15 @@ export function PartyListIsland() {
       if (invitesRes.ok) {
         const invitesData = await invitesRes.json() as { invites: FellowshipInvite[]; count: number };
         setInvites(invitesData.invites ?? []);
+      }
+
+      if (storylinesRes.ok) {
+        const storylinesData = await storylinesRes.json() as { storylines?: StorylineOption[] };
+        const options = Array.isArray(storylinesData.storylines) ? storylinesData.storylines : [];
+        setStorylines(options);
+        setSelectedStorylineId(current => current || (options[0]?.id ? String(options[0].id) : ''));
+      } else {
+        console.warn('Could not load storylines for party creation:', storylinesRes.status);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load fellowships');
@@ -140,6 +159,7 @@ export function PartyListIsland() {
           name: createName.trim(),
           distance_mode: distanceMode,
           leave_distance_behavior: leaveBehavior,
+          ...(selectedStorylineId ? { storylineId: Number(selectedStorylineId) } : {}),
         }),
       });
       const data = await res.json();
@@ -320,6 +340,21 @@ export function PartyListIsland() {
               />
               <span className="helper-text" id="name-helper">{createName.length}/50 characters</span>
             </label>
+            {storylines.length > 0 && (
+              <label>
+                Storyline
+                <select value={selectedStorylineId} onChange={(e) => setSelectedStorylineId((e.target as HTMLSelectElement).value)}>
+                  {storylines.map(storyline => (
+                    <option key={storyline.id} value={storyline.id}>
+                      {storyline.title}{storyline.adminOnly ? ' — Admin only' : ''}
+                    </option>
+                  ))}
+                </select>
+                <span className="helper-text">
+                  Choose the route this fellowship will follow. Leaders can change it later from Manage Fellowship.
+                </span>
+              </label>
+            )}
             <label>
               Distance Mode
               <select value={distanceMode} onChange={(e) => setDistanceMode((e.target as HTMLSelectElement).value)}>

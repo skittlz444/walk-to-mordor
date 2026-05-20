@@ -1076,6 +1076,7 @@ export interface AdminStorylineSummary {
   path_key: string;
   sort_order: number;
   is_active: boolean;
+  admin_only: boolean;
   goal_count: number;
   min_distance: number | null;
   max_distance: number | null;
@@ -1097,6 +1098,7 @@ interface AdminStorylineDbRow {
   path_key: string;
   sort_order: number;
   is_active: number;
+  admin_only: number;
   goal_count: number;
   min_distance: number | null;
   max_distance: number | null;
@@ -1111,6 +1113,7 @@ function toAdminStorylineSummary(row: AdminStorylineDbRow): AdminStorylineSummar
     path_key: row.path_key,
     sort_order: row.sort_order,
     is_active: row.is_active === 1,
+    admin_only: row.admin_only === 1,
     goal_count: row.goal_count,
     min_distance: row.min_distance,
     max_distance: row.max_distance,
@@ -1125,7 +1128,8 @@ function parseStorylineMetadata(body: unknown):
       pathKey: string;
       sortOrder: number;
       isActive: boolean;
-      copyFromStorylineId: number | null;
+      adminOnly: boolean;
+      copyFromStorylineId: number | null | undefined;
     }
   | { error: Response } {
   if (!body || typeof body !== 'object') {
@@ -1139,9 +1143,13 @@ function parseStorylineMetadata(body: unknown):
   const pathKey = typeof data.pathKey === 'string' && data.pathKey.trim() !== '' ? data.pathKey.trim() : 'fellowship';
   const sortOrder = typeof data.sortOrder === 'number' && Number.isInteger(data.sortOrder) ? data.sortOrder : 0;
   const isActive = typeof data.isActive === 'boolean' ? data.isActive : true;
-  const copyFromStorylineId = typeof data.copyFromStorylineId === 'number' && Number.isInteger(data.copyFromStorylineId) && data.copyFromStorylineId > 0
-    ? data.copyFromStorylineId
-    : null;
+  const adminOnly = typeof data.adminOnly === 'boolean' ? data.adminOnly : false;
+  const rawCopyFromStorylineId = data.copyFromStorylineId;
+  const copyFromStorylineId = rawCopyFromStorylineId === null
+    ? null
+    : typeof rawCopyFromStorylineId === 'number' && Number.isInteger(rawCopyFromStorylineId) && rawCopyFromStorylineId > 0
+      ? rawCopyFromStorylineId
+      : undefined;
 
   if (!slug || !SLUG_REGEX.test(slug)) {
     return { error: new Response(JSON.stringify({ error: 'Slug must use lowercase words separated by hyphens' }), { status: 400, headers: { 'Content-Type': 'application/json' } }) };
@@ -1153,12 +1161,12 @@ function parseStorylineMetadata(body: unknown):
     return { error: new Response(JSON.stringify({ error: 'Path key must use lowercase words separated by hyphens' }), { status: 400, headers: { 'Content-Type': 'application/json' } }) };
   }
 
-  return { slug, title, description, pathKey, sortOrder, isActive, copyFromStorylineId };
+  return { slug, title, description, pathKey, sortOrder, isActive, adminOnly, copyFromStorylineId };
 }
 
 async function getAdminStorylineSummary(db: DbClient, storylineId: number): Promise<AdminStorylineSummary | null> {
   const row = await db.read.prepare(
-    `SELECT s.id, s.slug, s.title, s.description, s.path_key, s.sort_order, s.is_active,
+    `SELECT s.id, s.slug, s.title, s.description, s.path_key, s.sort_order, s.is_active, s.admin_only,
             COUNT(sg.id) as goal_count,
             MIN(sg.distance) as min_distance,
             MAX(sg.distance) as max_distance
@@ -1174,7 +1182,7 @@ async function getAdminStorylineSummary(db: DbClient, storylineId: number): Prom
 export async function handleAdminStorylinesList(_request: Request, db: DbClient): Promise<Response> {
   try {
     const { results } = await db.read.prepare(
-      `SELECT s.id, s.slug, s.title, s.description, s.path_key, s.sort_order, s.is_active,
+      `SELECT s.id, s.slug, s.title, s.description, s.path_key, s.sort_order, s.is_active, s.admin_only,
               COUNT(sg.id) as goal_count,
               MIN(sg.distance) as min_distance,
               MAX(sg.distance) as max_distance
@@ -1246,14 +1254,14 @@ export async function handleAdminStorylineCreate(
   if ('error' in parsed) return parsed.error;
 
   try {
-    const copyFromStorylineId = parsed.copyFromStorylineId
-      ?? (await db.read.prepare('SELECT id FROM storylines ORDER BY sort_order ASC, id ASC LIMIT 1').first<{ id: number }>())?.id
-      ?? null;
+    const copyFromStorylineId = parsed.copyFromStorylineId === undefined
+      ? (await db.read.prepare('SELECT id FROM storylines ORDER BY sort_order ASC, id ASC LIMIT 1').first<{ id: number }>())?.id ?? null
+      : parsed.copyFromStorylineId;
 
     const insertResult = await db.write.prepare(
-      `INSERT INTO storylines (slug, title, description, path_key, sort_order, is_active)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    ).bind(parsed.slug, parsed.title, parsed.description, parsed.pathKey, parsed.sortOrder, parsed.isActive ? 1 : 0).run();
+      `INSERT INTO storylines (slug, title, description, path_key, sort_order, is_active, admin_only)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     ).bind(parsed.slug, parsed.title, parsed.description, parsed.pathKey, parsed.sortOrder, parsed.isActive ? 1 : 0, parsed.adminOnly ? 1 : 0).run();
 
     const newStorylineId = (insertResult.meta as Record<string, unknown>).last_row_id;
     if (typeof newStorylineId !== 'number' || !Number.isFinite(newStorylineId)) {
@@ -1277,7 +1285,7 @@ export async function handleAdminStorylineCreate(
       action: 'create_storyline',
       targetType: 'storyline',
       targetId: newStorylineId,
-      details: JSON.stringify({ slug: parsed.slug, copyFromStorylineId }),
+      details: JSON.stringify({ slug: parsed.slug, copyFromStorylineId, adminOnly: parsed.adminOnly }),
       ipAddress: request.headers.get('CF-Connecting-IP') || 'unknown',
       success: true,
     });
@@ -1323,16 +1331,16 @@ export async function handleAdminStorylineUpdate(
 
     await db.write.prepare(
       `UPDATE storylines
-       SET slug = ?, title = ?, description = ?, path_key = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+       SET slug = ?, title = ?, description = ?, path_key = ?, sort_order = ?, is_active = ?, admin_only = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-    ).bind(parsed.slug, parsed.title, parsed.description, parsed.pathKey, parsed.sortOrder, parsed.isActive ? 1 : 0, storylineId).run();
+     ).bind(parsed.slug, parsed.title, parsed.description, parsed.pathKey, parsed.sortOrder, parsed.isActive ? 1 : 0, parsed.adminOnly ? 1 : 0, storylineId).run();
 
     await logAdminAction(db, {
       adminUserId,
       action: 'update_storyline',
       targetType: 'storyline',
       targetId: storylineId,
-      details: JSON.stringify({ slug: parsed.slug, title: parsed.title }),
+      details: JSON.stringify({ slug: parsed.slug, title: parsed.title, adminOnly: parsed.adminOnly }),
       ipAddress: request.headers.get('CF-Connecting-IP') || 'unknown',
       success: true,
     });

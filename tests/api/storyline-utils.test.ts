@@ -46,6 +46,7 @@ describe('storyline-utils', () => {
     path_key: 'fellowship',
     sort_order: 0,
     is_active: 1,
+    admin_only: 0,
   };
 
   describe('getDefaultStoryline', () => {
@@ -97,6 +98,17 @@ describe('storyline-utils', () => {
       expect(results).toHaveLength(1);
       expect(results[0].slug).toBe('frodo-sam');
     });
+
+    it('can include admin-only active storylines for admins', async () => {
+      const adminOnlyRow = { ...mockStorylineRow, id: 2, slug: 'draft', admin_only: 1 };
+      mockDB.prepare.mockReturnValueOnce({
+        all: jest.fn(() => Promise.resolve({ results: [mockStorylineRow, adminOnlyRow] })),
+      });
+
+      const results = await listActiveStorylines(mockDb, { includeAdminOnly: true });
+      expect(results).toHaveLength(2);
+      expect(results[1].admin_only).toBe(true);
+    });
   });
 
   describe('requireActiveStoryline', () => {
@@ -107,6 +119,15 @@ describe('storyline-utils', () => {
 
       const result = await requireActiveStoryline(mockDb, 1);
       expect(result.id).toBe(1);
+    });
+
+    it('can return an admin-only storyline when explicitly allowed', async () => {
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({ first: jest.fn(() => Promise.resolve({ ...mockStorylineRow, admin_only: 1 })) }),
+      });
+
+      const result = await requireActiveStoryline(mockDb, 1, { includeAdminOnly: true });
+      expect(result.admin_only).toBe(true);
     });
 
     it('throws when storyline not found', async () => {

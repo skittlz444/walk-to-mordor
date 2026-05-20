@@ -147,6 +147,12 @@ describe('Goals Handlers', () => {
       // Mock requireActiveStoryline: returns storyline row
       mockDB.prepare.mockReturnValueOnce({
         bind: jest.fn().mockReturnValue({
+          first: jest.fn(() => Promise.resolve({ is_admin: 0 })),
+        }),
+      });
+
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
           first: jest.fn(() => Promise.resolve({
             id: 2,
             slug: 'rohan',
@@ -155,6 +161,7 @@ describe('Goals Handlers', () => {
             path_key: 'rohan',
             sort_order: 1,
             is_active: 1,
+            admin_only: 0,
           })),
         }),
       });

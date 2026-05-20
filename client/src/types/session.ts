@@ -14,6 +14,7 @@ export interface ActiveStoryline {
   title: string;
   description: string | null;
   pathKey: string;
+  adminOnly?: boolean;
   distanceOffset: number;
 }
 

@@ -3,6 +3,7 @@ import { calculateTotalDistance } from './goals-handlers';
 import {
   applyStorylineOffset,
   calculatePartyRawTotalDistance,
+  isUserAdmin,
   listActiveStorylines,
   requireActiveStoryline,
   resolvePartyStoryline,
@@ -58,7 +59,8 @@ export async function handleStorylinesList(
   }
 
   try {
-    const storylines = await listActiveStorylines(db);
+    const includeAdminOnly = await isUserAdmin(db, sessionValidation.userId);
+    const storylines = await listActiveStorylines(db, { includeAdminOnly });
     return createSuccessResponse({
       storylines: storylines.map((storyline) => ({
         id: storyline.id,
@@ -66,6 +68,7 @@ export async function handleStorylinesList(
         title: storyline.title,
         description: storyline.description,
         pathKey: storyline.path_key,
+        adminOnly: storyline.admin_only,
       })),
     });
   } catch (error: unknown) {
@@ -92,7 +95,8 @@ export async function handleUpdateUserStoryline(
 
   try {
     const userId = sessionValidation.userId;
-    const nextStoryline = await requireActiveStoryline(db, parsed.storylineId);
+    const includeAdminOnly = await isUserAdmin(db, userId);
+    const nextStoryline = await requireActiveStoryline(db, parsed.storylineId, { includeAdminOnly });
     const rawTotalDistance = await calculateTotalDistance(db, userId);
     const currentContext = await resolveUserStoryline(db, userId);
     const nextOffset = calculateNextOffset(rawTotalDistance, currentContext.distanceOffset, parsed.mode);
@@ -148,9 +152,10 @@ export async function handleUpdatePartyStoryline(
       return createErrorResponse('Only the party leader can update storyline', 403);
     }
 
-    const nextStoryline = await requireActiveStoryline(db, parsed.storylineId);
+    const includeAdminOnly = await isUserAdmin(db, userId);
+    const nextStoryline = await requireActiveStoryline(db, parsed.storylineId, { includeAdminOnly });
     const rawTotalDistance = await calculatePartyRawTotalDistance(db, partyId, party.distance_mode);
-    const currentContext = await resolvePartyStoryline(db, partyId);
+    const currentContext = await resolvePartyStoryline(db, partyId, userId);
     const nextOffset = calculateNextOffset(rawTotalDistance, currentContext.distanceOffset, parsed.mode);
     const totalDistance = applyStorylineOffset(rawTotalDistance, nextOffset);
 

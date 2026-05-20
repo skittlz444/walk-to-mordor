@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { Avatar } from '../components/Avatar';
 import type { ActiveStoryline } from '../types/session';
+import { clearMapCache } from '../utils/map-cache';
 
 interface SessionData {
   username: string;
@@ -195,6 +196,7 @@ export function ProfileIsland() {
       setStorylineStatusClass('saved');
       setTimeout(() => { setStorylineStatus(''); setStorylineStatusClass(''); }, 1500);
 
+      clearMapCache();
       window.dispatchEvent(new CustomEvent('storylineChanged', { detail: data }));
       void clearServiceWorkerSWRCache();
     } catch (err) {

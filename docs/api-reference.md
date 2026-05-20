@@ -84,15 +84,15 @@ Last updated: 2026-05-20
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/api/goals` | Yes | Active user's storyline goals. Optional `storylineId` query selects another active storyline. |
+| GET | `/api/goals` | Yes | Active user's storyline goals. Optional `storylineId` query selects another active storyline; admin-only storylines require an admin user. |
 
 ## Storyline Endpoints
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/api/storylines` | Yes | Active storylines available for user/fellowship selection |
-| PUT | `/api/user/storyline` | Yes | Body: `{ storylineId, mode: 'carry' | 'reset' }`. Updates active user storyline and offset. |
-| PUT | `/api/party/:id/storyline` | Yes | Leader-only. Same body as user endpoint. Updates party storyline and active members' viewed distance baseline. |
+| GET | `/api/storylines` | Yes | Active storylines available for user/fellowship selection. Admin users also receive admin-only storylines. |
+| PUT | `/api/user/storyline` | Yes | Body: `{ storylineId, mode: 'carry' | 'reset' }`. Updates active user storyline and offset. Admin-only targets require an admin user. |
+| PUT | `/api/party/:id/storyline` | Yes | Leader-only. Same body as user endpoint. Updates party storyline and active members' viewed distance baseline. Admin-only targets require an admin leader. |
 
 - Raw walking progress remains the source of truth. Displayed storyline distance is `max(0, rawTotalDistance + distanceOffset)`.
 - `carry` preserves the currently displayed distance on the new storyline. `reset` sets displayed distance to 0 without deleting progress.
@@ -101,7 +101,7 @@ Last updated: 2026-05-20
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| POST | `/api/party` | Yes | Body: `{ name, distance_mode, leave_distance_behavior }`. Returns `201` with `invite_code` |
+| POST | `/api/party` | Yes | Body: `{ name, distance_mode, leave_distance_behavior, storylineId? }`. Returns `201` with `invite_code` |
 | GET | `/api/user/parties` | Yes | Query: `include_dissolved=true` optional |
 | GET | `/api/party/join/:inviteCode` | **No** | Public invite preview |
 | POST | `/api/party/join/:inviteCode` | Yes | Joins or rejoins a party |
@@ -116,6 +116,7 @@ Last updated: 2026-05-20
 | POST | `/api/party/:id/transfer-leadership` | Yes | Leader-only. Body: `{ new_leader_id }` |
 
 - `distance_mode` is **immutable** after creation — rejected if sent to `PUT settings`.
+- `storylineId` is optional at creation. If provided, it must reference an active storyline visible to the creator; admin-only storylines can only be selected by admins.
 - Activity and messages require active membership (`403` if not a member).
 - Party progress returns `total_distance` as displayed storyline distance and `raw_total_distance` as contribution sum before offset. Member `contribution` values remain raw.
 
@@ -182,11 +183,12 @@ All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Eve
 |---|---|---|
 | GET | `/api/admin/storylines` | Lists all storylines with goal counts and distance range |
 | GET | `/api/admin/storylines/:id` | Storyline metadata plus mapped goal distances |
-| POST | `/api/admin/storylines` | Creates a storyline and copies goal mappings from an existing storyline |
-| PUT | `/api/admin/storylines/:id` | Updates slug, title, description, path key, sort order, and active flag |
+| POST | `/api/admin/storylines` | Creates a storyline and optionally copies goal mappings from an existing storyline. Supports `adminOnly` for draft visibility. |
+| PUT | `/api/admin/storylines/:id` | Updates slug, title, description, path key, sort order, active flag, and admin-only flag |
 | PUT | `/api/admin/storylines/:id/goals` | Upserts per-goal storyline distances and sort orders |
 
 - Slugs and path keys use lowercase hyphenated format.
+- `adminOnly: true` keeps the storyline out of regular user/fellowship selectors while admins build and test it.
 - Admin UI is available at `/admin/storylines`.
 
 ### Image Inventory

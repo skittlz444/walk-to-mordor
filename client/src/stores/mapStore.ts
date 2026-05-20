@@ -292,11 +292,14 @@ export async function initializeMap(): Promise<void> {
 
     // Try cached milestones first
     const pathKey = activePathKey.value;
-    let milestonesData = getCachedMilestones(pathKey);
+    const storylineCacheKey = appActiveStoryline.value
+      ? `${pathKey}:${appActiveStoryline.value.id}`
+      : pathKey;
+    let milestonesData = getCachedMilestones(storylineCacheKey);
     if (!milestonesData) {
       // Cache miss or expired - fetch from API
       milestonesData = await fetchMilestones(pathKey);
-      cacheMilestones(milestonesData, pathKey);
+      cacheMilestones(milestonesData, storylineCacheKey);
     }
     milestones.value = milestonesData;
 

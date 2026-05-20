@@ -10,6 +10,7 @@ export interface Storyline {
   path_key: string;
   sort_order: number;
   is_active: boolean;
+  admin_only: boolean;
 }
 
 export interface StorylineContext {
@@ -36,6 +37,7 @@ interface StorylineRow {
   path_key: string;
   sort_order: number;
   is_active: number;
+  admin_only: number;
 }
 
 interface StorylineContextRow extends StorylineRow {
@@ -51,6 +53,7 @@ function toStoryline(row: StorylineRow): Storyline {
     path_key: row.path_key,
     sort_order: row.sort_order,
     is_active: row.is_active === 1,
+    admin_only: row.admin_only === 1,
   };
 }
 
@@ -62,12 +65,20 @@ export function applyStorylineOffset(rawDistance: number, offset: number): numbe
   return roundDistance(Math.max(0, rawDistance + offset));
 }
 
+export async function isUserAdmin(db: DbClient, userId: number): Promise<boolean> {
+  const row = await db.read.prepare(
+    'SELECT is_admin FROM users WHERE id = ?',
+  ).bind(userId).first<{ is_admin: number | null }>();
+
+  return row?.is_admin === 1;
+}
+
 export async function getDefaultStoryline(db: DbClient): Promise<Storyline> {
   // Try the canonical default storyline first
   const storyline = await db.read.prepare(
-    `SELECT id, slug, title, description, path_key, sort_order, is_active
+    `SELECT id, slug, title, description, path_key, sort_order, is_active, admin_only
      FROM storylines
-     WHERE slug = ? AND is_active = 1
+     WHERE slug = ? AND is_active = 1 AND admin_only = 0
      LIMIT 1`,
   ).bind(DEFAULT_STORYLINE_SLUG).first<StorylineRow>();
 
@@ -77,9 +88,9 @@ export async function getDefaultStoryline(db: DbClient): Promise<Storyline> {
 
   // Fallback: use the first available active storyline
   const anyStoryline = await db.read.prepare(
-    `SELECT id, slug, title, description, path_key, sort_order, is_active
+    `SELECT id, slug, title, description, path_key, sort_order, is_active, admin_only
      FROM storylines
-     WHERE is_active = 1
+     WHERE is_active = 1 AND admin_only = 0
      ORDER BY sort_order ASC, id ASC
      LIMIT 1`,
   ).first<StorylineRow>();
@@ -91,22 +102,30 @@ export async function getDefaultStoryline(db: DbClient): Promise<Storyline> {
   throw new Error('No storylines are configured');
 }
 
-export async function listActiveStorylines(db: DbClient): Promise<Storyline[]> {
+export async function listActiveStorylines(db: DbClient, options: { includeAdminOnly?: boolean } = {}): Promise<Storyline[]> {
+  // Safe: derived from a boolean, never from user input.
+  const visibilityFilter = options.includeAdminOnly ? '' : 'AND admin_only = 0';
   const { results } = await db.read.prepare(
-    `SELECT id, slug, title, description, path_key, sort_order, is_active
+    `SELECT id, slug, title, description, path_key, sort_order, is_active, admin_only
      FROM storylines
-     WHERE is_active = 1
+     WHERE is_active = 1 ${visibilityFilter}
      ORDER BY sort_order ASC, title COLLATE NOCASE ASC, id ASC`,
   ).all<StorylineRow>();
 
   return results.map(toStoryline);
 }
 
-export async function requireActiveStoryline(db: DbClient, storylineId: number): Promise<Storyline> {
+export async function requireActiveStoryline(
+  db: DbClient,
+  storylineId: number,
+  options: { includeAdminOnly?: boolean } = {},
+): Promise<Storyline> {
+  // Safe: derived from a boolean, never from user input.
+  const visibilityFilter = options.includeAdminOnly ? '' : 'AND admin_only = 0';
   const storyline = await db.read.prepare(
-    `SELECT id, slug, title, description, path_key, sort_order, is_active
+    `SELECT id, slug, title, description, path_key, sort_order, is_active, admin_only
      FROM storylines
-     WHERE id = ? AND is_active = 1
+     WHERE id = ? AND is_active = 1 ${visibilityFilter}
      LIMIT 1`,
   ).bind(storylineId).first<StorylineRow>();
 
@@ -119,10 +138,12 @@ export async function requireActiveStoryline(db: DbClient, storylineId: number):
 
 export async function resolveUserStoryline(db: DbClient, userId: number): Promise<StorylineContext> {
   const row = await db.read.prepare(
-    `SELECT s.id, s.slug, s.title, s.description, s.path_key, s.sort_order, s.is_active,
+    `SELECT s.id, s.slug, s.title, s.description, s.path_key, s.sort_order, s.is_active, s.admin_only,
             u.storyline_distance_offset
      FROM users u
-     LEFT JOIN storylines s ON s.id = u.active_storyline_id AND s.is_active = 1
+     LEFT JOIN storylines s ON s.id = u.active_storyline_id
+       AND s.is_active = 1
+       AND (s.admin_only = 0 OR u.is_admin = 1)
      WHERE u.id = ?
      LIMIT 1`,
   ).bind(userId).first<StorylineContextRow>();
@@ -142,15 +163,23 @@ export async function resolveUserStoryline(db: DbClient, userId: number): Promis
   };
 }
 
-export async function resolvePartyStoryline(db: DbClient, partyId: number): Promise<StorylineContext> {
+export async function resolvePartyStoryline(db: DbClient, partyId: number, viewerUserId?: number): Promise<StorylineContext> {
+  // Safe: both strings are hardcoded literals derived from a boolean, never from user input.
+  const viewerJoin = viewerUserId === undefined ? '' : 'LEFT JOIN users viewer ON viewer.id = ?';
+  const visibilityFilter = viewerUserId === undefined
+    ? 'AND s.admin_only = 0'
+    : 'AND (s.admin_only = 0 OR viewer.is_admin = 1)';
   const row = await db.read.prepare(
-    `SELECT s.id, s.slug, s.title, s.description, s.path_key, s.sort_order, s.is_active,
+    `SELECT s.id, s.slug, s.title, s.description, s.path_key, s.sort_order, s.is_active, s.admin_only,
             p.storyline_distance_offset
      FROM parties p
-     LEFT JOIN storylines s ON s.id = p.active_storyline_id AND s.is_active = 1
+     ${viewerJoin}
+     LEFT JOIN storylines s ON s.id = p.active_storyline_id
+       AND s.is_active = 1
+       ${visibilityFilter}
      WHERE p.id = ?
      LIMIT 1`,
-  ).bind(partyId).first<StorylineContextRow>();
+  ).bind(...(viewerUserId === undefined ? [partyId] : [viewerUserId, partyId])).first<StorylineContextRow>();
 
   if (row?.id) {
     return {
@@ -202,6 +231,7 @@ export function toStorylineResponse(context: StorylineContext) {
     title: context.storyline.title,
     description: context.storyline.description,
     pathKey: context.storyline.path_key,
+    adminOnly: context.storyline.admin_only,
     distanceOffset: context.distanceOffset,
   };
 }
