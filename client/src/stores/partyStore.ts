@@ -9,6 +9,7 @@
 
 import { signal, computed } from '@preact/signals';
 import type { Goal } from '../types/goal';
+import type { ActiveStoryline } from '../types/session';
 
 // ============================================================================
 // Types
@@ -36,11 +37,13 @@ export interface PartyMember {
 
 export interface PartyProgress {
   total_distance: number;
+  raw_total_distance?: number;
   user_total_distance: number;
   member_count: number;
   calculated_position: { id: number; title: string; distance: number } | null;
   distance_mode: string;
   leave_distance_behavior: string;
+  active_storyline?: ActiveStoryline;
   members: PartyMember[];
   newly_passed_milestones: Goal[];
 }

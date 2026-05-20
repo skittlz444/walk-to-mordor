@@ -7,15 +7,26 @@ import { syncPartyProgressLog } from '../../src/progress-handlers';
 import { validateSession } from '../../src/auth-handlers';
 import { DbClient } from '../../src/db';
 import { calculateTotalDistance } from '../../src/goals-handlers';
+import { listStorylineGoals } from '../../src/storyline-utils';
 
 // Mock dependencies
 jest.mock('../../src/auth-handlers');
 jest.mock('../../src/goals-handlers');
+jest.mock('../../src/storyline-utils', () => ({
+  resolvePartyStoryline: jest.fn().mockResolvedValue({
+    storyline: { id: 1, slug: 'fellowship', title: 'Fellowship', description: null, path_key: 'fellowship', sort_order: 0, is_active: true },
+    distanceOffset: 0,
+  }),
+  listStorylineGoals: jest.fn().mockResolvedValue([]),
+  toStorylineResponse: jest.fn().mockReturnValue({ id: 1, slug: 'fellowship', title: 'Fellowship', description: null, pathKey: 'fellowship', distanceOffset: 0 }),
+  applyStorylineOffset: jest.fn((rawDistance: number, offset: number) => rawDistance + offset),
+}));
 
 describe('Party Progress API (Story 3.4)', () => {
   let mockDB: Record<string, jest.Mock>;
   let mockDb: DbClient;
   let mockRequest: { headers: { get: jest.Mock }; url: string };
+  const mockListStorylineGoals = jest.mocked(listStorylineGoals);
 
   // Reusable chainable mock builder
   function createChainableMock(overrides?: {
@@ -34,6 +45,7 @@ describe('Party Progress API (Story 3.4)', () => {
     jest.clearAllMocks();
     (validateSession as jest.Mock).mockResolvedValue({ valid: true, userId: 1 });
     (calculateTotalDistance as jest.Mock).mockResolvedValue(42.5);
+    mockListStorylineGoals.mockResolvedValue([]);
 
     mockDB = {
       prepare: jest.fn(() => createChainableMock()),
@@ -137,23 +149,11 @@ describe('Party Progress API (Story 3.4)', () => {
       mockDB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
-      // Milestone position
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue({ id: 5, title: 'Rivendell', distance: 30 }),
-      }));
-      // Next milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Newly passed milestones
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        all: jest.fn().mockResolvedValue({
-          results: [
-            { id: 3, title: 'Crickhollow', distance: 10 },
-            { id: 5, title: 'Rivendell', distance: 30 },
-          ],
-        }),
-      }));
+      // storylineGoals — 2 goals for Crickhollow (10) and Rivendell (30)
+      mockListStorylineGoals.mockResolvedValueOnce([
+        { id: 3, title: 'Crickhollow', distance: 10, description: null, image_id: null, special: null },
+        { id: 5, title: 'Rivendell', distance: 30, description: null, image_id: null, special: null },
+      ]);
       // Update last_viewed_distance
       mockDB.prepare.mockReturnValueOnce(createChainableMock());
 
@@ -217,18 +217,8 @@ describe('Party Progress API (Story 3.4)', () => {
       mockDB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
-      // Milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Next milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Newly passed milestones
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        all: jest.fn().mockResolvedValue({ results: [] }),
-      }));
+      // storylineGoals — empty (test only checks totals and modes)
+      mockListStorylineGoals.mockResolvedValueOnce([]);
       // Update last_viewed_distance
       mockDB.prepare.mockReturnValueOnce(createChainableMock());
 
@@ -269,18 +259,11 @@ describe('Party Progress API (Story 3.4)', () => {
       mockDB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
-      // Current milestone position (at 45km)
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue({ id: 7, title: 'Weathertop', distance: 45, description: 'A great hill', image_id: 'img-7', special: null }),
-      }));
-      // Next milestone (at 72km)
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue({ id: 8, title: 'Rivendell', distance: 72, description: 'Last Homely House', image_id: 'img-8', special: 'rivendell' }),
-      }));
-      // Newly passed milestones
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        all: jest.fn().mockResolvedValue({ results: [] }),
-      }));
+      // storylineGoals — Weathertop (45) and Rivendell (72)
+      mockListStorylineGoals.mockResolvedValueOnce([
+        { id: 7, title: 'Weathertop', distance: 45, description: 'A great hill', image_id: 'img-7', special: null },
+        { id: 8, title: 'Rivendell', distance: 72, description: 'Last Homely House', image_id: 'img-8', special: 'rivendell' },
+      ]);
       // Update last_viewed_distance
       mockDB.prepare.mockReturnValueOnce(createChainableMock());
 
@@ -328,18 +311,8 @@ describe('Party Progress API (Story 3.4)', () => {
           ],
         }),
       }));
-      // Milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Next milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Newly passed milestones
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        all: jest.fn().mockResolvedValue({ results: [] }),
-      }));
+      // storylineGoals — empty
+      mockListStorylineGoals.mockResolvedValueOnce([]);
       // Update last_viewed_distance
       mockDB.prepare.mockReturnValueOnce(createChainableMock());
 
@@ -385,18 +358,8 @@ describe('Party Progress API (Story 3.4)', () => {
       mockDB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
-      // Milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Next milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Newly passed milestones
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        all: jest.fn().mockResolvedValue({ results: [] }),
-      }));
+      // storylineGoals — empty
+      mockListStorylineGoals.mockResolvedValueOnce([]);
       // Update last_viewed_distance
       mockDB.prepare.mockReturnValueOnce(createChainableMock());
 
@@ -436,16 +399,8 @@ describe('Party Progress API (Story 3.4)', () => {
       mockDB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
-      // Milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({ first: jest.fn().mockResolvedValue(null) }));
-      // Next milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Newly passed milestones
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        all: jest.fn().mockResolvedValue({ results: [] }),
-      }));
+      // storylineGoals — empty
+      mockListStorylineGoals.mockResolvedValueOnce([]);
       // Update last_viewed_distance
       mockDB.prepare.mockReturnValueOnce(createChainableMock());
 
@@ -484,23 +439,11 @@ describe('Party Progress API (Story 3.4)', () => {
       mockDB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
-      // Milestone position
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue({ id: 8, title: 'Weathertop', distance: 90 }),
-      }));
-      // Next milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Newly passed milestones (between 50 and 100)
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        all: jest.fn().mockResolvedValue({
-          results: [
-            { id: 6, title: 'Ford of Bruinen', distance: 60 },
-            { id: 8, title: 'Weathertop', distance: 90 },
-          ],
-        }),
-      }));
+      // storylineGoals — Ford of Bruinen (60) and Weathertop (90), both between 50 and 100
+      mockListStorylineGoals.mockResolvedValueOnce([
+        { id: 6, title: 'Ford of Bruinen', distance: 60, description: null, image_id: null, special: null },
+        { id: 8, title: 'Weathertop', distance: 90, description: null, image_id: null, special: null },
+      ]);
       // Update last_viewed_distance
       mockDB.prepare.mockReturnValueOnce(createChainableMock());
 
@@ -539,16 +482,8 @@ describe('Party Progress API (Story 3.4)', () => {
       mockDB.prepare.mockReturnValueOnce(createChainableMock({
         all: jest.fn().mockResolvedValue({ results: [] }),
       }));
-      // Milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({ first: jest.fn().mockResolvedValue(null) }));
-      // Next milestone
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        first: jest.fn().mockResolvedValue(null),
-      }));
-      // Newly passed milestones
-      mockDB.prepare.mockReturnValueOnce(createChainableMock({
-        all: jest.fn().mockResolvedValue({ results: [] }),
-      }));
+      // storylineGoals — empty
+      mockListStorylineGoals.mockResolvedValueOnce([]);
       // Update last_viewed_distance
       const mockRun = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
       mockDB.prepare.mockReturnValueOnce(createChainableMock({ run: mockRun }));

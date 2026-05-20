@@ -27,6 +27,12 @@ export function renderAdminUsersPage(): string {
               </a>
             </li>
             <li>
+              <a href="/admin/storylines" class="admin-nav__link">
+                <i class="fas fa-route" aria-hidden="true"></i>
+                <span>Storylines</span>
+              </a>
+            </li>
+            <li>
               <a href="/admin/users" class="admin-nav__link admin-nav__link--active" aria-current="page">
                 <i class="fas fa-users" aria-hidden="true"></i>
                 <span>Users</span>

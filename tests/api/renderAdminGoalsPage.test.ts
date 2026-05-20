@@ -67,6 +67,11 @@ describe('renderAdminGoalsPage', () => {
       expect(html).toContain('fa-users');
     });
 
+    it('should have Storylines link pointing to /admin/storylines', () => {
+      expect(html).toContain('href="/admin/storylines"');
+      expect(html).toContain('fa-route');
+    });
+
     it('should have Metrics link pointing to /admin/metrics', () => {
       expect(html).toContain('href="/admin/metrics"');
       expect(html).toContain('fa-chart-bar');
@@ -78,15 +83,17 @@ describe('renderAdminGoalsPage', () => {
       expect(html).toContain('fa-arrow-left');
     });
 
-    it('should have correct nav link order: Dashboard, Goals, Users, Metrics', () => {
+    it('should have correct nav link order: Dashboard, Goals, Storylines, Users, Metrics', () => {
       const dashIdx = html.indexOf('Dashboard</span>');
       const goalsIdx = html.indexOf('Goals</span>');
+      const storylinesIdx = html.indexOf('Storylines</span>');
       const usersIdx = html.indexOf('Users</span>');
       const metricsIdx = html.indexOf('Metrics</span>');
 
       expect(dashIdx).toBeGreaterThan(-1);
       expect(goalsIdx).toBeGreaterThan(dashIdx);
-      expect(usersIdx).toBeGreaterThan(goalsIdx);
+      expect(storylinesIdx).toBeGreaterThan(goalsIdx);
+      expect(usersIdx).toBeGreaterThan(storylinesIdx);
       expect(metricsIdx).toBeGreaterThan(usersIdx);
     });
   });

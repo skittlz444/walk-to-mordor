@@ -189,13 +189,14 @@ function handleSaveDistance() {
   // Get current total before updating
   const events = window.calendarModule ? window.calendarModule.events() : [];
   const currentTotal = events.reduce((acc, ev) => acc + Number(ev.title.replace(/\s*km$/, '')), 0);
+  const previousDisplayedTotal = typeof window._personalDistance === 'number' ? window._personalDistance : currentTotal;
   
   if (isEdit) {
     // For edits, we need to subtract the old distance and add the new one
     const oldDistance = Number(popupEvent.title.replace(/\s*km$/, ''));
     const newDistance = Number(distance);
     const previousTotal = currentTotal - oldDistance;
-    const projectedNewTotal = previousTotal + newDistance;
+    const projectedDisplayedTotal = Math.max(0, previousDisplayedTotal + (newDistance - oldDistance));
     
     popupEvent.title = distance;
     fetch('/api/calendar-progress', {
@@ -205,7 +206,7 @@ function handleSaveDistance() {
         ...window.getAuthHeaders()
       },
       body: JSON.stringify({ start: selectedDate, title: distance })
-    }).then(response => response).then(() => {
+    }).then(response => response).then(async () => {
       if (window.updateCalendarAndTotal) {
         window.updateCalendarAndTotal();
       }
@@ -215,16 +216,17 @@ function handleSaveDistance() {
       }
       // Check for newly passed goals after calendar update
       if (window.goalsModule && window.goalsModule.checkForNewlyPassedGoals) {
-        window.goalsModule.checkForNewlyPassedGoals(previousTotal, projectedNewTotal).then(newlyPassedGoal => {
+        const updatedDisplayedTotal = await fetchDisplayedTotalDistanceOnly() ?? projectedDisplayedTotal;
+        window.goalsModule.checkForNewlyPassedGoals(previousDisplayedTotal, updatedDisplayedTotal).then(newlyPassedGoal => {
           if (newlyPassedGoal && window.goalsModule.showGoalModal) {
-            setTimeout(() => window.goalsModule.showGoalModal(newlyPassedGoal, projectedNewTotal, true), 500);
+            setTimeout(() => window.goalsModule.showGoalModal(newlyPassedGoal, updatedDisplayedTotal, true), 500);
           }
         });
       }
     });
   } else {
     const newDistance = Number(distance);
-    const projectedNewTotal = currentTotal + newDistance;
+    const projectedDisplayedTotal = Math.max(0, previousDisplayedTotal + newDistance);
     
     // Update local events array before making the API call
     if (window.calendarModule && window.calendarModule.setEvents) {
@@ -240,7 +242,7 @@ function handleSaveDistance() {
         ...window.getAuthHeaders()
       },
       body: JSON.stringify({ start: selectedDate, title: distance })
-    }).then(response => response).then(() => {
+    }).then(response => response).then(async () => {
       if (window.updateCalendarAndTotal) {
         window.updateCalendarAndTotal();
       }
@@ -250,9 +252,10 @@ function handleSaveDistance() {
       }
       // Check for newly passed goals after calendar update
       if (window.goalsModule && window.goalsModule.checkForNewlyPassedGoals) {
-        window.goalsModule.checkForNewlyPassedGoals(currentTotal, projectedNewTotal).then(newlyPassedGoal => {
+        const updatedDisplayedTotal = await fetchDisplayedTotalDistanceOnly() ?? projectedDisplayedTotal;
+        window.goalsModule.checkForNewlyPassedGoals(previousDisplayedTotal, updatedDisplayedTotal).then(newlyPassedGoal => {
           if (newlyPassedGoal && window.goalsModule.showGoalModal) {
-            setTimeout(() => window.goalsModule.showGoalModal(newlyPassedGoal, projectedNewTotal, true), 500);
+            setTimeout(() => window.goalsModule.showGoalModal(newlyPassedGoal, updatedDisplayedTotal, true), 500);
           }
         });
       }
@@ -313,6 +316,24 @@ function formatDateLocal(date) {
   return `${year}-${month}-${day}`;
 }
 
+async function fetchDisplayedTotalDistanceOnly() {
+  try {
+    const response = await fetch('/api/total-distance', {
+      headers: window.getAuthHeaders()
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (typeof data.totalDistance === 'number') {
+      window._personalDistance = data.totalDistance;
+      window._activeStoryline = data.activeStoryline || window._activeStoryline;
+      return data.totalDistance;
+    }
+  } catch (error) {
+    console.error('Error fetching displayed total distance:', error);
+  }
+  return null;
+}
+
 async function fetchAndUpdateTotalDistance() {
   try {
     const response = await fetch('/api/total-distance', {
@@ -322,6 +343,7 @@ async function fetchAndUpdateTotalDistance() {
       const data = await response.json();
       // Store personal distance for party view toggle
       window._personalDistance = data.totalDistance;
+      window._activeStoryline = data.activeStoryline || window._activeStoryline;
       const el = document.getElementById('total-distance-value');
       if (el) el.textContent = `${data.totalDistance} km`;
       if (window.goalsModule && window.goalsModule.renderGoals) {

@@ -37,7 +37,7 @@ import {
   readLastOpenedDistanceMiles,
   writeLastOpenedDistanceMiles,
 } from '../utils/map-storage.ts';
-import { fellowshipPath } from '../data/paths/fellowship-path';
+import { getPathByKey } from '../data/paths/registry';
 import type { Goal } from '../types/goal';
 import {
   getWaypointCoordinates,
@@ -48,7 +48,7 @@ import {
   type Waypoint,
 } from '../data/waypoints';
 import { MapWalkIsland } from './MapWalkIsland';
-import { userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
+import { currentJourneyPath, userProgress, milestones, showFutureGoalsUnlocked } from '../stores/mapStore';
 import {
   avatarId as appAvatarId,
   isAuthenticated,
@@ -327,6 +327,19 @@ export function MapIsland() {
 
   const partyViewActive = useComputed(() => isPartyView.value);
 
+  /**
+   * Returns the active map path for the current view.
+   * Empty dependency array is intentional: Preact signals (currentJourneyPath,
+   * selectedView, partyProgress) are read reactively inside the callback at
+   * call time, so this callback never needs to be recreated.
+   */
+  const activeMapPath = useCallback(() => {
+    const partyPathKey = selectedView.value !== 'personal'
+      ? partyProgress.value?.active_storyline?.pathKey
+      : null;
+    return partyPathKey ? getPathByKey(partyPathKey) : currentJourneyPath.value;
+  }, []);
+
   /** Close the waypoint popup. */
   const closePopup = useCallback(() => {
     selectedWaypoint.value = null;
@@ -547,7 +560,7 @@ export function MapIsland() {
 
     // Update journey path stroke widths for current zoom
     if (pathNodesRef.current) {
-      updateJourneyPath(pathNodesRef.current, userDistance.value, currentScale.value);
+      updateJourneyPath(pathNodesRef.current, userDistance.value, currentScale.value, activeMapPath());
       pathLayerRef.current?.batchDraw();
     }
 
@@ -767,9 +780,9 @@ export function MapIsland() {
 
   /** Re-center on the user's current position */
   const handleRecenter = useCallback(() => {
-    const pos = getUserPosition(fellowshipPath, userDistance.value);
+    const pos = getUserPosition(activeMapPath(), userDistance.value);
     centerOnPosition(pos, DEFAULT_CENTER_ZOOM, true);
-  }, [centerOnPosition]);
+  }, [activeMapPath, centerOnPosition]);
 
   /**
    * Update the user's distance and animate the marker + path.
@@ -782,11 +795,11 @@ export function MapIsland() {
 
     personalDistanceRef.current = newDistanceMiles;
     userDistance.value = newDistanceMiles;
-    const newPos = getUserPosition(fellowshipPath, newDistanceMiles);
+    const newPos = getUserPosition(activeMapPath(), newDistanceMiles);
 
     // Update path
     if (pathNodesRef.current) {
-      updateJourneyPath(pathNodesRef.current, newDistanceMiles, currentScale.value);
+      updateJourneyPath(pathNodesRef.current, newDistanceMiles, currentScale.value, activeMapPath());
       pathLayerRef.current?.batchDraw();
     }
 
@@ -807,7 +820,7 @@ export function MapIsland() {
 
     // Persist latest opened distance for next map visit animation baseline
     writeLastOpenedDistanceMiles(localStorage, newDistanceMiles);
-  }, [centerOnPosition]);
+  }, [activeMapPath, centerOnPosition]);
 
   /** Draw or clear member contribution paths on the map. */
   const drawMemberPaths = useCallback((progress: PartyProgressType | null) => {
@@ -837,11 +850,16 @@ export function MapIsland() {
         isDeparted: m.status !== 'active',
       }));
 
+    const memberPath = progress.active_storyline
+      ? getPathByKey(progress.active_storyline.pathKey)
+      : activeMapPath();
+
     if (memberData.length > 0) {
       memberPathsRef.current = createMemberPaths(
         pathLayerRef.current,
         memberData,
         currentScale.value,
+        memberPath,
       );
 
       // Hide the completed journey path — member segments already cover it
@@ -851,7 +869,7 @@ export function MapIsland() {
     }
 
     pathLayerRef.current.batchDraw();
-  }, []);
+  }, [activeMapPath]);
 
   /** Handle party view changes from the toggle panel. */
   const handlePartyViewChange = useCallback(async (selection: PartySelection) => {
@@ -890,10 +908,10 @@ export function MapIsland() {
       const personalDist = personalDistanceRef.current;
       if (personalDist !== userDistance.value) {
         userDistance.value = personalDist;
-        const personalPos = getUserPosition(fellowshipPath, personalDist);
+        const personalPos = getUserPosition(activeMapPath(), personalDist);
 
         if (pathNodesRef.current) {
-          updateJourneyPath(pathNodesRef.current, personalDist, currentScale.value);
+          updateJourneyPath(pathNodesRef.current, personalDist, currentScale.value, activeMapPath());
           pathLayerRef.current?.batchDraw();
         }
 
@@ -913,12 +931,15 @@ export function MapIsland() {
       // Viewing a fellowship — update path/waypoints to fellowship total distance,
       // but keep user marker at their personal distance.
       const fellowshipDistMiles = progress.total_distance * KM_TO_MILES;
-      const fellowshipPos = getUserPosition(fellowshipPath, fellowshipDistMiles);
+      const partyPath = progress.active_storyline
+        ? getPathByKey(progress.active_storyline.pathKey)
+        : activeMapPath();
+      const fellowshipPos = getUserPosition(partyPath, fellowshipDistMiles);
 
       // Update journey path and waypoints to show fellowship total distance
       userDistance.value = fellowshipDistMiles;
       if (pathNodesRef.current) {
-        updateJourneyPath(pathNodesRef.current, fellowshipDistMiles, currentScale.value);
+        updateJourneyPath(pathNodesRef.current, fellowshipDistMiles, currentScale.value, partyPath);
         pathLayerRef.current?.batchDraw();
       }
 
@@ -928,7 +949,7 @@ export function MapIsland() {
 
       // Keep the user's personal marker at their personal distance
       const personalDist = personalDistanceRef.current;
-      const personalPos = getUserPosition(fellowshipPath, personalDist);
+      const personalPos = getUserPosition(partyPath, personalDist);
       if (markerRef.current) {
         markerRef.current.setDistance(personalDist);
         markerRef.current.setPosition(personalPos, true);
@@ -945,7 +966,7 @@ export function MapIsland() {
         );
         activeFellowshipMarkerRef.current.update(
           [{ party_id: effectiveSelection as number, name: partyName, total_distance: progress.total_distance, avatar_id: partyAvatarId }],
-          fellowshipPath,
+          partyPath,
           currentScale.value,
         );
       }
@@ -979,7 +1000,7 @@ export function MapIsland() {
     }
 
     showSocialPanel.value = false;
-  }, [drawMemberPaths, centerOnPosition]);
+  }, [activeMapPath, drawMemberPaths, centerOnPosition]);
 
   /** Fetch friend positions from the API and update the cache. */
   const fetchFriendPositions = useCallback(async (): Promise<FriendMarkerData[]> => {
@@ -1011,7 +1032,7 @@ export function MapIsland() {
     if (!stage) return;
 
     const distanceMiles = friend.total_distance * KM_TO_MILES;
-    const mapPos = getUserPosition(fellowshipPath, distanceMiles);
+    const mapPos = getUserPosition(currentJourneyPath.value, distanceMiles);
     const screenPos = getScreenPosition(mapPos, position.value, currentScale.value);
 
     // Use getOptimalPopupPosition for smart placement
@@ -1041,7 +1062,7 @@ export function MapIsland() {
             handleFriendSelect,
           );
         }
-        friendMarkerRef.current.update(friends, fellowshipPath, currentScale.value);
+        friendMarkerRef.current.update(friends, currentJourneyPath.value, currentScale.value);
 
         // Apply frustum culling
         const stagePos = position.value;
@@ -1105,7 +1126,7 @@ export function MapIsland() {
             markerLayerRef.current,
           );
         }
-        fellowshipMarkerRef.current.update(fellowships, fellowshipPath, currentScale.value);
+        fellowshipMarkerRef.current.update(fellowships, currentJourneyPath.value, currentScale.value);
 
         // Apply frustum culling
         const stagePos = position.value;
@@ -1133,6 +1154,18 @@ export function MapIsland() {
   useEffect(() => {
     fetchUserParties();
   }, []);
+
+  // Re-fetch party progress when the party's storyline changes (dispatched by PartyManageIsland).
+  // This ensures the map updates to the new path when a party leader switches storylines.
+  useEffect(() => {
+    const handlePartyStorylineChanged = () => {
+      if (selectedView.value !== 'personal') {
+        void handlePartyViewChange(selectedView.value);
+      }
+    };
+    window.addEventListener('partyStorylineChanged', handlePartyStorylineChanged);
+    return () => window.removeEventListener('partyStorylineChanged', handlePartyStorylineChanged);
+  }, [handlePartyViewChange]);
 
   // Auto-apply persisted fellowship view once map + parties are ready.
   // Without this, the map always initialises at the personal distance even
@@ -1341,7 +1374,7 @@ export function MapIsland() {
         minScaleVal.value = min;
 
         // Determine user position for initial centering
-        const userPos = getUserPosition(fellowshipPath, initialDistance);
+        const userPos = getUserPosition(currentJourneyPath.value, initialDistance);
 
         // Start zoomed in on user position
         const initialZoom = clampScale(DEFAULT_CENTER_ZOOM, min);
@@ -1361,6 +1394,7 @@ export function MapIsland() {
           pathLayer,
           userDistance.value,
           initialZoom,
+          currentJourneyPath.value,
         );
 
         // Create user marker on marker layer
@@ -1374,7 +1408,7 @@ export function MapIsland() {
 
         // Create waypoint markers from goals data
         if (goals.length > 0) {
-          const waypoints = getWaypointCoordinates(fellowshipPath, goals);
+          const waypoints = getWaypointCoordinates(currentJourneyPath.value, goals);
           allWaypointsRef.current = waypoints;
           allGoalsRef.current = goals;
 
@@ -1517,7 +1551,7 @@ export function MapIsland() {
           // In fellowship view, update the user marker to the new personal distance
           // while keeping the fellowship view (which will re-fetch fellowship progress)
           if (markerRef.current) {
-            const personalPos = getUserPosition(fellowshipPath, newDistMiles);
+            const personalPos = getUserPosition(activeMapPath(), newDistMiles);
             markerRef.current.setDistance(newDistMiles);
             markerRef.current.setPosition(personalPos, true);
             markerLayerRef.current?.batchDraw();

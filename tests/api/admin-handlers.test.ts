@@ -47,6 +47,15 @@ jest.mock('../../src/email-utils', () => ({
   sendConfirmationEmail: jest.fn()
 }));
 
+// Mock storyline-utils to avoid DB calls in resolveUserStoryline
+jest.mock('../../src/storyline-utils', () => ({
+  resolveUserStoryline: jest.fn().mockResolvedValue({
+    storyline: { id: 1, slug: 'fellowship', title: 'Fellowship', description: null, path_key: 'fellowship', sort_order: 0, is_active: true },
+    distanceOffset: 0,
+  }),
+  toStorylineResponse: jest.fn().mockReturnValue({ id: 1, slug: 'fellowship', title: 'Fellowship', description: null, pathKey: 'fellowship', distanceOffset: 0 }),
+}));
+
 describe('Admin Handlers', () => {
   let mockDB: {
     prepare: jest.Mock;

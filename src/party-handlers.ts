@@ -3,21 +3,18 @@ import { validateSession } from "./auth-handlers";
 import { generateAlphanumericCode } from "./auth-utils";
 import { isValidAvatarSlug } from "./avatar-slugs";
 import { calculateTotalDistance } from "./goals-handlers";
+import {
+  applyStorylineOffset,
+  listStorylineGoals,
+  resolvePartyStoryline,
+  toStorylineResponse,
+  type StorylineGoal,
+} from "./storyline-utils";
 import { createErrorResponse, createSuccessResponse } from "./validators";
 import type { DbClient } from './db';
 
 /** Palette size for deterministic member color assignment */
 const COLOR_PALETTE_SIZE = 12;
-
-/** D1 result row for goals table */
-interface GoalRow {
-  id: number;
-  title: string;
-  distance: number;
-  description?: string | null;
-  image_id?: string | null;
-  special?: string | null;
-}
 
 /** D1 result row for parties table */
 interface PartyRow {
@@ -453,6 +450,20 @@ interface DepartedMemberRow {
   avatar_id: string | null;
 }
 
+function toGoalResponse(goal: StorylineGoal | null) {
+  return goal
+    ? {
+        id: goal.id,
+        storyline_goal_id: goal.storyline_goal_id,
+        title: goal.title,
+        distance: goal.distance,
+        description: goal.description ?? null,
+        image_id: goal.image_id ?? null,
+        special: goal.special ?? null,
+      }
+    : null;
+}
+
 /** Unified activity feed item with type discriminator */
 interface UnifiedActivityRow {
   type: 'walk' | 'message';
@@ -524,7 +535,7 @@ export async function handlePartyProgress(request: Request, db: DbClient, partyI
       avatar_id: string | null;
     }> = [];
 
-    let totalDistance = 0;
+    let rawTotalDistance = 0;
 
     for (const member of activeMembers) {
       let contribution: number;
@@ -533,7 +544,7 @@ export async function handlePartyProgress(request: Request, db: DbClient, partyI
       } else {
         contribution = member.total_distance;
       }
-      totalDistance += contribution;
+      rawTotalDistance += contribution;
       members.push({
         user_id: member.user_id,
         display_name: member.display_name,
@@ -557,7 +568,7 @@ export async function handlePartyProgress(request: Request, db: DbClient, partyI
 
     for (const departed of departedMembers) {
       const contribution = departed.contribution_at_departure ?? 0;
-      totalDistance += contribution;
+      rawTotalDistance += contribution;
       members.push({
         user_id: departed.user_id,
         display_name: departed.display_name,
@@ -570,22 +581,27 @@ export async function handlePartyProgress(request: Request, db: DbClient, partyI
     }
 
     // Round to 2 decimal places to avoid floating point drift
-    totalDistance = Number(totalDistance.toFixed(2));
+    rawTotalDistance = Number(rawTotalDistance.toFixed(2));
 
-    // Calculate milestone position (latest milestone ≤ total_distance)
-    const calculatedPosition = await db.read.prepare(
-      'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance <= ? ORDER BY distance DESC LIMIT 1'
-    ).bind(totalDistance).first<GoalRow>();
+    const storylineContext = await resolvePartyStoryline(db, partyId);
+    const totalDistance = applyStorylineOffset(rawTotalDistance, storylineContext.distanceOffset);
+    const storylineGoals = await listStorylineGoals(db, storylineContext.storyline.id);
 
-    // Calculate next milestone (first goal > total_distance)
-    const nextPosition = await db.read.prepare(
-      'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance > ? ORDER BY distance ASC LIMIT 1'
-    ).bind(totalDistance).first<GoalRow>();
+    let calculatedPosition: StorylineGoal | null = null;
+    let nextPosition: StorylineGoal | null = null;
+    const newlyPassedMilestones: StorylineGoal[] = [];
 
-    // Get newly passed milestones (between previous last_viewed_distance and current total)
-    const { results: newlyPassedMilestones } = await db.read.prepare(
-      'SELECT id, title, distance, description, image_id, special FROM goals WHERE distance > ? AND distance <= ? ORDER BY distance ASC'
-    ).bind(previousViewedDistance, totalDistance).all<GoalRow>();
+    for (const goal of storylineGoals) {
+      if (goal.distance <= totalDistance) {
+        calculatedPosition = goal;
+      } else if (!nextPosition) {
+        nextPosition = goal;
+      }
+
+      if (goal.distance > previousViewedDistance && goal.distance <= totalDistance) {
+        newlyPassedMilestones.push(goal);
+      }
+    }
 
     // Update last_viewed_distance for the requesting user
     await db.write.prepare(
@@ -599,25 +615,16 @@ export async function handlePartyProgress(request: Request, db: DbClient, partyI
     return createSuccessResponse({
       current_user_id: userId,
       total_distance: totalDistance,
+      raw_total_distance: rawTotalDistance,
       user_total_distance: userTotalDistance,
       member_count: activeMembers.length,
-      calculated_position: calculatedPosition
-        ? { id: calculatedPosition.id, title: calculatedPosition.title, distance: calculatedPosition.distance, description: calculatedPosition.description ?? null, image_id: calculatedPosition.image_id ?? null, special: calculatedPosition.special ?? null }
-        : null,
-      next_position: nextPosition
-        ? { id: nextPosition.id, title: nextPosition.title, distance: nextPosition.distance, description: nextPosition.description ?? null, image_id: nextPosition.image_id ?? null, special: nextPosition.special ?? null }
-        : null,
+      calculated_position: toGoalResponse(calculatedPosition),
+      next_position: toGoalResponse(nextPosition),
       distance_mode: party.distance_mode,
       leave_distance_behavior: party.leave_distance_behavior,
+      active_storyline: toStorylineResponse(storylineContext),
       members,
-      newly_passed_milestones: newlyPassedMilestones.map((m) => ({
-        id: m.id,
-        title: m.title,
-        distance: m.distance,
-        description: m.description ?? null,
-        image_id: m.image_id ?? null,
-        special: m.special ?? null,
-      })),
+      newly_passed_milestones: newlyPassedMilestones.map(toGoalResponse),
     });
   } catch (error: unknown) {
     console.error('Database error during party progress calculation:', error);

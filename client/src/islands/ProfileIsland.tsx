@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
 import { Avatar } from '../components/Avatar';
+import type { ActiveStoryline } from '../types/session';
 
 interface SessionData {
   username: string;
@@ -7,6 +8,25 @@ interface SessionData {
   showFutureGoalsUnlocked: boolean;
   defaultViewMap: boolean;
   avatarId: string | null;
+  activeStoryline?: ActiveStoryline;
+}
+
+interface StorylineOption {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  pathKey: string;
+}
+
+interface StorylineListResponse {
+  storylines: StorylineOption[];
+}
+
+interface StorylineSwitchResponse {
+  totalDistance: number;
+  rawTotalDistance: number;
+  activeStoryline: ActiveStoryline;
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -49,6 +69,12 @@ export function ProfileIsland() {
   const [preferenceStatusClass, setPreferenceStatusClass] = useState('');
   const [avatarStatus, setAvatarStatus] = useState('');
   const [avatarStatusClass, setAvatarStatusClass] = useState('');
+  const [storylines, setStorylines] = useState<StorylineOption[]>([]);
+  const [activeStoryline, setActiveStoryline] = useState<ActiveStoryline | null>(null);
+  const [pendingStoryline, setPendingStoryline] = useState<StorylineOption | null>(null);
+  const [storylineStatus, setStorylineStatus] = useState('');
+  const [storylineStatusClass, setStorylineStatusClass] = useState('');
+  const [switchingStoryline, setSwitchingStoryline] = useState(false);
   const usernameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -56,9 +82,10 @@ export function ProfileIsland() {
 
     async function fetchData() {
       try {
-        const [sessionRes, avatarRes] = await Promise.all([
+        const [sessionRes, avatarRes, storylinesRes] = await Promise.all([
           fetch('/api/session', { headers: getAuthHeaders() }),
           fetch('/api/avatars', { headers: getAuthHeaders() }),
+          fetch('/api/storylines', { headers: getAuthHeaders() }),
         ]);
 
         if (cancelled) return;
@@ -74,11 +101,17 @@ export function ProfileIsland() {
             typeof data.defaultViewMap === 'boolean' ? data.defaultViewMap : false
           );
           setAvatarId(data.avatarId ?? null);
+          setActiveStoryline(data.activeStoryline ?? null);
         }
 
         if (avatarRes.ok) {
           const avatars: string[] = await avatarRes.json();
           setAvailableAvatars(avatars);
+        }
+
+        if (storylinesRes.ok) {
+          const data: StorylineListResponse = await storylinesRes.json();
+          setStorylines(Array.isArray(data.storylines) ? data.storylines : []);
         }
       } catch (err) {
         console.error('Error fetching profile data:', err);
@@ -133,6 +166,52 @@ export function ProfileIsland() {
       setAvatarStatusClass('error');
     }
   }, []);
+
+  const switchStoryline = useCallback(async (mode: 'carry' | 'reset') => {
+    if (!pendingStoryline) return;
+
+    setSwitchingStoryline(true);
+    setStorylineStatus('Saving...');
+    setStorylineStatusClass('saving');
+
+    try {
+      const response = await fetch('/api/user/storyline', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ storylineId: pendingStoryline.id, mode }),
+      });
+      const data = await response.json() as StorylineSwitchResponse | { error?: string };
+
+      if (!response.ok || !('activeStoryline' in data)) {
+        throw new Error('error' in data && data.error ? data.error : 'Failed to update journey');
+      }
+
+      setActiveStoryline(data.activeStoryline);
+      setPendingStoryline(null);
+      setStorylineStatus('Saved');
+      setStorylineStatusClass('saved');
+      setTimeout(() => { setStorylineStatus(''); setStorylineStatusClass(''); }, 1500);
+
+      window.dispatchEvent(new CustomEvent('storylineChanged', { detail: data }));
+      void clearServiceWorkerSWRCache();
+    } catch (err) {
+      console.error('Error switching storyline:', err);
+      setStorylineStatus(err instanceof Error ? err.message : 'Failed to update journey');
+      setStorylineStatusClass('error');
+    } finally {
+      setSwitchingStoryline(false);
+    }
+  }, [pendingStoryline]);
+
+  const handleStorylineChange = useCallback((e: Event) => {
+    const storylineId = Number((e.target as HTMLSelectElement).value);
+    const nextStoryline = storylines.find((storyline) => storyline.id === storylineId) ?? null;
+    if (!nextStoryline || nextStoryline.id === activeStoryline?.id) return;
+    setPendingStoryline(nextStoryline);
+  }, [activeStoryline?.id, storylines]);
 
   const savePreference = useCallback(async (
     preferenceKey: string,
@@ -387,6 +466,27 @@ export function ProfileIsland() {
             {preferenceStatus}
           </div>
 
+          <div className="form-group storyline-section">
+            <label htmlFor="profile-storyline">Journey</label>
+            <select
+              id="profile-storyline"
+              value={activeStoryline?.id ?? ''}
+              onChange={handleStorylineChange}
+              disabled={storylines.length === 0 || switchingStoryline}
+            >
+              <option value="" disabled>Select a journey</option>
+              {storylines.map((storyline) => (
+                <option key={storyline.id} value={storyline.id}>{storyline.title}</option>
+              ))}
+            </select>
+            {activeStoryline?.description && (
+              <small className="field-hint">{activeStoryline.description}</small>
+            )}
+            <div className={`preference-status ${storylineStatusClass}`}>
+              {storylineStatus}
+            </div>
+          </div>
+
           {error && <div id="profile-error" className="error-message" style={{ display: 'block' }}>{error}</div>}
           {success && <div id="profile-success" className="success-message" style={{ display: 'block' }}>{success}</div>}
         </div>
@@ -405,6 +505,28 @@ export function ProfileIsland() {
           </div>
         </div>
       </div>
+
+      {pendingStoryline && (
+        <div className="profile-dialog-overlay" onClick={() => setPendingStoryline(null)}>
+          <div className="profile-dialog" role="dialog" aria-modal="true" aria-label="Change journey" onClick={(e) => e.stopPropagation()}>
+            <h3>Change Journey</h3>
+            <p>
+              Switch to <strong>{pendingStoryline.title}</strong> and choose how your current distance should appear there.
+            </p>
+            <div className="profile-dialog-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setPendingStoryline(null)} disabled={switchingStoryline}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => switchStoryline('carry')} disabled={switchingStoryline}>
+                Carry Distance
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => switchStoryline('reset')} disabled={switchingStoryline}>
+                Start at 0
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

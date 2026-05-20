@@ -67,10 +67,13 @@ function makeGoalClickable(element, goal, currentDistance, locked = false) {
 
 // Track last rendered distance for re-rendering on preference change
 let lastRenderedDistance = null;
+let lastRenderedStorylineId = null;
 
-function renderGoals(currentDistance) {
+function renderGoals(currentDistance, storylineId) {
   lastRenderedDistance = currentDistance;
-  fetch('/api/goals', {
+  lastRenderedStorylineId = storylineId || null;
+  const goalsUrl = storylineId ? `/api/goals?storylineId=${encodeURIComponent(storylineId)}` : '/api/goals';
+  fetch(goalsUrl, {
     headers: window.getAuthHeaders()
   })
     .then(res => {
@@ -406,7 +409,7 @@ window.goalsModule = {
 // Re-render goals when preference changes (dynamic toggle reactivity)
 window.addEventListener('preferenceChanged', function() {
   if (lastRenderedDistance !== null) {
-    renderGoals(lastRenderedDistance);
+    renderGoals(lastRenderedDistance, lastRenderedStorylineId);
   }
 });
 
@@ -448,7 +451,7 @@ function mountPartySelector() {
       if (el) {
         el.textContent = progress.total_distance.toFixed(2) + ' km';
       }
-      renderGoals(progress.total_distance);
+      renderGoals(progress.total_distance, progress.active_storyline && progress.active_storyline.id);
     }
   }
 

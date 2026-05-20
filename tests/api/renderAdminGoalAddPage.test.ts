@@ -51,6 +51,7 @@ describe('renderAdminGoalAddPage', () => {
     });
 
     it('should have Users and Metrics links', () => {
+      expect(html).toContain('href="/admin/storylines"');
       expect(html).toContain('href="/admin/users"');
       expect(html).toContain('href="/admin/metrics"');
     });

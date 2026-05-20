@@ -43,7 +43,7 @@ jest.mock('../../src/fellowship-invite-handlers');
 
 // Import after mocking
 import worker from '../../src/index';
-import { calculateTotalDistance, handleGoalsGet } from '../../src/goals-handlers';
+import { calculateTotalDistance, calculateUserStorylineDistance, handleGoalsGet } from '../../src/goals-handlers';
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from '../../src/party-handlers';
 import { renderPartyListPage } from '../../src/renderPartyListPage';
 import { renderPartyDetailPage } from '../../src/renderPartyDetailPage';
@@ -70,6 +70,7 @@ const mockSafeJsonParse = jest.mocked(safeJsonParse);
 const mockIsValidMethod = jest.mocked(isValidMethod);
 const mockCreateErrorResponse = jest.mocked(createErrorResponse);
 const mockCalculateTotalDistance = jest.mocked(calculateTotalDistance);
+const mockCalculateUserStorylineDistance = jest.mocked(calculateUserStorylineDistance);
 const mockHandleGoalsGet = jest.mocked(handleGoalsGet);
 const mockValidateSession = jest.mocked(validateSession);
 const mockValidateAdminSession = jest.mocked(validateAdminSession);
@@ -178,6 +179,7 @@ describe('Cloudflare Worker Index', () => {
 
     // Setup handler mocks
     mockCalculateTotalDistance.mockResolvedValue(10);
+    mockCalculateUserStorylineDistance.mockResolvedValue({ totalDistance: 10, rawTotalDistance: 10, activeStoryline: null });
     mockHandleGoalsGet.mockResolvedValue(new Response(JSON.stringify({ goals: [] }), { 
       status: 200, 
       headers: { 'content-type': 'application/json' } 
@@ -1495,16 +1497,7 @@ describe('Cloudflare Worker Index', () => {
   it('should calculate total distance correctly via API endpoint', async () => {
     const authRequest = createRequest('https://example.com/api/total-distance', 'GET');
 
-    // Mock multiple entries with distances
-    mockEnv.DB.prepare.mockReturnValue({
-      all: jest.fn(() => Promise.resolve({
-        results: [
-          { distance: 5.5 },
-          { distance: 3.2 },
-          { distance: 1.3 }
-        ]
-      }))
-    });
+    mockCalculateUserStorylineDistance.mockResolvedValueOnce({ totalDistance: 10, rawTotalDistance: 10, activeStoryline: null });
 
     const response = await worker.fetch(authRequest, mockEnv);
     const data = await response.json();
@@ -1516,8 +1509,8 @@ describe('Cloudflare Worker Index', () => {
   it('should handle database errors in total distance API', async () => {
     const authRequest = createRequest('https://example.com/api/total-distance', 'GET');
 
-    // Mock calculateTotalDistance to throw an error
-    mockCalculateTotalDistance.mockRejectedValue(new Error('Database error'));
+    // Mock calculateUserStorylineDistance to throw an error
+    mockCalculateUserStorylineDistance.mockRejectedValue(new Error('Database error'));
 
     const response = await worker.fetch(authRequest, mockEnv);
     

@@ -8,6 +8,15 @@
 /**
  * Response shape from GET /api/session.
  */
+export interface ActiveStoryline {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  pathKey: string;
+  distanceOffset: number;
+}
+
 export interface SessionResponse {
   userId: number;
   username: string;
@@ -15,6 +24,7 @@ export interface SessionResponse {
   isAdmin: boolean;
   showFutureGoalsUnlocked: boolean;
   defaultViewMap: boolean;
+  activeStoryline?: ActiveStoryline;
 }
 
 /**

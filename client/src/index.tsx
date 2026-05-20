@@ -20,6 +20,7 @@ import { AdminGoalEditIsland } from './islands/AdminGoalEditIsland';
 import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
 import { AdminUsersListIsland } from './islands/AdminUsersListIsland';
 import { AdminMetricsIsland } from './islands/AdminMetricsIsland';
+import { AdminStorylinesIsland } from './islands/AdminStorylinesIsland';
 import { ProfileIsland } from './islands/ProfileIsland';
 import { PushNudgeBanner } from './islands/PushNudgeBanner';
 import { PushPermissionIsland } from './islands/PushPermissionIsland';
@@ -36,6 +37,7 @@ const autoHydratedIslands = {
   AdminGoalEditIsland,
   AdminGoalsListIsland,
   AdminMetricsIsland,
+  AdminStorylinesIsland,
   AdminUsersListIsland,
   AuthForms,
   DrawerIsland,
@@ -62,6 +64,7 @@ const allIslands = {
   AdminGoalEditIsland,
   AdminGoalsListIsland,
   AdminMetricsIsland,
+  AdminStorylinesIsland,
   AdminUsersListIsland,
   AuthForms,
   DistanceModal,

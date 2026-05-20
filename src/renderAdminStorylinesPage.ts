@@ -1,9 +1,9 @@
 import { renderLayout } from './renderLayout';
 
-export function renderAdminMetricsPage(): string {
+export function renderAdminStorylinesPage(): string {
   return renderLayout({
-    title: 'Walk to Mordor - Admin Metrics',
-    description: 'Admin community metrics for Walk to Mordor',
+    title: 'Walk to Mordor - Admin Storylines',
+    description: 'Admin storyline management for Walk to Mordor',
     stylesheets: ['/css/admin.css'],
     bodyClass: 'admin-body',
     headerContent: `
@@ -27,7 +27,7 @@ export function renderAdminMetricsPage(): string {
               </a>
             </li>
             <li>
-              <a href="/admin/storylines" class="admin-nav__link">
+              <a href="/admin/storylines" class="admin-nav__link admin-nav__link--active" aria-current="page">
                 <i class="fas fa-route" aria-hidden="true"></i>
                 <span>Storylines</span>
               </a>
@@ -39,7 +39,7 @@ export function renderAdminMetricsPage(): string {
               </a>
             </li>
             <li>
-              <a href="/admin/metrics" class="admin-nav__link admin-nav__link--active" aria-current="page">
+              <a href="/admin/metrics" class="admin-nav__link">
                 <i class="fas fa-chart-bar" aria-hidden="true"></i>
                 <span>Metrics</span>
               </a>
@@ -56,10 +56,10 @@ export function renderAdminMetricsPage(): string {
           <nav class="admin-breadcrumb" aria-label="Breadcrumb">
             <ol>
               <li><a href="/admin">Admin</a></li>
-              <li aria-current="page">Metrics</li>
+              <li aria-current="page">Storylines</li>
             </ol>
           </nav>
-          <div data-island="AdminMetricsIsland"></div>
+          <div data-island="AdminStorylinesIsland"></div>
         </div>
       </div>`,
   });

@@ -1216,6 +1216,142 @@
   background: var(--bg-secondary);
   border: 2px solid var(--border-gray);
   border-radius: 8px;
+
+.admin-badge--success {
+  color: var(--status-success-light);
+  border-color: rgba(81, 207, 102, 0.45);
+  background: var(--status-success-bg);
+}
+
+.admin-notice {
+  background: var(--status-success-bg);
+  border: 1px solid rgba(81, 207, 102, 0.45);
+  border-radius: 8px;
+  color: var(--status-success-light);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-storylines-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-storyline-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-storyline-slug {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.admin-storyline-empty {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.admin-storyline-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-storyline-form h3,
+.admin-storyline-goals h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.admin-storyline-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-storyline-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.admin-storyline-form input,
+.admin-storyline-form select,
+.admin-storyline-form textarea,
+.admin-storyline-goal-row input {
+  min-height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--border-gray);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 0.6rem 0.75rem;
+}
+
+.admin-storyline-form textarea {
+  resize: vertical;
+}
+
+.admin-storyline-form__wide {
+  grid-column: 1 / -1;
+}
+
+.admin-storyline-checkbox {
+  align-self: center;
+  display: flex !important;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.5rem !important;
+}
+
+.admin-storyline-checkbox input {
+  min-height: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-blue);
+}
+
+.admin-storyline-goals {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-storyline-goal-list {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.admin-storyline-goal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border-gray);
+}
+
+.admin-storyline-goal-row span {
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .admin-storylines-grid,
+  .admin-storyline-form__grid {
+    grid-template-columns: 1fr;
+  }
+}
   padding: 0.5rem;
   cursor: pointer;
   text-align: center;

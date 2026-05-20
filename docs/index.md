@@ -5,7 +5,7 @@ description: Master index of all project documentation with brief descriptions.
 
 # Walk to Mordor Documentation
 
-Last updated: 2026-03-17
+Last updated: 2026-05-20
 
 For documentation guidelines, see [AGENTS.md](AGENTS.md).
 
