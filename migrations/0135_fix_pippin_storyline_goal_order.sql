@@ -1,16 +1,5 @@
--- Migration 0134_add_pippin_storyline.sql
--- Add Peregrin Took's storyline and map it onto existing goal rows.
-
-INSERT OR IGNORE INTO storylines (slug, title, description, path_key, sort_order, is_active, admin_only)
-VALUES (
-  'pippin',
-  'Pippin',
-  'Follow Peregrin Took from Bag End through Fangorn, Isengard, Minas Tirith, the Black Gate, and the long road home.',
-  'pippin',
-  10,
-  1,
-  0
-);
+-- Migration 0135_fix_pippin_storyline_goal_order.sql
+-- Repair Pippin's reused goals so return-story milestones do not appear on the outbound branch.
 
 DELETE FROM storyline_goals
 WHERE storyline_id = (SELECT id FROM storylines WHERE slug = 'pippin');
