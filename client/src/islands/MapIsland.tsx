@@ -27,7 +27,7 @@ import {
 import { FriendMiniCard } from '../components/map/FriendMiniCard';
 import { WaypointPopupContainer } from '../components/map/WaypointPopupContainer';
 import { GoalModal } from './GoalModal';
-import { getUserPosition, MILES_TO_KM, KM_TO_MILES, type Point } from '../utils/map-utils';
+import { getUserPosition, getPathTotalDistance, MILES_TO_KM, KM_TO_MILES, type Point } from '../utils/map-utils';
 import {
   getScreenPosition,
   getOptimalPopupPosition,
@@ -85,8 +85,6 @@ const SCALE_BY = 1.3;
 const MAX_ZOOM = 3.0;
 /** Default zoom level when centering on user position */
 const DEFAULT_CENTER_ZOOM = 1.7;
-/** Total journey distance in miles (Bag End to Bag End, all 9 challenges). */
-const TOTAL_PATH_DISTANCE_MILES = 3991;
 /** Fallback popup dimensions before the real rendered size is measured. */
 const INITIAL_POPUP_SIZE = { width: 280, height: 200 };
 /** Mobile breakpoint matching WaypointPopupContainer. */
@@ -515,10 +513,11 @@ export function MapIsland() {
     };
 
     // 1. Filter by range (7% ahead, or all in dev mode)
+    const pathTotalDistance = getPathTotalDistance(activeMapPath());
     let visible = filterWaypointsByRange(
       allWaypointsRef.current,
       userDistance.value,
-      TOTAL_PATH_DISTANCE_MILES,
+      pathTotalDistance,
       devMode,
     );
 
