@@ -35,10 +35,16 @@ export function AdminGoalsListIsland() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [missingImagesOnly, setMissingImagesOnly] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const fetchGoals = useCallback(async (p: number, s: string, order: string) => {
+  const fetchGoals = useCallback(async (
+    p: number,
+    s: string,
+    order: 'asc' | 'desc',
+    missingOnly: boolean,
+  ) => {
     setLoading(true);
     setError(null);
     try {
@@ -49,6 +55,9 @@ export function AdminGoalsListIsland() {
       });
       if (s) {
         params.set('search', s);
+      }
+      if (missingOnly) {
+        params.set('imageFilter', 'missing');
       }
       const res = await fetch(`/api/admin/goals?${params.toString()}`, {
         headers: getAuthHeaders(),
@@ -75,10 +84,10 @@ export function AdminGoalsListIsland() {
     }
   }, [pageSize]);
 
-  // Fetch when page, debouncedSearch, or sortOrder changes
+  // Fetch when page, debouncedSearch, sortOrder, or image filter changes
   useEffect(() => {
-    fetchGoals(page, debouncedSearch, sortOrder);
-  }, [page, debouncedSearch, sortOrder, fetchGoals]);
+    fetchGoals(page, debouncedSearch, sortOrder, missingImagesOnly);
+  }, [page, debouncedSearch, sortOrder, missingImagesOnly, fetchGoals]);
 
   // Clean up debounce timer on unmount
   useEffect(() => {
@@ -105,6 +114,11 @@ export function AdminGoalsListIsland() {
 
   const toggleSort = useCallback(() => {
     setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    setPage(1);
+  }, []);
+
+  const handleMissingImagesChange = useCallback((e: Event) => {
+    setMissingImagesOnly((e.target as HTMLInputElement).checked);
     setPage(1);
   }, []);
 
@@ -162,7 +176,7 @@ export function AdminGoalsListIsland() {
           <button
             type="button"
             className="admin-error__btn"
-            onClick={() => fetchGoals(page, debouncedSearch, sortOrder)}
+            onClick={() => fetchGoals(page, debouncedSearch, sortOrder, missingImagesOnly)}
           >
             <i className="fas fa-redo" aria-hidden="true"></i> Retry
           </button>
@@ -186,6 +200,15 @@ export function AdminGoalsListIsland() {
             aria-label="Search goals"
           />
         </div>
+        <label className="admin-goals-filter">
+          <input
+            type="checkbox"
+            checked={missingImagesOnly}
+            onChange={handleMissingImagesChange}
+            className="admin-goals-filter__checkbox"
+          />
+          <span>Only goals without images</span>
+        </label>
         <div className="admin-goals-info">
           <span className="admin-goals-info__count">
             {total} goal{total !== 1 ? 's' : ''}
@@ -198,10 +221,20 @@ export function AdminGoalsListIsland() {
 
       {goals.length === 0 ? (
         <div className="admin-goals-empty">
-          {debouncedSearch ? (
+          {debouncedSearch && missingImagesOnly ? (
+            <>
+              <i className="fas fa-filter" aria-hidden="true"></i>
+              <p>No goals match your current filters</p>
+            </>
+          ) : debouncedSearch ? (
             <>
               <i className="fas fa-search" aria-hidden="true"></i>
               <p>No goals match your search</p>
+            </>
+          ) : missingImagesOnly ? (
+            <>
+              <i className="fas fa-image" aria-hidden="true"></i>
+              <p>No goals without images found</p>
             </>
           ) : (
             <>

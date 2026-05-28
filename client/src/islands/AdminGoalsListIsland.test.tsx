@@ -188,6 +188,24 @@ describe('AdminGoalsListIsland', () => {
     });
   });
 
+  it('fetches only goals without images when the missing-image filter is enabled', async () => {
+    const { getByLabelText } = render(<AdminGoalsListIsland />);
+
+    await waitFor(() => {
+      expect(getByLabelText('Only goals without images')).toBeTruthy();
+    });
+
+    const filter = getByLabelText('Only goals without images') as HTMLInputElement;
+    filter.click();
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        expect.stringContaining('imageFilter=missing'),
+        expect.any(Object),
+      );
+    });
+  });
+
   it('shows pagination controls when multiple pages exist', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

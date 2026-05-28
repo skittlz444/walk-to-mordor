@@ -34,6 +34,17 @@ export function getUserPosition(
   return calculateCutoffPoint(pathNodes, userDistance).userPosition;
 }
 
+/** Return the final numeric distance anchor for a path, or 0 if none exists. */
+export function getPathTotalDistance(pathNodes: PathNode[]): number {
+  for (let index = pathNodes.length - 1; index >= 0; index--) {
+    const distance = pathNodes[index].distance;
+    if (distance !== null && distance !== undefined) {
+      return distance;
+    }
+  }
+  return 0;
+}
+
 /** Euclidean distance between two points. */
 function euclidean(a: Point, b: Point): number {
   const dx = b.x - a.x;

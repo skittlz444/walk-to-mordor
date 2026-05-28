@@ -21,6 +21,39 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     return { bind, run, all, first };
   }
 
+  const mockStorylineRow = {
+    id: 1,
+    slug: 'frodo-sam',
+    title: 'Frodo & Sam',
+    description: null,
+    path_key: 'fellowship',
+    sort_order: 0,
+    is_active: 1,
+    storyline_distance_offset: 0,
+  };
+
+  function mockResolveUserStoryline(offset = 0) {
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ ...mockStorylineRow, storyline_distance_offset: offset }) }),
+    );
+  }
+
+  function mockStorylineGoals(goals: Array<{ id: number; title: string; distance: number; special: string | null; sort_order?: number }>) {
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({
+        all: jest.fn().mockResolvedValue({
+          results: goals.map((goal, index) => ({
+            storyline_goal_id: index + 1,
+            description: null,
+            image_id: null,
+            sort_order: goal.sort_order ?? index + 1,
+            ...goal,
+          })),
+        }),
+      }),
+    );
+  }
+
   beforeEach(() => {
     jest.useRealTimers();
     jest.clearAllMocks();
@@ -83,13 +116,11 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ first: jest.fn().mockResolvedValue({ total: 120 }) }),
     );
-    // Goals for projection
-    mockDB.prepare.mockReturnValueOnce(
-      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [
-        { id: 1, title: 'Rivendell', distance: 458, special: null },
-        { id: 2, title: 'Lothlórien', distance: 917, special: 'major' },
-      ] }) }),
-    );
+    mockResolveUserStoryline();
+    mockStorylineGoals([
+      { id: 1, title: 'Rivendell', distance: 458, special: null },
+      { id: 2, title: 'Lothlórien', distance: 917, special: 'major' },
+    ]);
     // Fellowships
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
@@ -122,14 +153,12 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ first: jest.fn().mockResolvedValue({ total: 450 }) }),
     );
-    // Goals: next major milestone at 917 km; regular next at 458
-    mockDB.prepare.mockReturnValueOnce(
-      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [
-        { id: 1, title: 'Rivendell', distance: 458, special: null },
-        { id: 2, title: 'Lothlórien', distance: 917, special: 'major' },
-        { id: 3, title: 'Far Away', distance: 2000, special: 'major' },
-      ] }) }),
-    );
+    mockResolveUserStoryline();
+    mockStorylineGoals([
+      { id: 1, title: 'Rivendell', distance: 458, special: null },
+      { id: 2, title: 'Lothlórien', distance: 917, special: 'major' },
+      { id: 3, title: 'Far Away', distance: 2000, special: 'major' },
+    ]);
     // No fellowships
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
@@ -167,6 +196,7 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     const thisWeek = createChainableMock({ first: jest.fn().mockResolvedValue({ total: 12 }) });
     const prevWeek = createChainableMock({ first: jest.fn().mockResolvedValue({ total: 8 }) });
     const totalDistance = createChainableMock({ first: jest.fn().mockResolvedValue({ total: 120 }) });
+    const storyline = createChainableMock({ first: jest.fn().mockResolvedValue(mockStorylineRow) });
     const goals = createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) });
     const fellowships = createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) });
 
@@ -175,6 +205,7 @@ describe('Stats Handlers – handleWeeklyStats', () => {
       .mockReturnValueOnce(thisWeek)
       .mockReturnValueOnce(prevWeek)
       .mockReturnValueOnce(totalDistance)
+      .mockReturnValueOnce(storyline)
       .mockReturnValueOnce(goals)
       .mockReturnValueOnce(fellowships);
 
@@ -198,9 +229,8 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ first: jest.fn().mockResolvedValue({ total: 120 }) }),
     );
-    mockDB.prepare.mockReturnValueOnce(
-      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
-    );
+    mockResolveUserStoryline();
+    mockStorylineGoals([]);
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
     );
@@ -232,13 +262,11 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ first: jest.fn().mockResolvedValue({ total: 900 }) }),
     );
-    // Goals: next regular at 910, next major at 917
-    mockDB.prepare.mockReturnValueOnce(
-      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [
-        { id: 1, title: 'Small Step', distance: 910, special: null },
-        { id: 2, title: 'Lothlórien', distance: 917, special: 'major' },
-      ] }) }),
-    );
+    mockResolveUserStoryline();
+    mockStorylineGoals([
+      { id: 1, title: 'Small Step', distance: 910, special: null },
+      { id: 2, title: 'Lothlórien', distance: 917, special: 'major' },
+    ]);
     // No fellowships
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
@@ -251,6 +279,43 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     };
     // 17 km at 100 km/week → ~1.19 days < 14 → should show major milestone
     expect(data.projection?.title).toBe('Lothlórien');
+  });
+  
+  it('projects against the active storyline distance and goals', async () => {
+    // 30-day count
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ count: 10 }) }),
+    );
+    // This week: 100 km
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ total: 100 }) }),
+    );
+    // Previous week
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ total: 0 }) }),
+    );
+    // Raw total distance remains 0 after resetting onto the shortcut route
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ first: jest.fn().mockResolvedValue({ total: 0 }) }),
+    );
+    mockResolveUserStoryline(160.934);
+    mockStorylineGoals([
+      { id: 1, title: 'Bag End', distance: 0, special: 'start' },
+      { id: 2, title: 'Isengard', distance: 160.934, special: null },
+      { id: 3, title: 'Mount Doom', distance: 321.868, special: 'major' },
+    ]);
+    mockDB.prepare.mockReturnValueOnce(
+      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [] }) }),
+    );
+
+    const res = await handleWeeklyStats(mockRequest, mockDb);
+    expect(res.status).toBe(200);
+    const data = await res.json() as {
+      projection: { title: string; km_to_next: number } | null;
+    };
+    expect(data.projection?.title).toBe('Mount Doom');
+    expect(data.projection?.km_to_next).toBe(160.9);
+    expect(mockDB.prepare).toHaveBeenCalledWith(expect.stringContaining('FROM storyline_goals sg'));
   });
 
   it('returns top 2 fellowship contributions sorted by percentage descending', async () => {
@@ -270,12 +335,10 @@ describe('Stats Handlers – handleWeeklyStats', () => {
     mockDB.prepare.mockReturnValueOnce(
       createChainableMock({ first: jest.fn().mockResolvedValue({ total: 200 }) }),
     );
-    // Goals
-    mockDB.prepare.mockReturnValueOnce(
-      createChainableMock({ all: jest.fn().mockResolvedValue({ results: [
-        { id: 1, title: 'Next Goal', distance: 300, special: null },
-      ] }) }),
-    );
+    mockResolveUserStoryline();
+    mockStorylineGoals([
+      { id: 1, title: 'Next Goal', distance: 300, special: null },
+    ]);
     // Fellowships: 3 parties, user contributed 20 km to each, party totals differ
     // party A: user 20, total 40 → 50%
     // party B: user 20, total 100 → 20%

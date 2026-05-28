@@ -13,7 +13,7 @@
  */
 
 import { signal, computed, effect } from '@preact/signals';
-import type { SessionResponse, UserPreferences } from '../types/session';
+import type { ActiveStoryline, SessionResponse, UserPreferences } from '../types/session';
 
 // ============================================================================
 // Core Signals
@@ -39,6 +39,12 @@ export const defaultViewMap = signal<boolean>(false);
 
 /** User's total walking distance in km. null until hydrated. */
 export const totalDistance = signal<number | null>(null);
+
+/** User's raw walking distance before active storyline offset. null until hydrated. */
+export const rawTotalDistance = signal<number | null>(null);
+
+/** Active storyline selected by the current user. */
+export const activeStoryline = signal<ActiveStoryline | null>(null);
 
 /** Whether the store has been initialized (hydrated from API). */
 export const storeInitialized = signal<boolean>(false);
@@ -197,15 +203,30 @@ function onPreferenceChangedEvent(e: Event): void {
   }
 }
 
+function onStorylineChangedEvent(e: Event): void {
+  const detail = (e as CustomEvent).detail;
+  if (detail && typeof detail.totalDistance === 'number') {
+    totalDistance.value = detail.totalDistance;
+  }
+  if (detail && typeof detail.rawTotalDistance === 'number') {
+    rawTotalDistance.value = detail.rawTotalDistance;
+  }
+  if (detail && typeof detail.activeStoryline === 'object') {
+    activeStoryline.value = detail.activeStoryline as ActiveStoryline;
+  }
+}
+
 export function startPreferenceListener(): void {
   if (_preferenceListenerBound) return;
   window.addEventListener('preferenceChanged', onPreferenceChangedEvent);
+  window.addEventListener('storylineChanged', onStorylineChangedEvent);
   _preferenceListenerBound = true;
 }
 
 export function stopPreferenceListener(): void {
   if (typeof window !== 'undefined') {
     window.removeEventListener('preferenceChanged', onPreferenceChangedEvent);
+    window.removeEventListener('storylineChanged', onStorylineChangedEvent);
   }
   _preferenceListenerBound = false;
 }
@@ -226,9 +247,17 @@ async function hydrateTotalDistance(token: string): Promise<void> {
       return;
     }
 
-    const distData = (await distResponse.json()) as { totalDistance: number };
+    const distData = (await distResponse.json()) as {
+      totalDistance: number;
+      rawTotalDistance?: number;
+      activeStoryline?: ActiveStoryline;
+    };
     if (sessionToken.value === token) {
       totalDistance.value = distData.totalDistance;
+      rawTotalDistance.value = typeof distData.rawTotalDistance === 'number' ? distData.rawTotalDistance : null;
+      if (distData.activeStoryline) {
+        activeStoryline.value = distData.activeStoryline;
+      }
     }
   } catch {
     // totalDistance remains null — non-critical
@@ -250,6 +279,8 @@ async function hydrateTotalDistance(token: string): Promise<void> {
 export async function initializeAppStore(): Promise<void> {
   storeError.value = null;
   totalDistance.value = null;
+  rawTotalDistance.value = null;
+  activeStoryline.value = null;
   lastPalantirViewTs.value = null;
 
   // Refresh token signal from localStorage
@@ -279,6 +310,7 @@ export async function initializeAppStore(): Promise<void> {
         username.value = data.username;
         avatarId.value = data.avatarId;
         isAdmin.value = data.isAdmin;
+        activeStoryline.value = data.activeStoryline ?? null;
         lastPalantirViewTs.value = readPalantirViewedAt(data.userId);
         showFutureGoalsUnlocked.value =
           typeof data.showFutureGoalsUnlocked === 'boolean'
@@ -319,6 +351,8 @@ export function resetAppStore(): void {
   showFutureGoalsUnlocked.value = false;
   defaultViewMap.value = false;
   totalDistance.value = null;
+  rawTotalDistance.value = null;
+  activeStoryline.value = null;
   storeInitialized.value = false;
   storeError.value = null;
   sessionToken.value = null;

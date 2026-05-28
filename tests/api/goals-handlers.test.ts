@@ -21,8 +21,8 @@ describe('Goals Handlers', () => {
   describe('handleGoalsGet', () => {
     it('should return goals successfully', async () => {
       const mockResults = [
-        { distance: 100, title: 'Rivendell', special: true, image_id: '1' },
-        { distance: 200, title: 'Lothlorien', special: false, image_id: '2' }
+        { storyline_goal_id: 10, id: 1, distance: 100, title: 'Rivendell', description: null, special: true, image_id: '1', sort_order: 1 },
+        { storyline_goal_id: 11, id: 2, distance: 200, title: 'Lothlorien', description: null, special: false, image_id: '2', sort_order: 2 }
       ];
 
       // Mock session validation
@@ -39,11 +39,29 @@ describe('Goals Handlers', () => {
         })
       });
 
-      // Mock goals query
+      // Mock active user storyline resolution
       mockDB.prepare.mockReturnValueOnce({
-        all: jest.fn(() => Promise.resolve({
-          results: mockResults
-        }))
+        bind: jest.fn().mockReturnValue({
+          first: jest.fn(() => Promise.resolve({
+            id: 1,
+            slug: 'frodo-sam',
+            title: 'Frodo & Sam',
+            description: null,
+            path_key: 'fellowship',
+            sort_order: 0,
+            is_active: 1,
+            storyline_distance_offset: 0,
+          }))
+        })
+      });
+
+      // Mock storyline goals query
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn(() => Promise.resolve({
+            results: mockResults
+          }))
+        })
       });
 
       const response = await handleGoalsGet(mockRequest, mockDb);
@@ -68,9 +86,27 @@ describe('Goals Handlers', () => {
         })
       });
       
-      // Mock goals query to fail
+      // Mock active user storyline resolution
       mockDB.prepare.mockReturnValueOnce({
-        all: jest.fn(() => Promise.reject(new Error('Database connection failed')))
+        bind: jest.fn().mockReturnValue({
+          first: jest.fn(() => Promise.resolve({
+            id: 1,
+            slug: 'frodo-sam',
+            title: 'Frodo & Sam',
+            description: null,
+            path_key: 'fellowship',
+            sort_order: 0,
+            is_active: 1,
+            storyline_distance_offset: 0,
+          }))
+        })
+      });
+
+      // Mock storyline goals query to fail
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn(() => Promise.reject(new Error('Database connection failed')))
+        })
       });
 
       const response = await handleGoalsGet(mockRequest, mockDb);
@@ -87,6 +123,91 @@ describe('Goals Handlers', () => {
 
       expect(response.status).toBe(401);
       expect(data.error).toBe('Missing or invalid authorization header');
+    });
+
+    it('should use explicit storylineId when provided as query param', async () => {
+      const mockResults = [
+        { storyline_goal_id: 20, id: 3, distance: 300, title: 'Edoras', description: null, special: false, image_id: null, sort_order: 1 },
+      ];
+
+      // Mock session validation
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn(() => Promise.resolve({
+            results: [{
+              id: 'mock-session',
+              expires_at: new Date(Date.now() + 86400000).toISOString(),
+              user_id: 1,
+              approved: 1,
+            }],
+          })),
+        }),
+      });
+
+      // Mock requireActiveStoryline: returns storyline row
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          first: jest.fn(() => Promise.resolve({ is_admin: 0 })),
+        }),
+      });
+
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          first: jest.fn(() => Promise.resolve({
+            id: 2,
+            slug: 'rohan',
+            title: 'Rohan',
+            description: null,
+            path_key: 'rohan',
+            sort_order: 1,
+            is_active: 1,
+            admin_only: 0,
+          })),
+        }),
+      });
+
+      // Mock storyline goals query
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn(() => Promise.resolve({ results: mockResults })),
+        }),
+      });
+
+      const requestWithStorylineId = new Request('https://example.com?storylineId=2', {
+        headers: { 'Authorization': 'Bearer mock-session-token' },
+      });
+
+      const response = await handleGoalsGet(requestWithStorylineId, mockDb);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toEqual(mockResults);
+    });
+
+    it('should return 400 for invalid storylineId query param', async () => {
+      // Mock session validation
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          all: jest.fn(() => Promise.resolve({
+            results: [{
+              id: 'mock-session',
+              expires_at: new Date(Date.now() + 86400000).toISOString(),
+              user_id: 1,
+              approved: 1,
+            }],
+          })),
+        }),
+      });
+
+      const requestWithBadId = new Request('https://example.com?storylineId=abc', {
+        headers: { 'Authorization': 'Bearer mock-session-token' },
+      });
+
+      const response = await handleGoalsGet(requestWithBadId, mockDb);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Invalid storylineId');
     });
   });
 

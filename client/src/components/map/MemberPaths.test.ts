@@ -28,6 +28,14 @@ vi.mock('../../data/paths/fellowship-path', () => ({
   ],
 }));
 
+vi.mock('../../data/paths/registry', () => ({
+  getPathByKey: vi.fn(() => [
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    { x: 200, y: 100 },
+  ]),
+}));
+
 vi.mock('../../utils/map-utils', () => ({
   calculateCutoffPoint: vi.fn(() => ({
     completedPoints: [0, 0, 50, 0, 100, 0, 150, 50],

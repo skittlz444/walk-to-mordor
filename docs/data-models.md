@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-04-16 · Migrations: 0001–0129 · Full DDL: `migrations/`
+> Last updated: 2026-05-20 · Migrations: 0001–0138 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -14,7 +14,9 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `users` | Credentials, profile flags, avatar, friend code | 0006, 0008 |
 | `sessions` | Active user sessions (token-based) | 0008 |
 | `progress` | Daily walking logs (one entry per user per date) | 0002 |
-| `goals` | Milestones on the Shire-to-Mordor route (managed via admin UI) | 0003 |
+| `goals` | Reusable milestone content (title, description, image, default distance compatibility) | 0003 |
+| `storylines` | Named journey routes users and fellowships can select | 0132 |
+| `storyline_goals` | Per-storyline goal ordering and distances | 0132 |
 | `password_reset_tokens` | Temporary tokens for password reset flow | 0010 |
 | `email_confirmation_tokens` | Email verification tokens (24h expiry, 3 resends/hr) | 0008 |
 | `parties` | Fellowship groups with configurable distance modes | 0020+ |
@@ -39,6 +41,15 @@ These are rules the schema enforces or that the application layer must uphold �
 - `one_more_mile_enabled` is a per-user toggle for the "One More Mile" milestone nudge notifications. Defaults to ON (`1`) for new users.
 - `inactivity_nudge_enabled` is a per-user toggle for "Gandalf's Absence Arc" re-engagement notifications. Defaults to ON (`1`) for new users.
 - `reengage_tier_sent` tracks the highest re-engagement notification tier sent during the current inactivity period (0 = none, 1–4 = tier reached). Resets to 0 when the user logs a new walk.
+- `active_storyline_id` selects the user's current journey. If null, inactive, or no longer visible to the user, handlers fall back to the default `frodo-sam` storyline.
+- `storyline_distance_offset` is applied to raw progress for display: `max(0, raw_distance + offset)`. Switching with carry preserves displayed distance; switching with reset stores `-raw_distance`.
+
+### storylines / storyline_goals
+- `storylines.slug` is unique and uses lowercase hyphenated slugs. The default seeded storyline is `frodo-sam` with `path_key = 'fellowship'`.
+- `storylines.admin_only = 1` keeps an active storyline visible to admins only while it is being built. Public list/switch handlers exclude admin-only storylines for regular users.
+- `path_key` lets future storylines select a map path dataset. Unknown client path keys must fall back to the fellowship path until a new path is registered.
+- `storyline_goals` reuses rows from `goals` and stores the storyline-specific `distance` and `sort_order`. This allows the same goal content to appear in multiple routes at different distances.
+- Existing goals are backfilled into `storyline_goals` for `frodo-sam`, preserving current behavior for existing users.
 
 ### push_subscriptions
 - Stores one row per browser/device subscription endpoint. Multiple rows per user are expected.
@@ -47,6 +58,7 @@ These are rules the schema enforces or that the application layer must uphold �
 
 ### one_more_mile_sent
 - `UNIQUE(user_id, goal_id)` prevents the same nudge from being sent more than once per user per goal.
+- `storyline_goal_id` supports storyline-specific nudges. New code should prefer the partial unique index `(user_id, storyline_goal_id) WHERE storyline_goal_id IS NOT NULL`.
 - Rows are kept when at least one push delivery succeeds or when a stale subscription is cleaned up after an HTTP `404`/`410`; otherwise the operation is rolled back so the nudge can be retried later.
 - Foreign keys cascade on user/goal deletion.
 
@@ -54,6 +66,7 @@ These are rules the schema enforces or that the application layer must uphold �
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.
 - `leave_distance_behavior` (`keep` | `remove`): leader-updatable.
 - `dissolved_at` set when all members depart — dissolved parties cannot be rejoined.
+- `active_storyline_id` can be set at creation and later changed by the leader. It mirrors the user storyline model for fellowship views. Member contributions remain raw and are not changed by storyline reset.
 
 ### party_members
 - **Leader invariant:** `role = 'leader'` must match `parties.leader_id`. Leader transfers must update both atomically in a transaction.
@@ -105,6 +118,10 @@ erDiagram
     users ||--o{ party_messages : "sends"
     users ||--o{ one_more_mile_sent : "receives"
     goals ||--o{ one_more_mile_sent : "targets"
+    storylines ||--o{ storyline_goals : "orders"
+    goals ||--o{ storyline_goals : "reused by"
+    storylines ||--o{ users : "selected by"
+    storylines ||--o{ parties : "selected by"
     parties ||--o{ party_members : "has"
     parties ||--o{ party_progress_log : "receives"
     parties ||--o{ fellowship_invites : "has"

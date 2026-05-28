@@ -24,6 +24,10 @@ export const CACHE_KEYS = {
   MAP_VIEW: 'walk-to-mordor-map-state',
 } as const;
 
+function getMilestonesCacheKey(pathKey?: string | null): string {
+  return pathKey ? `${CACHE_KEYS.MILESTONES}:${pathKey}` : CACHE_KEYS.MILESTONES;
+}
+
 // ============================================================================
 // TTL Configuration
 // ============================================================================
@@ -40,9 +44,10 @@ const TTL_24_HOURS = 24 * 60 * 60 * 1000;
  *
  * @returns Cached milestones array if valid and not expired, null otherwise.
  */
-export function getCachedMilestones(): Milestone[] | null {
+export function getCachedMilestones(pathKey?: string | null): Milestone[] | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEYS.MILESTONES);
+    const cacheKey = getMilestonesCacheKey(pathKey);
+    const raw = localStorage.getItem(cacheKey);
     if (!raw) return null;
 
     const cached = JSON.parse(raw) as CachedMilestones;
@@ -56,7 +61,7 @@ export function getCachedMilestones(): Milestone[] | null {
     const age = Date.now() - cached.timestamp;
     if (age >= TTL_24_HOURS) {
       // Expired - remove from cache
-      localStorage.removeItem(CACHE_KEYS.MILESTONES);
+      localStorage.removeItem(cacheKey);
       return null;
     }
 
@@ -72,13 +77,13 @@ export function getCachedMilestones(): Milestone[] | null {
  *
  * @param milestones - Array of milestones to cache.
  */
-export function cacheMilestones(milestones: Milestone[]): void {
+export function cacheMilestones(milestones: Milestone[], pathKey?: string | null): void {
   try {
     const cached: CachedMilestones = {
       data: milestones,
       timestamp: Date.now(),
     };
-    localStorage.setItem(CACHE_KEYS.MILESTONES, JSON.stringify(cached));
+    localStorage.setItem(getMilestonesCacheKey(pathKey), JSON.stringify(cached));
   } catch {
     // Quota exceeded or localStorage unavailable - fail silently
     console.warn('[map-cache] Failed to cache milestones');
@@ -157,6 +162,12 @@ export function persistMapView(state: MapViewState): void {
 export function clearMapCache(): void {
   try {
     localStorage.removeItem(CACHE_KEYS.MILESTONES);
+    for (let index = localStorage.length - 1; index >= 0; index--) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(`${CACHE_KEYS.MILESTONES}:`)) {
+        localStorage.removeItem(key);
+      }
+    }
     localStorage.removeItem(CACHE_KEYS.MAP_VIEW);
   } catch {
     // localStorage unavailable - fail silently

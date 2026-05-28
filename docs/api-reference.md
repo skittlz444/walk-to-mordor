@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-04-17
+Last updated: 2026-05-20
 
 ## Conventions
 
@@ -21,6 +21,7 @@ Last updated: 2026-04-17
 | Push | `src/push-handlers.ts` |
 | Progress | `src/progress-handlers.ts` |
 | Goals | `src/goals-handlers.ts` |
+| Storylines | `src/storyline-handlers.ts`, `src/storyline-utils.ts` |
 | Party (Fellowship) | `src/party-handlers.ts` |
 | Fellowship Invites | `src/fellowship-invite-handlers.ts` |
 | Friends | `src/friends-handlers.ts` |
@@ -34,7 +35,7 @@ Last updated: 2026-04-17
 | POST | `/api/register` | No | Creates user, triggers confirmation email |
 | POST | `/api/login` | No | Returns session token |
 | POST | `/api/logout` | Yes | Body requires `sessionId`; missing → `400` |
-| GET | `/api/session` | Yes | camelCase fields: `userId`, `username`, `email`, `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId`, `expiresAt` |
+| GET | `/api/session` | Yes | camelCase fields: `userId`, `username`, `email`, `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId`, `activeStoryline`, `expiresAt` |
 | PUT | `/api/profile` | Yes | Updates username/email/password |
 | PUT | `/api/user/preferences` | Yes | Body: any of `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId` (at least one) |
 | GET | `/api/avatars` | Yes | Valid slugs from `src/avatar-slugs.ts` |
@@ -77,19 +78,30 @@ Last updated: 2026-04-17
 | POST | `/api/calendar-progress` | Yes | Body: `{ date, distance }` |
 | PUT | `/api/calendar-progress` | Yes | Body: `{ id, date, distance }` |
 | DELETE | `/api/calendar-progress` | Yes | Body: `{ id }` |
-| GET | `/api/total-distance` | Yes | Returns `{ totalDistance }` |
+| GET | `/api/total-distance` | Yes | Returns displayed storyline distance: `{ totalDistance, rawTotalDistance, activeStoryline }` |
 
 ## Goal Endpoints
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/api/goals` | Yes | Milestone goals with `image_id` metadata |
+| GET | `/api/goals` | Yes | Active user's storyline goals. Optional `storylineId` query selects another active storyline; admin-only storylines require an admin user. |
+
+## Storyline Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/storylines` | Yes | Active storylines available for user/fellowship selection. Admin users also receive admin-only storylines. |
+| PUT | `/api/user/storyline` | Yes | Body: `{ storylineId, mode: 'carry' | 'reset' }`. Updates active user storyline and offset. Admin-only targets require an admin user. |
+| PUT | `/api/party/:id/storyline` | Yes | Leader-only. Same body as user endpoint. Updates party storyline and active members' viewed distance baseline. Admin-only targets require an admin leader. |
+
+- Raw walking progress remains the source of truth. Displayed storyline distance is `max(0, rawTotalDistance + distanceOffset)`.
+- `carry` preserves the currently displayed distance on the new storyline. `reset` sets displayed distance to 0 without deleting progress.
 
 ## Party (Fellowship) Endpoints
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| POST | `/api/party` | Yes | Body: `{ name, distance_mode, leave_distance_behavior }`. Returns `201` with `invite_code` |
+| POST | `/api/party` | Yes | Body: `{ name, distance_mode, leave_distance_behavior, storylineId? }`. Returns `201` with `invite_code` |
 | GET | `/api/user/parties` | Yes | Query: `include_dissolved=true` optional |
 | GET | `/api/party/join/:inviteCode` | **No** | Public invite preview |
 | POST | `/api/party/join/:inviteCode` | Yes | Joins or rejoins a party |
@@ -100,10 +112,13 @@ Last updated: 2026-04-17
 | POST | `/api/party/:id/leave` | Yes | Applies leave-distance policy |
 | POST | `/api/party/:id/kick/:userId` | Yes | Leader-only. Optional: `{ removeDistance: true }` |
 | PUT | `/api/party/:id/settings` | Yes | Leader-only. Mutable: `name`, `leave_distance_behavior` |
+| PUT | `/api/party/:id/storyline` | Yes | Leader-only. Mutable: active storyline and display offset |
 | POST | `/api/party/:id/transfer-leadership` | Yes | Leader-only. Body: `{ new_leader_id }` |
 
 - `distance_mode` is **immutable** after creation — rejected if sent to `PUT settings`.
+- `storylineId` is optional at creation. If provided, it must reference an active storyline visible to the creator; admin-only storylines can only be selected by admins.
 - Activity and messages require active membership (`403` if not a member).
+- Party progress returns `total_distance` as displayed storyline distance and `raw_total_distance` as contribution sum before offset. Member `contribution` values remain raw.
 
 ## Fellowship Invite Endpoints
 
@@ -138,7 +153,7 @@ Last updated: 2026-04-17
 
 All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Every mutating action is audit-logged via `logAdminAction`.
 
-**Audit action strings:** `update_goal`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
+**Audit action strings:** `update_goal`, `create_goal`, `create_storyline`, `update_storyline`, `update_storyline_goals`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
 
 ### Dashboard & Metrics
 
@@ -161,6 +176,20 @@ All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Eve
 - `image_id` must match `/^[a-z0-9]+(-[a-z0-9]+)*$/` or be null/empty. References static assets in `public/img/`.
 - POST uses `distance_miles` (converted to km); PUT uses `distance` (already km).
 - Empty `special` and `image_id` strings normalized to `null`. Goal IDs must be positive integers.
+
+### Storyline Management
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/admin/storylines` | Lists all storylines with goal counts and distance range |
+| GET | `/api/admin/storylines/:id` | Storyline metadata plus mapped goal distances |
+| POST | `/api/admin/storylines` | Creates a storyline and optionally copies goal mappings from an existing storyline. Supports `adminOnly` for draft visibility. |
+| PUT | `/api/admin/storylines/:id` | Updates slug, title, description, path key, sort order, active flag, and admin-only flag |
+| PUT | `/api/admin/storylines/:id/goals` | Upserts per-goal storyline distances and sort orders |
+
+- Slugs and path keys use lowercase hyphenated format.
+- `adminOnly: true` keeps the storyline out of regular user/fellowship selectors while admins build and test it.
+- Admin UI is available at `/admin/storylines`.
 
 ### Image Inventory
 

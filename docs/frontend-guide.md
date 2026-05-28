@@ -5,7 +5,7 @@ description: Island hydration architecture, component patterns, build tooling, a
 
 # Frontend Guide
 
-Last updated: 2026-03-17
+Last updated: 2026-05-20
 
 ## Frontend Shape
 
@@ -135,6 +135,9 @@ Each `src/render*.ts` file produces an SSR shell mounting one or more islands. K
 | Map + Social Panel | `client/src/islands/MapIsland.tsx` |
 | Admin Dashboard | `client/src/islands/AdminDashboardIsland.tsx` |
 | Admin Goals CRUD | `client/src/islands/AdminGoalsListIsland.tsx`, `AdminGoalEditIsland.tsx` |
+| Admin Storylines | `client/src/islands/AdminStorylinesIsland.tsx` |
+| User Storyline Selector | `client/src/islands/ProfileIsland.tsx` |
+| Fellowship Storyline Selector | `client/src/islands/PartyManageIsland.tsx` |
 | Friends | `client/src/islands/FriendsListIsland.tsx`, `FriendProfileIsland.tsx`, `FriendAddIsland.tsx` |
 | Reusable Avatar | `client/src/components/Avatar.tsx` |
 | Avatar slug inventory | `src/avatar-slugs.ts` (`VALID_AVATAR_SLUGS`) |
@@ -150,6 +153,8 @@ Legacy vanilla JS lives in `public/js/`. Key modules: `main.js` (bootstrap), `ca
 - `window.__islands.render(name, container, props)` — programmatic island mounting
 - `window.preact` / `window.preactIslands` — Preact runtime references
 - `window.partyStore` — fellowship state (`client/src/stores/partyStore.ts`)
+- `window._personalDistance` and `window._activeStoryline` — legacy journey display state from `/api/total-distance`
+- `storylineChanged` CustomEvent — emitted by `ProfileIsland` after user storyline switches; `appStore` consumes it to update signals
 
 Never remove these without migrating all dependent legacy code. Prefer signals and stores over adding new bridge globals.
 

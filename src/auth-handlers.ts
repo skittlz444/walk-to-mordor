@@ -22,10 +22,22 @@ import type { DbClient } from './db';
 import { createErrorResponse, createSuccessResponse } from './validators';
 import { sendPasswordResetEmail, sendConfirmationEmail } from './email-utils';
 import { isValidAvatarSlug, VALID_AVATAR_SLUGS } from './avatar-slugs';
+import { resolveUserStoryline, toStorylineResponse } from './storyline-utils';
 
 // Rate limit constants
 const PASSWORD_RESET_RATE_LIMIT = 3; // Maximum password reset emails per hour
 const EMAIL_CONFIRMATION_RATE_LIMIT = 3; // Maximum confirmation emails per hour
+
+interface SessionUserRow {
+  id: number;
+  username: string;
+  email: string;
+  approved: number;
+  show_future_goals_unlocked: number;
+  default_view_map: number;
+  is_admin: number;
+  avatar_id: string | null;
+}
 
 /**
  * Handle user registration
@@ -256,9 +268,9 @@ export async function handleSessionValidation(request: Request, db: DbClient, al
       // Check if user exists
       let { results } = await db.read.prepare(
         'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin, avatar_id FROM users WHERE username = ?'
-      ).bind(username).all();
+      ).bind(username).all<SessionUserRow>();
 
-      let user;
+      let user: SessionUserRow;
       if (results.length === 0) {
         // Create test user (INSERT OR IGNORE to handle concurrent requests)
         const salt = 'test_salt';
@@ -272,7 +284,7 @@ export async function handleSessionValidation(request: Request, db: DbClient, al
         // Fetch the user (created here or by a concurrent request)
         const createdUser = await db.read.prepare(
           'SELECT id, username, email, approved, show_future_goals_unlocked, default_view_map, is_admin, avatar_id FROM users WHERE username = ?'
-        ).bind(username).first();
+        ).bind(username).first<SessionUserRow>();
         
         if (!createdUser) {
           return createErrorResponse('Failed to create or find test user', 500);
@@ -282,6 +294,8 @@ export async function handleSessionValidation(request: Request, db: DbClient, al
         user = results[0];
       }
 
+      const storylineContext = await resolveUserStoryline(db, user.id);
+
       return createSuccessResponse({
         userId: user.id,
         username: user.username,
@@ -290,6 +304,7 @@ export async function handleSessionValidation(request: Request, db: DbClient, al
         defaultViewMap: user.default_view_map === 1,
         isAdmin: user.is_admin === 1,
         avatarId: user.avatar_id ?? null,
+        activeStoryline: toStorylineResponse(storylineContext),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       }, 200);
     } catch (error: any) {
@@ -321,6 +336,8 @@ export async function handleSessionValidation(request: Request, db: DbClient, al
       return createErrorResponse('User account is no longer approved', 403);
     }
 
+    const storylineContext = await resolveUserStoryline(db, session.user_id);
+
     return createSuccessResponse({
       userId: session.user_id,
       username: session.username,
@@ -329,6 +346,7 @@ export async function handleSessionValidation(request: Request, db: DbClient, al
       defaultViewMap: session.default_view_map === 1,
       isAdmin: session.is_admin === 1,
       avatarId: session.avatar_id ?? null,
+      activeStoryline: toStorylineResponse(storylineContext),
       expiresAt: session.expires_at
     }, 200);
   } catch (error: any) {

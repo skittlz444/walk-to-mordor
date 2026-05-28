@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateCutoffPoint,
   getUserPosition,
+  getPathTotalDistance,
   clamp,
   dynamicStrokeWidth,
   truncateFuturePath,
@@ -239,6 +240,23 @@ describe('getUserPosition', () => {
     const lastCompletedY = split.completedPoints[split.completedPoints.length - 1];
     expect(pos.x).toBeCloseTo(lastCompletedX, 5);
     expect(pos.y).toBeCloseTo(lastCompletedY, 5);
+  });
+});
+
+describe('getPathTotalDistance', () => {
+  it('returns the final numeric anchor distance', () => {
+    const path: PathNode[] = [
+      { x: 0, y: 0, distance: 0 },
+      { x: 10, y: 0, distance: 20 },
+      { x: 20, y: 0, distance: null },
+    ];
+
+    expect(getPathTotalDistance(path)).toBe(20);
+  });
+
+  it('returns 0 when the path has no anchors', () => {
+    expect(getPathTotalDistance([])).toBe(0);
+    expect(getPathTotalDistance([{ x: 0, y: 0, distance: null }])).toBe(0);
   });
 });
 

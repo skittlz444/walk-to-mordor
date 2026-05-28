@@ -21,9 +21,12 @@ import type {
   MapLoadingState,
 } from '../types/map';
 import { getUserPosition, type Point } from '../utils/map-utils';
-import { fellowshipPath } from '../data/paths/fellowship-path';
+import { DEFAULT_PATH_KEY, getPathByKey } from '../data/paths/registry';
 import { getWaypointCoordinates } from '../data/waypoints';
-import { showFutureGoalsUnlocked as appShowFutureGoalsUnlocked } from './appStore';
+import {
+  activeStoryline as appActiveStoryline,
+  showFutureGoalsUnlocked as appShowFutureGoalsUnlocked,
+} from './appStore';
 
 // ============================================================================
 // Core Signals
@@ -68,6 +71,12 @@ export const error = signal<Error | null>(null);
  * Automatically stays in sync — no manual snapshot needed.
  */
 export const showFutureGoalsUnlocked = computed<boolean>(() => appShowFutureGoalsUnlocked.value);
+
+/** Active map path key selected by the user's current storyline. */
+export const activePathKey = computed<string>(() => appActiveStoryline.value?.pathKey ?? DEFAULT_PATH_KEY);
+
+/** Active map path data selected by the user's current storyline. */
+export const currentJourneyPath = computed(() => getPathByKey(activePathKey.value));
 
 // ============================================================================
 // Computed Signals (defined in mapStore for full implementation)
@@ -121,7 +130,7 @@ export const currentPosition = computed((): Point => {
   if (!progress) return { x: 0, y: 0 };
 
   const distanceMiles = progress.totalDistance * KM_TO_MILES;
-  return getUserPosition(fellowshipPath, distanceMiles);
+  return getUserPosition(currentJourneyPath.value, distanceMiles);
 });
 
 /**
@@ -164,6 +173,7 @@ const GOALS_API_URL = '/api/goals';
  */
 interface TotalDistanceResponse {
   totalDistance: number;
+  activeStoryline?: { pathKey: string };
 }
 
 /**
@@ -215,7 +225,7 @@ export async function fetchUserProgress(): Promise<UserProgress> {
  * @returns Array of Milestone objects with coordinates.
  * @throws Error on non-ok response.
  */
-export async function fetchMilestones(): Promise<Milestone[]> {
+export async function fetchMilestones(pathKey = activePathKey.value): Promise<Milestone[]> {
   const token = localStorage.getItem('sessionToken');
   const headers: HeadersInit = token
     ? { Authorization: `Bearer ${token}` }
@@ -229,7 +239,7 @@ export async function fetchMilestones(): Promise<Milestone[]> {
 
   const goals = (await response.json()) as GoalResponse[];
 
-  const waypoints = getWaypointCoordinates(fellowshipPath, goals);
+  const waypoints = getWaypointCoordinates(getPathByKey(pathKey), goals);
 
   // Map waypoints back to Milestone format (preserving all Goal fields)
   return goals.map((goal, index) => ({
@@ -281,11 +291,15 @@ export async function initializeMap(): Promise<void> {
     // Safe: initializeAppStore() completes before island hydration (see index.tsx bootstrap)
 
     // Try cached milestones first
-    let milestonesData = getCachedMilestones();
+    const pathKey = activePathKey.value;
+    const storylineCacheKey = appActiveStoryline.value
+      ? `${pathKey}:${appActiveStoryline.value.id}`
+      : pathKey;
+    let milestonesData = getCachedMilestones(storylineCacheKey);
     if (!milestonesData) {
       // Cache miss or expired - fetch from API
-      milestonesData = await fetchMilestones();
-      cacheMilestones(milestonesData);
+      milestonesData = await fetchMilestones(pathKey);
+      cacheMilestones(milestonesData, storylineCacheKey);
     }
     milestones.value = milestonesData;
 

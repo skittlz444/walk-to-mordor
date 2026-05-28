@@ -18,7 +18,8 @@
  */
 
 import Konva from 'konva';
-import { fellowshipPath } from '../../data/paths/fellowship-path';
+import { type PathNode } from '../../data/paths/fellowship-path';
+import { getPathByKey } from '../../data/paths/registry';
 import {
   calculateCutoffPoint,
   truncateFuturePath,
@@ -109,7 +110,7 @@ function slicePathByDistance(points: number[], startPx: number, endPx: number): 
 }
 
 /** Build fade segments between the 7% and 11% future path distances. */
-function buildFadeSegments(futurePoints: number[]): number[][] {
+function buildFadeSegments(futurePoints: number[], fullPathPixelLength: number): number[][] {
   const fadeStartPx = fullPathPixelLength * FUTURE_SOLID_FRACTION;
   const fadeEndPx = fullPathPixelLength * FUTURE_FADE_END_FRACTION;
   const segmentSize = (fadeEndPx - fadeStartPx) / FUTURE_FADE_SEGMENTS;
@@ -123,18 +124,24 @@ function buildFadeSegments(futurePoints: number[]): number[][] {
   return segments;
 }
 
-/** Pre-compute the total geometric pixel length of the full path. */
-function getFullPathPixelLength(): number {
+/** Pre-compute the total geometric pixel length of the full path.
+ *  Results are cached per path array reference to avoid O(n) on every render.
+ */
+const pathPixelLengthCache = new Map<PathNode[], number>();
+
+function getFullPathPixelLength(path: PathNode[]): number {
+  const cached = pathPixelLengthCache.get(path);
+  if (cached !== undefined) return cached;
+
   let total = 0;
-  for (let i = 1; i < fellowshipPath.length; i++) {
-    const dx = fellowshipPath[i].x - fellowshipPath[i - 1].x;
-    const dy = fellowshipPath[i].y - fellowshipPath[i - 1].y;
+  for (let i = 1; i < path.length; i++) {
+    const dx = path[i].x - path[i - 1].x;
+    const dy = path[i].y - path[i - 1].y;
     total += Math.sqrt(dx * dx + dy * dy);
   }
+  pathPixelLengthCache.set(path, total);
   return total;
 }
-
-const fullPathPixelLength = getFullPathPixelLength();
 
 /**
  * Create the two Konva Line nodes for the journey path.
@@ -148,17 +155,19 @@ export function createJourneyPath(
   layer: Konva.Layer,
   userDistance: number,
   scale: number,
+  path: PathNode[] = getPathByKey(null),
 ): JourneyPathNodes {
   const { completedPoints, futurePoints } = calculateCutoffPoint(
-    fellowshipPath,
+    path,
     userDistance,
   );
 
   // In dev mode, show entire path as solid; otherwise use 7% + 7-11% fade tail
   const devMode = !!window.__MAP_DEV_LOG;
+  const fullPathPixelLength = getFullPathPixelLength(path);
   const solidFuturePixels = fullPathPixelLength * FUTURE_SOLID_FRACTION;
   const displayedFuture = devMode ? futurePoints : truncateFuturePath(futurePoints, solidFuturePixels);
-  const fadeSegments = devMode ? [] : buildFadeSegments(futurePoints);
+  const fadeSegments = devMode ? [] : buildFadeSegments(futurePoints, fullPathPixelLength);
 
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
   const scaledDash = FUTURE_DASH.map((d) => d / scale);
@@ -222,17 +231,19 @@ export function updateJourneyPath(
   nodes: JourneyPathNodes,
   userDistance: number,
   scale: number,
+  path: PathNode[] = getPathByKey(null),
 ): void {
   const { completedPoints, futurePoints } = calculateCutoffPoint(
-    fellowshipPath,
+    path,
     userDistance,
   );
 
   // In dev mode, show entire path as solid; otherwise use 7% + 7-11% fade tail
   const devMode = !!window.__MAP_DEV_LOG;
+  const fullPathPixelLength = getFullPathPixelLength(path);
   const solidFuturePixels = fullPathPixelLength * FUTURE_SOLID_FRACTION;
   const displayedFuture = devMode ? futurePoints : truncateFuturePath(futurePoints, solidFuturePixels);
-  const fadeSegments = devMode ? [] : buildFadeSegments(futurePoints);
+  const fadeSegments = devMode ? [] : buildFadeSegments(futurePoints, fullPathPixelLength);
 
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
 

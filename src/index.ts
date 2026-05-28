@@ -14,7 +14,7 @@ import {
 } from "./progress-handlers";
 import { 
   handleGoalsGet, 
-  calculateTotalDistance 
+  calculateUserStorylineDistance 
 } from "./goals-handlers";
 import {
   handleRegister,
@@ -53,6 +53,11 @@ import {
   handleAdminGoalUpdate,
   handleAdminImageInventory,
   handleAdminGoalCreate,
+  handleAdminStorylinesList,
+  handleAdminStorylineGet,
+  handleAdminStorylineCreate,
+  handleAdminStorylineUpdate,
+  handleAdminStorylineGoalsUpdate,
   handleAdminUsersList,
   handleAdminUserVerify,
   handleAdminUserResetPassword,
@@ -66,6 +71,7 @@ import { renderAdminGoalEditPage } from "./renderAdminGoalEditPage";
 import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 import { renderAdminUsersPage } from "./renderAdminUsersPage";
 import { renderAdminMetricsPage } from "./renderAdminMetricsPage";
+import { renderAdminStorylinesPage } from "./renderAdminStorylinesPage";
 import { createDbClient } from './db';
 import { handleWeeklyStats, handleHeatmap, handleWrappedStats } from './stats-handlers';
 import {
@@ -75,6 +81,11 @@ import {
   handlePushSettings,
   handleVapidKey,
 } from './push-handlers';
+import {
+  handleStorylinesList,
+  handleUpdatePartyStoryline,
+  handleUpdateUserStoryline,
+} from './storyline-handlers';
 import { handleOneMoreMileCron, handleReengagementCron } from './scheduled-handlers';
 
 /**
@@ -165,6 +176,10 @@ export default {
         return handleUpdatePreferences(request, db, body, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/avatars" && method === "GET") {
         return handleGetAvatars(request, db, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/storylines" && method === "GET") {
+        return handleStorylinesList(request, db, env.ALLOW_TEST_AUTH);
+      } else if (url.pathname === "/api/user/storyline" && method === "PUT") {
+        return handleUpdateUserStoryline(request, db, body, env.ALLOW_TEST_AUTH);
       } else if (url.pathname === "/api/password-reset-request" && method === "POST") {
         return handlePasswordResetRequest(request, db, body, env);
       } else if (url.pathname === "/api/password-reset" && method === "POST") {
@@ -208,6 +223,33 @@ export default {
         }
         if (url.pathname === "/api/admin/goals" && method === "POST") {
           return handleAdminGoalCreate(request, db, body, adminValidation.userId);
+        }
+
+        // Admin Storylines
+        if (url.pathname === "/api/admin/storylines" && method === "GET") {
+          return handleAdminStorylinesList(request, db);
+        }
+        if (url.pathname === "/api/admin/storylines" && method === "POST") {
+          return handleAdminStorylineCreate(request, db, body, adminValidation.userId);
+        }
+
+        const adminStorylineGoalParams = matchRoute(url.pathname, '/api/admin/storylines/:id/goals');
+        if (adminStorylineGoalParams) {
+          const storylineId = Number.parseInt(adminStorylineGoalParams.id, 10);
+          if (!Number.isInteger(storylineId) || storylineId <= 0 || String(storylineId) !== adminStorylineGoalParams.id) {
+            return createErrorResponse('Invalid storyline ID', 400);
+          }
+          if (method === 'PUT') return handleAdminStorylineGoalsUpdate(request, db, storylineId, body, adminValidation.userId);
+        }
+
+        const adminStorylineParams = matchRoute(url.pathname, '/api/admin/storylines/:id');
+        if (adminStorylineParams) {
+          const storylineId = Number.parseInt(adminStorylineParams.id, 10);
+          if (!Number.isInteger(storylineId) || storylineId <= 0 || String(storylineId) !== adminStorylineParams.id) {
+            return createErrorResponse('Invalid storyline ID', 400);
+          }
+          if (method === 'GET') return handleAdminStorylineGet(request, db, storylineId);
+          if (method === 'PUT') return handleAdminStorylineUpdate(request, db, storylineId, body, adminValidation.userId);
         }
 
         // Admin Image Inventory (Story 4.5)
@@ -445,6 +487,20 @@ export default {
         return handleUpdatePartySettings(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
       }
 
+      // PUT /api/party/:id/storyline — update party storyline (leader only)
+      const partyStorylineParams = matchRoute(url.pathname, '/api/party/:id/storyline');
+      if (partyStorylineParams && method === "PUT") {
+        const partyId = Number.parseInt(partyStorylineParams.id, 10);
+        if (
+          !Number.isInteger(partyId) ||
+          partyId <= 0 ||
+          String(partyId) !== partyStorylineParams.id
+        ) {
+          return createErrorResponse('Invalid party ID', 400);
+        }
+        return handleUpdatePartyStoryline(request, db, partyId, body, env.ALLOW_TEST_AUTH);
+      }
+
       // POST /api/party/:id/transfer-leadership — transfer leadership (leader only)
       const transferParams = matchRoute(url.pathname, '/api/party/:id/transfer-leadership');
       if (transferParams && method === "POST") {
@@ -556,8 +612,8 @@ export default {
         }
         
         try {
-          const totalDistance = await calculateTotalDistance(db, sessionValidation.userId!);
-          return new Response(JSON.stringify({ totalDistance }), {
+          const distance = await calculateUserStorylineDistance(db, sessionValidation.userId!);
+          return new Response(JSON.stringify(distance), {
             headers: { "content-type": "application/json" },
           });
         } catch (error: unknown) {
@@ -619,6 +675,12 @@ export default {
     // Admin Goals list page — auth handled client-side by Preact islands
     if (url.pathname === "/admin/goals") {
       return new Response(renderAdminGoalsPage(), {
+        headers: { "content-type": "text/html" },
+      });
+    }
+
+    if (url.pathname === "/admin/storylines") {
+      return new Response(renderAdminStorylinesPage(), {
         headers: { "content-type": "text/html" },
       });
     }
@@ -771,6 +833,7 @@ function getAllowedMethods(pathname: string): string[] {
     case "/api/total-distance":
     case "/api/session":
     case "/api/avatars":
+    case "/api/storylines":
     case "/api/push/status":
     case "/api/push/vapid-key":
     case "/api/auth/confirm-email":
@@ -790,6 +853,8 @@ function getAllowedMethods(pathname: string): string[] {
       return ['GET'];
     case "/api/admin/goals":
       return ['GET', 'POST'];
+    case "/api/admin/storylines":
+      return ['GET', 'POST'];
     case "/api/register":
     case "/api/login":
     case "/api/logout":
@@ -804,12 +869,15 @@ function getAllowedMethods(pathname: string): string[] {
       return ['POST', 'DELETE'];
     case "/api/profile":
     case "/api/user/preferences":
+    case "/api/user/storyline":
     case "/api/push/settings":
       return ['PUT'];
     default:
       // Admin API routes
       if (pathname.startsWith('/api/admin/')) {
         if (matchRoute(pathname, '/api/admin/goals/:id')) return ['GET', 'PUT'];
+        if (matchRoute(pathname, '/api/admin/storylines/:id')) return ['GET', 'PUT'];
+        if (matchRoute(pathname, '/api/admin/storylines/:id/goals')) return ['PUT'];
         if (matchRoute(pathname, '/api/admin/users/:id')) return ['DELETE'];
         if (matchRoute(pathname, '/api/admin/users/:id/verify')) return ['PUT'];
         if (matchRoute(pathname, '/api/admin/users/:id/reset')) return ['PUT'];
@@ -843,6 +911,9 @@ function getAllowedMethods(pathname: string): string[] {
         return ['POST'];
       }
       if (matchRoute(pathname, '/api/party/:id/settings')) {
+        return ['PUT'];
+      }
+      if (matchRoute(pathname, '/api/party/:id/storyline')) {
         return ['PUT'];
       }
       if (matchRoute(pathname, '/api/party/:id/transfer-leadership')) {

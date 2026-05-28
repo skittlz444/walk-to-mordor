@@ -12,7 +12,8 @@
  */
 
 import Konva from 'konva';
-import { fellowshipPath } from '../../data/paths/fellowship-path';
+import { type PathNode } from '../../data/paths/fellowship-path';
+import { getPathByKey } from '../../data/paths/registry';
 import {
   calculateCutoffPoint,
   computePathLength,
@@ -52,6 +53,7 @@ export function createMemberPaths(
   layer: Konva.Layer,
   members: MemberPathData[],
   scale: number,
+  path: PathNode[] = getPathByKey(null),
 ): MemberPathNodes {
   const strokeWidth = dynamicStrokeWidth(BASE_STROKE, scale, MIN_STROKE, MAX_STROKE);
   const lines: Konva.Line[] = [];
@@ -63,7 +65,7 @@ export function createMemberPaths(
   }
 
   // Get the completed path from 0 to the total party distance
-  const { completedPoints } = calculateCutoffPoint(fellowshipPath, totalMiles);
+  const { completedPoints } = calculateCutoffPoint(path, totalMiles);
   if (completedPoints.length < 4) {
     return { lines, destroy() { lines.length = 0; } };
   }

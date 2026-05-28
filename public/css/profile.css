@@ -149,6 +149,61 @@ input:checked + .toggle-slider:before {
   background-color: #fff;
 }
 
+.storyline-section select {
+  width: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-gray);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.storyline-section select:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.profile-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-modal-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.profile-dialog {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.profile-dialog h3 {
+  color: var(--accent-gold);
+  margin: 0 0 0.75rem;
+}
+
+.profile-dialog p {
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.profile-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 /* Preference save status */
 .preference-status {
   font-size: 0.85em;

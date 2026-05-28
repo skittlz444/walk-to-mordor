@@ -414,6 +414,24 @@
   box-shadow: 0 0 0 2px rgba(22, 199, 154, 0.2);
 }
 
+.admin-goals-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-goals-filter__checkbox {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--accent-teal);
+}
+
 .admin-goals-info__count {
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -1225,6 +1243,194 @@
   align-items: center;
   gap: 0.3rem;
   position: relative;
+}
+
+.admin-notice {
+  background: var(--status-success-bg);
+  border: 1px solid rgba(81, 207, 102, 0.45);
+  border-radius: 8px;
+  color: var(--status-success-light);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-storylines {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-storylines-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(480px, 1.15fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.admin-panel.admin-storyline-panel,
+.admin-panel.admin-storyline-list-panel {
+  min-width: 0;
+}
+
+.admin-panel.admin-storyline-list-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-storyline-table-wrap {
+  margin-bottom: 0;
+}
+
+.admin-storyline-list-panel .admin-goals-table {
+  min-width: 520px;
+}
+
+.admin-storyline-row--active {
+  background: color-mix(in srgb, var(--accent-gold) 12%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent-gold);
+}
+
+.admin-storyline-row--active:hover {
+  background: color-mix(in srgb, var(--accent-gold) 16%, transparent);
+}
+
+.admin-storyline-slug {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.admin-storyline-empty {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.admin-storyline-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-storyline-form h3,
+.admin-storyline-goals h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.admin-storyline-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-storyline-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.admin-storyline-form input,
+.admin-storyline-form select,
+.admin-storyline-form textarea,
+.admin-storyline-goal-add select,
+.admin-storyline-goal-row input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--border-gray);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 0.6rem 0.75rem;
+}
+
+.admin-storyline-form textarea {
+  resize: vertical;
+}
+
+.admin-storyline-form__wide {
+  grid-column: 1 / -1;
+}
+
+.admin-storyline-checkbox {
+  align-self: center;
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem !important;
+}
+
+.admin-storyline-checkbox input {
+  min-height: 0;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-blue);
+}
+
+.admin-storyline-goals {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-gray);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-storyline-goal-list {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.admin-storyline-goal-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin-storyline-goal-search {
+  max-width: none;
+}
+
+.admin-storyline-goal-add .admin-btn,
+.admin-storyline-goal-row .admin-btn {
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.admin-storyline-goal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border-gray);
+}
+
+.admin-storyline-goal-row span {
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 960px) {
+  .admin-storylines-grid,
+  .admin-storyline-form__grid,
+  .admin-storyline-goal-add,
+  .admin-storyline-goal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-storyline-list-panel .admin-goals-table {
+    min-width: 0;
+  }
+
+  .admin-storyline-goal-add .admin-btn,
+  .admin-storyline-goal-row .admin-btn {
+    width: 100%;
+  }
 }
 
 .admin-image-tile:hover {

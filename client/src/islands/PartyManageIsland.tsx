@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { Avatar } from '../components/Avatar';
 import { getAuthHeaders } from '../utils/auth';
+import type { ActiveStoryline } from '../types/session';
 
 interface PartyMember {
   user_id: number;
@@ -21,11 +22,32 @@ interface PartyInfo {
 
 interface PartyProgressData {
   total_distance: number;
+  raw_total_distance?: number;
   member_count: number;
   current_user_id: number;
   distance_mode: string;
   leave_distance_behavior: string;
+  active_storyline?: ActiveStoryline;
   members: PartyMember[];
+}
+
+interface StorylineOption {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  pathKey: string;
+}
+
+interface StorylineListResponse {
+  storylines: StorylineOption[];
+}
+
+interface StorylineSwitchResponse {
+  partyId: number;
+  totalDistance: number;
+  rawTotalDistance: number;
+  activeStoryline: ActiveStoryline;
 }
 
 function parseAvatarSlugs(payload: unknown): string[] {
@@ -61,6 +83,10 @@ export function PartyManageIsland() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [availableAvatars, setAvailableAvatars] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [storylines, setStorylines] = useState<StorylineOption[]>([]);
+  const [activeStoryline, setActiveStoryline] = useState<ActiveStoryline | null>(null);
+  const [pendingStoryline, setPendingStoryline] = useState<StorylineOption | null>(null);
+  const [switchingStoryline, setSwitchingStoryline] = useState(false);
 
   // Kick state
   const [kickTarget, setKickTarget] = useState<PartyMember | null>(null);
@@ -82,12 +108,21 @@ export function PartyManageIsland() {
     setError(null);
     try {
       const headers = getAuthHeaders();
-      const partiesRes = await fetch('/api/user/parties', { headers });
+      const [partiesRes, storylinesRes] = await Promise.all([
+        fetch('/api/user/parties', { headers }),
+        fetch('/api/storylines', { headers }),
+      ]);
 
       if (!partiesRes.ok) {
         if (partiesRes.status === 401) { window.location.href = '/login'; return; }
         throw new Error('Failed to load parties');
       }
+
+      if (storylinesRes.ok) {
+        const storylinesData: StorylineListResponse = await storylinesRes.json();
+        setStorylines(Array.isArray(storylinesData.storylines) ? storylinesData.storylines : []);
+      }
+
       const partiesData = await partiesRes.json();
       const info = (partiesData.parties ?? []).find((p: PartyInfo) => p.id === partyId);
       if (!info) { window.location.href = '/party'; return; }
@@ -119,6 +154,7 @@ export function PartyManageIsland() {
         const progressData: PartyProgressData = await progressRes.json();
         setCurrentUserId(progressData.current_user_id ?? null);
         setMembers(progressData.members.filter(m => m.status === 'active'));
+        setActiveStoryline(progressData.active_storyline ?? null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -154,6 +190,40 @@ export function PartyManageIsland() {
       setSaving(false);
     }
   };
+
+  const handleStorylineChange = useCallback((e: Event) => {
+    const storylineId = Number((e.target as HTMLSelectElement).value);
+    const nextStoryline = storylines.find(storyline => storyline.id === storylineId) ?? null;
+    if (!nextStoryline || nextStoryline.id === activeStoryline?.id) return;
+    setPendingStoryline(nextStoryline);
+  }, [activeStoryline?.id, storylines]);
+
+  const handleSwitchStoryline = useCallback(async (mode: 'carry' | 'reset') => {
+    if (!pendingStoryline) return;
+
+    setSwitchingStoryline(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/party/${partyId}/storyline`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ storylineId: pendingStoryline.id, mode }),
+      });
+      const data = await res.json() as StorylineSwitchResponse | { error?: string };
+      if (!res.ok || !('activeStoryline' in data)) {
+        throw new Error('error' in data && data.error ? data.error : 'Failed to update storyline');
+      }
+
+      setActiveStoryline(data.activeStoryline);
+      setPendingStoryline(null);
+      setSuccessMsg('Storyline updated!');
+      window.dispatchEvent(new CustomEvent('partyStorylineChanged', { detail: data }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update storyline');
+    } finally {
+      setSwitchingStoryline(false);
+    }
+  }, [partyId, pendingStoryline]);
 
   const handleKick = async () => {
     if (!kickTarget) return;
@@ -358,6 +428,29 @@ export function PartyManageIsland() {
         </form>
       </div>
 
+      {/* Storyline */}
+      <div className="party-manage-section">
+        <h3><i className="fas fa-map-signs" aria-hidden="true" style={{ marginRight: '0.4em' }}></i>Storyline</h3>
+        <div className="party-form">
+          <label>
+            Fellowship Journey
+            <select
+              value={activeStoryline?.id ?? ''}
+              onChange={handleStorylineChange}
+              disabled={storylines.length === 0 || switchingStoryline}
+            >
+              <option value="" disabled>Select a journey…</option>
+              {storylines.map(storyline => (
+                <option key={storyline.id} value={storyline.id}>{storyline.title}</option>
+              ))}
+            </select>
+            {activeStoryline?.description && (
+              <span className="helper-text">{activeStoryline.description}</span>
+            )}
+          </label>
+        </div>
+      </div>
+
       {/* Members / Kick */}
       <div className="party-manage-section">
         <h3><i className="fas fa-users" aria-hidden="true" style={{ marginRight: '0.4em' }}></i>Members</h3>
@@ -484,6 +577,23 @@ export function PartyManageIsland() {
               <button className="party-btn party-btn--primary" onClick={handleRegenerate} disabled={regenerating}>
                 {regenerating ? <><i className="fas fa-spinner fa-spin" aria-hidden="true"></i> Regenerating…</> : 'Regenerate'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Storyline Confirmation Dialog */}
+      {pendingStoryline && (
+        <div className="party-confirm-overlay" onClick={() => setPendingStoryline(null)}>
+          <div className="party-confirm-dialog" role="dialog" aria-label="Change Storyline" onClick={(e) => e.stopPropagation()}>
+            <h3>Change Storyline?</h3>
+            <p>
+              Switch this fellowship to <strong>{pendingStoryline.title}</strong> and choose how its shared distance should appear there.
+            </p>
+            <div className="party-confirm-actions">
+              <button className="party-btn party-btn--secondary" onClick={() => setPendingStoryline(null)} disabled={switchingStoryline}>Cancel</button>
+              <button className="party-btn party-btn--secondary" onClick={() => handleSwitchStoryline('carry')} disabled={switchingStoryline}>Carry Distance</button>
+              <button className="party-btn party-btn--primary" onClick={() => handleSwitchStoryline('reset')} disabled={switchingStoryline}>Start at 0</button>
             </div>
           </div>
         </div>
