@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-05-20 · Migrations: 0001–0132 · Full DDL: `migrations/`
+> Last updated: 2026-05-20 · Migrations: 0001–0138 · Full DDL: `migrations/`
 
 ## Tables
 

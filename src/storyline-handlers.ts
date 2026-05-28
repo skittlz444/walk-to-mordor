@@ -145,8 +145,11 @@ export async function handleUpdatePartyStoryline(
       'SELECT id, leader_id, distance_mode, dissolved_at FROM parties WHERE id = ?',
     ).bind(partyId).first<PartyStorylineRow>();
 
-    if (!party || party.dissolved_at !== null) {
+    if (!party) {
       return createErrorResponse('Party not found', 404);
+    }
+    if (party.dissolved_at !== null) {
+      return createErrorResponse('This party has been dissolved', 400);
     }
     if (party.leader_id !== userId) {
       return createErrorResponse('Only the party leader can update storyline', 403);

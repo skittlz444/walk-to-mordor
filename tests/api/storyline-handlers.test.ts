@@ -298,6 +298,24 @@ describe('Storyline Handlers', () => {
       expect(response.status).toBe(404);
     });
 
+    it('returns 400 when party is dissolved', async () => {
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnValue({
+          first: jest.fn(() => Promise.resolve({
+            id: 5, leader_id: 1, distance_mode: 'cumulative', dissolved_at: '2026-05-20T00:00:00.000Z',
+          })),
+        }),
+      });
+
+      const response = await handleUpdatePartyStoryline(
+        mockRequest, mockDb, 5, { storylineId: 1, mode: 'reset' },
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('This party has been dissolved');
+    });
+
     it('returns 400 for invalid mode', async () => {
       const response = await handleUpdatePartyStoryline(
         mockRequest, mockDb, 5, { storylineId: 1, mode: 'invalid' },
