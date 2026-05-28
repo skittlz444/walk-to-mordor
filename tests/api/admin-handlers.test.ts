@@ -1271,6 +1271,31 @@ describe('Admin Handlers', () => {
       );
     });
 
+    it('should filter to goals without images when imageFilter=missing', async () => {
+      const rowsWithoutImages = [
+        { id: 10, title: 'No Image Yet', distance: 123, description: null, special: null, image_id: null },
+        { id: 11, title: 'Still Missing', distance: 124, description: null, special: null, image_id: '' },
+      ];
+      setupGoalsDb({ countTotal: 2, rows: rowsWithoutImages });
+
+      const request = createGoalsRequest('?imageFilter=missing');
+      const response = await handleAdminGoalsList(
+        request,
+        mockDb
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.goals).toHaveLength(2);
+      expect(body.goals[0].has_image).toBe(false);
+      expect(body.goals[1].has_image).toBe(false);
+
+      const countSqlCall = mockDB.prepare.mock.calls[0][0] as string;
+      const dataSqlCall = mockDB.prepare.mock.calls[1][0] as string;
+      expect(countSqlCall).toContain("WHERE (image_id IS NULL OR image_id = '')");
+      expect(dataSqlCall).toContain("WHERE (image_id IS NULL OR image_id = '')");
+    });
+
     it('should not include WHERE clause when search is empty', async () => {
       setupGoalsDb({ countTotal: 3, rows: sampleGoals });
 
@@ -1644,6 +1669,45 @@ describe('Admin Handlers', () => {
       // Verify search binding is used — one binding per searched field (6 fields)
       const searchParam = '%river%';
       expect(mockCountBind).toHaveBeenCalledWith(searchParam, searchParam, searchParam, searchParam, searchParam, searchParam);
+    });
+
+    it('should combine search and missing-image filter correctly', async () => {
+      const mockCountFirst = jest.fn().mockResolvedValue({ total: 1 });
+      const mockCountBind = jest.fn().mockReturnValue({ first: mockCountFirst });
+      const mockDataAll = jest.fn().mockResolvedValue({
+        results: [
+          { id: 12, title: 'River-bank Camp', distance: 350, description: null, special: null, image_id: null },
+        ],
+      });
+      const mockDataBind = jest.fn().mockReturnValue({ all: mockDataAll });
+
+      mockDB.prepare
+        .mockReturnValueOnce({ bind: mockCountBind })
+        .mockReturnValueOnce({ bind: mockDataBind });
+
+      const request = createGoalsRequest('?search=river&imageFilter=missing');
+      await handleAdminGoalsList(
+        request,
+        mockDb
+      );
+
+      const countSqlCall = mockDB.prepare.mock.calls[0][0] as string;
+      const dataSqlCall = mockDB.prepare.mock.calls[1][0] as string;
+      expect(countSqlCall).toContain('WHERE (title LIKE');
+      expect(countSqlCall).toContain("AND (image_id IS NULL OR image_id = '')");
+      expect(dataSqlCall).toContain("AND (image_id IS NULL OR image_id = '')");
+
+      const searchParam = '%river%';
+      expect(mockDataBind).toHaveBeenCalledWith(
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        searchParam,
+        25,
+        0,
+      );
     });
 
     it('should return empty goals array when no results match', async () => {

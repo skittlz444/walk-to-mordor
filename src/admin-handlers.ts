@@ -704,6 +704,7 @@ export async function handleAdminMetricsTimeline(_request: Request, db: DbClient
  *   - page (default 1)
  *   - pageSize (default 25, max 100)
  *   - search (optional, performs a text search over goal fields)
+ *   - imageFilter ('missing' optional, limits goals to rows without image_id)
  *   - order ('asc' | 'desc', default 'asc' — by distance)
  */
 export async function handleAdminGoalsList(request: Request, db: DbClient): Promise<Response> {
@@ -712,6 +713,7 @@ export async function handleAdminGoalsList(request: Request, db: DbClient): Prom
     const rawPage = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get('pageSize') ?? '25', 10) || 25));
     const search = url.searchParams.get('search')?.trim() ?? '';
+    const imageFilter = url.searchParams.get('imageFilter') === 'missing' ? 'missing' : '';
     const order = url.searchParams.get('order') === 'desc' ? 'DESC' : 'ASC';
 
     // Build queries with parameterized bindings
@@ -719,15 +721,14 @@ export async function handleAdminGoalsList(request: Request, db: DbClient): Prom
     let dataSql = 'SELECT id, title, distance, description, special, image_id FROM goals';
     const countBindings: (string | number)[] = [];
     const dataBindings: (string | number)[] = [];
+    const whereClauses: string[] = [];
 
     if (search) {
       // Search across all goal fields: title, description, special, image_id, id, distance
       const searchFields = [
         'title', 'description', 'special', 'image_id', 'CAST(id AS TEXT)', 'CAST(distance AS TEXT)',
       ];
-      const whereClause = ` WHERE (${searchFields.map((f) => `${f} LIKE ? ESCAPE '\\'`).join(' OR ')})`;
-      countSql += whereClause;
-      dataSql += whereClause;
+      whereClauses.push(`(${searchFields.map((f) => `${f} LIKE ? ESCAPE '\\'`).join(' OR ')})`);
       // Escape LIKE wildcards in user input to prevent unintended pattern matching
       const escapedSearch = escapeLikeSearch(search);
       const searchParam = `%${escapedSearch}%`;
@@ -735,6 +736,16 @@ export async function handleAdminGoalsList(request: Request, db: DbClient): Prom
         countBindings.push(searchParam);
         dataBindings.push(searchParam);
       }
+    }
+
+    if (imageFilter === 'missing') {
+      whereClauses.push("(image_id IS NULL OR image_id = '')");
+    }
+
+    if (whereClauses.length > 0) {
+      const whereClause = ` WHERE ${whereClauses.join(' AND ')}`;
+      countSql += whereClause;
+      dataSql += whereClause;
     }
 
     dataSql += ` ORDER BY distance ${order} LIMIT ? OFFSET ?`;
