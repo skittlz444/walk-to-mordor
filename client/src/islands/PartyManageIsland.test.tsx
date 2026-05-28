@@ -48,6 +48,10 @@ function mockManageResponses(avatarsPayload: unknown) {
     })
     .mockResolvedValueOnce({
       ok: true,
+      json: () => Promise.resolve({ storylines: [] }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
       json: () => Promise.resolve(avatarsPayload),
     })
     .mockResolvedValueOnce({

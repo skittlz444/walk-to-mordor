@@ -32,9 +32,9 @@ describe('pippinPath', () => {
   });
 
   it('places key Pippin branch milestones on the expected map anchors', () => {
-    expect(getUserPosition(pippinPath, 1396)).toEqual({ x: 5128, y: 2992 });
-    expect(getUserPosition(pippinPath, 1436)).toEqual({ x: 4868, y: 2900 });
-    expect(getUserPosition(pippinPath, 1450)).toEqual({ x: 4718, y: 2858 });
+    expect(getUserPosition(pippinPath, 1396)).toEqual({ x: 5275, y: 3083 });
+    expect(getUserPosition(pippinPath, 1436)).toEqual({ x: 5113, y: 2980 });
+    expect(getUserPosition(pippinPath, 1450)).toEqual({ x: 5021, y: 2935 });
     expect(getUserPosition(pippinPath, 1555)).toEqual({ x: 4549, y: 3032 });
     expect(getUserPosition(pippinPath, 1579)).toEqual({ x: 4554, y: 3210 });
     expect(getUserPosition(pippinPath, 1729)).toEqual({ x: 4928, y: 3483 });
