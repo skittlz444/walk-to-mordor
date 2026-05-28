@@ -112,16 +112,14 @@ const pippinMinasTirithToBlackGatePath = copyReversedSharedSegment(
 const pippinBranch: PathNode[] = [
   // Amon Hen -> Fangorn -> Isengard
   { x: 5587, y: 3374, distance: null },        // Orcs leave Parth Galen
-  { x: 5440, y: 3208, distance: 1348 },        // Orc trail across the Wold
-  { x: 5290, y: 3092, distance: null },
-  { x: 5128, y: 2992, distance: 1396 },        // Pippin drops his brooch
-  { x: 4988, y: 2938, distance: null },
-  { x: 4868, y: 2900, distance: 1436 },        // Riders strike the Orcs
-  { x: 4784, y: 2875, distance: 1442 },        // Escape into Fangorn
-  { x: 4718, y: 2858, distance: 1450 },        // Meet Treebeard
-  { x: 4654, y: 2858, distance: 1485 },        // Entmoot in Fangorn
-  { x: 4592, y: 2935, distance: null },
-  { x: 4531, y: 3010, distance: 1535 },        // Ents march on Isengard
+  { x: 5499, y: 3275, distance: 1348 },        // Orc trail across the Wold
+  { x: 5275, y: 3083, distance: 1396 },        // Pippin drops his brooch
+  { x: 5113, y: 2980, distance: 1436 },        // Riders strike the Orcs
+  { x: 5059, y: 2956, distance: 1442 },        // Escape into Fangorn
+  { x: 5021, y: 2935, distance: 1450 },        // Meet Treebeard
+  { x: 4950, y: 2878, distance: 1485 },        // Entmoot in Fangorn
+  { x: 4881, y: 2892, distance: 1515 },
+  { x: 4734, y: 3004, distance: 1535 },        // Ents march on Isengard
   { x: 4549, y: 3032, distance: PIPPIN_ISENGARD_DISTANCE },        // Isengard flooded
 
   // Isengard -> Minas Tirith with Gandalf
