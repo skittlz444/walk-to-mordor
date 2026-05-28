@@ -96,6 +96,7 @@ export function AdminStorylinesIsland() {
   const [goals, setGoals] = useState<StorylineGoal[]>([]);
   const [availableGoals, setAvailableGoals] = useState<AdminGoalOption[]>([]);
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
+  const [goalDistanceSearch, setGoalDistanceSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [loadingGoals, setLoadingGoals] = useState(false);
@@ -145,6 +146,7 @@ export function AdminStorylinesIsland() {
       const data: StorylineDetailResponse = await res.json();
       setForm(toFormState(data.storyline));
       setGoals(data.goals);
+      setGoalDistanceSearch('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load storyline details');
     } finally {
@@ -189,16 +191,43 @@ export function AdminStorylinesIsland() {
   }, [fetchDetail, selectedId]);
 
   const selectedStoryline = storylines.find((storyline) => storyline.id === selectedId) ?? null;
+  const goalDistanceSearchQuery = goalDistanceSearch.trim().toLowerCase();
+  const filteredGoals = useMemo(() => {
+    if (!goalDistanceSearchQuery) return goals;
+
+    return goals.filter((goal) => {
+      const distanceTwoDecimals = goal.distance.toFixed(2);
+      const distanceOneDecimal = goal.distance.toFixed(1);
+
+      return goal.title.toLowerCase().includes(goalDistanceSearchQuery)
+        || String(goal.goal_id).includes(goalDistanceSearchQuery)
+        || distanceTwoDecimals.includes(goalDistanceSearchQuery)
+        || distanceOneDecimal.includes(goalDistanceSearchQuery);
+    });
+  }, [goalDistanceSearchQuery, goals]);
   const addableGoals = useMemo(() => {
     const mappedGoalIds = new Set(goals.map((goal) => goal.goal_id));
     return availableGoals.filter((goal) => !mappedGoalIds.has(goal.id));
   }, [availableGoals, goals]);
+  const filteredAddableGoals = useMemo(() => {
+    if (!goalDistanceSearchQuery) return addableGoals;
+
+    return addableGoals.filter((goal) => {
+      const distanceTwoDecimals = goal.distance.toFixed(2);
+      const distanceOneDecimal = goal.distance.toFixed(1);
+
+      return goal.title.toLowerCase().includes(goalDistanceSearchQuery)
+        || String(goal.id).includes(goalDistanceSearchQuery)
+        || distanceTwoDecimals.includes(goalDistanceSearchQuery)
+        || distanceOneDecimal.includes(goalDistanceSearchQuery);
+    });
+  }, [addableGoals, goalDistanceSearchQuery]);
 
   useEffect(() => {
-    setSelectedGoalId((current) => current !== null && addableGoals.some((goal) => goal.id === current)
+    setSelectedGoalId((current) => current !== null && filteredAddableGoals.some((goal) => goal.id === current)
       ? current
-      : addableGoals[0]?.id ?? null);
-  }, [addableGoals]);
+      : filteredAddableGoals[0]?.id ?? null);
+  }, [filteredAddableGoals]);
 
   const updateForm = useCallback(<K extends keyof StorylineFormState>(key: K, value: StorylineFormState[K]) => {
     setForm((current) => current ? { ...current, [key]: value } : current);
@@ -319,7 +348,7 @@ export function AdminStorylinesIsland() {
   }
 
   return (
-    <div className="admin-storylines">
+    <section className="admin-storylines">
       <div className="admin-section-heading">
         <div>
           <h2>Storylines</h2>
@@ -334,7 +363,7 @@ export function AdminStorylinesIsland() {
       {error && <div className="admin-error" role="alert"><p>{error}</p></div>}
 
       {showCreate && (
-        <form className="admin-storyline-panel admin-storyline-form" onSubmit={handleCreate}>
+        <form className="admin-panel admin-storyline-panel admin-storyline-form" onSubmit={handleCreate}>
           <h3>Create Storyline</h3>
           <div className="admin-storyline-form__grid">
             <label>Slug<input value={createForm.slug} onInput={(e) => updateCreateForm('slug', (e.target as HTMLInputElement).value)} required /></label>
@@ -354,30 +383,45 @@ export function AdminStorylinesIsland() {
       )}
 
       <div className="admin-storylines-grid">
-        <div className="admin-goals-table-wrap">
-          <table className="admin-goals-table" role="grid">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Goals</th>
-                <th>Range</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {storylines.map((storyline) => (
-                <tr key={storyline.id} className="admin-goals-row" onClick={() => setSelectedId(storyline.id)} tabIndex={0}>
-                  <td className="admin-goals-cell--title">{storyline.title}<span className="admin-storyline-slug">{storyline.slug}</span></td>
-                  <td>{storyline.goal_count}</td>
-                  <td>{formatRange(storyline)}</td>
-                  <td><span className={`admin-badge ${getStatusClass(storyline)}`}>{getStatusLabel(storyline)}</span></td>
+        <section className="admin-panel admin-storyline-list-panel" aria-label="Storyline list">
+          <div className="admin-goals-table-wrap admin-storyline-table-wrap">
+            <table className="admin-goals-table" role="grid">
+              <thead>
+                <tr>
+                  <th scope="col">Title</th>
+                  <th scope="col">Goals</th>
+                  <th scope="col">Range</th>
+                  <th scope="col">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {storylines.map((storyline) => (
+                  <tr
+                    key={storyline.id}
+                    className={`admin-goals-row admin-storyline-row ${storyline.id === selectedId ? 'admin-storyline-row--active' : ''}`}
+                    onClick={() => setSelectedId(storyline.id)}
+                    role="row"
+                    aria-selected={storyline.id === selectedId}
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedId(storyline.id);
+                      }
+                    }}
+                  >
+                    <td className="admin-goals-cell--title">{storyline.title}<span className="admin-storyline-slug">{storyline.slug}</span></td>
+                    <td>{storyline.goal_count}</td>
+                    <td>{formatRange(storyline)}</td>
+                    <td><span className={`admin-badge ${getStatusClass(storyline)}`}>{getStatusLabel(storyline)}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <div className="admin-storyline-panel">
+        <section className="admin-panel admin-storyline-panel">
           {!selectedStoryline || !form ? (
             <p className="admin-storyline-empty">Select a storyline to edit.</p>
           ) : detailLoading ? (
@@ -402,25 +446,42 @@ export function AdminStorylinesIsland() {
                 <div className="admin-panel__header">
                   <div>
                     <h3>Goal Distances</h3>
-                    <p>{goals.length} mapped goals</p>
+                    <p>{goalDistanceSearchQuery ? `${filteredGoals.length} of ${goals.length} mapped goals` : `${goals.length} mapped goals`}</p>
                   </div>
                   <button type="button" className="admin-btn admin-btn-secondary" onClick={handleSaveGoals} disabled={savingGoals}>Save Distances</button>
                 </div>
+                <div className="admin-goals-search admin-storyline-goal-search">
+                  <i className="fas fa-search" aria-hidden="true"></i>
+                  <input
+                    className="admin-goals-search__input"
+                    type="search"
+                    value={goalDistanceSearch}
+                    onInput={(e) => setGoalDistanceSearch((e.target as HTMLInputElement).value)}
+                    placeholder="Search goals"
+                    aria-label="Search mapped and addable goals"
+                  />
+                </div>
                 <div className="admin-storyline-goal-add">
                   <select
-                    value={selectedGoalId ?? ''}
+                    value={selectedGoalId === null ? '' : String(selectedGoalId)}
                     onChange={(e) => setSelectedGoalId(Number((e.target as HTMLSelectElement).value) || null)}
-                    disabled={loadingGoals || addableGoals.length === 0}
+                    disabled={loadingGoals || filteredAddableGoals.length === 0}
                   >
-                    <option value="">{loadingGoals ? 'Loading goals...' : 'Select a goal'}</option>
-                    {addableGoals.map((goal) => (
+                    <option value="">
+                      {loadingGoals ? 'Loading goals...' : filteredAddableGoals.length === 0
+                        ? goalDistanceSearchQuery ? 'No matching goals' : 'No goals available'
+                        : 'Select a goal'}
+                    </option>
+                    {filteredAddableGoals.map((goal) => (
                       <option key={goal.id} value={goal.id}>{goal.title} ({goal.distance.toFixed(2)} km)</option>
                     ))}
                   </select>
                   <button type="button" className="admin-btn admin-btn-secondary" onClick={handleAddGoal} disabled={selectedGoalId === null || savingGoals}>Add Goal</button>
                 </div>
                 <div className="admin-storyline-goal-list">
-                  {goals.map((goal, index) => (
+                  {filteredGoals.length === 0 ? (
+                    <p className="admin-storyline-empty">{goalDistanceSearchQuery ? 'No mapped goals match your search.' : 'No mapped goals yet.'}</p>
+                  ) : filteredGoals.map((goal) => (
                     <div className="admin-storyline-goal-row" key={goal.storyline_goal_id}>
                       <span>{goal.title}</span>
                       <input
@@ -430,7 +491,7 @@ export function AdminStorylinesIsland() {
                         value={goal.distance}
                         onInput={(e) => {
                           const distance = Number((e.target as HTMLInputElement).value);
-                          setGoals((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, distance } : item));
+                          setGoals((current) => current.map((item) => item.goal_id === goal.goal_id ? { ...item, distance } : item));
                         }}
                       />
                       <button type="button" className="admin-btn admin-btn-secondary" onClick={() => handleRemoveGoal(goal.goal_id)}>Remove</button>
@@ -440,8 +501,8 @@ export function AdminStorylinesIsland() {
               </div>
             </>
           )}
-        </div>
+        </section>
       </div>
-    </div>
+    </section>
   );
 }
