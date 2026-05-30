@@ -1,0 +1,27 @@
+schema: spec-driven
+
+context: |
+  Project: Walk to Mordor.
+  Runtime: Cloudflare Workers single-worker monolith.
+  Database: Cloudflare D1 (SQLite) is the source of truth.
+  Frontend: Preact islands in client/src plus legacy vanilla JS in public/js.
+  State: Preact Signals for new client logic.
+  Map UI: Konva.js.
+  Tests: Jest, Vitest, and Playwright.
+  TypeScript is strict; avoid any and define interfaces for D1 results.
+  Preserve working legacy vanilla JS unless explicitly changing it.
+  Prefer new interactive frontend components in client/src.
+
+rules:
+  proposal:
+    - Keep each change focused on one behavior or user-facing outcome.
+    - Identify affected surfaces and rollout or rollback considerations when relevant.
+  specs:
+    - Use behavior-first requirements with Given/When/Then scenarios.
+    - Keep implementation details out of specs unless they affect observable behavior.
+  design:
+    - Reference existing Cloudflare Worker, D1, Preact island, and legacy JS patterns before introducing new abstractions.
+    - Call out migrations, compatibility risks, and data-shape changes.
+  tasks:
+    - Include validation steps for affected Jest, Vitest, or Playwright coverage.
+    - Keep tasks small enough to implement and review independently.
