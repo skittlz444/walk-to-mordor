@@ -3,7 +3,7 @@
   "description": "Cloudflare's native serverless SQL database.",
   "private": true,
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.0.0"
   },
   "repository": {
     "type": "git",
