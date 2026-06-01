@@ -3,7 +3,7 @@
   "description": "Cloudflare's native serverless SQL database.",
   "private": true,
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.0.0"
   },
   "repository": {
     "type": "git",
@@ -37,7 +37,7 @@
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
     "@vitest/coverage-v8": "^4.1.7",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.1",
     "eslint": "^10.4.1",
     "globals": "^17.6.0",
     "happy-dom": "^20.9.0",
