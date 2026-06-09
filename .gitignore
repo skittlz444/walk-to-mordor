@@ -212,3 +212,4 @@ raw_assets/
 _inspection-screenshots/
 client/test-results/junit.xml
 _bmad/custom/config.user.toml
+.playwright-mcp/
