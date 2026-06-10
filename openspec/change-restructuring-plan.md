@@ -461,3 +461,28 @@ Within each phase, changes can be parallelized if desired. Phases must be sequen
 | **Archive** | `events-and-challenges`, `storyline-books-and-achievements` |
 | **Split + rename** | `field-guide-collectible-discovery` → `field-guide-collectible-discovery-core` + `field-guide-collectible-discovery-admin` |
 | **Create new** | `shared-achievement-infrastructure`, `profile-badge-display`, `personal-challenges`, `personal-challenges-admin`, `community-campaigns`, `community-campaigns-admin`, `storyline-books-core`, `storyline-books-ui`, `storyline-books-admin` |
+
+---
+
+## Cross-Cutting Infrastructure Improvements
+
+### Replace the monolithic if/else route chain with a proper router
+
+**Current state**: `src/index.ts` uses a ~500-line if/else chain to dispatch API routes. Each new change adds more branches, making the file harder to read, harder to test in isolation, and prone to ordering bugs (exact match vs parameterized match, multiple changes stepping on each other's patch context).
+
+**Proposed**: Replace with a lightweight router abstraction — a simple path-to-handler map with method validation. This should:
+
+- Support exact path matching, parameterized path matching (`:param`), and HTTP method filtering
+- Preserve the existing `DbClient` injection pattern (all handlers receive `db` as a parameter)
+- Support the existing `matchRoute` utility's semantics
+- Be added as a standalone module in `src/router.ts`
+- Be backwards compatible — no existing route behavior changes
+
+**Migration path**:
+1. Create `src/router.ts` with a `Router` class that registers `{ method, pattern, handler, requiresAuth, requiresAdmin }` entries
+2. Write a helper to convert the existing if/else chain to route registrations one section at a time
+3. Each new OpenSpec change (community-campaigns, storyline-books-core, etc.) registers its routes via the router instead of editing the if/else chain
+4. Once all routes are migrated, remove the if/else chain
+5. The `getAllowedMethods` function is replaced by the router's method metadata
+
+**When**: This is not a separate OpenSpec change — it's applied incrementally. The first change that needs routing complexity beyond simple exact-path matching (likely `community-campaigns` with its parameterized `/api/events/:id` routes, or `personal-challenges` with `/api/events/daily-roll/*`) should ship the router module and register its routes there. Subsequent changes register their routes via the router, gradually shrinking the if/else chain until it can be removed.

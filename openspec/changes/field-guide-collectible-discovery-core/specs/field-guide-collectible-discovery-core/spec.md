@@ -14,17 +14,7 @@ The system SHALL provide one global Field Guide collection per user across all s
 - **THEN** the previously discovered slots in that region remain revealed in the global Field Guide
 
 ### Requirement: Admins can manage regions, mappings, and collectible catalog entries
-The system SHALL provide admin workflows to manage reusable Field Guide regions, storyline-to-region distance mappings, and collectible catalog entries for those regions.
-
-#### Scenario: Admin defines a reusable region mapping
-- **GIVEN** an admin is configuring Field Guide data
-- **WHEN** the admin maps a reusable region to a storyline with a start and end distance band
-- **THEN** the system saves that mapping independently of the region definition itself
-
-#### Scenario: Admin creates a collectible slot
-- **GIVEN** an admin is editing a reusable region
-- **WHEN** the admin creates a collectible entry
-- **THEN** the system requires a category of either `flora` or `fauna`, a rarity tier, a fixed slot order, and the authored content needed for that collectible's silhouette and revealed detail view
+Admin management of Field Guide regions, storyline-to-region distance mappings, and collectible catalog entries is handled in `field-guide-collectible-discovery-admin`. Regions, mappings, and collectibles for MVP are seeded via migration in this change.
 
 ### Requirement: Positive walk distance triggers region-aware discovery attempts
 The system SHALL evaluate collectible discovery only from positive walk distance added through walk create or walk update flows, using the active storyline's mapped regions across the traversed distance interval and rarity-tier-based odds with a slight rare-tier bump for unusually long walk entries.
@@ -45,9 +35,13 @@ The system SHALL evaluate collectible discovery only from positive walk distance
 - **THEN** the system uses the traversed interval to make collectibles from each crossed mapped region eligible
 
 #### Scenario: Long walk entries slightly improve rare finds
-- **GIVEN** a saved walk entry meets the long-walk threshold
+- **GIVEN** a saved walk entry meets the long-walk threshold (10 km)
 - **WHEN** discovery attempts are evaluated
-- **THEN** the system applies a slight bump toward rarer collectible tiers compared with an otherwise equivalent shorter walk entry
+- **THEN** the system applies a rare-tier multiplier that scales non-linearly from 10 km (1×) to 20 km (3× cap)
+
+#### Scenario: Discovery engine parameters are configurable
+- **WHEN** the application is deployed
+- **THEN** rarity tier odds (75/20/5), distance budget (1/km), base find chance (1-in-10), and long-walk thresholds (10-20 km) are defined as tunable constants that can be adjusted without schema changes
 
 ### Requirement: Discoveries are immutable and duplicates are preserved
 The system SHALL store discoveries as immutable collection events, reveal a collectible slot on first discovery, preserve duplicates as additional finds of the same collectible, and never revoke already found collectibles because of later walk edits or deletes.

@@ -1,0 +1,25 @@
+## 1. Admin Campaign API
+
+- [ ] 1.1 Create `src/campaign-admin-handlers.ts` with `handleAdminCampaignsList`, `handleAdminCampaignCreate`, `handleAdminCampaignGet`, `handleAdminCampaignUpdate`, `handleAdminCampaignEnable`, `handleAdminCampaignDisable`, `handleAdminCampaignSuggestions`. Each handler validates admin session, performs the requested DB operation on `campaign_definitions`, manages the linked badge definition in `achievement_definitions` (auto-create on save from inline badge fields), logs via `logAdminAction` from `admin-handlers.ts`, and returns JSON responses.
+- [ ] 1.2 Implement validation for campaign fields: slug (required, max 80, kebab-case, unique), name (required, max 120), description (required, max 2000), image_slug (required, max 120), badge_slug (required, max 120), target_distance (required, number > 0), start_date (required, ISO date, >= today), end_date (required, ISO date, > start_date). Validate badge_slug against `achievement_definitions` — if no match but inline badge fields (badge_name, badge_description, badge_image_slug) are provided, auto-create the achievement definition row. Return `{ error: "validation", fields: { ... } }` on failure.
+- [ ] 1.3 Implement community metric suggestions: query total distance and distinct active user count from `progress` table for the past 30 days. Calculate suggested target distance, suggested duration days (7/14/30 based on target magnitude), suggested participant count. Return all fields plus raw totals.
+- [ ] 1.4 Implement disable-with-confirmation: `PUT /api/admin/campaigns/:id/disable` checks for active `campaign_participants` rows. If any exist, returns `{ activeParticipants: N, requiresConfirmation: true }` (400 status). Client must re-send with `{ cancelActive: true }` or `{ cancelActive: false }`. Audit log records participant count when cancelled.
+- [ ] 1.5 Audit log mutations via `logAdminAction` with `action` (create_campaign, update_campaign, enable_campaign, disable_campaign, cancel_campaign_participants), `targetType` = 'community_campaign', `targetId`, and `details` as JSON.
+- [ ] 1.6 Wire admin campaign routes into `src/index.ts` under the admin block: `GET /api/admin/campaigns/suggestions` (must check BEFORE `/:id` parameterized routes), then `GET/POST /api/admin/campaigns`, `GET/PUT /api/admin/campaigns/:id`, `PUT /api/admin/campaigns/:id/enable`, `PUT /api/admin/campaigns/:id/disable`. Add `matchRoute` patterns to `getAllowedMethods`.
+- [ ] 1.7 Add Jest coverage for: admin CRUD operations, badge auto-create on save, field validation, non-admin rejection, metric suggestion calculation, disable with/without active participants, cancel vs keep-active flow, audit log entries.
+
+## 2. Admin Campaigns UI
+
+- [ ] 2.1 Create `client/src/islands/AdminCommunityCampaignsIsland.tsx`: Preact functional component that fetches from `GET /api/admin/campaigns`, displays them in a table or card list with name, slug, target distance, dates, badge name, enabled state, and edit/enable/disable action buttons. Includes "New Campaign" button that reveals an inline create form.
+- [ ] 2.2 Implement the create/edit form with inline badge fields and suggestions: inline form fields for campaign fields plus a reusable badge fields section (same pattern as `AdminEncountersIsland`). A "Get Suggestions" button calls `GET /api/admin/campaigns/suggestions` and pre-fills target, start date, and end date fields. Shows field-level validation errors. Refreshes list on submit.
+- [ ] 2.3 Implement enable/disable toggle with participant confirmation: sends PUT request. If disable response indicates active participants, shows confirmation modal with count and "Leave active" / "Cancel all" options. Sends `{ cancelActive: bool }` in body. Updates row on success.
+- [ ] 2.4 Add admin CSS for the campaigns section following existing admin patterns. No contamination of unrelated admin blocks. Add to existing admin CSS or `renderAdminPage.ts` stylesheet array.
+- [ ] 2.5 Register `AdminCommunityCampaignsIsland` in `client/src/index.tsx`: add import, add to `autoHydratedIslands` and `allIslands` objects. Add `<div data-island="AdminCommunityCampaignsIsland"></div>` to `renderAdminPage.ts` below `AdminEncountersIsland` (which will already exist from the `personal-challenges-admin` change).
+
+## 3. Validation
+
+- [ ] 3.1 Add Vitest coverage for `AdminCommunityCampaignsIsland`: renders campaign list with enable/disable, opens create form with badge fields and suggestions button, submits with suggestions data, shows field validation errors, toggles enable/disable, shows disable confirmation modal for active participants.
+- [ ] 3.2 Run `npm test` and fix regressions related to admin campaign handlers, route dispatch, and audit logging.
+- [ ] 3.3 Run `npm run test:client` and fix regressions related to the new admin island and island registration.
+- [ ] 3.4 Run `npm run check` and resolve any TypeScript or Wrangler dry-run issues.
+- [ ] 3.5 Update `docs/api-reference.md` with admin campaign endpoint specifications.
