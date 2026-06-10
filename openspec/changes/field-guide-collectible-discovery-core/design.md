@@ -4,21 +4,21 @@ Walk to Mordor already models journey progress as raw walking distance plus stor
 
 The product shape is a global Field Guide spanning all storylines, with reusable regions such as Hollin or Fangorn appearing once in the collection even when they map to multiple storyline distance bands. Discoveries must feel exploratory rather than deterministic, preserve duplicates immutably, and place first-discovery markers on the map without being vulnerable to progress-edit farming.
 
-This is cross-cutting because it introduces new D1 models, new admin workflows, new public APIs, progress-handler side effects, new Field Guide UI, and a new Konva marker layer. It also overlaps with active OpenSpec work around progress reconciliation, immutable repeatable achievements, and route-aware presentation.
+This is cross-cutting because it introduces new D1 models, new public APIs, progress-handler side effects, new Field Guide UI, and a new Konva marker layer. Admin workflows for region/collectible management are handled separately in `field-guide-collectible-discovery-admin`. The design references the shared `achievement_definitions` table from `shared-achievement-infrastructure` for forward compatibility with future duplicate-threshold badges.
 
 ## Goals / Non-Goals
 
 **Goals:**
 - Provide one global Field Guide collection per user that persists across storyline switches.
 - Model reusable regions separately from storyline mappings so the same region and collectible roster can appear on multiple routes at different distances.
-- Let admins manage regions, region-to-storyline distance bands, and collectible catalog entries independently from storyline admin.
+- Let admins manage regions, region-to-storyline distance bands, and collectible catalog entries independently from storyline admin (admin APIs and UI are in `field-guide-collectible-discovery-admin`).
 - Trigger collectible discovery from positive walk-distance changes rather than fixed milestone unlocks.
 - Support duplicates as immutable discovery instances while revealing each collectible slot on first find.
 - Show first-discovery markers on compatible map paths.
 - Count both first discoveries and duplicates in the Field Guide drawer badge.
 - Keep the MVP limited to flora and fauna while staying compatible with future repeatable badge support.
 - Avoid historical backfill so the collection begins fresh at launch.
-- When map dev mode (`window.__MAP_DEV_LOG`) is active, render region distance bands visually on the path so admins and developers can debug mapping coverage and boundary placement.
+- When map dev mode (`window.__MAP_DEV_LOG`) is active, render region distance bands visually on the path so developers can debug mapping coverage and boundary placement.
 
 **Non-Goals:**
 - No milestone-based collectible unlocks.
@@ -28,6 +28,7 @@ This is cross-cutting because it introduces new D1 models, new admin workflows, 
 - No duplicate-threshold achievement awarding in MVP.
 - No requirement that every storyline distance must belong to a mapped region in the first release.
 - No revocation of discoveries after walk edits or deletes.
+- No admin management UI in this change (in `field-guide-collectible-discovery-admin`).
 
 ## Decisions
 
@@ -57,13 +58,21 @@ Alternative considered: rolling only against the ending region. Rejected because
 
 ### Use distance-budget attempts with tier-based odds and a long-walk rare bump
 
-The system will convert each positive walked delta into multiple discovery attempts from a distance budget. Attempts first resolve a rarity tier using shared tier odds, then select uniformly from eligible undiscovered or already-discovered collectibles in the active region pool for that tier. Walk entries above a configured long-walk threshold will receive a slight bump toward rarer tiers, but MVP will not store per-item roll weights.
+The system will convert each positive walked delta into multiple discovery attempts from a distance budget. Each attempt first rolls a 1-in-10 chance of finding anything at all. If that succeeds, a rarity tier is resolved using the configured tier odds, then a collectible is selected uniformly from eligible items in the active region pool for that tier. Long walks receive a rare-tier multiplier based on distance.
 
-Rationale: this preserves the user's desired “chance scales with distance entered” behavior while keeping rarity tuning understandable and content authoring simple.
+**Tuning parameters** (configurable constants, adjustable without schema changes):
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Rarity tier odds | Common 75%, Uncommon 20%, Rare 5% | Probability distribution for tier selection |
+| Distance budget | 1 attempt per km | How many discovery rolls per km walked |
+| Base find chance | 1-in-10 (10%) | Chance that any attempt yields a discovery |
+| Long-walk threshold min | 10 km | Distance below which no rare bump applies |
+| Long-walk threshold max | 20 km | Distance at which rare bump caps |
+| Rare multiplier at cap | 3× | Maximum rare-tier probability multiplier |
+| Rare multiplier curve | Gentle exponential | 10 km = 1×, 15 km ≈ 1.5×, 20 km = 3× |
+| Per-request attempt cap | 999 (effectively uncapped) | Can be lowered later for tuning |
 
-Alternative considered: one large percentage roll per walk entry. Rejected because it is harder to tune across short and long walks and makes edge cases around very large manual entries more extreme.
-
-Alternative considered: item-specific roll weights. Rejected for MVP because the user explicitly wants rarity-tier-based odds instead of authoring per-item chances.
+Rationale: these defaults make the first discovery feel achievable while keeping rares genuinely exciting. The two-phase roll (find something → which tier) lets us tune overall drop rates and rarity distribution independently. All values are configurable constants so the admin UI (`field-guide-collectible-discovery-admin`) can expose tuning controls later.
 
 ### Prevent progress-edit farming with per-date discovery high-water state
 
@@ -85,9 +94,27 @@ Alternative considered: one mutable row per user and collectible with an increme
 
 Unread Field Guide state will be tracked in D1 using user-scoped state that records the latest seen discovery instance. The drawer badge will count all later discovery instances, including duplicates, until the user visits or explicitly marks the Field Guide as seen.
 
-Rationale: the collection is global and durable, so unread state should behave consistently across devices and browsers.
+**"Last visit" is defined as opening the Field Guide page.** When the user navigates to `/field-guide`, the mark-seen endpoint is called, which updates the stored `last_seen_discovery_id` to the latest discovery instance ID. The drawer badge count becomes zero. New discoveries (first finds or duplicates) after that visit increment the badge count again.
+
+Rationale: the collection is global and durable, so unread state should behave consistently across devices and browsers. Opening the Field Guide page is the natural "acknowledge" action — users who care about the badge will open it.
 
 Alternative considered: localStorage-only last-visit tracking. Rejected because it makes badge counts device-specific and out of sync with a global collection.
+
+### Use dedicated silhouette image slugs with CSS blur treatment
+
+Each collectible definition includes a `silhouette_image_slug` — a black, lower-resolution version of the collectible's key visual with an alpha-channel border. Undiscovered slots render this silhouette with CSS `filter: blur(8px)` and reduced opacity to create a shadowy, mysterious appearance. Discovered slots reveal the full-resolution `image_slug` at full opacity and sharpness.
+
+A generic placeholder silhouette (`field-guide/placeholder`) provides a shadowy question-mark shape for collectibles that don't have their own silhouette art yet, or as a fallback.
+
+Rationale: black silhouettes with blur and opacity create a unified "unlocked" aesthetic across all slots. The alpha-channel border lets key recognizable shapes peek through the blur. Dedicated silhouette slugs allow authors to choose what part of each creature is most visually identifiable.
+
+Alternative considered: CSS-only silhouette via `brightness(0)` on the full image. Rejected because it doesn't allow selective key-shape emphasis and looks bad for complex images.
+
+### Empty state for first-time visitors: all silhouettes visible
+
+A user who has never discovered anything sees all region sections with all silhouette slots rendered in their blurred/shadow state. There is no "start walking" message or gated content — the full Field Guide catalog is visible from the moment the user first visits. The silhouettes themselves communicate "there are things to find here."
+
+Rationale: hiding content behind zero discoveries would make the page look broken. Showing all regions and silhouettes gives users an immediate sense of the collection's scope and motivates walking. This matches the spec's existing statement: "silhouettes visible from the start."
 
 ### Show first-discovery markers only on matching map paths
 
@@ -99,29 +126,27 @@ Alternative considered: projecting every first discovery onto every mapped story
 
 ### Keep region admin separate from storyline admin while allowing mapping crossover
 
-Regions and collectibles will be administered in a dedicated Field Guide admin surface. Storyline crossover will be handled through explicit mapping UIs or APIs that reference existing storylines, but Field Guide administration will not be embedded inside the storyline editor.
+Regions and collectibles will be administered in a dedicated Field Guide admin surface (in `field-guide-collectible-discovery-admin`). The core change does not include admin UI — only the public-facing discovery experience. Data for regions, mappings, and collectibles is seeded via migration.
 
-Rationale: the product explicitly wants region management separate from storyline admin, while still supporting reusable distance-band mappings.
-
-Alternative considered: extending `AdminStorylinesIsland` directly. Rejected because it would mix route editing with collectible catalog management and make reusable-region authoring harder to reason about.
+Rationale: the product explicitly wants region management separate from storyline admin. Splitting admin into its own change follows the established pattern (personal-challenges-admin, community-campaigns-admin, storyline-books-admin).
 
 ## Risks / Trade-offs
 
 - [Route mapping ambiguity] → Overlapping region bands within the same storyline could make discovery pools ambiguous. Mitigation: disallow overlapping active mappings per storyline while permitting unmapped gaps.
-- [Progress hook contention] → This change and the active events work both need side effects in `progress-handlers.ts`. Mitigation: centralize post-write hooks and keep each concern isolated and idempotent.
+- [Progress hook contention] → This change and existing progress reconciliation hooks (party sync, event reconciliation) all need side effects in `progress-handlers.ts`. Mitigation: isolate each concern's post-write processing and keep failures from blocking walk saves.
 - [Large walk entries skew rarity] → Very large manual entries can distort perceived rarity. Mitigation: use distance-budget attempts with configured per-request caps and a modest rare-tier bump rather than uncapped percentage escalation.
 - [Map clutter] → A mature collection can place many first-discovery markers on one path. Mitigation: reuse existing Konva marker clustering and keep MVP to first-discovery markers only.
-- [Partial region coverage] → Unmapped storyline gaps mean users may walk without eligible discoveries in some spans. Mitigation: allow this in MVP for rollout flexibility, but make gaps visible in admin tooling.
+- [Partial region coverage] → Unmapped storyline gaps mean users may walk without eligible discoveries in some spans. Mitigation: allow this in MVP for rollout flexibility; gaps are visible in admin tooling (in `field-guide-collectible-discovery-admin`).
 - [Cross-change achievement drift] → Future duplicate-threshold badges could fork from the shared achievement model. Mitigation: store immutable discovery instances in a shape compatible with later occurrence-based badge awarding instead of inventing a separate mutable counter model.
 
 ## Migration Plan
 
 1. Add additive D1 migrations for reusable regions, storyline-region mappings, collectible definitions, discovery high-water state, immutable user discovery instances, and user unread state.
 2. Seed initial reusable regions, mappings, and flora/fauna catalog entries before enabling discovery logic in production.
-3. Add admin APIs and dedicated admin UI for region, mapping, and collectible management.
-4. Add public Field Guide list/detail/status endpoints plus a mark-seen endpoint for unread badge behavior.
-5. Extend progress create and update flows to evaluate discovery attempts from positive deltas, while leaving delete flows non-revoking.
-6. Add the Field Guide page, drawer badge updates, and first-discovery map markers.
+3. Add public Field Guide list/detail/status endpoints plus a mark-seen endpoint for unread badge behavior.
+4. Extend progress create and update flows to evaluate discovery attempts from positive deltas, while leaving delete flows non-revoking.
+5. Add the Field Guide page, drawer badge updates, and first-discovery map markers.
+6. Update docs and add backend, client, and Playwright coverage.
 7. Update docs and add backend, client, and Playwright coverage.
 
 Rollback strategy: keep migrations additive. If the UI or route handlers need to be rolled back, the app can stop reading Field Guide tables without affecting canonical walk history. Existing discovery instances remain stored for later repair or re-enable, and no revocation is required.
