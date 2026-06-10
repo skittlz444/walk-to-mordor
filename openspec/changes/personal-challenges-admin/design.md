@@ -86,8 +86,9 @@ Alternative considered: a full badge CRUD admin page. Rejected as over-scoped �
 
 The inline badge fields (name, description, image_slug) will be implemented as a small reusable Preact component (`BadgeDefinitionFields`) that renders the shared badge metadata inputs. This component is defined in the `AdminEncountersIsland` file but structured so it can be extracted into a shared component later when other admin surfaces need it.
 
-Rationale: the badge definition schema (`achievement_definitions`) is shared. The form fields for editing its metadata (name, description, image_slug) are the same regardless of which feature defines the badge. Building it as a reusable pattern now prevents duplicate implementation later.<｜end▁of▁thinking｜>### Disable confirmation when active occurrences exist
+Rationale: the badge definition schema (`achievement_definitions`) is shared. The form fields for editing its metadata (name, description, image_slug) are the same regardless of which feature defines the badge. Building it as a reusable pattern now prevents duplicate implementation later.
 
+### Disable confirmation when active occurrences exist
 When an admin clicks "disable" on an encounter definition, the API checks for active occurrences referencing that definition. If active occurrences exist, the API returns a count and the UI shows a confirmation modal:
 - "X users have active challenges for this encounter. What would you like to do?"
 - Option 1: "Keep active challenges" — disable only affects future rolls; active occurrences continue to completion.

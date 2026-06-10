@@ -85,7 +85,7 @@ Rationale: the achievement data model is already handled. This change is purely 
 3. Create `BadgeDisplayIsland` in `client/src/islands/BadgeDisplayIsland.tsx`.
 4. Register `BadgeDisplayIsland` in `client/src/index.tsx` auto-hydrated islands.
 5. Add `<div data-island="BadgeDisplayIsland"></div>` to `renderProfilePage.ts` SSR shell.
-6. Add `<div data-island="BadgeDisplayIsland" data-user-id="<friend-id>"></div>` to `renderFriendProfilePage.ts` SSR shell (injected server-side from the URL param).
+6. Add `<div data-island="BadgeDisplayIsland"></div>` to `renderFriendProfilePage.ts` below `FriendProfileIsland`. The island detects the friend ID from the URL pathname — no `data-user-id` attribute needed.
 7. Create `public/css/badge-display.css` and reference from both page renderers.
 8. Add Jest coverage for the endpoint and Vitest coverage for the island.
 9. Update `docs/api-reference.md`.

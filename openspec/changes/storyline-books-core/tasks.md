@@ -44,7 +44,7 @@
 - [ ] 4.1 Hook personal book completion detection into progress create, update, and delete flows in `src/progress-handlers.ts`: after the walk mutation, compute the user's new story distance, check if the active book's end distance is crossed. If crossed: mark the attempt completed, call `awardAchievement`, and call `updateActiveBookOnProgress` to advance `user_active_book` to the next book (or stay at the final book).
 - [ ] 4.2 Ensure progress edits/deletes never revoke earned book achievements (shared infra handles immutability).
 - [ ] 4.3 Ensure progress edits/deletes cannot award a second badge for an already completed attempt (attempt-scoped idempotency key prevents this).
-- [ ] 4.4 Hook fellowship book contribution tracking: after `syncPartyProgressLog` completes in the progress handler, check if the member's party has an active fellowship book attempt. If so, set `has_contributed = 1` in `fellowship_book_contributions` for that member (upsert on `(attempt_id, user_id)`). This runs AFTER `syncPartyProgressLog`, not inside it — keeping the exitising function unchanged.
+- [ ] 4.4 Hook fellowship book contribution tracking: after `syncPartyProgressLog` completes in the progress handler, check if the member's party has an active fellowship book attempt. If so, set `has_contributed = 1` in `fellowship_book_contributions` for that member (upsert on `(attempt_id, user_id)`). This runs AFTER `syncPartyProgressLog`, not inside it — keeping the existing function unchanged.
 - [ ] 4.5 Hook fellowship book completion detection into party progress updates and book switching flows: when the fellowship's story distance crosses the active book end, complete the attempt and award badges to members with `has_contributed = 1`.
 - [ ] 4.6 Ensure departed members keep earned fellowship badges but are excluded from future fellowship book award eligibility (query only current active members for award).
 - [ ] 4.7 Add Jest coverage for: personal book crossing detection, repeat reset completion, edit/delete exploit safety (no double award), late joiner eligibility, departed-member exclusion, and immutable awards via shared infra.
@@ -52,7 +52,7 @@
 ## 5. Documentation and Validation
 
 - [ ] 5.1 Update `docs/data-models.md` with storyline book, attempt, contribution, active-book, and achievement invariants.
-- [ ] 5.2 Update `docs/api-reference.md` with book-aware session, total-distance, goals (viewMode param), user book switch, party book switch, and admin storyline book endpoint specifications.
+- [ ] 5.2 Update `docs/api-reference.md` with book-aware session, total-distance, goals, user book switch, party book switch, and admin storyline book endpoint specifications.
 - [ ] 5.3 Update `docs/architecture.md` with book progression, attempt idempotency, achievement immutability via shared infra, and migration notes.
 - [ ] 5.4 Run `npm test` and fix regressions related to book domain services, handlers, migrations, progress hooks, and achievements.
 - [ ] 5.5 Run `npm run check` and resolve TypeScript, build, or Wrangler dry-run issues introduced by book-aware APIs and hooks.

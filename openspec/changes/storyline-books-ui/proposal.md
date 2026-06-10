@@ -9,7 +9,7 @@
 - Update `PartyManageIsland` leader controls to display the fellowship's active book and offer book switching with the same reset/carry semantics.
 - Add a current-book vs whole-story view mode toggle on the journey page, persisted using the same mechanism as the current personal/fellowship view selection.
 - Update the journey total-distance display to show either whole-story distance or current-book progress based on view mode.
-- Update legacy goals rendering in `public/js/goals.js` to pass `viewMode=book` to `/api/goals` when current-book view is active, and switch back to book-relative distance labels.
+- Update legacy goals rendering in `public/js/goals.js` to compute book-relative distance labels and book-range filtering client-side using `bookMetadata` returned by `/api/goals` (no `viewMode` query parameter).
 - Update map milestone loading to filter waypoints to the active book in current-book view, with distinct cache keys per (storyline, book, view mode).
 - Keep friend and fellowship map markers globally visible regardless of the viewer's current book, with labels showing whole-story distance plus storyline context.
 - Update friend and fellowship marker labels to include storyline context (e.g., "634 km as Pippin").

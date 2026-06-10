@@ -125,8 +125,7 @@ The system SHALL award fellowship book completion badges when a fellowship's sto
 - **AND** the member's Book 1 badge remains in their earned achievements
 
 ### Requirement: Book-aware API responses
-The system SHALL extend `/api/session` with a top-level `activeBook` field containing book ID, slug, title, progress, length, and badge slug, SHALL extend `/api/total-distance` with book progress, book length, and active book metadata, and SHALL extend `/api/goals` with an optional `viewMode` parameter that defaults to `story` (whole-story view) and supports `book` for book-relative filtering.
-
+The system SHALL extend `/api/session` with a top-level `activeBook` field containing book ID, slug, title, progress, length, and badge slug, SHALL extend `/api/total-distance` with book progress, book length, and active book metadata, and SHALL extend `/api/goals` with optional `bookMetadata` (`bookStartDistance`, `bookEndDistance`) while always returning goals with absolute story distances.
 #### Scenario: Session response includes active book context as a top-level field
 - **GIVEN** an authenticated user with an active book
 - **WHEN** `GET /api/session` is called

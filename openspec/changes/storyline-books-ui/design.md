@@ -19,7 +19,7 @@ The surfaces affected:
 - Add a view mode toggle (whole-story vs current-book) to the journey page.
 - Persist view mode using the same scope as the current personal/fellowship view selection.
 - Update journey total-distance display for book-relative distances.
-- Pass `viewMode=book` to the goals API in current-book view.
+- Compute book-relative goal distances and filter to the active book range client-side using `bookMetadata` returned by `/api/goals` (no `viewMode` parameter).
 - Filter map milestones to the active book in current-book view.
 - Keep friend and fellowship markers globally visible with storyline context in labels.
 
