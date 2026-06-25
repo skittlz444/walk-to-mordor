@@ -5,7 +5,7 @@ description: System architecture, runtime topology, source tree layout, and proj
 
 # Architecture
 
-Last updated: 2026-03-17
+Last updated: 2026-06-25
 
 ## Project Overview
 
@@ -22,7 +22,8 @@ Feature domains:
 
 ## Runtime Topology
 
-- **Single Worker monolith**: `src/index.ts` — stateless request handlers.
+- **Single Worker monolith**: `src/index.ts` — stateless request handlers, routed via Hono.
+- **Framework**: [Hono](https://hono.dev) v4 — lightweight web framework for Cloudflare Workers.
 - **Database**: D1 SQLite (`DB` binding) — source of truth.
 - **Static assets**: Workers Assets binding from `public/` (`ASSETS` binding).
 - **Email**: Resend API via `email-utils.ts` and `email-templates.ts`.
@@ -32,9 +33,42 @@ Feature domains:
 
 1. Request enters Worker `fetch()` in `src/index.ts`.
 2. `GET`/`HEAD` requests first check static assets via `env.ASSETS.fetch(request)`.
-3. `/api/*` routes enforce method allowlists and JSON body parsing.
-4. API handlers execute domain logic — full route listings in `docs/api-reference.md`.
-5. Page requests render SSR shells (`src/render*.ts`), then hydrate islands via `client/src/index.tsx`.
+3. All other requests delegate to Hono's `app.fetch(request, env, ctx)`.
+4. Hono routes requests based on path and method to the appropriate handler:
+   - **SSR page routes** use `c.html()` to render HTML shells.
+   - **Public API routes** (e.g., `/api/register`, `/api/login`) require no auth.
+   - **Authenticated API routes** are protected by auth middleware that calls `validateSession()`.
+   - **Admin API routes** are protected by admin middleware that calls `validateAdminSession()`.
+5. Unmatched API routes return 404; unmatched page routes fall back to the SPA shell (`renderHtml()`).
+6. Page requests render SSR shells (`src/render*.ts`), then hydrate islands via `client/src/index.tsx`.
+
+### Routing Architecture
+
+Routes are organized into three groups by auth scope, all registered directly on the main Hono app:
+
+- **Public routes**: No auth required. Registered via `app.post()`, `app.get()` etc.
+- **Authenticated routes**: Protected by `app.use('/api/*', authMiddleware)` which skips known public paths and admin paths.
+- **Admin routes**: Protected by `app.use('/api/admin/*', adminMiddleware)`.
+
+Middleware:
+- **DbClient injection**: `app.use('*', dbMiddleware)` sets `c.get('db')` for all routes.
+- **Auth guard**: Calls `validateSession()`, sets `c.get('userId')` on success, returns 401 on failure.
+- **Admin guard**: Calls `validateAdminSession()`, sets `c.get('userId')` and `c.get('adminUserId')` on success, returns 403 on failure.
+
+Handler wrappers are thin (2-5 lines each) and adapt existing handler signatures to Hono's `(c: Context) => Response` pattern:
+```typescript
+app.post('/api/register', async (c) =>
+  handleRegister(c.req.raw, c.get('db'), await c.req.json(), c.env));
+```
+
+Parameterized routes use `c.req.param('name')` instead of the removed `matchRoute()` function:
+```typescript
+app.get('/api/party/:id/progress', async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handlePartyProgress(c.req.raw, c.get('db'), partyId, c.env.ALLOW_TEST_AUTH);
+});
+```
 
 ### Route → Handler Map
 

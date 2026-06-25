@@ -1,20 +1,19 @@
+import { Hono } from 'hono';
+import { createMiddleware } from 'hono/factory';
+import type { Context } from 'hono';
 import { renderHtml } from "./renderHtml";
 import { renderHomePage } from "./renderHomePage";
 import { renderAuthPage } from "./renderAuthPage";
 import { renderPasswordResetRequestPage, renderPasswordResetPage } from "./renderPasswordResetPage";
-import { 
-  safeJsonParse, 
-  createErrorResponse, 
-} from "./validators";
-import { 
-  handleProgressPost, 
-  handleProgressPut, 
-  handleProgressDelete, 
-  handleProgressGet 
+import {
+  handleProgressPost,
+  handleProgressPut,
+  handleProgressDelete,
+  handleProgressGet
 } from "./progress-handlers";
-import { 
-  handleGoalsGet, 
-  calculateUserStorylineDistance 
+import {
+  handleGoalsGet,
+  calculateUserStorylineDistance
 } from "./goals-handlers";
 import {
   handleRegister,
@@ -72,7 +71,7 @@ import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 import { renderAdminUsersPage } from "./renderAdminUsersPage";
 import { renderAdminMetricsPage } from "./renderAdminMetricsPage";
 import { renderAdminStorylinesPage } from "./renderAdminStorylinesPage";
-import { createDbClient } from './db';
+import { createDbClient, type DbClient } from './db';
 import { handleWeeklyStats, handleHeatmap, handleWrappedStats } from './stats-handlers';
 import {
   handlePushSubscribe,
@@ -88,721 +87,459 @@ import {
 } from './storyline-handlers';
 import { handleOneMoreMileCron, handleReengagementCron } from './scheduled-handlers';
 
-/**
- * Match a URL pathname against a parameterized route pattern.
- * Returns null if no match, or an object with extracted params.
- * E.g., matchRoute('/api/party/join/AbCd1234', '/api/party/join/:inviteCode')
- *   => { inviteCode: 'AbCd1234' }
- */
-function matchRoute(pathname: string, pattern: string): Record<string, string> | null {
+// ── Hono Context Variables ────────────────────────────────────────────────
+type Variables = {
+  db: DbClient;
+  userId?: number;
+  adminUserId?: number;
+};
+
+// ── Hono App ───────────────────────────────────────────────────────────────
+export const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// ── Method registry for API 405 detection ──────────────────────────────────
+// Hono's wildcard middleware prevents automatic 405 generation.
+// We check `app.routes` in the notFound handler to return proper 405 responses.
+
+/** Match a concrete URL path against a Hono pattern like /api/party/:id/progress */
+function matchApiPattern(pattern: string, pathname: string): boolean {
+  const patParts = pattern.split('/');
   const pathParts = pathname.split('/');
-  const patternParts = pattern.split('/');
-  if (pathParts.length !== patternParts.length) return null;
-  const params: Record<string, string> = {};
-  for (let i = 0; i < patternParts.length; i++) {
-    if (patternParts[i].startsWith(':')) {
-      params[patternParts[i].slice(1)] = pathParts[i];
-    } else if (patternParts[i] !== pathParts[i]) {
-      return null;
-    }
+  if (patParts.length !== pathParts.length) return false;
+  for (let i = 0; i < patParts.length; i++) {
+    if (patParts[i].startsWith(':')) continue;
+    if (patParts[i] !== pathParts[i]) return false;
   }
-  return params;
+  return true;
 }
 
-export default {
-  async fetch(request, env): Promise<Response> {
-    const url = new URL(request.url);
-    const method = request.method;
-    let body: Record<string, unknown> | undefined;
+// ── Middleware: DbClient injection ─────────────────────────────────────────
+app.use('*', createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
+  c.set('db', createDbClient(c.env.DB));
+  return next();
+}));
 
-    // Only serve static assets for GET/HEAD requests
-    if (method === "GET" || method === "HEAD") {
+// ── Helper: validate integer param ─────────────────────────────────────────
+function intParam(value: string, name: string): number | Response {
+  const num = Number.parseInt(value, 10);
+  if (!Number.isInteger(num) || num <= 0 || String(num) !== value) {
+    return new Response(JSON.stringify({ error: `Invalid ${name}` }), {
+      status: 400,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+  return num;
+}
+
+// ── Helper: safe JSON body parsing ────────────────────────────────────────
+async function safeJsonBody(c: Context<{ Bindings: Env; Variables: Variables }>): Promise<Record<string, unknown>> {
+  try {
+    const body = await c.req.json();
+    return (body as Record<string, unknown>) || {};
+  } catch (e) {
+    console.warn('Failed to parse JSON request body:', e);
+    return {};
+  }
+}
+
+// ── Auth Guards ────────────────────────────────────────────────────────────
+const authGuard = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
+  const db = c.get('db');
+  const result = await validateSession(c.req.raw, db, c.env.ALLOW_TEST_AUTH);
+  if (!result.valid) return result.error;
+  c.set('userId', result.userId!);
+  await next();
+});
+
+const adminGuard = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
+  const db = c.get('db');
+  const result = await validateAdminSession(c.req.raw, db, c.env.ALLOW_TEST_AUTH);
+  if (!result.valid) return result.error;
+  c.set('userId', result.userId!);
+  c.set('adminUserId', result.userId!);
+  await next();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SSR PAGE ROUTES
+// ═══════════════════════════════════════════════════════════════════════════
+
+app.get('/login', (c) => c.html(renderAuthPage()));
+app.get('/password-reset', (c) => c.html(renderPasswordResetRequestPage()));
+app.get('/reset-password', (c) => c.html(renderPasswordResetPage()));
+
+app.get('/map', (c) => handleMapPage(c.req.raw, c.env));
+
+app.get('/admin', (c) => c.html(renderAdminPage()));
+app.get('/admin/goals', (c) => c.html(renderAdminGoalsPage()));
+app.get('/admin/goals/new', (c) => c.html(renderAdminGoalAddPage()));
+app.get('/admin/goals/:id', (c) => c.html(renderAdminGoalEditPage()));
+app.get('/admin/storylines', (c) => c.html(renderAdminStorylinesPage()));
+app.get('/admin/users', (c) => c.html(renderAdminUsersPage()));
+app.get('/admin/metrics', (c) => c.html(renderAdminMetricsPage()));
+
+app.get('/profile', (c) => c.html(renderProfilePage()));
+app.get('/friends', (c) => c.html(renderFriendsPage()));
+app.get('/friends/add/:friendCode', (c) => c.html(renderFriendAddPage()));
+app.get('/friends/:id', (c) => c.html(renderFriendProfilePage()));
+app.get('/stats', (c) => c.html(renderStatsPage()));
+
+app.get('/party', (c) => c.html(renderPartyListPage()));
+app.get('/party/join/:inviteCode', (c) => c.html(renderPartyJoinPage()));
+app.get('/party/:id/manage', (c) => c.html(renderPartyManagePage()));
+app.get('/party/:id', (c) => c.html(renderPartyDetailPage()));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC API ROUTES (no auth required)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Auth ──
+app.post('/api/register', async (c) =>
+  handleRegister(c.req.raw, c.get('db'), await c.req.json(), c.env));
+app.post('/api/login', async (c) =>
+  handleLogin(c.req.raw, c.get('db'), await c.req.json()));
+app.post('/api/logout', async (c) =>
+  handleLogout(c.req.raw, c.get('db'), await c.req.json()));
+app.get('/api/session', (c) =>
+  handleSessionValidation(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.post('/api/password-reset-request', async (c) =>
+  handlePasswordResetRequest(c.req.raw, c.get('db'), await c.req.json(), c.env));
+app.post('/api/password-reset', async (c) =>
+  handlePasswordReset(c.req.raw, c.get('db'), await c.req.json()));
+app.get('/api/auth/confirm-email', (c) =>
+  handleConfirmEmail(c.req.raw, c.get('db')));
+app.post('/api/auth/resend-confirmation', async (c) =>
+  handleResendConfirmation(c.req.raw, c.get('db'), await c.req.json(), c.env));
+app.get('/api/push/vapid-key', (c) =>
+  handleVapidKey(c.env));
+
+// ── Public party preview (no auth required) ──
+app.get('/api/party/join/:inviteCode', (c) =>
+  handlePreviewParty(c.req.raw, c.get('db'), c.req.param('inviteCode')));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUTHENTICATED API ROUTES (session required)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Profile & Preferences ──
+app.put('/api/profile', authGuard, async (c) =>
+  handleUpdateProfile(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.put('/api/user/preferences', authGuard, async (c) =>
+  handleUpdatePreferences(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.put('/api/user/storyline', authGuard, async (c) =>
+  handleUpdateUserStoryline(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+
+// ── Avatars & Storylines ──
+app.get('/api/avatars', authGuard, (c) =>
+  handleGetAvatars(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/storylines', authGuard, (c) =>
+  handleStorylinesList(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+
+// ── Progress ──
+app.post('/api/calendar-progress', authGuard, async (c) =>
+  handleProgressPost(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.put('/api/calendar-progress', authGuard, async (c) =>
+  handleProgressPut(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.delete('/api/calendar-progress', authGuard, async (c) =>
+  handleProgressDelete(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.get('/api/calendar-progress', authGuard, (c) =>
+  handleProgressGet(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+
+// ── Goals & Stats ──
+app.get('/api/goals', authGuard, (c) =>
+  handleGoalsGet(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/stats/weekly', authGuard, (c) =>
+  handleWeeklyStats(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/stats/heatmap', authGuard, (c) =>
+  handleHeatmap(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/stats/wrapped', authGuard, (c) =>
+  handleWrappedStats(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/total-distance', authGuard, async (c) => {
+  try {
+    const distance = await calculateUserStorylineDistance(c.get('db'), c.get('userId')!);
+    return new Response(JSON.stringify(distance), {
+      headers: { 'content-type': 'application/json' },
+    });
+  } catch (error: unknown) {
+    console.error('Database error during total distance calculation:', error);
+    return new Response(JSON.stringify({
+      error: 'Internal server error while calculating total distance'
+    }), {
+      status: 500,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+});
+
+// ── Push Notifications ──
+app.post('/api/push/subscribe', authGuard, async (c) =>
+  handlePushSubscribe(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.delete('/api/push/subscribe', authGuard, async (c) =>
+  handlePushUnsubscribe(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.get('/api/push/status', authGuard, (c) =>
+  handlePushStatus(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.put('/api/push/settings', authGuard, async (c) =>
+  handlePushSettings(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+
+// ── Party (Fellowship) ──
+app.post('/api/party', authGuard, async (c) =>
+  handleCreateParty(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.get('/api/user/parties', authGuard, (c) =>
+  handleGetUserParties(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/user/parties/positions', authGuard, (c) =>
+  handlePartyPositions(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/user/fellowship-invites', authGuard, (c) =>
+  handleGetFellowshipInvites(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+
+// ── Fellowship Invite Actions ──
+app.post('/api/user/fellowship-invites/:inviteId/accept', authGuard, async (c) => {
+  const id = intParam(c.req.param('inviteId'), 'invite ID');
+  if (id instanceof Response) return id;
+  return handleAcceptFellowshipInvite(c.req.raw, c.get('db'), id, c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/user/fellowship-invites/:inviteId/reject', authGuard, async (c) => {
+  const id = intParam(c.req.param('inviteId'), 'invite ID');
+  if (id instanceof Response) return id;
+  return handleRejectFellowshipInvite(c.req.raw, c.get('db'), id, c.env.ALLOW_TEST_AUTH);
+});
+
+// ── Party Param Routes ──
+app.post('/api/party/join/:inviteCode', authGuard, (c) =>
+  handleJoinParty(c.req.raw, c.get('db'), c.req.param('inviteCode'), c.env.ALLOW_TEST_AUTH));
+
+app.post('/api/party/:id/invite', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handleRegenerateInvite(c.req.raw, c.get('db'), partyId, c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/party/:id/invite-friend', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handleInviteFriend(c.req.raw, c.get('db'), partyId, await c.req.json(), c.env.ALLOW_TEST_AUTH);
+});
+app.get('/api/party/:id/progress', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handlePartyProgress(c.req.raw, c.get('db'), partyId, c.env.ALLOW_TEST_AUTH);
+});
+app.get('/api/party/:id/activity', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handlePartyActivity(c.req.raw, c.get('db'), partyId, c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/party/:id/messages', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handleSendPartyMessage(c.req.raw, c.get('db'), partyId, await c.req.json(), c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/party/:id/leave', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handleLeaveParty(c.req.raw, c.get('db'), partyId, c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/party/:id/kick/:userId', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  const targetUserId = intParam(c.req.param('userId'), 'user ID');
+  if (targetUserId instanceof Response) return targetUserId;
+  const body = await safeJsonBody(c);
+  return handleKickMember(c.req.raw, c.get('db'), partyId, targetUserId, body, c.env.ALLOW_TEST_AUTH);
+});
+app.put('/api/party/:id/settings', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handleUpdatePartySettings(c.req.raw, c.get('db'), partyId, await c.req.json(), c.env.ALLOW_TEST_AUTH);
+});
+app.put('/api/party/:id/storyline', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handleUpdatePartyStoryline(c.req.raw, c.get('db'), partyId, await c.req.json(), c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/party/:id/transfer-leadership', authGuard, async (c) => {
+  const partyId = intParam(c.req.param('id'), 'party ID');
+  if (partyId instanceof Response) return partyId;
+  return handleTransferLeadership(c.req.raw, c.get('db'), partyId, await c.req.json(), c.env.ALLOW_TEST_AUTH);
+});
+
+// ── Friends (Social) ──
+app.get('/api/friends', authGuard, (c) =>
+  handleGetFriends(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/friends/pending', authGuard, (c) =>
+  handleGetPendingFriends(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/friends/search', authGuard, (c) =>
+  handleSearchUsers(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.post('/api/friends/request', authGuard, async (c) =>
+  handleFriendRequest(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.post('/api/friends/request/code', authGuard, async (c) =>
+  handleFriendRequestByCode(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+app.get('/api/friends/positions', authGuard, (c) =>
+  handleFriendPositions(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+
+// ── Friend Param Routes ──
+app.get('/api/friends/resolve/:friendCode', authGuard, (c) =>
+  handleResolveFriendCode(c.req.raw, c.get('db'), c.req.param('friendCode')));
+
+app.get('/api/friends/:userId/profile', authGuard, async (c) => {
+  const userId = intParam(c.req.param('userId'), 'user ID');
+  if (userId instanceof Response) return userId;
+  return handleGetFriendProfile(c.req.raw, c.get('db'), userId, c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/friends/:friendshipId/accept', authGuard, async (c) => {
+  const friendshipId = intParam(c.req.param('friendshipId'), 'friendship ID');
+  if (friendshipId instanceof Response) return friendshipId;
+  return handleAcceptFriend(c.req.raw, c.get('db'), friendshipId, c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/friends/:friendshipId/reject', authGuard, async (c) => {
+  const friendshipId = intParam(c.req.param('friendshipId'), 'friendship ID');
+  if (friendshipId instanceof Response) return friendshipId;
+  return handleRejectFriend(c.req.raw, c.get('db'), friendshipId, c.env.ALLOW_TEST_AUTH);
+});
+app.delete('/api/friends/:friendshipId', authGuard, async (c) => {
+  const friendshipId = intParam(c.req.param('friendshipId'), 'friendship ID');
+  if (friendshipId instanceof Response) return friendshipId;
+  return handleUnfriend(c.req.raw, c.get('db'), friendshipId, c.env.ALLOW_TEST_AUTH);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADMIN API ROUTES (admin session required)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Dashboard & Users ──
+app.get('/api/admin/dashboard', adminGuard, (c) =>
+  handleAdminDashboard(c.req.raw, c.get('db')));
+app.get('/api/admin/users', adminGuard, (c) =>
+  handleAdminUsersList(c.req.raw, c.get('db')));
+
+app.put('/api/admin/users/:id/verify', adminGuard, async (c) => {
+  const userId = intParam(c.req.param('id'), 'user ID');
+  if (userId instanceof Response) return userId;
+  return handleAdminUserVerify(c.req.raw, c.get('db'), userId, c.get('adminUserId')!);
+});
+app.put('/api/admin/users/:id/reset', adminGuard, async (c) => {
+  const userId = intParam(c.req.param('id'), 'user ID');
+  if (userId instanceof Response) return userId;
+  return handleAdminUserResetPassword(c.req.raw, c.get('db'), userId, c.get('adminUserId')!, c.env.RESEND_API_KEY);
+});
+app.put('/api/admin/users/:id/admin', adminGuard, async (c) => {
+  const userId = intParam(c.req.param('id'), 'user ID');
+  if (userId instanceof Response) return userId;
+  return handleAdminUserToggleAdmin(c.req.raw, c.get('db'), userId, c.get('adminUserId')!);
+});
+app.delete('/api/admin/users/:id', adminGuard, async (c) => {
+  const userId = intParam(c.req.param('id'), 'user ID');
+  if (userId instanceof Response) return userId;
+  return handleAdminUserDelete(c.req.raw, c.get('db'), userId, await c.req.json(), c.get('adminUserId')!);
+});
+
+// ── Metrics ──
+app.get('/api/admin/metrics', adminGuard, (c) =>
+  handleAdminMetricsSummary(c.req.raw, c.get('db')));
+app.get('/api/admin/metrics/leaderboard', adminGuard, (c) =>
+  handleAdminMetricsLeaderboard(c.req.raw, c.get('db')));
+app.get('/api/admin/metrics/timeline', adminGuard, (c) =>
+  handleAdminMetricsTimeline(c.req.raw, c.get('db')));
+
+// ── Goals ──
+app.get('/api/admin/goals', adminGuard, (c) =>
+  handleAdminGoalsList(c.req.raw, c.get('db')));
+app.post('/api/admin/goals', adminGuard, async (c) =>
+  handleAdminGoalCreate(c.req.raw, c.get('db'), await c.req.json(), c.get('adminUserId')!));
+app.get('/api/admin/goals/:id', adminGuard, async (c) => {
+  const goalId = intParam(c.req.param('id'), 'goal ID');
+  if (goalId instanceof Response) return goalId;
+  return handleAdminGoalGet(c.req.raw, c.get('db'), goalId);
+});
+app.put('/api/admin/goals/:id', adminGuard, async (c) => {
+  const goalId = intParam(c.req.param('id'), 'goal ID');
+  if (goalId instanceof Response) return goalId;
+  return handleAdminGoalUpdate(c.req.raw, c.get('db'), goalId, await c.req.json(), c.get('adminUserId')!);
+});
+
+// ── Storylines ──
+app.get('/api/admin/storylines', adminGuard, (c) =>
+  handleAdminStorylinesList(c.req.raw, c.get('db')));
+app.post('/api/admin/storylines', adminGuard, async (c) =>
+  handleAdminStorylineCreate(c.req.raw, c.get('db'), await c.req.json(), c.get('adminUserId')!));
+app.get('/api/admin/storylines/:id', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'storyline ID');
+  if (id instanceof Response) return id;
+  return handleAdminStorylineGet(c.req.raw, c.get('db'), id);
+});
+app.put('/api/admin/storylines/:id', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'storyline ID');
+  if (id instanceof Response) return id;
+  return handleAdminStorylineUpdate(c.req.raw, c.get('db'), id, await c.req.json(), c.get('adminUserId')!);
+});
+app.put('/api/admin/storylines/:id/goals', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'storyline ID');
+  if (id instanceof Response) return id;
+  return handleAdminStorylineGoalsUpdate(c.req.raw, c.get('db'), id, await c.req.json(), c.get('adminUserId')!);
+});
+
+// ── Image Inventory ──
+app.get('/api/admin/images', adminGuard, (c) =>
+  handleAdminImageInventory(c.req.raw, c.get('db'), c.env.ASSETS));
+
+// ── SPA fallback ──
+app.get('/', (_c) => new Response(renderHomePage(), {
+  headers: {
+    'content-type': 'text/html',
+    'cache-control': 'no-store, no-cache, must-revalidate',
+    'pragma': 'no-cache',
+  },
+}));
+app.get('/journey', (c) => c.html(renderHtml()));
+
+// notFound handles SPA fallback, API 404s, and API 405s.
+// Hono's wildcard middleware prevents automatic 405 generation,
+// so we check registered routes manually.
+app.notFound((c) => {
+  const pathname = new URL(c.req.url).pathname;
+  if (pathname.startsWith('/api/')) {
+    // Check registered routes for this path (any method).
+    // If found with a different method → 405; otherwise → 404.
+    const routes: Array<{ path: string; method: string }> = (app as unknown as { routes: Array<{ path: string; method: string }> }).routes;
+    const allowed = new Set<string>();
+    for (const r of routes) {
+      if (r.method === 'ALL') continue;
+      if (matchApiPattern(r.path, pathname)) {
+        allowed.add(r.method);
+      }
+    }
+    if (allowed.size > 0 && !allowed.has(c.req.method)) {
+      const methods = [...allowed].join(', ');
+      return new Response(JSON.stringify({
+        error: `Method ${c.req.method} not allowed for ${pathname}`,
+        allowedMethods: [...allowed],
+      }), {
+        status: 405,
+        headers: { 'content-type': 'application/json', 'Allow': methods },
+      });
+    }
+    return new Response(JSON.stringify({ error: 'API endpoint not found' }), {
+      status: 404,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+  // All other paths get the SPA HTML shell
+  return c.html(renderHtml());
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export default {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+    // Serve static assets first (GET/HEAD only)
+    if (request.method === 'GET' || request.method === 'HEAD') {
       const assetResponse = await env.ASSETS.fetch(request);
       if (assetResponse.status !== 404) {
         return assetResponse;
       }
     }
 
-    const db = createDbClient(env.DB);
-
-    // Validate HTTP method for API endpoints
-    if (url.pathname.startsWith("/api/")) {
-      const allowedMethods = getAllowedMethods(url.pathname);
-      if (!allowedMethods.includes(method)) {
-        return new Response(JSON.stringify({ 
-          error: `Method ${method} not allowed for ${url.pathname}`,
-          allowedMethods
-        }), { 
-          status: 405,
-          headers: { 
-            "content-type": "application/json",
-            "Allow": allowedMethods.join(", ")
-          }
-        });
-      }
-    }
-
-    // Only read body for API endpoints that need it
-    if (
-      url.pathname.startsWith("/api/") &&
-      (method === "POST" || method === "PUT" || method === "DELETE")
-    ) {
-      const parseResult = await safeJsonParse(request);
-      if (!parseResult.success) {
-        return new Response(JSON.stringify({ 
-          error: parseResult.error || 'Invalid request body' 
-        }), { 
-          status: 400,
-          headers: { "content-type": "application/json" }
-        });
-      }
-      body = parseResult.data as Record<string, unknown>;
-    }
-
-    // API endpoints
-    if (url.pathname.startsWith("/api/")) {
-      // Public authentication endpoints (no session required)
-      if (url.pathname === "/api/register" && method === "POST") {
-        return handleRegister(request, db, body, env);
-      } else if (url.pathname === "/api/login" && method === "POST") {
-        return handleLogin(request, db, body);
-      } else if (url.pathname === "/api/logout" && method === "POST") {
-        return handleLogout(request, db, body);
-      } else if (url.pathname === "/api/session" && method === "GET") {
-        return handleSessionValidation(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/profile" && method === "PUT") {
-        return handleUpdateProfile(request, db, body, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/user/preferences" && method === "PUT") {
-        return handleUpdatePreferences(request, db, body, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/avatars" && method === "GET") {
-        return handleGetAvatars(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/storylines" && method === "GET") {
-        return handleStorylinesList(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/user/storyline" && method === "PUT") {
-        return handleUpdateUserStoryline(request, db, body, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/password-reset-request" && method === "POST") {
-        return handlePasswordResetRequest(request, db, body, env);
-      } else if (url.pathname === "/api/password-reset" && method === "POST") {
-        return handlePasswordReset(request, db, body);
-      } else if (url.pathname === "/api/auth/confirm-email" && method === "GET") {
-        return handleConfirmEmail(request, db);
-      } else if (url.pathname === "/api/auth/resend-confirmation" && method === "POST") {
-        return handleResendConfirmation(request, db, body, env);
-      } else if (url.pathname === "/api/push/vapid-key" && method === "GET") {
-        return handleVapidKey(env);
-      }
-      
-      // Protected endpoints (authentication required)
-      // Admin API endpoints (admin authentication required)
-      if (url.pathname.startsWith("/api/admin/")) {
-        const adminValidation = await validateAdminSession(request, db, env.ALLOW_TEST_AUTH);
-        if (!adminValidation.valid) return adminValidation.error;
-
-        // Admin API endpoints (Story 4.2+)
-        if (url.pathname === "/api/admin/dashboard" && method === "GET") {
-          return handleAdminDashboard(request, db);
-        }
-
-        if (url.pathname === "/api/admin/users" && method === "GET") {
-          return handleAdminUsersList(request, db);
-        }
-
-        if (url.pathname === "/api/admin/metrics" && method === "GET") {
-          return handleAdminMetricsSummary(request, db);
-        }
-        if (url.pathname === "/api/admin/metrics/leaderboard" && method === "GET") {
-          return handleAdminMetricsLeaderboard(request, db);
-        }
-        if (url.pathname === "/api/admin/metrics/timeline" && method === "GET") {
-          return handleAdminMetricsTimeline(request, db);
-        }
-
-        // Admin Goals List (Story 4.3) / Create (Story 4.6)
-        if (url.pathname === "/api/admin/goals" && method === "GET") {
-          return handleAdminGoalsList(request, db);
-        }
-        if (url.pathname === "/api/admin/goals" && method === "POST") {
-          return handleAdminGoalCreate(request, db, body, adminValidation.userId);
-        }
-
-        // Admin Storylines
-        if (url.pathname === "/api/admin/storylines" && method === "GET") {
-          return handleAdminStorylinesList(request, db);
-        }
-        if (url.pathname === "/api/admin/storylines" && method === "POST") {
-          return handleAdminStorylineCreate(request, db, body, adminValidation.userId);
-        }
-
-        const adminStorylineGoalParams = matchRoute(url.pathname, '/api/admin/storylines/:id/goals');
-        if (adminStorylineGoalParams) {
-          const storylineId = Number.parseInt(adminStorylineGoalParams.id, 10);
-          if (!Number.isInteger(storylineId) || storylineId <= 0 || String(storylineId) !== adminStorylineGoalParams.id) {
-            return createErrorResponse('Invalid storyline ID', 400);
-          }
-          if (method === 'PUT') return handleAdminStorylineGoalsUpdate(request, db, storylineId, body, adminValidation.userId);
-        }
-
-        const adminStorylineParams = matchRoute(url.pathname, '/api/admin/storylines/:id');
-        if (adminStorylineParams) {
-          const storylineId = Number.parseInt(adminStorylineParams.id, 10);
-          if (!Number.isInteger(storylineId) || storylineId <= 0 || String(storylineId) !== adminStorylineParams.id) {
-            return createErrorResponse('Invalid storyline ID', 400);
-          }
-          if (method === 'GET') return handleAdminStorylineGet(request, db, storylineId);
-          if (method === 'PUT') return handleAdminStorylineUpdate(request, db, storylineId, body, adminValidation.userId);
-        }
-
-        // Admin Image Inventory (Story 4.5)
-        if (url.pathname === "/api/admin/images" && method === "GET") {
-          return handleAdminImageInventory(request, db, env.ASSETS);
-        }
-
-        // Admin Goal Detail / Update (Story 4.4)
-        const adminGoalParams = matchRoute(url.pathname, '/api/admin/goals/:id');
-        if (adminGoalParams) {
-          const goalId = Number.parseInt(adminGoalParams.id, 10);
-          if (!Number.isInteger(goalId) || goalId <= 0 || String(goalId) !== adminGoalParams.id) {
-            return createErrorResponse('Invalid goal ID', 400);
-          }
-          if (method === 'GET') return handleAdminGoalGet(request, db, goalId);
-          if (method === 'PUT') return handleAdminGoalUpdate(request, db, goalId, body, adminValidation.userId);
-        }
-
-        const adminUserVerifyParams = matchRoute(url.pathname, '/api/admin/users/:id/verify');
-        if (adminUserVerifyParams) {
-          const userId = Number.parseInt(adminUserVerifyParams.id, 10);
-          if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserVerifyParams.id) {
-            return createErrorResponse('Invalid user ID', 400);
-          }
-          if (method === 'PUT') return handleAdminUserVerify(request, db, userId, adminValidation.userId);
-        }
-
-        const adminUserResetParams = matchRoute(url.pathname, '/api/admin/users/:id/reset');
-        if (adminUserResetParams) {
-          const userId = Number.parseInt(adminUserResetParams.id, 10);
-          if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserResetParams.id) {
-            return createErrorResponse('Invalid user ID', 400);
-          }
-          if (method === 'PUT') return handleAdminUserResetPassword(request, db, userId, adminValidation.userId, env.RESEND_API_KEY);
-        }
-
-        const adminUserToggleAdminParams = matchRoute(url.pathname, '/api/admin/users/:id/admin');
-        if (adminUserToggleAdminParams) {
-          const userId = Number.parseInt(adminUserToggleAdminParams.id, 10);
-          if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserToggleAdminParams.id) {
-            return createErrorResponse('Invalid user ID', 400);
-          }
-          if (method === 'PUT') return handleAdminUserToggleAdmin(request, db, userId, adminValidation.userId);
-        }
-
-        const adminUserParams = matchRoute(url.pathname, '/api/admin/users/:id');
-        if (adminUserParams) {
-          const userId = Number.parseInt(adminUserParams.id, 10);
-          if (!Number.isInteger(userId) || userId <= 0 || String(userId) !== adminUserParams.id) {
-            return createErrorResponse('Invalid user ID', 400);
-          }
-          if (method === 'DELETE') return handleAdminUserDelete(request, db, userId, body, adminValidation.userId);
-        }
-
-        return new Response(JSON.stringify({ error: 'Admin API endpoint not found' }), {
-          status: 404,
-          headers: { "content-type": "application/json" }
-        });
-      }
-
-      // Party (Fellowship) endpoints
-      if (url.pathname === "/api/party" && method === "POST") {
-        return handleCreateParty(request, db, body!, env.ALLOW_TEST_AUTH);
-      }
-
-      // GET /api/user/parties — list user's party memberships (auth required)
-      if (url.pathname === "/api/user/parties" && method === "GET") {
-        return handleGetUserParties(request, db, env.ALLOW_TEST_AUTH);
-      }
-
-      // GET /api/user/parties/positions — get fellowship positions for map display
-      if (url.pathname === "/api/user/parties/positions" && method === "GET") {
-        return handlePartyPositions(request, db, env.ALLOW_TEST_AUTH);
-      }
-
-      // GET /api/user/fellowship-invites — list pending fellowship invites
-      if (url.pathname === "/api/user/fellowship-invites" && method === "GET") {
-        return handleGetFellowshipInvites(request, db, env.ALLOW_TEST_AUTH);
-      }
-
-      // POST /api/user/fellowship-invites/:inviteId/accept
-      const acceptInviteParams = matchRoute(url.pathname, '/api/user/fellowship-invites/:inviteId/accept');
-      if (acceptInviteParams && method === "POST") {
-        const inviteId = Number.parseInt(acceptInviteParams.inviteId, 10);
-        if (
-          !Number.isInteger(inviteId) ||
-          inviteId <= 0 ||
-          String(inviteId) !== acceptInviteParams.inviteId
-        ) {
-          return createErrorResponse('Invalid invite ID', 400);
-        }
-        return handleAcceptFellowshipInvite(request, db, inviteId, env.ALLOW_TEST_AUTH);
-      }
-
-      // POST /api/user/fellowship-invites/:inviteId/reject
-      const rejectInviteParams = matchRoute(url.pathname, '/api/user/fellowship-invites/:inviteId/reject');
-      if (rejectInviteParams && method === "POST") {
-        const inviteId = Number.parseInt(rejectInviteParams.inviteId, 10);
-        if (
-          !Number.isInteger(inviteId) ||
-          inviteId <= 0 ||
-          String(inviteId) !== rejectInviteParams.inviteId
-        ) {
-          return createErrorResponse('Invalid invite ID', 400);
-        }
-        return handleRejectFellowshipInvite(request, db, inviteId, env.ALLOW_TEST_AUTH);
-      }
-
-      // Parameterized party routes
-      const joinParams = matchRoute(url.pathname, '/api/party/join/:inviteCode');
-      if (joinParams) {
-        if (method === "GET") {
-          return handlePreviewParty(request, db, joinParams.inviteCode);
-        } else if (method === "POST") {
-          return handleJoinParty(request, db, joinParams.inviteCode, env.ALLOW_TEST_AUTH);
-        }
-      }
-
-      const inviteParams = matchRoute(url.pathname, '/api/party/:id/invite');
-      if (inviteParams && method === "POST") {
-        const partyId = Number.parseInt(inviteParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== inviteParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handleRegenerateInvite(request, db, partyId, env.ALLOW_TEST_AUTH);
-      }
-
-      // POST /api/party/:id/invite-friend— invite an accepted friend to a party
-      const inviteFriendParams = matchRoute(url.pathname, '/api/party/:id/invite-friend');
-      if (inviteFriendParams && method === "POST") {
-        const partyId = Number.parseInt(inviteFriendParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== inviteFriendParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handleInviteFriend(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
-      }
-
-      // GET /api/party/:id/progress — party progress calculation
-      const progressParams = matchRoute(url.pathname, '/api/party/:id/progress');
-      if (progressParams && method === "GET") {
-        const partyId = Number.parseInt(progressParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== progressParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handlePartyProgress(request, db, partyId, env.ALLOW_TEST_AUTH);
-      }
-
-      // GET /api/party/:id/activity— party activity feed
-      const activityParams = matchRoute(url.pathname, '/api/party/:id/activity');
-      if (activityParams && method === "GET") {
-        const partyId = Number.parseInt(activityParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== activityParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handlePartyActivity(request, db, partyId, env.ALLOW_TEST_AUTH);
-      }
-
-      // POST /api/party/:id/messages— send a message to party feed
-      const messagesParams = matchRoute(url.pathname, '/api/party/:id/messages');
-      if (messagesParams && method === "POST") {
-        const partyId = Number.parseInt(messagesParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== messagesParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handleSendPartyMessage(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
-      }
-
-      // POST /api/party/:id/leave — leave party
-      const leaveParams = matchRoute(url.pathname, '/api/party/:id/leave');
-      if (leaveParams && method === "POST") {
-        const partyId = Number.parseInt(leaveParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== leaveParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handleLeaveParty(request, db, partyId, env.ALLOW_TEST_AUTH);
-      }
-
-      // POST /api/party/:id/kick/:userId — kick member (leader only)
-      const kickParams = matchRoute(url.pathname, '/api/party/:id/kick/:userId');
-      if (kickParams && method === "POST") {
-        const partyId = Number.parseInt(kickParams.id, 10);
-        const targetUserId = Number.parseInt(kickParams.userId, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== kickParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        if (
-          !Number.isInteger(targetUserId) ||
-          targetUserId <= 0 ||
-          String(targetUserId) !== kickParams.userId
-        ) {
-          return createErrorResponse('Invalid user ID', 400);
-        }
-        return handleKickMember(request, db, partyId, targetUserId, body!, env.ALLOW_TEST_AUTH);
-      }
-
-      // PUT /api/party/:id/settings — update party settings (leader only)
-      const settingsParams = matchRoute(url.pathname, '/api/party/:id/settings');
-      if (settingsParams && method === "PUT") {
-        const partyId = Number.parseInt(settingsParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== settingsParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handleUpdatePartySettings(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
-      }
-
-      // PUT /api/party/:id/storyline — update party storyline (leader only)
-      const partyStorylineParams = matchRoute(url.pathname, '/api/party/:id/storyline');
-      if (partyStorylineParams && method === "PUT") {
-        const partyId = Number.parseInt(partyStorylineParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== partyStorylineParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handleUpdatePartyStoryline(request, db, partyId, body, env.ALLOW_TEST_AUTH);
-      }
-
-      // POST /api/party/:id/transfer-leadership — transfer leadership (leader only)
-      const transferParams = matchRoute(url.pathname, '/api/party/:id/transfer-leadership');
-      if (transferParams && method === "POST") {
-        const partyId = Number.parseInt(transferParams.id, 10);
-        if (
-          !Number.isInteger(partyId) ||
-          partyId <= 0 ||
-          String(partyId) !== transferParams.id
-        ) {
-          return createErrorResponse('Invalid party ID', 400);
-        }
-        return handleTransferLeadership(request, db, partyId, body!, env.ALLOW_TEST_AUTH);
-      }
-
-      // Friends (Social) endpoints — exact routes first, then parameterized
-      if (url.pathname === "/api/friends" && method === "GET") {
-        return handleGetFriends(request, db, env.ALLOW_TEST_AUTH);
-      }
-      if (url.pathname === "/api/friends/pending" && method === "GET") {
-        return handleGetPendingFriends(request, db, env.ALLOW_TEST_AUTH);
-      }
-      if (url.pathname === "/api/friends/search" && method === "GET") {
-        return handleSearchUsers(request, db, env.ALLOW_TEST_AUTH);
-      }
-      if (url.pathname === "/api/friends/request" && method === "POST") {
-        return handleFriendRequest(request, db, body!, env.ALLOW_TEST_AUTH);
-      }
-      if (url.pathname === "/api/friends/request/code" && method === "POST") {
-        return handleFriendRequestByCode(request, db, body!, env.ALLOW_TEST_AUTH);
-      }
-      if (url.pathname === "/api/friends/positions" && method === "GET") {
-        return handleFriendPositions(request, db, env.ALLOW_TEST_AUTH);
-      }
-
-      // Parameterized friend routes — resolve before friendshipId routes
-      const resolveParams = matchRoute(url.pathname, '/api/friends/resolve/:friendCode');
-      if (resolveParams && method === "GET") {
-        return handleResolveFriendCode(request, db, resolveParams.friendCode);
-      }
-
-      // GET /api/friends/:userId/profile — friend profile (before generic :friendshipId routes)
-      const profileParams = matchRoute(url.pathname, '/api/friends/:userId/profile');
-      if (profileParams && method === "GET") {
-        const profileUserId = Number.parseInt(profileParams.userId, 10);
-        if (!Number.isInteger(profileUserId) || profileUserId <= 0 || String(profileUserId) !== profileParams.userId) {
-          return createErrorResponse('Invalid user ID', 400);
-        }
-        return handleGetFriendProfile(request, db, profileUserId, env.ALLOW_TEST_AUTH);
-      }
-
-      const acceptParams= matchRoute(url.pathname, '/api/friends/:friendshipId/accept');
-      if (acceptParams && method === "POST") {
-        const friendshipId = Number.parseInt(acceptParams.friendshipId, 10);
-        if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== acceptParams.friendshipId) {
-          return createErrorResponse('Invalid friendship ID', 400);
-        }
-        return handleAcceptFriend(request, db, friendshipId, env.ALLOW_TEST_AUTH);
-      }
-
-      const rejectParams= matchRoute(url.pathname, '/api/friends/:friendshipId/reject');
-      if (rejectParams && method === "POST") {
-        const friendshipId = Number.parseInt(rejectParams.friendshipId, 10);
-        if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== rejectParams.friendshipId) {
-          return createErrorResponse('Invalid friendship ID', 400);
-        }
-        return handleRejectFriend(request, db, friendshipId, env.ALLOW_TEST_AUTH);
-      }
-
-      // DELETE /api/friends/:friendshipId — unfriend
-      const unfriendParams = matchRoute(url.pathname, '/api/friends/:friendshipId');
-      if (unfriendParams && method === "DELETE") {
-        const friendshipId = Number.parseInt(unfriendParams.friendshipId, 10);
-        if (!Number.isInteger(friendshipId) || friendshipId <= 0 || String(friendshipId) !== unfriendParams.friendshipId) {
-          return createErrorResponse('Invalid friendship ID', 400);
-        }
-        return handleUnfriend(request, db, friendshipId, env.ALLOW_TEST_AUTH);
-      }
-
-      // CRUD for calendar events
-      if (url.pathname === "/api/calendar-progress" && method === "POST") {
-        return handleProgressPost(request, db, body!, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/calendar-progress" && method === "PUT") {
-        return handleProgressPut(request, db, body!, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/calendar-progress" && method === "DELETE") {
-        return handleProgressDelete(request, db, body!, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/calendar-progress") {
-        return handleProgressGet(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/goals") {
-        return handleGoalsGet(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/stats/weekly" && method === "GET") {
-        return handleWeeklyStats(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/stats/heatmap" && method === "GET") {
-        return handleHeatmap(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/stats/wrapped" && method === "GET") {
-        return handleWrappedStats(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/push/subscribe" && method === "POST") {
-        return handlePushSubscribe(request, db, body, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/push/subscribe" && method === "DELETE") {
-        return handlePushUnsubscribe(request, db, body, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/push/status" && method === "GET") {
-        return handlePushStatus(request, db, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/push/settings" && method === "PUT") {
-        return handlePushSettings(request, db, body, env.ALLOW_TEST_AUTH);
-      } else if (url.pathname === "/api/total-distance") {
-        // Validate session first
-        const sessionValidation = await validateSession(request, db, env.ALLOW_TEST_AUTH);
-        if (!sessionValidation.valid) {
-          return sessionValidation.error;
-        }
-        
-        try {
-          const distance = await calculateUserStorylineDistance(db, sessionValidation.userId!);
-          return new Response(JSON.stringify(distance), {
-            headers: { "content-type": "application/json" },
-          });
-        } catch (error: unknown) {
-          console.error('Database error during total distance calculation:', error);
-          return new Response(JSON.stringify({ 
-            error: 'Internal server error while calculating total distance' 
-          }), { 
-            status: 500,
-            headers: { "content-type": "application/json" }
-          });
-        }
-      }
-      
-      // Unknown API endpoint
-      return new Response(JSON.stringify({ error: 'API endpoint not found' }), {
-        status: 404,
-        headers: { "content-type": "application/json" }
-      });
-    }
-
-    // Main page - serve auth page for /login
-    if (url.pathname === "/login") {
-      return new Response(renderAuthPage(), {
-        headers: {
-          "content-type": "text/html",
-        },
-      });
-    }
-    
-    // Password reset request page
-    if (url.pathname === "/password-reset") {
-      return new Response(renderPasswordResetRequestPage(), {
-        headers: {
-          "content-type": "text/html",
-        },
-      });
-    }
-    
-    // Password reset with token page
-    if (url.pathname === "/reset-password") {
-      return new Response(renderPasswordResetPage(), {
-        headers: {
-          "content-type": "text/html",
-        },
-      });
-    }
-
-    if (url.pathname === "/map") {
-      return handleMapPage(request, env);
-    }
-
-    // Admin page — auth handled client-side by Preact islands
-    if (url.pathname === "/admin") {
-      return new Response(renderAdminPage(), {
-        headers: { "content-type": "text/html" },
-      });
-    }
-
-    // Admin Goals list page — auth handled client-side by Preact islands
-    if (url.pathname === "/admin/goals") {
-      return new Response(renderAdminGoalsPage(), {
-        headers: { "content-type": "text/html" },
-      });
-    }
-
-    if (url.pathname === "/admin/storylines") {
-      return new Response(renderAdminStorylinesPage(), {
-        headers: { "content-type": "text/html" },
-      });
-    }
-
-    if (url.pathname === "/admin/users") {
-      return new Response(renderAdminUsersPage(), {
-        headers: { "content-type": "text/html" },
-      });
-    }
-
-    if (url.pathname === "/admin/metrics") {
-      return new Response(renderAdminMetricsPage(), {
-        headers: { "content-type": "text/html" },
-      });
-    }
-
-    // Admin Goal Add page — auth handled client-side by Preact islands
-    // MUST be matched BEFORE /admin/goals/:id to prevent "new" being parsed as an id
-    if (url.pathname === "/admin/goals/new") {
-      return new Response(renderAdminGoalAddPage(), {
-        headers: { "content-type": "text/html" },
-      });
-    }
-
-    // Admin Goal Edit page — auth handled client-side by Preact islands
-    const adminGoalEditParams = matchRoute(url.pathname, '/admin/goals/:id');
-    if (adminGoalEditParams) {
-      const goalId = Number.parseInt(adminGoalEditParams.id, 10);
-      if (!Number.isInteger(goalId) || goalId <= 0 || String(goalId) !== adminGoalEditParams.id) {
-        return new Response('Not Found', { status: 404 });
-      }
-      return new Response(renderAdminGoalEditPage(), {
-        headers: { "content-type": "text/html" },
-      });
-    }
-
-    // Party (Fellowship) pages
-    // Must check /party/join/:code before /party/:id to avoid matching "join" as an id
-    const partyJoinPageParams = matchRoute(url.pathname, '/party/join/:inviteCode');
-    if (partyJoinPageParams) {
-      return new Response(renderPartyJoinPage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    const partyManagePageParams = matchRoute(url.pathname, '/party/:id/manage');
-    if (partyManagePageParams) {
-      return new Response(renderPartyManagePage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    const partyDetailPageParams = matchRoute(url.pathname, '/party/:id');
-    if (partyDetailPageParams) {
-      return new Response(renderPartyDetailPage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    if (url.pathname === "/party") {
-      return new Response(renderPartyListPage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    // Friends pages — exact /friends first, then /friends/add/:friendCode, then /friends/:id
-    if (url.pathname === "/friends") {
-      return new Response(renderFriendsPage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    if (url.pathname === "/stats") {
-      return new Response(renderStatsPage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    const friendAddPageParams = matchRoute(url.pathname, '/friends/add/:friendCode');
-    if (friendAddPageParams) {
-      return new Response(renderFriendAddPage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    const friendProfilePageParams = matchRoute(url.pathname, '/friends/:id');
-    if (friendProfilePageParams) {
-      return new Response(renderFriendProfilePage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    if (url.pathname === "/profile") {
-      return new Response(renderProfilePage(), {
-        headers: { 'content-type': 'text/html' },
-      });
-    }
-
-    if (url.pathname === "/") {
-      return new Response(renderHomePage(), {
-        headers: {
-          "content-type": "text/html",
-          "cache-control": "no-store, no-cache, must-revalidate",
-          "pragma": "no-cache",
-        },
-      });
-    }
-
-    if (url.pathname === "/journey") {
-      return new Response(renderHtml(), {
-        headers: {
-          "content-type": "text/html",
-        },
-      });
-    }
-    
-    // Main app fallback page
-    return new Response(renderHtml(), {
-      headers: {
-        "content-type": "text/html",
-      },
-    });
+    return app.fetch(request, env, _ctx);
   },
 
   async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
@@ -820,128 +557,3 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
-
-// Helper function to get allowed methods for API endpoints
-function getAllowedMethods(pathname: string): string[] {
-  switch (pathname) {
-    case "/api/calendar-progress":
-      return ['GET', 'POST', 'PUT', 'DELETE'];
-    case "/api/goals":
-    case "/api/stats/weekly":
-    case "/api/stats/heatmap":
-    case "/api/stats/wrapped":
-    case "/api/total-distance":
-    case "/api/session":
-    case "/api/avatars":
-    case "/api/storylines":
-    case "/api/push/status":
-    case "/api/push/vapid-key":
-    case "/api/auth/confirm-email":
-    case "/api/user/parties":
-    case "/api/user/parties/positions":
-    case "/api/user/fellowship-invites":
-    case "/api/friends":
-    case "/api/friends/pending":
-    case "/api/friends/search":
-    case "/api/friends/positions":
-    case "/api/admin/dashboard":
-    case "/api/admin/users":
-    case "/api/admin/metrics":
-    case "/api/admin/metrics/leaderboard":
-    case "/api/admin/metrics/timeline":
-    case "/api/admin/images":
-      return ['GET'];
-    case "/api/admin/goals":
-      return ['GET', 'POST'];
-    case "/api/admin/storylines":
-      return ['GET', 'POST'];
-    case "/api/register":
-    case "/api/login":
-    case "/api/logout":
-    case "/api/password-reset-request":
-    case "/api/password-reset":
-    case "/api/auth/resend-confirmation":
-    case "/api/party":
-    case "/api/friends/request":
-    case "/api/friends/request/code":
-      return ['POST'];
-    case "/api/push/subscribe":
-      return ['POST', 'DELETE'];
-    case "/api/profile":
-    case "/api/user/preferences":
-    case "/api/user/storyline":
-    case "/api/push/settings":
-      return ['PUT'];
-    default:
-      // Admin API routes
-      if (pathname.startsWith('/api/admin/')) {
-        if (matchRoute(pathname, '/api/admin/goals/:id')) return ['GET', 'PUT'];
-        if (matchRoute(pathname, '/api/admin/storylines/:id')) return ['GET', 'PUT'];
-        if (matchRoute(pathname, '/api/admin/storylines/:id/goals')) return ['PUT'];
-        if (matchRoute(pathname, '/api/admin/users/:id')) return ['DELETE'];
-        if (matchRoute(pathname, '/api/admin/users/:id/verify')) return ['PUT'];
-        if (matchRoute(pathname, '/api/admin/users/:id/reset')) return ['PUT'];
-        if (matchRoute(pathname, '/api/admin/users/:id/admin')) return ['PUT'];
-        // Unknown admin routes — restrict to safe default; the handler will return 404
-        return ['GET'];
-      }
-      // Parameterized routes
-      if (matchRoute(pathname, '/api/party/join/:inviteCode')) {
-        return ['GET', 'POST'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/invite')) {
-        return ['POST'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/invite-friend')) {
-        return ['POST'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/progress')) {
-        return ['GET'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/activity')) {
-        return ['GET'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/messages')) {
-        return ['POST'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/leave')) {
-        return ['POST'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/kick/:userId')) {
-        return ['POST'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/settings')) {
-        return ['PUT'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/storyline')) {
-        return ['PUT'];
-      }
-      if (matchRoute(pathname, '/api/party/:id/transfer-leadership')) {
-        return ['POST'];
-      }
-      // Fellowship invite parameterized routes
-      if (matchRoute(pathname, '/api/user/fellowship-invites/:inviteId/accept')) {
-        return ['POST'];
-      }
-      if (matchRoute(pathname, '/api/user/fellowship-invites/:inviteId/reject')) {
-        return ['POST'];
-      }
-      // Friend parameterized routes
-      if (matchRoute(pathname, '/api/friends/resolve/:friendCode')) {
-        return ['GET'];
-      }
-      if (matchRoute(pathname, '/api/friends/:userId/profile')) {
-        return ['GET'];
-      }
-      if (matchRoute(pathname, '/api/friends/:friendshipId/accept')) {
-        return ['POST'];
-      }
-      if (matchRoute(pathname, '/api/friends/:friendshipId/reject')) {
-        return ['POST'];
-      }
-      if (matchRoute(pathname, '/api/friends/:friendshipId')) {
-        return ['DELETE'];
-      }
-      return ['GET'];
-  }
-}
