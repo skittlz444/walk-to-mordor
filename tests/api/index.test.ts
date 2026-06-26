@@ -1,25 +1,16 @@
-import { renderHtml } from '../../src/renderHtml';
-import { renderHomePage } from '../../src/renderHomePage';
-import { 
-  isValidDateFormat, 
-  isValidDistance, 
-  safeJsonParse, 
-  isValidMethod,
-  createErrorResponse
-} from '../../src/validators';
-import { 
-  validateSession,
-  validateAdminSession,
-  handleRegister,
-  handleLogin,
-  handleLogout,
-  handleSessionValidation,
-  handleUpdatePreferences
-} from '../../src/auth-handlers';
+/**
+ * Hono Router Tests
+ *
+ * Tests the new Hono-based routing in src/index.ts.
+ * Uses app.request() for proper Request/Response handling.
+ */
+import { app } from '../../src/index';
 
-// Mock the modules at module level
+// Mock handler modules before importing anything that uses them
 jest.mock('../../src/renderHtml');
 jest.mock('../../src/renderHomePage');
+jest.mock('../../src/renderAuthPage');
+jest.mock('../../src/renderPasswordResetPage');
 jest.mock('../../src/validators');
 jest.mock('../../src/goals-handlers');
 jest.mock('../../src/auth-handlers');
@@ -37,14 +28,38 @@ jest.mock('../../src/renderAdminPage');
 jest.mock('../../src/renderAdminGoalsPage');
 jest.mock('../../src/renderAdminGoalEditPage');
 jest.mock('../../src/renderAdminGoalAddPage');
+jest.mock('../../src/renderAdminUsersPage');
+jest.mock('../../src/renderAdminMetricsPage');
+jest.mock('../../src/renderAdminStorylinesPage');
 jest.mock('../../src/admin-handlers');
 jest.mock('../../src/friends-handlers');
 jest.mock('../../src/fellowship-invite-handlers');
+jest.mock('../../src/stats-handlers');
+jest.mock('../../src/push-handlers');
+jest.mock('../../src/storyline-handlers');
+jest.mock('../../src/map-handlers');
+jest.mock('../../src/progress-handlers');
 
-// Import after mocking
-import worker from '../../src/index';
-import { calculateTotalDistance, calculateUserStorylineDistance, handleGoalsGet } from '../../src/goals-handlers';
-import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from '../../src/party-handlers';
+import { renderHtml } from '../../src/renderHtml';
+import { renderHomePage } from '../../src/renderHomePage';
+import { renderAuthPage } from '../../src/renderAuthPage';
+import { renderPasswordResetPage } from '../../src/renderPasswordResetPage';
+import {
+  validateSession,
+  validateAdminSession,
+  handleRegister,
+  handleLogin,
+  handleLogout,
+  handleSessionValidation,
+  handleUpdateProfile,
+  handleUpdatePreferences,
+  handleGetAvatars,
+  handlePasswordResetRequest,
+  handlePasswordReset,
+  handleConfirmEmail,
+  handleResendConfirmation,
+} from '../../src/auth-handlers';
+import { handleCreateParty, handlePreviewParty, handleJoinParty, handleGetUserParties, handlePartyProgress } from '../../src/party-handlers';
 import { renderPartyListPage } from '../../src/renderPartyListPage';
 import { renderPartyDetailPage } from '../../src/renderPartyDetailPage';
 import { renderPartyManagePage } from '../../src/renderPartyManagePage';
@@ -58,36 +73,46 @@ import { renderAdminPage } from '../../src/renderAdminPage';
 import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
 import { renderAdminGoalAddPage } from '../../src/renderAdminGoalAddPage';
 import { renderAdminGoalEditPage } from '../../src/renderAdminGoalEditPage';
-import { handleAdminDashboard, handleAdminGoalsList, handleAdminGoalCreate } from '../../src/admin-handlers';
-import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile } from '../../src/friends-handlers';
-import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from '../../src/fellowship-invite-handlers';
+import { renderAdminStorylinesPage } from '../../src/renderAdminStorylinesPage';
+import { renderAdminUsersPage } from '../../src/renderAdminUsersPage';
+import { renderAdminMetricsPage } from '../../src/renderAdminMetricsPage';
+import {
+  handleAdminDashboard,
+  handleAdminGoalsList,
+  handleAdminGoalCreate,
+  handleAdminGoalGet,
+} from '../../src/admin-handlers';
+import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleAcceptFriend } from '../../src/friends-handlers';
+import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite } from '../../src/fellowship-invite-handlers';
+import { handleWeeklyStats, handleHeatmap } from '../../src/stats-handlers';
+import { handlePushSubscribe, handlePushStatus, handleVapidKey } from '../../src/push-handlers';
+import { handleStorylinesList } from '../../src/storyline-handlers';
+import { handleMapPage } from '../../src/map-handlers';
+import { handleProgressGet } from '../../src/progress-handlers';
+import { calculateUserStorylineDistance, handleGoalsGet } from '../../src/goals-handlers';
 
 const mockRenderHtml = jest.mocked(renderHtml);
 const mockRenderHomePage = jest.mocked(renderHomePage);
-const mockIsValidDateFormat = jest.mocked(isValidDateFormat);
-const mockIsValidDistance = jest.mocked(isValidDistance);
-const mockSafeJsonParse = jest.mocked(safeJsonParse);
-const mockIsValidMethod = jest.mocked(isValidMethod);
-const mockCreateErrorResponse = jest.mocked(createErrorResponse);
-const mockCalculateTotalDistance = jest.mocked(calculateTotalDistance);
-const mockCalculateUserStorylineDistance = jest.mocked(calculateUserStorylineDistance);
-const mockHandleGoalsGet = jest.mocked(handleGoalsGet);
+const mockRenderAuthPage = jest.mocked(renderAuthPage);
+const mockRenderPasswordResetPage = jest.mocked(renderPasswordResetPage);
 const mockValidateSession = jest.mocked(validateSession);
 const mockValidateAdminSession = jest.mocked(validateAdminSession);
 const mockHandleRegister = jest.mocked(handleRegister);
 const mockHandleLogin = jest.mocked(handleLogin);
 const mockHandleLogout = jest.mocked(handleLogout);
 const mockHandleSessionValidation = jest.mocked(handleSessionValidation);
+const mockHandleUpdateProfile = jest.mocked(handleUpdateProfile);
 const mockHandleUpdatePreferences = jest.mocked(handleUpdatePreferences);
+const mockHandleGetAvatars = jest.mocked(handleGetAvatars);
+const mockHandlePasswordResetRequest = jest.mocked(handlePasswordResetRequest);
+const mockHandlePasswordReset = jest.mocked(handlePasswordReset);
+const mockHandleConfirmEmail = jest.mocked(handleConfirmEmail);
+const mockHandleResendConfirmation = jest.mocked(handleResendConfirmation);
 const mockHandleCreateParty = jest.mocked(handleCreateParty);
 const mockHandlePreviewParty = jest.mocked(handlePreviewParty);
 const mockHandleJoinParty = jest.mocked(handleJoinParty);
-const mockHandleRegenerateInvite = jest.mocked(handleRegenerateInvite);
 const mockHandleGetUserParties = jest.mocked(handleGetUserParties);
-const mockHandleLeaveParty = jest.mocked(handleLeaveParty);
-const mockHandleKickMember = jest.mocked(handleKickMember);
-const mockHandleUpdatePartySettings = jest.mocked(handleUpdatePartySettings);
-const mockHandleTransferLeadership = jest.mocked(handleTransferLeadership);
+const mockHandlePartyProgress = jest.mocked(handlePartyProgress);
 const mockRenderPartyListPage = jest.mocked(renderPartyListPage);
 const mockRenderPartyDetailPage = jest.mocked(renderPartyDetailPage);
 const mockRenderPartyManagePage = jest.mocked(renderPartyManagePage);
@@ -101,104 +126,99 @@ const mockRenderAdminPage = jest.mocked(renderAdminPage);
 const mockRenderAdminGoalsPage = jest.mocked(renderAdminGoalsPage);
 const mockRenderAdminGoalAddPage = jest.mocked(renderAdminGoalAddPage);
 const mockRenderAdminGoalEditPage = jest.mocked(renderAdminGoalEditPage);
+const mockRenderAdminStorylinesPage = jest.mocked(renderAdminStorylinesPage);
+const mockRenderAdminUsersPage = jest.mocked(renderAdminUsersPage);
+const mockRenderAdminMetricsPage = jest.mocked(renderAdminMetricsPage);
 const mockHandleAdminDashboard = jest.mocked(handleAdminDashboard);
 const mockHandleAdminGoalsList = jest.mocked(handleAdminGoalsList);
 const mockHandleAdminGoalCreate = jest.mocked(handleAdminGoalCreate);
+const mockHandleAdminGoalGet = jest.mocked(handleAdminGoalGet);
 const mockHandleGetFriends = jest.mocked(handleGetFriends);
 const mockHandleGetPendingFriends = jest.mocked(handleGetPendingFriends);
 const mockHandleSearchUsers = jest.mocked(handleSearchUsers);
 const mockHandleResolveFriendCode = jest.mocked(handleResolveFriendCode);
 const mockHandleFriendRequest = jest.mocked(handleFriendRequest);
-const mockHandleFriendRequestByCode = jest.mocked(handleFriendRequestByCode);
 const mockHandleAcceptFriend = jest.mocked(handleAcceptFriend);
-const mockHandleRejectFriend = jest.mocked(handleRejectFriend);
-const mockHandleUnfriend = jest.mocked(handleUnfriend);
-const mockHandleGetFriendProfile = jest.mocked(handleGetFriendProfile);
 const mockHandleInviteFriend = jest.mocked(handleInviteFriend);
 const mockHandleGetFellowshipInvites = jest.mocked(handleGetFellowshipInvites);
 const mockHandleAcceptFellowshipInvite = jest.mocked(handleAcceptFellowshipInvite);
-const mockHandleRejectFellowshipInvite = jest.mocked(handleRejectFellowshipInvite);
+const mockHandleWeeklyStats = jest.mocked(handleWeeklyStats);
+const mockHandleHeatmap = jest.mocked(handleHeatmap);
+const mockHandlePushSubscribe = jest.mocked(handlePushSubscribe);
+const mockHandlePushStatus = jest.mocked(handlePushStatus);
+const mockHandleVapidKey = jest.mocked(handleVapidKey);
+const mockHandleStorylinesList = jest.mocked(handleStorylinesList);
+const mockHandleMapPage = jest.mocked(handleMapPage);
+const mockHandleProgressGet = jest.mocked(handleProgressGet);
+const mockCalculateUserStorylineDistance = jest.mocked(calculateUserStorylineDistance);
+const mockHandleGoalsGet = jest.mocked(handleGoalsGet);
 
-describe('Cloudflare Worker Index', () => {
-  let mockEnv: any;
-  let expectedDb: any;
-  let mockRequest: any;
-  let originalConsoleError: typeof console.error;
-  let originalConsoleLog: typeof console.log;
+function jsonResponse(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
 
-  // Helper function to create a request
-  const createRequest = (url: string, method: string = 'GET') => {
-    return {
-      ...mockRequest,
-      url,
-      method,
-      headers: {
-        get: jest.fn((name: string) => {
-          if (name === 'content-type' || name === 'Content-Type') {
-            return 'application/json';
-          }
-          return null;
-        }),
-        set: jest.fn(),
-        has: jest.fn(),
-        delete: jest.fn(),
-        append: jest.fn(),
-        entries: jest.fn(),
-        forEach: jest.fn(),
-        keys: jest.fn(),
-        values: jest.fn(),
-        [Symbol.iterator]: jest.fn()
-      }
-    };
-  };
+function htmlResponse(html: string): Response {
+  return new Response(html, {
+    headers: { 'content-type': 'text/html' },
+  });
+}
+
+describe('Hono Router', () => {
+  // Mock environment with D1 database binding
+  const mockEnv = {
+    DB: {
+      prepare: jest.fn(() => ({
+        bind: jest.fn(() => ({
+          run: jest.fn(() => Promise.resolve({ meta: { changes: 1 } })),
+          all: jest.fn(() => Promise.resolve({ results: [] })),
+          first: jest.fn(() => Promise.resolve(null)),
+        })),
+        all: jest.fn(() => Promise.resolve({ results: [] })),
+        first: jest.fn(() => Promise.resolve(null)),
+        run: jest.fn(() => Promise.resolve({ meta: { changes: 1 } })),
+      })),
+    },
+    ASSETS: {
+      fetch: jest.fn(() => Promise.resolve(new Response(null, { status: 404 }))),
+    },
+    ALLOW_TEST_AUTH: 'true',
+  } as any;
+
+  // Helper to make requests through the Hono app with mock env
+  async function request(path: string, init?: RequestInit): Promise<Response> {
+    return app.request(path, init, mockEnv);
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Suppress console outputs during tests to reduce noise from expected scenarios
-    originalConsoleError = console.error;
-    originalConsoleLog = console.log;
-    console.error = jest.fn();
-    console.log = jest.fn();
-    
-    // Setup default mock returns
+
+    // Default mock returns
     mockRenderHtml.mockReturnValue('<html>Mock HTML</html>');
-    mockRenderHomePage.mockReturnValue('<html>Mock Home HTML</html>');
-    mockIsValidDateFormat.mockReturnValue(true);
-    mockIsValidDistance.mockReturnValue(true);
-    mockIsValidMethod.mockReturnValue(true);
-    mockSafeJsonParse.mockResolvedValue({ success: true, data: {} });
+    mockRenderHomePage.mockReturnValue('<html>Mock Home</html>');
+    mockRenderAuthPage.mockReturnValue('<html>Login</html>');
+    mockRenderPasswordResetPage.mockReturnValue('<html>Reset Password</html>');
     mockValidateSession.mockResolvedValue({ valid: true, userId: 1 });
-    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
-    mockCreateErrorResponse.mockImplementation((error: string, status: number = 400) => {
-      return new Response(JSON.stringify({ error }), {
-        status,
-        headers: { 'content-type': 'application/json' }
-      });
-    });
-
-    // Setup handler mocks
-    mockCalculateTotalDistance.mockResolvedValue(10);
-    mockCalculateUserStorylineDistance.mockResolvedValue({ totalDistance: 10, rawTotalDistance: 10, activeStoryline: null });
-    mockHandleGoalsGet.mockResolvedValue(new Response(JSON.stringify({ goals: [] }), { 
-      status: 200, 
-      headers: { 'content-type': 'application/json' } 
-    }));
-
-    mockHandleRegister.mockResolvedValue(new Response('Registered', { status: 201 }));
-    mockHandleLogin.mockResolvedValue(new Response('Logged In', { status: 200 }));
-    mockHandleLogout.mockResolvedValue(new Response('Logged Out', { status: 200 }));
-    mockHandleSessionValidation.mockResolvedValue(new Response('Valid Session', { status: 200 }));
-    mockHandleUpdatePreferences.mockResolvedValue(new Response(JSON.stringify({ showFutureGoalsUnlocked: true }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleCreateParty.mockResolvedValue(new Response(JSON.stringify({ id: 1, name: 'Test Party' }), { status: 201, headers: { 'content-type': 'application/json' } }));
-    mockHandlePreviewParty.mockResolvedValue(new Response(JSON.stringify({ name: 'Party', member_count: 3 }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleJoinParty.mockResolvedValue(new Response(JSON.stringify({ party_id: 1, rejoined: false }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleRegenerateInvite.mockResolvedValue(new Response(JSON.stringify({ inviteCode: 'NewCode1', inviteUrl: 'https://example.com/party/join/NewCode1' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleGetUserParties.mockResolvedValue(new Response(JSON.stringify({ parties: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleLeaveParty.mockResolvedValue(new Response(JSON.stringify({ message: 'You have left the party' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleKickMember.mockResolvedValue(new Response(JSON.stringify({ message: 'Member has been kicked from the party' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleUpdatePartySettings.mockResolvedValue(new Response(JSON.stringify({ id: 1, name: 'Updated Party' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleTransferLeadership.mockResolvedValue(new Response(JSON.stringify({ message: 'Leadership transferred successfully', new_leader_id: 2 }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1 });
+    mockHandleRegister.mockResolvedValue(jsonResponse({ ok: true }, 201));
+    mockHandleLogin.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandleLogout.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandleSessionValidation.mockResolvedValue(jsonResponse({ valid: true }));
+    mockHandleUpdateProfile.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandleUpdatePreferences.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandleGetAvatars.mockResolvedValue(jsonResponse({ avatars: [] }));
+    mockHandlePasswordResetRequest.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandlePasswordReset.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandleConfirmEmail.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandleResendConfirmation.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandleVapidKey.mockReturnValue(jsonResponse({ key: 'test-key' }));
+    mockHandleCreateParty.mockResolvedValue(jsonResponse({ id: 1 }, 201));
+    mockHandlePreviewParty.mockResolvedValue(jsonResponse({ name: 'Party' }));
+    mockHandleJoinParty.mockResolvedValue(jsonResponse({ party_id: 1 }));
+    mockHandleGetUserParties.mockResolvedValue(jsonResponse({ parties: [] }));
+    mockHandlePartyProgress.mockResolvedValue(jsonResponse({ progress: 0 }));
     mockRenderPartyListPage.mockReturnValue('<html>Party List</html>');
     mockRenderPartyDetailPage.mockReturnValue('<html>Party Detail</html>');
     mockRenderPartyManagePage.mockReturnValue('<html>Party Manage</html>');
@@ -207,1489 +227,516 @@ describe('Cloudflare Worker Index', () => {
     mockRenderFriendAddPage.mockReturnValue('<html>Friend Add</html>');
     mockRenderFriendProfilePage.mockReturnValue('<html>Friend Profile</html>');
     mockRenderStatsPage.mockReturnValue('<html>Stats</html>');
-    mockRenderAdminPage.mockReturnValue('<html>Admin Dashboard</html>');
+    mockRenderProfilePage.mockReturnValue('<html>Profile</html>');
+    mockRenderAdminPage.mockReturnValue('<html>Admin</html>');
     mockRenderAdminGoalsPage.mockReturnValue('<html>Admin Goals</html>');
     mockRenderAdminGoalAddPage.mockReturnValue('<html>Admin Goal Add</html>');
     mockRenderAdminGoalEditPage.mockReturnValue('<html>Admin Goal Edit</html>');
-    mockHandleAdminDashboard.mockResolvedValue(new Response(JSON.stringify({
-      totalUsers: 42, totalDistanceKm: 12345.6, activeParties: 5, totalGoals: 171
-    }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleAdminGoalsList.mockResolvedValue(new Response(JSON.stringify({
-      goals: [], total: 0, page: 1, pageSize: 25, totalPages: 1
-    }), { status: 200, headers: { 'content-type': 'application/json' } }));
-
-    // Friends handler mocks
-    mockHandleGetFriends.mockResolvedValue(new Response(JSON.stringify({ friends: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleGetPendingFriends.mockResolvedValue(new Response(JSON.stringify({ pending: [], count: 0 }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleSearchUsers.mockResolvedValue(new Response(JSON.stringify({ results: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleResolveFriendCode.mockResolvedValue(new Response(JSON.stringify({ username: 'alice', avatar_id: 'gandalf-grey' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleFriendRequest.mockResolvedValue(new Response(JSON.stringify({ friendship_id: 1, status: 'pending' }), { status: 201, headers: { 'content-type': 'application/json' } }));
-    mockHandleFriendRequestByCode.mockResolvedValue(new Response(JSON.stringify({ friendship_id: 1, status: 'pending' }), { status: 201, headers: { 'content-type': 'application/json' } }));
-    mockHandleAcceptFriend.mockResolvedValue(new Response(JSON.stringify({ status: 'accepted' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleRejectFriend.mockResolvedValue(new Response(JSON.stringify({ status: 'rejected' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleUnfriend.mockResolvedValue(new Response(JSON.stringify({ status: 'removed' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleGetFriendProfile.mockResolvedValue(new Response(JSON.stringify({ username: 'alice', total_distance: 100 }), { status: 200, headers: { 'content-type': 'application/json' } }));
-
-    // Fellowship invite handler mocks
-    mockHandleInviteFriend.mockResolvedValue(new Response(JSON.stringify({ id: 1, party_id: 1, party_name: 'Party', invitee_id: 2, status: 'pending' }), { status: 201, headers: { 'content-type': 'application/json' } }));
-    mockHandleGetFellowshipInvites.mockResolvedValue(new Response(JSON.stringify({ invites: [], count: 0 }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleAcceptFellowshipInvite.mockResolvedValue(new Response(JSON.stringify({ party_id: 1, party_name: 'Party', rejoined: false }), { status: 200, headers: { 'content-type': 'application/json' } }));
-    mockHandleRejectFellowshipInvite.mockResolvedValue(new Response(JSON.stringify({ status: 'rejected' }), { status: 200, headers: { 'content-type': 'application/json' } }));
-
-    // Create simple mock environment
-    mockEnv = {
-      DB: {
-        prepare: jest.fn(() => ({
-          bind: jest.fn(() => ({
-            run: jest.fn(() => Promise.resolve({ meta: { changes: 1 } })),
-            all: jest.fn(() => Promise.resolve({ results: [] }))
-          })),
-          all: jest.fn(() => Promise.resolve({ results: [] }))
-        }))
-      },
-      ASSETS: {
-        fetch: jest.fn(() => Promise.resolve({ status: 404 }))
-      }
-    };
-
-    // createDbClient(env.DB) wraps DB into { read, write } — match that shape
-    expectedDb = expect.objectContaining({ read: mockEnv.DB, write: mockEnv.DB });
-
-    // Create a more complete mock Request object with proper headers support
-    mockRequest = {
-      url: 'https://example.com/',
-      method: 'GET',
-      headers: {
-        get: jest.fn((name: string) => {
-          const headerMap = new Map([
-            ['content-type', 'application/json']
-          ]);
-          return headerMap.get(name) || null;
-        }),
-        set: jest.fn(),
-        has: jest.fn(),
-        delete: jest.fn(),
-        append: jest.fn(),
-        entries: jest.fn(),
-        forEach: jest.fn(),
-        keys: jest.fn(),
-        values: jest.fn(),
-        [Symbol.iterator]: jest.fn()
-      }
-    };
+    mockRenderAdminStorylinesPage.mockReturnValue('<html>Admin Storylines</html>');
+    mockRenderAdminUsersPage.mockReturnValue('<html>Admin Users</html>');
+    mockRenderAdminMetricsPage.mockReturnValue('<html>Admin Metrics</html>');
+    mockHandleAdminDashboard.mockResolvedValue(jsonResponse({ totalUsers: 42 }));
+    mockHandleAdminGoalsList.mockResolvedValue(jsonResponse({ goals: [] }));
+    mockHandleAdminGoalCreate.mockResolvedValue(jsonResponse({ id: 1 }, 201));
+    mockHandleAdminGoalGet.mockResolvedValue(jsonResponse({ id: 42, title: 'Test' }));
+    mockHandleGetFriends.mockResolvedValue(jsonResponse({ friends: [] }));
+    mockHandleGetPendingFriends.mockResolvedValue(jsonResponse({ pending: [] }));
+    mockHandleSearchUsers.mockResolvedValue(jsonResponse({ results: [] }));
+    mockHandleResolveFriendCode.mockResolvedValue(jsonResponse({ username: 'alice' }));
+    mockHandleFriendRequest.mockResolvedValue(jsonResponse({ friendship_id: 1 }, 201));
+    mockHandleAcceptFriend.mockResolvedValue(jsonResponse({ status: 'accepted' }));
+    mockHandleInviteFriend.mockResolvedValue(jsonResponse({ id: 1 }, 201));
+    mockHandleGetFellowshipInvites.mockResolvedValue(jsonResponse({ invites: [] }));
+    mockHandleAcceptFellowshipInvite.mockResolvedValue(jsonResponse({ party_id: 1 }));
+    mockHandleWeeklyStats.mockResolvedValue(jsonResponse({ stats: {} }));
+    mockHandleHeatmap.mockResolvedValue(jsonResponse({ heatmap: [] }));
+    mockHandlePushSubscribe.mockResolvedValue(jsonResponse({ ok: true }));
+    mockHandlePushStatus.mockResolvedValue(jsonResponse({ subscribed: false }));
+    mockHandleStorylinesList.mockResolvedValue(jsonResponse({ storylines: [] }));
+    mockHandleMapPage.mockResolvedValue(htmlResponse('<html>Map</html>'));
+    mockHandleProgressGet.mockResolvedValue(jsonResponse({ entries: [] }));
+    mockCalculateUserStorylineDistance.mockResolvedValue({ totalDistance: 10, rawTotalDistance: 10, activeStoryline: null });
+    mockHandleGoalsGet.mockResolvedValue(jsonResponse({ goals: [] }));
   });
 
-  afterEach(() => {
-    // Restore console methods after each test
-    console.error = originalConsoleError;
-    console.log = originalConsoleLog;
+  // ── SSR Page Routes ────────────────────────────────────────────────────
+
+  describe('SSR pages', () => {
+    it('renders login page at /login', async () => {
+      const res = await request('/login');
+      expect(res.status).toBe(200);
+      expect(mockRenderAuthPage).toHaveBeenCalled();
+    });
+
+    it('renders home page at /', async () => {
+      const res = await request('/');
+      expect(res.status).toBe(200);
+      expect(mockRenderHomePage).toHaveBeenCalled();
+    });
+
+    it('renders journey page at /journey', async () => {
+      const res = await request('/journey');
+      expect(res.status).toBe(200);
+      expect(mockRenderHtml).toHaveBeenCalled();
+    });
+
+    it('renders profile page at /profile', async () => {
+      const res = await request('/profile');
+      expect(res.status).toBe(200);
+      expect(mockRenderProfilePage).toHaveBeenCalled();
+    });
+
+    it('renders friends page at /friends', async () => {
+      const res = await request('/friends');
+      expect(res.status).toBe(200);
+      expect(mockRenderFriendsPage).toHaveBeenCalled();
+    });
+
+    it('renders friend add page at /friends/add/:code', async () => {
+      const res = await request('/friends/add/ABC123');
+      expect(res.status).toBe(200);
+      expect(mockRenderFriendAddPage).toHaveBeenCalled();
+    });
+
+    it('renders friend profile page at /friends/:id', async () => {
+      const res = await request('/friends/42');
+      expect(res.status).toBe(200);
+      expect(mockRenderFriendProfilePage).toHaveBeenCalled();
+    });
+
+    it('does not shadow /friends/add/:code with /friends/:id', async () => {
+      const res = await request('/friends/add/Test1234');
+      expect(mockRenderFriendAddPage).toHaveBeenCalled();
+      expect(mockRenderFriendProfilePage).not.toHaveBeenCalled();
+    });
+
+    it('renders stats page at /stats', async () => {
+      const res = await request('/stats');
+      expect(res.status).toBe(200);
+      expect(mockRenderStatsPage).toHaveBeenCalled();
+    });
+
+    it('renders party list at /party', async () => {
+      const res = await request('/party');
+      expect(res.status).toBe(200);
+      expect(mockRenderPartyListPage).toHaveBeenCalled();
+    });
+
+    it('renders party detail at /party/:id', async () => {
+      const res = await request('/party/42');
+      expect(res.status).toBe(200);
+      expect(mockRenderPartyDetailPage).toHaveBeenCalled();
+    });
+
+    it('renders party manage at /party/:id/manage', async () => {
+      const res = await request('/party/42/manage');
+      expect(res.status).toBe(200);
+      expect(mockRenderPartyManagePage).toHaveBeenCalled();
+    });
+
+    it('renders party join at /party/join/:code', async () => {
+      const res = await request('/party/join/ABC123');
+      expect(res.status).toBe(200);
+      expect(mockRenderPartyJoinPage).toHaveBeenCalled();
+    });
+
+    it('renders admin page at /admin', async () => {
+      const res = await request('/admin');
+      expect(res.status).toBe(200);
+      expect(mockRenderAdminPage).toHaveBeenCalled();
+    });
+
+    it('renders admin goals at /admin/goals', async () => {
+      const res = await request('/admin/goals');
+      expect(res.status).toBe(200);
+      expect(mockRenderAdminGoalsPage).toHaveBeenCalled();
+    });
+
+    it('renders admin goal new at /admin/goals/new', async () => {
+      const res = await request('/admin/goals/new');
+      expect(res.status).toBe(200);
+      expect(mockRenderAdminGoalAddPage).toHaveBeenCalled();
+    });
+
+    it('renders admin goal edit at /admin/goals/:id', async () => {
+      const res = await request('/admin/goals/42');
+      expect(res.status).toBe(200);
+      expect(mockRenderAdminGoalEditPage).toHaveBeenCalled();
+    });
+
+    it('renders admin storylines at /admin/storylines', async () => {
+      const res = await request('/admin/storylines');
+      expect(res.status).toBe(200);
+      expect(mockRenderAdminStorylinesPage).toHaveBeenCalled();
+    });
+
+    it('renders admin users at /admin/users', async () => {
+      const res = await request('/admin/users');
+      expect(res.status).toBe(200);
+      expect(mockRenderAdminUsersPage).toHaveBeenCalled();
+    });
+
+    it('renders admin metrics at /admin/metrics', async () => {
+      const res = await request('/admin/metrics');
+      expect(res.status).toBe(200);
+      expect(mockRenderAdminMetricsPage).toHaveBeenCalled();
+    });
+
+    it('falls back to renderHtml for unknown pages', async () => {
+      const res = await request('/nonexistent-page');
+      expect(res.status).toBe(200);
+      expect(mockRenderHtml).toHaveBeenCalled();
+    });
   });
-    it('should route to handleRegister', async () => {
-      const request = createRequest('http://localhost/api/register', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
+
+  // ── Public API Routes ──────────────────────────────────────────────────
+
+  describe('Public API routes', () => {
+    it('routes POST /api/register to handleRegister', async () => {
+      const res = await request('/api/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: 'test', password: 'Test1234!', email: 'test@example.com' }),
+      });
+      expect(res.status).toBe(201);
       expect(mockHandleRegister).toHaveBeenCalled();
-      expect(response.status).toBe(201);
     });
 
-    it('should route to handleLogin', async () => {
-      const request = createRequest('http://localhost/api/login', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
+    it('routes POST /api/login to handleLogin', async () => {
+      const res = await request('/api/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com', password: 'Test1234!' }),
+      });
+      expect(res.status).toBe(200);
       expect(mockHandleLogin).toHaveBeenCalled();
-      expect(response.status).toBe(200);
     });
 
-    it('should route to handleLogout', async () => {
-      const request = createRequest('http://localhost/api/logout', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
+    it('routes POST /api/logout to handleLogout', async () => {
+      const res = await request('/api/logout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(200);
       expect(mockHandleLogout).toHaveBeenCalled();
-      expect(response.status).toBe(200);
     });
 
-    it('should route to handleSessionValidation', async () => {
-      const request = createRequest('http://localhost/api/session', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
+    it('routes GET /api/session to handleSessionValidation', async () => {
+      const res = await request('/api/session');
+      expect(res.status).toBe(200);
       expect(mockHandleSessionValidation).toHaveBeenCalled();
-      expect(response.status).toBe(200);
     });
 
-    it('should route to handleUpdatePreferences', async () => {
-      const request = createRequest('http://localhost/api/user/preferences', 'PUT');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleUpdatePreferences).toHaveBeenCalled();
-      expect(response.status).toBe(200);
+    it('routes GET /api/push/vapid-key to handleVapidKey', async () => {
+      const res = await request('/api/push/vapid-key');
+      expect(res.status).toBe(200);
+      expect(mockHandleVapidKey).toHaveBeenCalled();
     });
 
-    it('should return 405 for invalid method on preferences endpoint', async () => {
-      const request = createRequest('http://localhost/api/user/preferences', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('PUT');
+    it('returns 405 for unsupported method on public endpoint', async () => {
+      const res = await request('/api/register', { method: 'GET' });
+      expect(res.status).toBe(405);
+    });
+  });
+
+  // ── Authenticated API Routes ───────────────────────────────────────────
+
+  describe('Auth middleware', () => {
+    it('rejects unauthenticated requests to authenticated endpoints', async () => {
+      mockValidateSession.mockResolvedValue({
+        valid: false,
+        error: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        }),
+      });
+
+      const res = await request('/api/profile', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(401);
+      expect(mockHandleUpdateProfile).not.toHaveBeenCalled();
     });
 
-    it('should return 405 for invalid method on auth endpoints', async () => {
-      const request = createRequest('http://localhost/api/login', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
+    it('allows authenticated requests to authenticated endpoints', async () => {
+      mockValidateSession.mockResolvedValue({ valid: true, userId: 1 });
+
+      const res = await request('/api/profile', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: 'test' }),
+      });
+      expect(res.status).toBe(200);
+      expect(mockHandleUpdateProfile).toHaveBeenCalled();
+    });
+  });
+
+  describe('Authenticated API routes', () => {
+    it('routes GET /api/avatars', async () => {
+      const res = await request('/api/avatars');
+      expect(res.status).toBe(200);
+      expect(mockHandleGetAvatars).toHaveBeenCalled();
     });
 
-    it('should route POST /api/party to handleCreateParty', async () => {
-      const request = createRequest('http://localhost/api/party', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
+    it('routes GET /api/storylines', async () => {
+      const res = await request('/api/storylines');
+      expect(res.status).toBe(200);
+      expect(mockHandleStorylinesList).toHaveBeenCalled();
+    });
+
+    it('routes GET /api/goals', async () => {
+      const res = await request('/api/goals');
+      expect(res.status).toBe(200);
+      expect(mockHandleGoalsGet).toHaveBeenCalled();
+    });
+
+    it('routes GET /api/calendar-progress', async () => {
+      const res = await request('/api/calendar-progress');
+      expect(res.status).toBe(200);
+      expect(mockHandleProgressGet).toHaveBeenCalled();
+    });
+
+    it('routes GET /api/stats/weekly', async () => {
+      const res = await request('/api/stats/weekly');
+      expect(res.status).toBe(200);
+      expect(mockHandleWeeklyStats).toHaveBeenCalled();
+    });
+
+    it('routes GET /api/stats/heatmap', async () => {
+      const res = await request('/api/stats/heatmap');
+      expect(res.status).toBe(200);
+      expect(mockHandleHeatmap).toHaveBeenCalled();
+    });
+
+    it('routes POST /api/push/subscribe', async () => {
+      const res = await request('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ endpoint: 'test', keys: {} }),
+      });
+      expect(res.status).toBe(200);
+      expect(mockHandlePushSubscribe).toHaveBeenCalled();
+    });
+
+    it('routes GET /api/push/status', async () => {
+      const res = await request('/api/push/status');
+      expect(res.status).toBe(200);
+      expect(mockHandlePushStatus).toHaveBeenCalled();
+    });
+
+    it('routes GET /api/total-distance', async () => {
+      const res = await request('/api/total-distance');
+      expect(res.status).toBe(200);
+      expect(mockCalculateUserStorylineDistance).toHaveBeenCalled();
+    });
+
+    // Party routes
+    it('routes POST /api/party to handleCreateParty', async () => {
+      const res = await request('/api/party', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'Test' }),
+      });
+      expect(res.status).toBe(201);
       expect(mockHandleCreateParty).toHaveBeenCalled();
-      expect(response.status).toBe(201);
     });
 
-    it('should return 405 for GET on /api/party', async () => {
-      const request = createRequest('http://localhost/api/party', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
-    });
-
-    it('should route GET /api/party/join/:inviteCode to handlePreviewParty', async () => {
-      const request = createRequest('http://localhost/api/party/join/AbCd1234', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandlePreviewParty).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 'AbCd1234'
-      );
-      expect(response.status).toBe(200);
-    });
-
-    it('should route POST /api/party/join/:inviteCode to handleJoinParty', async () => {
-      const request = createRequest('http://localhost/api/party/join/AbCd1234', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleJoinParty).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 'AbCd1234', undefined
-      );
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for PUT on /api/party/join/:inviteCode', async () => {
-      const request = createRequest('http://localhost/api/party/join/AbCd1234', 'PUT');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('GET');
-      expect(data.allowedMethods).toContain('POST');
-    });
-
-    it('should route POST /api/party/:id/invite to handleRegenerateInvite', async () => {
-      const request = createRequest('http://localhost/api/party/1/invite', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleRegenerateInvite).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, undefined
-      );
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for GET on /api/party/:id/invite', async () => {
-      const request = createRequest('http://localhost/api/party/1/invite', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
-    });
-
-    it('should return 400 for invalid party ID in /api/party/:id/invite', async () => {
-      const request = createRequest('http://localhost/api/party/abc/invite', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
-    });
-
-    it('should return 400 for non-integer party ID like 1.5 in /api/party/:id/invite', async () => {
-      const request = createRequest('http://localhost/api/party/1.5/invite', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
-    });
-
-    it('should return 400 for scientific notation party ID like 1e2 in /api/party/:id/invite', async () => {
-      const request = createRequest('http://localhost/api/party/1e2/invite', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
-    });
-
-    it('should route GET /api/user/parties to handleGetUserParties', async () => {
-      const request = createRequest('http://localhost/api/user/parties', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
+    it('routes GET /api/user/parties', async () => {
+      const res = await request('/api/user/parties');
+      expect(res.status).toBe(200);
       expect(mockHandleGetUserParties).toHaveBeenCalled();
-      expect(response.status).toBe(200);
     });
 
-    it('should return 405 for POST on /api/user/parties', async () => {
-      const request = createRequest('http://localhost/api/user/parties', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('GET');
+    it('routes GET /api/party/join/:inviteCode', async () => {
+      const res = await request('/api/party/join/ABC123');
+      expect(res.status).toBe(200);
+      expect(mockHandlePreviewParty).toHaveBeenCalled();
     });
 
-    it('should route POST /api/party/:id/leave with empty body', async () => {
-      mockSafeJsonParse.mockRestore();
-      const { safeJsonParse: realSafeJsonParse } = jest.requireActual('../../src/validators');
-      mockSafeJsonParse.mockImplementation(realSafeJsonParse);
-
-      const request = createRequest('http://localhost/api/party/1/leave', 'POST');
-      request.text = jest.fn().mockResolvedValue('');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleLeaveParty).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, undefined
-      );
-      expect(response.status).toBe(200);
+    it('routes POST /api/party/join/:inviteCode', async () => {
+      const res = await request('/api/party/join/ABC123', { method: 'POST' });
+      expect(res.status).toBe(200);
+      expect(mockHandleJoinParty).toHaveBeenCalled();
     });
 
-    it('should route POST /api/party/:id/kick/:userId with empty body', async () => {
-      mockSafeJsonParse.mockRestore();
-      const { safeJsonParse: realSafeJsonParse } = jest.requireActual('../../src/validators');
-      mockSafeJsonParse.mockImplementation(realSafeJsonParse);
-
-      const request = createRequest('http://localhost/api/party/1/kick/2', 'POST');
-      request.text = jest.fn().mockResolvedValue('');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleKickMember).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, 2, {}, undefined
-      );
-      expect(response.status).toBe(200);
+    it('routes GET /api/party/:id/progress', async () => {
+      const res = await request('/api/party/42/progress');
+      expect(res.status).toBe(200);
+      expect(mockHandlePartyProgress).toHaveBeenCalled();
     });
 
-    it('should route POST /api/party/:id/leave to handleLeaveParty', async () => {
-      const request = createRequest('http://localhost/api/party/1/leave', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleLeaveParty).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, undefined
-      );
-      expect(response.status).toBe(200);
+    it('returns 400 for invalid party ID in parameterized routes', async () => {
+      const res = await request('/api/party/abc/progress');
+      expect(res.status).toBe(400);
     });
 
-    it('should return 405 for GET on /api/party/:id/leave', async () => {
-      const request = createRequest('http://localhost/api/party/1/leave', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
+    // Friends routes
+    it('routes GET /api/friends', async () => {
+      const res = await request('/api/friends');
+      expect(res.status).toBe(200);
+      expect(mockHandleGetFriends).toHaveBeenCalled();
     });
 
-    it('should return 400 for invalid party ID in /api/party/:id/leave', async () => {
-      const request = createRequest('http://localhost/api/party/abc/leave', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
+    it('routes GET /api/friends/pending', async () => {
+      const res = await request('/api/friends/pending');
+      expect(res.status).toBe(200);
+      expect(mockHandleGetPendingFriends).toHaveBeenCalled();
     });
 
-    it('should route POST /api/party/:id/kick/:userId to handleKickMember', async () => {
-      const request = createRequest('http://localhost/api/party/1/kick/2', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleKickMember).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, 2, expect.anything(), undefined
-      );
-      expect(response.status).toBe(200);
+    it('routes GET /api/friends/search', async () => {
+      const res = await request('/api/friends/search?q=test');
+      expect(res.status).toBe(200);
+      expect(mockHandleSearchUsers).toHaveBeenCalled();
     });
 
-    it('should return 405 for GET on /api/party/:id/kick/:userId', async () => {
-      const request = createRequest('http://localhost/api/party/1/kick/2', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
+    it('routes POST /api/friends/request', async () => {
+      const res = await request('/api/friends/request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(201);
+      expect(mockHandleFriendRequest).toHaveBeenCalled();
     });
 
-    it('should return 400 for invalid party ID in /api/party/:id/kick/:userId', async () => {
-      const request = createRequest('http://localhost/api/party/abc/kick/2', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
+    it('routes GET /api/friends/resolve/:friendCode', async () => {
+      const res = await request('/api/friends/resolve/ABC123');
+      expect(res.status).toBe(200);
+      expect(mockHandleResolveFriendCode).toHaveBeenCalled();
     });
 
-    it('should return 400 for invalid user ID in /api/party/:id/kick/:userId', async () => {
-      const request = createRequest('http://localhost/api/party/1/kick/abc', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid user ID');
+    it('routes POST /api/friends/:id/accept', async () => {
+      const res = await request('/api/friends/5/accept', { method: 'POST' });
+      expect(res.status).toBe(200);
+      expect(mockHandleAcceptFriend).toHaveBeenCalled();
     });
 
-    it('should route PUT /api/party/:id/settings to handleUpdatePartySettings', async () => {
-      const request = createRequest('http://localhost/api/party/1/settings', 'PUT');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleUpdatePartySettings).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, expect.anything(), undefined
-      );
-      expect(response.status).toBe(200);
+    it('returns 400 for invalid friendship ID', async () => {
+      const res = await request('/api/friends/abc/accept', { method: 'POST' });
+      expect(res.status).toBe(400);
     });
 
-    it('should return 405 for GET on /api/party/:id/settings', async () => {
-      const request = createRequest('http://localhost/api/party/1/settings', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('PUT');
+    // Fellowship invite routes
+    it('routes GET /api/user/fellowship-invites', async () => {
+      const res = await request('/api/user/fellowship-invites');
+      expect(res.status).toBe(200);
+      expect(mockHandleGetFellowshipInvites).toHaveBeenCalled();
     });
 
-    it('should return 400 for invalid party ID in /api/party/:id/settings', async () => {
-      const request = createRequest('http://localhost/api/party/abc/settings', 'PUT');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
+    it('routes POST /api/party/:id/invite-friend', async () => {
+      const res = await request('/api/party/1/invite-friend', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ friend_id: 2 }),
+      });
+      expect(res.status).toBe(201);
+      expect(mockHandleInviteFriend).toHaveBeenCalled();
     });
 
-    it('should route POST /api/party/:id/transfer-leadership to handleTransferLeadership', async () => {
-      const request = createRequest('http://localhost/api/party/1/transfer-leadership', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleTransferLeadership).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, expect.anything(), undefined
-      );
-      expect(response.status).toBe(200);
+    it('routes POST /api/user/fellowship-invites/:id/accept', async () => {
+      const res = await request('/api/user/fellowship-invites/5/accept', { method: 'POST' });
+      expect(res.status).toBe(200);
+      expect(mockHandleAcceptFellowshipInvite).toHaveBeenCalled();
     });
-
-    it('should return 405 for GET on /api/party/:id/transfer-leadership', async () => {
-      const request = createRequest('http://localhost/api/party/1/transfer-leadership', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
-    });
-
-    it('should return 400 for invalid party ID in /api/party/:id/transfer-leadership', async () => {
-      const request = createRequest('http://localhost/api/party/abc/transfer-leadership', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
-    });
-
-    // ===== Friends (Social) route tests =====
-
-    // GET /api/friends
-    it('should route GET /api/friends to handleGetFriends', async () => {
-      const request = createRequest('http://localhost/api/friends', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleGetFriends).toHaveBeenCalledWith(expect.anything(), expectedDb, undefined);
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for POST on /api/friends', async () => {
-      const request = createRequest('http://localhost/api/friends', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('GET');
-    });
-
-    // GET /api/friends/pending
-    it('should route GET /api/friends/pending to handleGetPendingFriends', async () => {
-      const request = createRequest('http://localhost/api/friends/pending', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleGetPendingFriends).toHaveBeenCalledWith(expect.anything(), expectedDb, undefined);
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for POST on /api/friends/pending', async () => {
-      const request = createRequest('http://localhost/api/friends/pending', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-    });
-
-    // GET /api/friends/search
-    it('should route GET /api/friends/search to handleSearchUsers', async () => {
-      const request = createRequest('http://localhost/api/friends/search?q=test', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleSearchUsers).toHaveBeenCalledWith(expect.anything(), expectedDb, undefined);
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for POST on /api/friends/search', async () => {
-      const request = createRequest('http://localhost/api/friends/search', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-    });
-
-    // POST /api/friends/request
-    it('should route POST /api/friends/request to handleFriendRequest', async () => {
-      const request = createRequest('http://localhost/api/friends/request', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleFriendRequest).toHaveBeenCalledWith(expect.anything(), expectedDb, expect.anything(), undefined);
-      expect(response.status).toBe(201);
-    });
-
-    it('should return 405 for GET on /api/friends/request', async () => {
-      const request = createRequest('http://localhost/api/friends/request', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-    });
-
-    // POST /api/friends/request/code
-    it('should route POST /api/friends/request/code to handleFriendRequestByCode', async () => {
-      const request = createRequest('http://localhost/api/friends/request/code', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleFriendRequestByCode).toHaveBeenCalledWith(expect.anything(), expectedDb, expect.anything(), undefined);
-      expect(response.status).toBe(201);
-    });
-
-    it('should return 405 for GET on /api/friends/request/code', async () => {
-      const request = createRequest('http://localhost/api/friends/request/code', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-    });
-
-    // GET /api/friends/resolve/:friendCode
-    it('should route GET /api/friends/resolve/:friendCode to handleResolveFriendCode', async () => {
-      const request = createRequest('http://localhost/api/friends/resolve/AbCd1234', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleResolveFriendCode).toHaveBeenCalledWith(expect.anything(), expectedDb, 'AbCd1234');
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for POST on /api/friends/resolve/:friendCode', async () => {
-      const request = createRequest('http://localhost/api/friends/resolve/AbCd1234', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-    });
-
-    // POST /api/friends/:friendshipId/accept
-    it('should route POST /api/friends/:friendshipId/accept to handleAcceptFriend', async () => {
-      const request = createRequest('http://localhost/api/friends/5/accept', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleAcceptFriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5, undefined);
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for GET on /api/friends/:friendshipId/accept', async () => {
-      const request = createRequest('http://localhost/api/friends/5/accept', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-    });
-
-    it('should return 400 for invalid friendship ID in /api/friends/:friendshipId/accept', async () => {
-      const request = createRequest('http://localhost/api/friends/abc/accept', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid friendship ID');
-    });
-
-    it('should return 400 for negative friendship ID in /api/friends/-1/accept', async () => {
-      const request = createRequest('http://localhost/api/friends/-1/accept', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-    });
-
-    it('should return 400 for float friendship ID in /api/friends/1.5/accept', async () => {
-      const request = createRequest('http://localhost/api/friends/1.5/accept', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-    });
-
-    // POST /api/friends/:friendshipId/reject
-    it('should route POST /api/friends/:friendshipId/reject to handleRejectFriend', async () => {
-      const request = createRequest('http://localhost/api/friends/5/reject', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleRejectFriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5, undefined);
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for GET on /api/friends/:friendshipId/reject', async () => {
-      const request = createRequest('http://localhost/api/friends/5/reject', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-    });
-
-    it('should return 400 for invalid friendship ID in /api/friends/:friendshipId/reject', async () => {
-      const request = createRequest('http://localhost/api/friends/abc/reject', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid friendship ID');
-    });
-
-    // DELETE /api/friends/:friendshipId
-    it('should route DELETE /api/friends/:friendshipId to handleUnfriend', async () => {
-      const request = createRequest('http://localhost/api/friends/5', 'DELETE');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleUnfriend).toHaveBeenCalledWith(expect.anything(), expectedDb, 5, undefined);
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for GET on /api/friends/:friendshipId (not exact /api/friends)', async () => {
-      const request = createRequest('http://localhost/api/friends/5', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-    });
-
-    it('should return 400 for invalid friendship ID in DELETE /api/friends/:friendshipId', async () => {
-      const request = createRequest('http://localhost/api/friends/abc', 'DELETE');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid friendship ID');
-    });
-
-    it('should return 400 for zero friendship ID in DELETE /api/friends/0', async () => {
-      const request = createRequest('http://localhost/api/friends/0', 'DELETE');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-    });
-
-    // ===== Fellowship Invite route tests =====
-
-    // POST /api/party/:id/invite-friend
-    it('should route POST /api/party/:id/invite-friend to handleInviteFriend', async () => {
-      const request = createRequest('http://localhost/api/party/1/invite-friend', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleInviteFriend).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 1, expect.anything(), undefined
-      );
-      expect(response.status).toBe(201);
-    });
-
-    it('should return 405 for GET on /api/party/:id/invite-friend', async () => {
-      const request = createRequest('http://localhost/api/party/1/invite-friend', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
-    });
-
-    it('should return 400 for invalid party ID in /api/party/:id/invite-friend', async () => {
-      const request = createRequest('http://localhost/api/party/abc/invite-friend', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
-    });
-
-    it('should return 400 for non-integer party ID like 1.5 in /api/party/:id/invite-friend', async () => {
-      const request = createRequest('http://localhost/api/party/1.5/invite-friend', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
-    });
-
-    it('should return 400 for scientific notation party ID like 1e2 in /api/party/:id/invite-friend', async () => {
-      const request = createRequest('http://localhost/api/party/1e2/invite-friend', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid party ID');
-    });
-
-    // GET /api/user/fellowship-invites
-    it('should route GET /api/user/fellowship-invites to handleGetFellowshipInvites', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleGetFellowshipInvites).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, undefined
-      );
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for POST on /api/user/fellowship-invites', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('GET');
-    });
-
-    // POST /api/user/fellowship-invites/:inviteId/accept
-    it('should route POST /api/user/fellowship-invites/:inviteId/accept to handleAcceptFellowshipInvite', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites/5/accept', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleAcceptFellowshipInvite).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 5, undefined
-      );
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for GET on /api/user/fellowship-invites/:inviteId/accept', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites/5/accept', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
-    });
-
-    it('should return 400 for invalid invite ID in /api/user/fellowship-invites/:inviteId/accept', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites/abc/accept', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid invite ID');
-    });
-
-    it('should return 400 for negative invite ID in /api/user/fellowship-invites/-1/accept', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites/-1/accept', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-    });
-
-    it('should return 400 for float invite ID in /api/user/fellowship-invites/1.5/accept', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites/1.5/accept', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-    });
-
-    // POST /api/user/fellowship-invites/:inviteId/reject
-    it('should route POST /api/user/fellowship-invites/:inviteId/reject to handleRejectFellowshipInvite', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites/5/reject', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(mockHandleRejectFellowshipInvite).toHaveBeenCalledWith(
-        expect.anything(), expectedDb, 5, undefined
-      );
-      expect(response.status).toBe(200);
-    });
-
-    it('should return 405 for GET on /api/user/fellowship-invites/:inviteId/reject', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites/5/reject', 'GET');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(405);
-      const data = await response.json();
-      expect(data.allowedMethods).toContain('POST');
-    });
-
-    it('should return 400 for invalid invite ID in /api/user/fellowship-invites/:inviteId/reject', async () => {
-      const request = createRequest('http://localhost/api/user/fellowship-invites/abc/reject', 'POST');
-      const response = await worker.fetch(request as any, mockEnv, {} as any);
-      expect(response.status).toBe(400);
-      const data = await response.json();
-      expect(data.error).toBe('Invalid invite ID');
-    });
-
-  it('should call renderHomePage for root page', async () => {
-    const request = createRequest('https://example.com/');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockRenderHomePage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
   });
 
-  it('should render journey page for /journey route', async () => {
-    const request = createRequest('https://example.com/journey');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockRenderHtml).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-  });
+  // ── Admin API Routes ───────────────────────────────────────────────────
 
-  // Party page routing tests
-  it('should render party list page for /party route', async () => {
-    const request = createRequest('https://example.com/party');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockRenderPartyListPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
+  describe('Admin middleware', () => {
+    it('rejects non-admin requests to admin endpoints', async () => {
+      mockValidateAdminSession.mockResolvedValue({
+        valid: false,
+        error: new Response(JSON.stringify({ error: 'Admin access required' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json' },
+        }),
+      });
 
-  it('should render party detail page for /party/:id route', async () => {
-    const request = createRequest('https://example.com/party/42');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockRenderPartyDetailPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  it('should render party manage page for /party/:id/manage route', async () => {
-    const request = createRequest('https://example.com/party/42/manage');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockRenderPartyManagePage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  it('should render party join page for /party/join/:inviteCode route', async () => {
-    const request = createRequest('https://example.com/party/join/AbCd1234');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockRenderPartyJoinPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  // Friends page routing tests
-  it('should render friends page for /friends route', async () => {
-    const request = createRequest('https://example.com/friends');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockRenderFriendsPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  it('should render friend add page for /friends/add/:friendCode route', async () => {
-    const request = createRequest('https://example.com/friends/add/AbCd1234');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockRenderFriendAddPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  it('should render friend profile page for /friends/:id route', async () => {
-    const request = createRequest('https://example.com/friends/42');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockRenderFriendProfilePage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  it('should not shadow /friends/add/:friendCode with /friends/:id', async () => {
-    const request = createRequest('https://example.com/friends/add/Test1234');
-    const response = await worker.fetch(request, mockEnv);
-
-    // /friends/add/:friendCode should match, NOT /friends/:id
-    expect(mockRenderFriendAddPage).toHaveBeenCalled();
-    expect(mockRenderFriendProfilePage).not.toHaveBeenCalled();
-  });
-
-  // Profile page routing test
-  it('should render profile page for /profile route', async () => {
-    const request = createRequest('https://example.com/profile');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockRenderProfilePage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  // Stats page routing test
-  it('should render stats page for /stats route', async () => {
-    const request = createRequest('https://example.com/stats');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockRenderStatsPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  // Friend profile API route tests
-  it('should route GET /api/friends/:userId/profile to handleGetFriendProfile', async () => {
-    const request = createRequest('http://localhost/api/friends/5/profile', 'GET');
-    const response = await worker.fetch(request as any, mockEnv, {} as any);
-    expect(mockHandleGetFriendProfile).toHaveBeenCalledWith(expect.anything(), expectedDb, 5, undefined);
-    expect(response.status).toBe(200);
-  });
-
-  it('should return 405 for POST on /api/friends/:userId/profile', async () => {
-    const request = createRequest('http://localhost/api/friends/5/profile', 'POST');
-    const response = await worker.fetch(request as any, mockEnv, {} as any);
-    expect(response.status).toBe(405);
-  });
-
-  it('should return 400 for invalid user ID in /api/friends/:userId/profile', async () => {
-    const request = createRequest('http://localhost/api/friends/abc/profile', 'GET');
-    const response = await worker.fetch(request as any, mockEnv, {} as any);
-    expect(response.status).toBe(400);
-    const data = await response.json() as { error: string };
-    expect(data.error).toBe('Invalid user ID');
-  });
-
-  it('should return 400 for float user ID in /api/friends/1.5/profile', async () => {
-    const request = createRequest('http://localhost/api/friends/1.5/profile', 'GET');
-    const response = await worker.fetch(request as any, mockEnv, {} as any);
-    expect(response.status).toBe(400);
-  });
-
-  // Admin route tests
-  it('should render admin page for /admin route without server-side auth', async () => {
-    const request = createRequest('https://example.com/admin');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockValidateAdminSession).not.toHaveBeenCalled();
-    expect(mockRenderAdminPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  it('should return 403 for /api/admin/* routes when not admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({
-      valid: false,
-      error: new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' }
-      })
-    });
-    const request = createRequest('https://example.com/api/admin/dashboard');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(mockValidateAdminSession).toHaveBeenCalled();
-    expect(response.status).toBe(403);
-  });
-
-  it('should return 404 for unknown /api/admin/* routes when admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
-    const request = createRequest('https://example.com/api/admin/nonexistent');
-    const response = await worker.fetch(request, mockEnv);
-    
-    expect(response.status).toBe(404);
-    const body = await response.json();
-    expect(body.error).toBe('Admin API endpoint not found');
-  });
-
-  it('should route GET /api/admin/dashboard to handleAdminDashboard when admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
-    const request = createRequest('https://example.com/api/admin/dashboard');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockValidateAdminSession).toHaveBeenCalled();
-    expect(mockHandleAdminDashboard).toHaveBeenCalledWith(request, expectedDb);
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.totalUsers).toBe(42);
-  });
-
-  it('should return 405 for POST /api/admin/dashboard (only GET supported)', async () => {
-    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
-    const request = createRequest('https://example.com/api/admin/dashboard', 'POST');
-    const response = await worker.fetch(request, mockEnv);
-
-    // POST to dashboard should be rejected by method validation (GET-only)
-    expect(mockHandleAdminDashboard).not.toHaveBeenCalled();
-    expect(response.status).toBe(405);
-    const body = await response.json();
-    expect(body.error).toContain('Method POST not allowed');
-  });
-
-  // Admin Goals List route tests (Story 4.3)
-  it('should render admin goals page for /admin/goals route without server-side auth', async () => {
-    const request = createRequest('https://example.com/admin/goals');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockValidateAdminSession).not.toHaveBeenCalled();
-    expect(mockRenderAdminGoalsPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  // Admin Goal Add page route tests (Story 4.6)
-  it('should render admin goal add page for /admin/goals/new route without server-side auth', async () => {
-    const request = createRequest('https://example.com/admin/goals/new');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockValidateAdminSession).not.toHaveBeenCalled();
-    expect(mockRenderAdminGoalAddPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  // Admin Goal Edit page route tests (Story 4.4)
-  it('should render admin goal edit page for /admin/goals/:id with valid id without server-side auth', async () => {
-    const request = createRequest('https://example.com/admin/goals/42');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockValidateAdminSession).not.toHaveBeenCalled();
-    expect(mockRenderAdminGoalEditPage).toHaveBeenCalled();
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('text/html');
-  });
-
-  it('should return 404 for /admin/goals/:id with non-numeric id', async () => {
-    const request = createRequest('https://example.com/admin/goals/abc');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockRenderAdminGoalEditPage).not.toHaveBeenCalled();
-    expect(response.status).toBe(404);
-  });
-
-  it('should return 404 for /admin/goals/:id with zero id', async () => {
-    const request = createRequest('https://example.com/admin/goals/0');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockRenderAdminGoalEditPage).not.toHaveBeenCalled();
-    expect(response.status).toBe(404);
-  });
-
-  it('should route GET /api/admin/goals to handleAdminGoalsList when admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
-    const request = createRequest('https://example.com/api/admin/goals');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockValidateAdminSession).toHaveBeenCalled();
-    expect(mockHandleAdminGoalsList).toHaveBeenCalledWith(request, expectedDb);
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body).toHaveProperty('goals');
-    expect(body).toHaveProperty('total');
-    expect(body).toHaveProperty('page');
-    expect(body).toHaveProperty('pageSize');
-    expect(body).toHaveProperty('totalPages');
-  });
-
-  it('should return 403 for /api/admin/goals when not admin', async () => {
-    mockValidateAdminSession.mockResolvedValue({
-      valid: false,
-      error: new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' }
-      })
-    });
-    const request = createRequest('https://example.com/api/admin/goals');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockValidateAdminSession).toHaveBeenCalled();
-    expect(mockHandleAdminGoalsList).not.toHaveBeenCalled();
-    expect(response.status).toBe(403);
-  });
-
-  it('should route POST /api/admin/goals to handleAdminGoalCreate when admin (Story 4.6)', async () => {
-    mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1, isAdmin: true });
-    mockSafeJsonParse.mockResolvedValue({ success: true, data: { title: 'Test', distance_miles: 100 } });
-    mockHandleAdminGoalCreate.mockResolvedValue(new Response(JSON.stringify({ id: 1 }), { status: 201 }));
-    const request = createRequest('https://example.com/api/admin/goals', 'POST');
-    const response = await worker.fetch(request, mockEnv);
-
-    expect(mockHandleAdminGoalCreate).toHaveBeenCalled();
-    expect(response.status).toBe(201);
-  });
-
-  it('should validate method for API endpoints', async () => {
-    // Use PATCH method which is not allowed for calendar-progress endpoint
-    const authRequest = createRequest('https://example.com/api/calendar-progress', 'PATCH');
-
-    const response = await worker.fetch(authRequest, mockEnv);
-    
-    expect(response.status).toBe(405);
-    const data = await response.json();
-    expect(data.error).toContain('Method PATCH not allowed');
-  });
-
-  it('should parse JSON for POST requests', async () => {
-    const authRequest = createRequest('https://example.com/api/calendar-progress', 'POST');
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: '5.5' }
+      const res = await request('/api/admin/dashboard');
+      expect(res.status).toBe(403);
+      expect(mockHandleAdminDashboard).not.toHaveBeenCalled();
     });
 
-    await worker.fetch(authRequest, mockEnv);
-    
-    expect(mockSafeJsonParse).toHaveBeenCalledWith(authRequest);
-    expect(mockIsValidDateFormat).toHaveBeenCalledWith('2024-01-15');
-    expect(mockIsValidDistance).toHaveBeenCalledWith('5.5');
+    it('allows admin requests to admin endpoints', async () => {
+      mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1 });
+
+      const res = await request('/api/admin/dashboard');
+      expect(res.status).toBe(200);
+      expect(mockHandleAdminDashboard).toHaveBeenCalled();
+    });
   });
 
-  it('should handle invalid JSON', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: false,
-      error: 'Invalid JSON'
+  describe('Admin API routes', () => {
+    beforeEach(() => {
+      mockValidateAdminSession.mockResolvedValue({ valid: true, userId: 1 });
     });
 
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(400);
-  });
-
-  it('should validate date format', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: 'invalid-date', title: '5.5' }
-    });
-    mockIsValidDateFormat.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(400);
-  });
-
-  it('should validate distance', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: 'invalid' }
-    });
-    mockIsValidDistance.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(400);
-  });
-
-  it('should serve static assets when available', async () => {
-    const assetResponse = { status: 200, body: 'asset' };
-    mockEnv.ASSETS.fetch.mockResolvedValue(assetResponse);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response).toBe(assetResponse);
-  });
-
-  it('should handle missing required fields in POST', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { title: '5.5' } // missing start
+    it('routes GET /api/admin/dashboard', async () => {
+      const res = await request('/api/admin/dashboard');
+      expect(res.status).toBe(200);
+      expect(mockHandleAdminDashboard).toHaveBeenCalled();
     });
 
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(400);
-  });
-
-  it('should return calendar data for GET requests', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'GET';
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(200);
-  });
-
-  it('should return goals data', async () => {
-    const authRequest = createRequest('https://example.com/api/goals', 'GET');
-
-    const response = await worker.fetch(authRequest, mockEnv);
-    
-    expect(response.status).toBe(200);
-  });
-
-  it('should handle PUT requests successfully', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'PUT';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: '7.5' }
+    it('routes GET /api/admin/goals', async () => {
+      const res = await request('/api/admin/goals');
+      expect(res.status).toBe(200);
+      expect(mockHandleAdminGoalsList).toHaveBeenCalled();
     });
 
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(200);
+    it('routes POST /api/admin/goals', async () => {
+      const res = await request('/api/admin/goals', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: 'Test', distance_miles: 10 }),
+      });
+      expect(res.status).toBe(201);
+      expect(mockHandleAdminGoalCreate).toHaveBeenCalled();
+    });
+
+    it('routes GET /api/admin/goals/:id', async () => {
+      const res = await request('/api/admin/goals/42');
+      expect(res.status).toBe(200);
+    });
+
+    it('returns 400 for invalid goal ID', async () => {
+      const res = await request('/api/admin/goals/abc');
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 for unknown admin API endpoint', async () => {
+      const res = await request('/api/admin/nonexistent');
+      expect(res.status).toBe(404);
+    });
   });
 
-  it('should handle PUT with missing fields', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'PUT';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15' } // missing title
+  // ── Method validation ──────────────────────────────────────────────────
+
+  describe('Method validation', () => {
+    it('returns 405 for POST on GET-only endpoint', async () => {
+      const res = await request('/api/session', { method: 'POST' });
+      expect(res.status).toBe(405);
     });
 
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(400);
+    it('returns 405 for GET on POST-only endpoint', async () => {
+      const res = await request('/api/login', { method: 'GET' });
+      expect(res.status).toBe(405);
+    });
+
+    it('returns 405 for unsupported method on parameterized route', async () => {
+      const res = await request('/api/party/42/progress', { method: 'POST' });
+      expect(res.status).toBe(405);
+    });
   });
 
-  it('should handle PUT when entry not found', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'PUT';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: '7.5' }
+  // ── 404 handling ──────────────────────────────────────────────────────
+
+  describe('404 handling', () => {
+    it('returns 404 for unknown API endpoint', async () => {
+      const res = await request('/api/nonexistent');
+      expect(res.status).toBe(404);
     });
-
-    // Mock no changes in database
-    mockEnv.DB.prepare.mockReturnValue({
-      bind: jest.fn(() => ({
-        run: jest.fn(() => Promise.resolve({ meta: { changes: 0 } }))
-      }))
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(404);
-  });
-
-  it('should handle DELETE requests successfully', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'DELETE';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15' }
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(200);
-  });
-
-  it('should handle DELETE with missing start field', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'DELETE';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: {}
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(400);
-  });
-
-  it('should handle DELETE when entry not found', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'DELETE';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15' }
-    });
-
-    // Mock no changes in database
-    mockEnv.DB.prepare.mockReturnValue({
-      bind: jest.fn(() => ({
-        run: jest.fn(() => Promise.resolve({ meta: { changes: 0 } }))
-      }))
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(404);
-  });
-
-  it('should handle DELETE with invalid date', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'DELETE';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: 'invalid-date' }
-    });
-    mockIsValidDateFormat.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(400);
-  });
-
-  it('should handle database errors in POST', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: '5.5' }
-    });
-
-    // Mock database error
-    mockEnv.DB.prepare.mockReturnValue({
-      bind: jest.fn(() => ({
-        run: jest.fn(() => Promise.reject(new Error('Database error')))
-      }))
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(500);
-  });
-
-  it('should handle UNIQUE constraint error in POST', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: '5.5' }
-    });
-
-    // Mock UNIQUE constraint error
-    mockEnv.DB.prepare.mockReturnValue({
-      bind: jest.fn(() => ({
-        run: jest.fn(() => Promise.reject(new Error('UNIQUE constraint failed')))
-      }))
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(409);
-  });
-
-  it('should handle database errors in PUT', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'PUT';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: '5.5' }
-    });
-
-    // Mock database error
-    mockEnv.DB.prepare.mockReturnValue({
-      bind: jest.fn(() => ({
-        run: jest.fn(() => Promise.reject(new Error('Database error')))
-      }))
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(500);
-  });
-
-  it('should handle database errors in DELETE', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'DELETE';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15' }
-    });
-
-    // Mock database error
-    mockEnv.DB.prepare.mockReturnValue({
-      bind: jest.fn(() => ({
-        run: jest.fn(() => Promise.reject(new Error('Database error')))
-      }))
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(500);
-  });
-
-  it('should handle database errors in GET calendar-progress', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'GET';
-
-    // Mock database error
-    mockEnv.DB.prepare.mockReturnValue({
-      all: jest.fn(() => Promise.reject(new Error('Database error')))
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(500);
-  });
-
-  it('should handle database errors in GET goals', async () => {
-    const authRequest = createRequest('https://example.com/api/goals', 'GET');
-
-    // Mock database error in goals handler
-    mockHandleGoalsGet.mockResolvedValue(new Response(JSON.stringify({ 
-      error: 'Database error' 
-    }), { 
-      status: 500, 
-      headers: { 'content-type': 'application/json' } 
-    }));
-
-    const response = await worker.fetch(authRequest, mockEnv);
-    
-    expect(response.status).toBe(500);
-  });
-
-  it('should calculate total distance correctly via API endpoint', async () => {
-    const authRequest = createRequest('https://example.com/api/total-distance', 'GET');
-
-    mockCalculateUserStorylineDistance.mockResolvedValueOnce({ totalDistance: 10, rawTotalDistance: 10, activeStoryline: null });
-
-    const response = await worker.fetch(authRequest, mockEnv);
-    const data = await response.json();
-    
-    expect(response.status).toBe(200);
-    expect(data.totalDistance).toBe(10); // 5.5 + 3.2 + 1.3 = 10
-  });
-
-  it('should handle database errors in total distance API', async () => {
-    const authRequest = createRequest('https://example.com/api/total-distance', 'GET');
-
-    // Mock calculateUserStorylineDistance to throw an error
-    mockCalculateUserStorylineDistance.mockRejectedValue(new Error('Database error'));
-
-    const response = await worker.fetch(authRequest, mockEnv);
-    
-    expect(response.status).toBe(500);
-  });
-
-  it('should render main page even with database errors', async () => {
-    const authRequest = createRequest('https://example.com/', 'GET');
-
-    // Mock database error (this won't affect main page rendering in new architecture)
-    mockEnv.DB.prepare.mockReturnValue({
-      all: jest.fn(() => Promise.reject(new Error('Database error')))
-    });
-
-    const response = await worker.fetch(authRequest, mockEnv);
-    
-    expect(mockRenderHomePage).toHaveBeenCalledWith();
-    expect(response.status).toBe(200);
-  });
-
-  it('should render main page without server-side distance calculation', async () => {
-    const authRequest = createRequest('https://example.com/', 'GET');
-
-    // Database data doesn't affect main page rendering in new architecture
-    mockEnv.DB.prepare.mockReturnValue({
-      all: jest.fn(() => Promise.resolve({
-        results: [
-          { distance: 5.5 },
-          { distance: 3.2 },
-          { distance: 1.3 }
-        ]
-      }))
-    });
-
-    await worker.fetch(authRequest, mockEnv);
-    
-    expect(mockRenderHomePage).toHaveBeenCalledWith();
-  });
-
-  it('should handle HEAD requests for assets', async () => {
-    mockRequest.method = 'HEAD';
-    
-    const assetResponse = { status: 200, body: 'asset' };
-    mockEnv.ASSETS.fetch.mockResolvedValue(assetResponse);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response).toBe(assetResponse);
-  });
-
-  it('should validate distance for specific error types in POST', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: 'invalid' }
-    });
-    mockIsValidDistance.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    
-    expect(response.status).toBe(400);
-  });
-
-  it('should validate distance for NaN values in POST', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: 'not-a-number' }
-    });
-    mockIsValidDistance.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    const result = await response.json();
-    
-    expect(response.status).toBe(400);
-    expect(result.error).toBe('Invalid distance value. Must be a valid number');
-  });
-
-  it('should validate distance for negative values in POST', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: '-5' }
-    });
-    mockIsValidDistance.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    const result = await response.json();
-    
-    expect(response.status).toBe(400);
-    expect(result.error).toBe('Invalid distance value. Must be non-negative (0 or greater)');
-  });
-
-  it('should validate distance for too large values in POST', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: '1000000000' }
-    });
-    mockIsValidDistance.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    const result = await response.json();
-    
-    expect(response.status).toBe(400);
-    expect(result.error).toBe('Invalid distance value. Must be less than 1 billion');
-  });
-
-  it('should validate missing title field in POST', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'POST';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15' }
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    const result = await response.json();
-    
-    expect(response.status).toBe(400);
-    expect(result.error).toBe('Missing required field: title (distance)');
-  });
-
-  it('should validate missing title field in PUT', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'PUT';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15' }
-    });
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    const result = await response.json();
-    
-    expect(response.status).toBe(400);
-    expect(result.error).toBe('Missing required field: title (distance)');
-  });
-
-  it('should validate date format in PUT', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'PUT';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: 'invalid-date', title: '5.5' }
-    });
-    mockIsValidDateFormat.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    const result = await response.json();
-    
-    expect(response.status).toBe(400);
-    expect(result.error).toBe('Invalid date format. Expected format: YYYY-MM-DD (e.g., 2024-01-15)');
-  });
-
-  it('should validate distance in PUT', async () => {
-    mockRequest.url = 'https://example.com/api/calendar-progress';
-    mockRequest.method = 'PUT';
-    
-    mockSafeJsonParse.mockResolvedValue({
-      success: true,
-      data: { start: '2024-01-15', title: 'invalid' }
-    });
-    mockIsValidDistance.mockReturnValue(false);
-
-    const response = await worker.fetch(mockRequest, mockEnv);
-    const result = await response.json();
-    
-    expect(response.status).toBe(400);
-    expect(result.error).toBe('Invalid distance value. Must be a non-negative number');
   });
 });
