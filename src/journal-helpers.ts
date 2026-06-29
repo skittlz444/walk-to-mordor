@@ -68,16 +68,6 @@ interface PartyMemberRow {
   role: string;
 }
 
-/** Row shape for party progress check */
-interface PartyProgressRow {
-  total_distance: number;
-}
-
-/** Row shape for goal distance on a specific storyline */
-interface GoalStorylineDistanceRow {
-  distance: number;
-}
-
 // ── Data-Access Helpers ────────────────────────────────────────────────────
 
 /** Convert a MilestoneJournalRow to the client-facing OwnJournalEntry */

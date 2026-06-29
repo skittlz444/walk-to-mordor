@@ -2,21 +2,6 @@
 import type { DbClient } from './db';
 import { applyStorylineOffset, resolvePartyStoryline } from './storyline-utils';
 
-/** D1 result row for party_members table */
-interface PartyMemberRow {
-  id: number;
-  party_id: number;
-  user_id: number;
-  joined_at: string;
-  distance_at_join: number;
-  role: string;
-  status: string;
-  last_viewed_distance: number;
-  departed_at: string | null;
-  distance_kept: number | null;
-  contribution_at_departure: number | null;
-}
-
 /** Row shape for active member distance query */
 interface ActiveMemberDistanceRow {
   user_id: number;
