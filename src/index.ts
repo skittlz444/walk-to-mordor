@@ -16,6 +16,11 @@ import {
   calculateUserStorylineDistance
 } from "./goals-handlers";
 import {
+  handleJournalStateGet,
+  handleJournalUpsert,
+  handleJournalDelete
+} from "./journal-handlers";
+import {
   handleRegister,
   handleLogin,
   handleLogout,
@@ -248,6 +253,25 @@ app.get('/api/calendar-progress', authGuard, (c) =>
 // ── Goals & Stats ──
 app.get('/api/goals', authGuard, (c) =>
   handleGoalsGet(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+
+// ── Goal Journals ──
+app.get('/api/goals/:goalId/journals', authGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goalId');
+  if (goalId instanceof Response) return goalId;
+  return handleJournalStateGet(c.req.raw, c.get('db'), goalId, c.env.ALLOW_TEST_AUTH);
+});
+app.put('/api/goals/:goalId/journal', authGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goalId');
+  if (goalId instanceof Response) return goalId;
+  const body = await safeJsonBody(c);
+  return handleJournalUpsert(c.req.raw, c.get('db'), goalId, body, c.env.ALLOW_TEST_AUTH);
+});
+app.delete('/api/goals/:goalId/journal', authGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goalId');
+  if (goalId instanceof Response) return goalId;
+  return handleJournalDelete(c.req.raw, c.get('db'), goalId, c.env.ALLOW_TEST_AUTH);
+});
+
 app.get('/api/stats/weekly', authGuard, (c) =>
   handleWeeklyStats(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
 app.get('/api/stats/heatmap', authGuard, (c) =>

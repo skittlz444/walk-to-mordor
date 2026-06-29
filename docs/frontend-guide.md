@@ -95,6 +95,18 @@ const { DistanceModal } = window.preactIslands;
 render(h(DistanceModal, { ...props }), containerEl);
 ```
 
+### GoalModal Journal (MVP)
+
+The `GoalModal` component now includes a milestone journal section for goal reflections:
+
+- **Fetching:** On mount, `GoalModal` fetches `GET /api/goals/:goalId/journals[?partyId=NN]` to load journal state.
+- **States:** Handles loading, error, create (no entry + write access), view (entry exists), and edit modes.
+- **Own entry:** Author, edit, and delete the viewer's own journal entry. Editing shows a textarea with a 2000-character counter. Body is rendered as plain text with `white-space: pre-wrap` to preserve line breaks.
+- **Friend entries:** When `canReadFriends` is true, friend journal entries are shown newest first with author username and date. Hidden when no entries are visible under friendship and milestone preview rules.
+- **Locked goals:** Journal section is hidden entirely when the modal is in locked (preview) mode.
+- **Context:** Pass `partyId` prop for fellowship-context journal access. Pass `storylineGoalId` for storyline-aware context.
+- **No standalone page:** There is no `/journals` page or journal archive in MVP — GoalModal is the only journal surface.
+
 ## Creating a New Island
 
 1. Create `client/src/islands/YourIsland.tsx`.

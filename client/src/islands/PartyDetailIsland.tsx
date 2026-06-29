@@ -424,6 +424,7 @@ export function PartyDetailIsland() {
           goal={modalGoal}
           currentDistance={modalDistance}
           onClose={() => setModalGoal(null)}
+          partyId={partyId}
         />
       )}
     </div>

@@ -28,6 +28,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `party_messages` | Fellowship chat messages for unified activity feed | 0124 |
 | `push_subscriptions` | Per-device browser push subscriptions for authenticated users | 0126 |
 | `one_more_mile_sent` | Tracks which "One More Mile" nudge notifications have been sent per user per goal | 0128 |
+| `milestone_journals` | Plain-text journal entries (one per user per canonical goal), shared across storylines | 0139 |
 
 ## Key Constraints & Invariants
 
@@ -60,6 +61,14 @@ These are rules the schema enforces or that the application layer must uphold â€
 - `UNIQUE(user_id, goal_id)` prevents the same nudge from being sent more than once per user per goal.
 - `storyline_goal_id` supports storyline-specific nudges. New code should prefer the partial unique index `(user_id, storyline_goal_id) WHERE storyline_goal_id IS NOT NULL`.
 - Rows are kept when at least one push delivery succeeds or when a stale subscription is cleaned up after an HTTP `404`/`410`; otherwise the operation is rolled back so the nudge can be retried later.
+- Foreign keys cascade on user/goal deletion.
+
+### milestone_journals
+- `UNIQUE(user_id, goal_id)` ensures at most one plain-text journal entry per user per canonical goal.
+- Journal identity is canonical `goal_id`, not `storyline_goal_id` â€” the same entry is shared across all storylines that reuse that goal.
+- `body` is plain text only, trimmed and validated as non-empty with a 2000-character maximum at the API layer.
+- Timestamps: `created_at` on insert, `updated_at` on subsequent updates.
+- Indexes: `idx_milestone_journals_goal_id` (fast goal-scoped reads) and `idx_milestone_journals_user_id_goal_id` (covering index for dominant lookup pattern).
 - Foreign keys cascade on user/goal deletion.
 
 ### parties

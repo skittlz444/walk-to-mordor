@@ -21,6 +21,7 @@ Last updated: 2026-05-20
 | Push | `src/push-handlers.ts` |
 | Progress | `src/progress-handlers.ts` |
 | Goals | `src/goals-handlers.ts` |
+| Goal Journals | `src/journal-handlers.ts` |
 | Storylines | `src/storyline-handlers.ts`, `src/storyline-utils.ts` |
 | Party (Fellowship) | `src/party-handlers.ts` |
 | Fellowship Invites | `src/fellowship-invite-handlers.ts` |
@@ -85,6 +86,20 @@ Last updated: 2026-05-20
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | GET | `/api/goals` | Yes | Active user's storyline goals. Optional `storylineId` query selects another active storyline; admin-only storylines require an admin user. |
+
+## Goal Journal Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/goals/:goalId/journals` | Yes | Returns goal-scoped journal state. Optional `partyId` query for fellowship context. Response: `{ ownEntry, friendEntries, permissions: { canWrite, canEditOwn, canDeleteOwn, canReadFriends } }` |
+| PUT | `/api/goals/:goalId/journal` | Yes | Creates or updates the viewer's journal entry. Body: `{ body: string, partyId?: number }`. `body` must be non-empty plain text ≤ 2000 characters. Returns `201` on create, `200` on update. |
+| DELETE | `/api/goals/:goalId/journal` | Yes | Deletes the viewer's journal entry for the goal. Returns `404` if no entry exists. |
+
+### Journal Access Rules
+
+- **Write access:** User must have personally reached the goal in their active storyline, OR be an active member of a fellowship that has reached the goal (via `partyId`).
+- **Friend read access:** Only entries from accepted friends are returned. If milestone previews are locked, the viewer must also have reached the goal before friend entries are shown.
+- **Journal identity:** One entry per user per canonical `goal_id`, shared across all storylines that reuse that goal.
 
 ## Storyline Endpoints
 
