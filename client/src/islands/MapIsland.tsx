@@ -1888,6 +1888,7 @@ export function MapIsland() {
           currentDistance={userDistance.value * MILES_TO_KM}
           locked={!showFutureGoalsUnlocked.value && (userDistance.value * MILES_TO_KM) < expandGoal.value.distance}
           onClose={() => { expandGoal.value = null; }}
+          partyId={typeof selectedView.value === 'number' ? selectedView.value : undefined}
         />
       )}
       {/* Party milestone congratulations modal (opened on party view switch) */}
@@ -1897,6 +1898,7 @@ export function MapIsland() {
           currentDistance={userDistance.value * MILES_TO_KM}
           isCongratulations={true}
           onClose={() => { partyMilestoneGoal.value = null; }}
+          partyId={typeof selectedView.value === 'number' ? selectedView.value : undefined}
         />
       )}
       {/* Walk logging FAB and congratulations flow (Story 2.8) */}

@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/preact';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/preact';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GoalModal } from './GoalModal';
 
 describe('GoalModal', () => {
@@ -409,5 +409,352 @@ describe('GoalModal', () => {
     expect(dialog.getAttribute('role')).toBe('dialog');
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(dialog.getAttribute('aria-label')).toBe('Goal: Test Goal');
+  });
+});
+
+// ── Journal Tests ──────────────────────────────────────────────────────────
+
+describe('GoalModal Journal', () => {
+  const mockGoal = {
+    id: 1,
+    distance: 100.5,
+    title: 'Test Goal',
+    special: null,
+    description: 'A test goal description',
+    image_id: '1',
+  };
+
+  const mockOnClose = vi.fn();
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockOnClose.mockClear();
+    fetchMock = vi.fn();
+    globalThis.fetch = fetchMock;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function mockJournalResponse(data: Record<string, unknown>, status = 200) {
+    fetchMock.mockResolvedValueOnce({
+      ok: status >= 200 && status < 300,
+      status,
+      json: () => Promise.resolve(data),
+    });
+  }
+
+  it('shows loading state while fetching journal', async () => {
+    fetchMock.mockImplementationOnce(() => new Promise(() => {})); // never resolves
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    // Click the Journals button to trigger fetch
+    const journalsBtn = screen.getByText('Journals');
+    journalsBtn.click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Loading journal...')).toBeTruthy();
+    });
+  });
+
+  it('shows error state when journal fetch fails', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('Network error'));
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    // Click Journals button
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Network error')).toBeTruthy();
+    });
+  });
+
+  it('shows create state when no entry exists and user has write access', async () => {
+    mockJournalResponse({
+      ownEntry: null,
+      friendEntries: [],
+      permissions: {
+        canWrite: true,
+        canEditOwn: false,
+        canDeleteOwn: false,
+        canReadFriends: false,
+      },
+    });
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Write your reflection on reaching this milestone...')).toBeTruthy();
+    });
+  });
+
+  it('shows view state when own entry exists', async () => {
+    mockJournalResponse({
+      ownEntry: {
+        id: 1,
+        body: 'Amazing milestone!',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+      friendEntries: [],
+      permissions: {
+        canWrite: false,
+        canEditOwn: true,
+        canDeleteOwn: true,
+        canReadFriends: false,
+      },
+    });
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Amazing milestone!')).toBeTruthy();
+      // The journal view header uses 📖 Your Journal
+      expect(screen.getByText(/Your Journal/)).toBeTruthy();
+    });
+  });
+
+  it('shows Edit and Delete buttons when permissions allow', async () => {
+    mockJournalResponse({
+      ownEntry: {
+        id: 1,
+        body: 'Amazing milestone!',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+      friendEntries: [],
+      permissions: {
+        canWrite: false,
+        canEditOwn: true,
+        canDeleteOwn: true,
+        canReadFriends: false,
+      },
+    });
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit')).toBeTruthy();
+      expect(screen.getByText('Delete')).toBeTruthy();
+    });
+  });
+
+  it('shows friends journal section with visible entries', async () => {
+    mockJournalResponse({
+      ownEntry: null,
+      friendEntries: [
+        {
+          userId: 2,
+          username: 'friend1',
+          avatarId: null,
+          body: 'Great goal!',
+          created_at: '2026-01-02T00:00:00Z',
+          updated_at: '2026-01-02T00:00:00Z',
+        },
+      ],
+      permissions: {
+        canWrite: false,
+        canEditOwn: false,
+        canDeleteOwn: false,
+        canReadFriends: true,
+      },
+    });
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Friends' Journals/)).toBeTruthy();
+      expect(screen.getByText('friend1')).toBeTruthy();
+      expect(screen.getByText('Great goal!')).toBeTruthy();
+    });
+  });
+
+  it('hides journal button when locked', () => {
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        locked={true}
+        onClose={mockOnClose}
+      />
+    );
+
+    // Journals button should not be present when locked
+    expect(screen.queryByText('Journals')).toBeFalsy();
+  });
+
+  it('shows locked message when goal not reached and no write access', async () => {
+    mockJournalResponse({
+      ownEntry: null,
+      friendEntries: [],
+      permissions: {
+        canWrite: false,
+        canEditOwn: false,
+        canDeleteOwn: false,
+        canReadFriends: false,
+      },
+    });
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={50}
+        onClose={mockOnClose}
+      />
+    );
+
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Reach this goal/)).toBeTruthy();
+    });
+  });
+
+  it('renders journal body with preserved line breaks', async () => {
+    mockJournalResponse({
+      ownEntry: {
+        id: 1,
+        body: 'Line one\nLine two\nLine three',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+      friendEntries: [],
+      permissions: {
+        canWrite: false,
+        canEditOwn: true,
+        canDeleteOwn: true,
+        canReadFriends: false,
+      },
+    });
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      const entry = screen.getByText(/Line one/);
+      expect(entry).toBeTruthy();
+      expect(entry.textContent).toContain('Line two');
+      expect(entry.textContent).toContain('Line three');
+    });
+  });
+
+  it('shows Back to Goal button when viewing journal', async () => {
+    mockJournalResponse({
+      ownEntry: null,
+      friendEntries: [],
+      permissions: {
+        canWrite: false,
+        canEditOwn: false,
+        canDeleteOwn: false,
+        canReadFriends: false,
+      },
+    });
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Back to Goal')).toBeTruthy();
+    });
+  });
+
+  it('returns to goal details when Back to Goal is clicked', async () => {
+    mockJournalResponse({
+      ownEntry: null,
+      friendEntries: [],
+      permissions: {
+        canWrite: false,
+        canEditOwn: false,
+        canDeleteOwn: false,
+        canReadFriends: false,
+      },
+    });
+
+    render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    // Journals button visible
+    expect(screen.getByText('Journals')).toBeTruthy();
+
+    // Click to journal view
+    screen.getByText('Journals').click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Back to Goal')).toBeTruthy();
+    });
+
+    // Click back
+    screen.getByText('Back to Goal').click();
+
+    // Journals button should be visible again
+    await waitFor(() => {
+      expect(screen.getByText('Journals')).toBeTruthy();
+    });
   });
 });

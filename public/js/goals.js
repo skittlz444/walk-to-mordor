@@ -9,7 +9,7 @@ function getRemainingKm(goal, currentDistance) {
   return Math.max(0, goal.distance - Number(currentDistance));
 }
 
-function showGoalModal(goal, currentDistance, isCongratulations = false, locked = false) {
+function showGoalModal(goal, currentDistance, isCongratulations = false, locked = false, partyId = null) {
   // Prevent stacking modals - if one is already open, don't open another
   if (document.getElementById('goal-modal-container')) {
     return;
@@ -57,7 +57,9 @@ function showGoalModal(goal, currentDistance, isCongratulations = false, locked 
       currentDistance: currentDistance,
       isCongratulations: isCongratulations,
       locked: locked,
-      onClose: onClose
+      onClose: onClose,
+      storylineGoalId: goal.storyline_goal_id,
+      partyId: partyId,
     }),
     modalContainer
   );

@@ -12,6 +12,7 @@ import {
   toStorylineResponse,
   type StorylineGoal,
 } from "./storyline-utils";
+import { computePartyTotalDistance } from './party-distance-utils';
 import { createErrorResponse, createSuccessResponse } from "./validators";
 import type { DbClient } from './db';
 
