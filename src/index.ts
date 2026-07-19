@@ -16,6 +16,14 @@ import {
   calculateUserStorylineDistance
 } from "./goals-handlers";
 import {
+  handleAdminGoalContentList,
+  handleAdminGoalContentCreate,
+  handleAdminGoalContentUpdate,
+  handleAdminGoalContentDelete,
+  handleGoalContentGet,
+  handleContentDiscoveryEvent,
+} from "./goal-content-handlers";
+import {
   handleJournalStateGet,
   handleJournalUpsert,
   handleJournalDelete
@@ -272,6 +280,28 @@ app.delete('/api/goals/:goalId/journal', authGuard, async (c) => {
   return handleJournalDelete(c.req.raw, c.get('db'), goalId, c.env.ALLOW_TEST_AUTH);
 });
 
+// ── Goal Content (unlock-aware reads + discovery analytics) ──
+app.get('/api/goals/:goalId/content', authGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goalId');
+  if (goalId instanceof Response) return goalId;
+  return handleGoalContentGet(c.req.raw, c.get('db'), goalId, c.env.ALLOW_TEST_AUTH);
+});
+app.post('/api/goals/:goalId/content/events', authGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goalId');
+  if (goalId instanceof Response) return goalId;
+  const body = await safeJsonBody(c);
+  // Plumb ExecutionContext so discovery writes run as non-blocking background work.
+  const schedule = (promise: Promise<unknown>) => {
+    try {
+      c.executionCtx.waitUntil(promise);
+    } catch {
+      // No execution context available (e.g. tests) — swallow, best-effort only.
+      void promise;
+    }
+  };
+  return handleContentDiscoveryEvent(c.req.raw, c.get('db'), goalId, body, schedule, c.env.ALLOW_TEST_AUTH);
+});
+
 app.get('/api/stats/weekly', authGuard, (c) =>
   handleWeeklyStats(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
 app.get('/api/stats/heatmap', authGuard, (c) =>
@@ -477,6 +507,32 @@ app.put('/api/admin/goals/:id', adminGuard, async (c) => {
   const goalId = intParam(c.req.param('id'), 'goal ID');
   if (goalId instanceof Response) return goalId;
   return handleAdminGoalUpdate(c.req.raw, c.get('db'), goalId, await c.req.json(), c.get('adminUserId')!);
+});
+
+// ── Goal Content (admin CRUD) ──
+app.get('/api/admin/goals/:goalId/content', adminGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goal ID');
+  if (goalId instanceof Response) return goalId;
+  return handleAdminGoalContentList(c.req.raw, c.get('db'), goalId);
+});
+app.post('/api/admin/goals/:goalId/content', adminGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goal ID');
+  if (goalId instanceof Response) return goalId;
+  return handleAdminGoalContentCreate(c.req.raw, c.get('db'), goalId, await safeJsonBody(c), c.get('adminUserId')!);
+});
+app.put('/api/admin/goals/:goalId/content/:contentId', adminGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goal ID');
+  if (goalId instanceof Response) return goalId;
+  const contentId = intParam(c.req.param('contentId'), 'content ID');
+  if (contentId instanceof Response) return contentId;
+  return handleAdminGoalContentUpdate(c.req.raw, c.get('db'), goalId, contentId, await safeJsonBody(c), c.get('adminUserId')!);
+});
+app.delete('/api/admin/goals/:goalId/content/:contentId', adminGuard, async (c) => {
+  const goalId = intParam(c.req.param('goalId'), 'goal ID');
+  if (goalId instanceof Response) return goalId;
+  const contentId = intParam(c.req.param('contentId'), 'content ID');
+  if (contentId instanceof Response) return contentId;
+  return handleAdminGoalContentDelete(c.req.raw, c.get('db'), goalId, contentId, c.get('adminUserId')!);
 });
 
 // ── Storylines ──

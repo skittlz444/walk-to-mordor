@@ -412,6 +412,178 @@ describe('GoalModal', () => {
   });
 });
 
+// ── Goal Content Tests ──────────────────────────────────────────────────────
+
+describe('GoalModal content', () => {
+  const mockGoal = {
+    id: 7,
+    distance: 100.5,
+    title: 'Lore Goal',
+    special: null,
+    description: 'A lore-rich goal',
+    image_id: '1',
+    has_content: true,
+  };
+
+  const mockOnClose = vi.fn();
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  const journalPayload = {
+    ownEntry: null,
+    friendEntries: [],
+    permissions: {
+      canWrite: false,
+      canEditOwn: false,
+      canDeleteOwn: false,
+      canReadFriends: false,
+    },
+  };
+
+  beforeEach(() => {
+    mockOnClose.mockClear();
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  function mockContentResponses(entries: Array<Record<string, unknown>>) {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/content/events')) {
+        return Promise.resolve({ ok: true, status: 202, json: () => Promise.resolve({}) });
+      }
+      if (url.includes('/content')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ entries }) });
+      }
+      if (url.includes('/journals')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(journalPayload) });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+    });
+  }
+
+  it('renders unlocked content entries by type in sort order', async () => {
+    mockContentResponses([
+      {
+        id: 3,
+        goal_id: 7,
+        type: 'appendix',
+        title: 'Appendix Note',
+        body: 'Reference **facts**.',
+        author_attribution: 'Archivist',
+        sort_order: 3,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 1,
+        goal_id: 7,
+        type: 'story',
+        title: 'Campfire Tale',
+        body: 'A **warm** story.',
+        author_attribution: null,
+        sort_order: 1,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 2,
+        goal_id: 7,
+        type: 'poetry',
+        title: 'Walking Song',
+        body: 'Line one\n\nLine two',
+        author_attribution: null,
+        sort_order: 2,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    const { container } = render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    // Panel renders collapsed by default with a summary of counts.
+    await waitFor(() => {
+      expect(screen.getByText('Campfire Lore')).toBeTruthy();
+      expect(screen.getByText('1 story')).toBeTruthy();
+      expect(screen.getByText('1 poem')).toBeTruthy();
+      expect(screen.getByText('1 appendix')).toBeTruthy();
+    });
+    expect(screen.queryByText('Campfire Tale')).toBeNull();
+
+    // Expand to reveal entries.
+    (container.querySelector('.goal-content-toggle') as HTMLButtonElement).click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Campfire Tale')).toBeTruthy();
+      expect(screen.getByText('Walking Song')).toBeTruthy();
+      expect(screen.getByText('Appendix Note')).toBeTruthy();
+    });
+
+    const titles = Array.from(container.querySelectorAll('.goal-content-entry h4')).map((el) => el.textContent);
+    expect(titles).toEqual(['Campfire Tale', 'Walking Song', 'Appendix Note']);
+    expect(screen.getByText('Campfire Story')).toBeTruthy();
+    expect(screen.getByText('Poetry')).toBeTruthy();
+    expect(screen.getByText('Appendix')).toBeTruthy();
+    expect(container.querySelector('.goal-content-entry--story strong')?.textContent).toBe('warm');
+    expect(screen.getByText(/Archivist/)).toBeTruthy();
+  });
+
+  it('collapses and expands appendices over 500 rendered words', async () => {
+    const longBody = Array.from({ length: 501 }, (_, index) => `word${index + 1}`).join(' ');
+    mockContentResponses([
+      {
+        id: 9,
+        goal_id: 7,
+        type: 'appendix',
+        title: 'Long Appendix',
+        body: longBody,
+        author_attribution: null,
+        sort_order: 1,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    const { container } = render(
+      <GoalModal
+        goal={mockGoal}
+        currentDistance={150}
+        onClose={mockOnClose}
+      />
+    );
+
+    // Expand the collapsed lore panel first.
+    await waitFor(() => {
+      expect(screen.getByText('Campfire Lore')).toBeTruthy();
+    });
+    (container.querySelector('.goal-content-toggle') as HTMLButtonElement).click();
+
+    await waitFor(() => {
+      expect(screen.getByText('Long Appendix')).toBeTruthy();
+      expect(screen.getByText('Expand appendix')).toBeTruthy();
+    });
+
+    expect(screen.queryByText((content) => content.includes('word501'))).toBeNull();
+
+    screen.getByText('Expand appendix').click();
+
+    await waitFor(() => {
+      expect(screen.getByText((content) => content.includes('word501'))).toBeTruthy();
+      expect(screen.getByText('Collapse appendix')).toBeTruthy();
+    });
+  });
+});
+
 // ── Journal Tests ──────────────────────────────────────────────────────────
 
 describe('GoalModal Journal', () => {
@@ -430,11 +602,12 @@ describe('GoalModal Journal', () => {
   beforeEach(() => {
     mockOnClose.mockClear();
     fetchMock = vi.fn();
-    globalThis.fetch = fetchMock;
+    vi.stubGlobal('fetch', fetchMock);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   function mockJournalResponse(data: Record<string, unknown>, status = 200) {

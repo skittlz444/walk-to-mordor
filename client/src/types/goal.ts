@@ -8,4 +8,5 @@ export interface Goal {
   special?: string | null;
   description?: string | null;
   image_id?: string | null;
+  has_content?: boolean;
 }

@@ -1,7 +1,14 @@
 import { useSignal, useComputed } from '@preact/signals';
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import type { Goal } from '../types/goal';
 import { getAuthHeaders } from '../utils/auth';
+import { recordGoalContentEvent } from '../utils/goalContentEvents';
+
+marked.setOptions({
+  breaks: true,
+});
 
 // ── Journal Types ──────────────────────────────────────────────────────────
 
@@ -36,10 +43,72 @@ interface GoalJournalState {
 
 type JournalLoadState = 'idle' | 'loading' | 'ready' | 'error';
 type JournalMode = 'create' | 'view' | 'edit';
+type GoalContentType = 'story' | 'poetry' | 'appendix';
+type GoalContentLoadState = 'idle' | 'loading' | 'ready' | 'error';
+
+interface GoalContentEntry {
+  id: number;
+  goal_id: number;
+  type: GoalContentType;
+  title: string;
+  body: string;
+  author_attribution: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const MAX_BODY_LENGTH = 2000;
+const APPENDIX_COLLAPSE_WORDS = 500;
+
+function sanitizeRenderedHtml(html: string): string {
+  const sanitized = DOMPurify.sanitize(html);
+  const template = document.createElement('template');
+  template.innerHTML = sanitized;
+  template.content.querySelectorAll('*').forEach((element) => {
+    Array.from(element.attributes).forEach((attr) => {
+      if (/^on/i.test(attr.name) || /^\s*javascript:/i.test(attr.value)) {
+        element.removeAttribute(attr.name);
+      }
+    });
+  });
+  return template.innerHTML;
+}
+
+function renderMarkdown(body: string): string {
+  return sanitizeRenderedHtml(marked.parse(body) as string);
+}
+
+function getPlainTextFromHtml(html: string): string {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  return template.content.textContent || '';
+}
+
+function getWords(text: string): string[] {
+  return text.trim().split(/\s+/).filter(Boolean);
+}
+
+function getContentTypeLabel(type: GoalContentType): string {
+  if (type === 'story') return 'Campfire Story';
+  if (type === 'poetry') return 'Poetry';
+  return 'Appendix';
+}
+
+/** Human summary of lore entries by type, e.g. ["2 stories", "1 poem"]. */
+function formatLoreSummary(entries: GoalContentEntry[]): string[] {
+  const counts: Record<GoalContentType, number> = { story: 0, poetry: 0, appendix: 0 };
+  for (const entry of entries) {
+    counts[entry.type] += 1;
+  }
+  const parts: string[] = [];
+  if (counts.story) parts.push(`${counts.story} ${counts.story === 1 ? 'story' : 'stories'}`);
+  if (counts.poetry) parts.push(`${counts.poetry} ${counts.poetry === 1 ? 'poem' : 'poems'}`);
+  if (counts.appendix) parts.push(`${counts.appendix} ${counts.appendix === 1 ? 'appendix' : 'appendices'}`);
+  return parts;
+}
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -59,6 +128,7 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, lo
   const highResLoaded = useSignal(false);
   const thumbFormat = useSignal<'webp' | 'jpg'>('webp');
   const highResFormat = useSignal<'webp' | 'jpg'>('webp');
+  const [expandedAppendices, setExpandedAppendices] = useState<ReadonlySet<number>>(() => new Set());
 
   // ── Journal State ──
   const journalState = useSignal<GoalJournalState | null>(null);
@@ -69,10 +139,64 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, lo
   const journalError = useSignal<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // ── Goal Content State ──
+  const contentEntries = useSignal<GoalContentEntry[]>([]);
+  const contentLoadState = useSignal<GoalContentLoadState>('idle');
+  const contentError = useSignal<string | null>(null);
+  const contentOpenSentForGoal = useRef<number | null>(null);
+  const loreExpanded = useSignal(false);
+
   // ── Computed ──
   const isCompleted = Number(currentDistance) >= goal.distance;
   const distanceToGo = isCompleted ? 0 : goal.distance - Number(currentDistance);
   const charCount = useComputed(() => journalText.value.length);
+
+  // ── Goal Content Fetch ──
+  const fetchGoalContent = async () => {
+    contentLoadState.value = 'loading';
+    contentError.value = null;
+    try {
+      let url = `/api/goals/${goal.id}/content`;
+      if (partyId) {
+        url += `?partyId=${partyId}`;
+      }
+      const resp = await fetch(url, { headers: getAuthHeaders() });
+      if (!resp.ok) {
+        throw new Error(`Failed to load goal content (${resp.status})`);
+      }
+      const data: { entries?: GoalContentEntry[] } = await resp.json();
+      const entries = [...(data.entries ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+      contentEntries.value = entries;
+      contentLoadState.value = 'ready';
+
+      if (entries.length > 0 && contentOpenSentForGoal.current !== goal.id) {
+        contentOpenSentForGoal.current = goal.id;
+        recordGoalContentEvent({
+          goalId: goal.id,
+          eventType: 'content_open',
+          partyId,
+          contentId: entries[0].id,
+        });
+      }
+    } catch (err) {
+      contentEntries.value = [];
+      contentLoadState.value = 'error';
+      contentError.value = err instanceof Error ? err.message : 'Failed to load goal content';
+    }
+  };
+
+  useEffect(() => {
+    contentEntries.value = [];
+    contentError.value = null;
+    contentLoadState.value = 'idle';
+    contentOpenSentForGoal.current = null;
+    loreExpanded.value = false;
+    setExpandedAppendices(new Set());
+
+    if (!locked && goal.has_content === true) {
+      fetchGoalContent();
+    }
+  }, [goal.id, goal.has_content, locked, partyId]);
 
   // ── Journal Fetch ──
   const fetchJournalState = async () => {
@@ -287,6 +411,148 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, lo
     ? 'text-decoration: line-through; color: #888;'
     : 'color: #FFD700;';
 
+  const toggleAppendix = (entryId: number) => {
+    setExpandedAppendices((current) => {
+      const next = new Set(current);
+      if (next.has(entryId)) {
+        next.delete(entryId);
+      } else {
+        next.add(entryId);
+      }
+      return next;
+    });
+  };
+
+  const renderContentEntry = (entry: GoalContentEntry) => {
+    const html = renderMarkdown(entry.body);
+    const plainText = getPlainTextFromHtml(html);
+    const words = getWords(plainText);
+    const isLongAppendix = entry.type === 'appendix' && words.length > APPENDIX_COLLAPSE_WORDS;
+    const isExpanded = expandedAppendices.has(entry.id);
+    const typeLabel = getContentTypeLabel(entry.type);
+    const bodyClass = `goal-content-entry__body goal-content-entry__body--${entry.type}`;
+    const bodyStyle = entry.type === 'poetry'
+      ? 'color: #ddd; line-height: 1.7; text-align: center; white-space: pre-wrap;'
+      : 'color: #ccc; line-height: 1.55;';
+    const entryStyle = entry.type === 'story'
+      ? 'background: linear-gradient(135deg, rgba(70, 43, 18, 0.38), rgba(24, 20, 16, 0.96)); border-color: rgba(255, 166, 77, 0.35);'
+      : entry.type === 'poetry'
+        ? 'background: rgba(36, 32, 52, 0.7); border-color: rgba(180, 160, 255, 0.35);'
+        : 'background: rgba(26, 34, 36, 0.82); border-color: rgba(120, 190, 170, 0.35);';
+
+    return (
+      <article
+        key={entry.id}
+        class={`goal-content-entry goal-content-entry--${entry.type}`}
+        style={`margin-top: 0.9em; padding: 1em; border: 1px solid; border-radius: 10px; ${entryStyle}`}
+      >
+        <div style="display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap; margin-bottom: 0.55em;">
+          <span
+            class={`goal-content-badge goal-content-badge--${entry.type}`}
+            style="font-size: 0.72em; letter-spacing: 0.06em; text-transform: uppercase; color: #111; background: #FFD700; border-radius: 999px; padding: 0.2em 0.55em; font-weight: 700;"
+          >
+            {typeLabel}
+          </span>
+          <h4 style="margin: 0; color: #fff; font-size: 1.05em;">{entry.title}</h4>
+        </div>
+
+        {isLongAppendix && !isExpanded ? (
+          <div class={bodyClass} style={bodyStyle}>
+            <p>{words.slice(0, APPENDIX_COLLAPSE_WORDS).join(' ')}…</p>
+          </div>
+        ) : (
+          <div
+            class={bodyClass}
+            style={bodyStyle}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        )}
+
+        {entry.author_attribution && (
+          <div class="goal-content-entry__attribution" style="margin-top: 0.7em; color: #999; font-size: 0.85em; font-style: italic;">
+            — {entry.author_attribution}
+          </div>
+        )}
+
+        {isLongAppendix && (
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            onClick={() => toggleAppendix(entry.id)}
+            aria-expanded={isExpanded}
+            style="margin-top: 0.8em; font-size: 0.82em;"
+          >
+            {isExpanded ? 'Collapse appendix' : 'Expand appendix'}
+          </button>
+        )}
+      </article>
+    );
+  };
+
+  const renderGoalContentSection = () => {
+    if (locked || goal.has_content !== true) {
+      return null;
+    }
+
+    if (contentLoadState.value === 'idle' || contentLoadState.value === 'loading') {
+      return (
+        <section class="goal-content-section" aria-label="Goal content" style="margin: 1em 0;">
+          <div style="color: #888; text-align: center; padding: 0.8em; border: 1px solid #333; border-radius: 8px;">
+            <i class="fas fa-spinner fa-pulse" aria-hidden="true" style="margin-right: 0.4em;" />
+            Loading campfire lore...
+          </div>
+        </section>
+      );
+    }
+
+    if (contentLoadState.value === 'error') {
+      return (
+        <section class="goal-content-section" aria-label="Goal content" style="margin: 1em 0;">
+          <div style="color: #c44; text-align: center; padding: 0.8em; border: 1px solid #5a2424; border-radius: 8px;">
+            {contentError.value || 'Failed to load goal content'}
+          </div>
+        </section>
+      );
+    }
+
+    if (contentEntries.value.length === 0) {
+      return null;
+    }
+
+    const summary = formatLoreSummary(contentEntries.value);
+    const expanded = loreExpanded.value;
+
+    return (
+      <section class="goal-content-section" aria-label="Campfire lore" style="margin: 1em 0;">
+        <button
+          type="button"
+          class="goal-content-toggle"
+          aria-expanded={expanded}
+          onClick={() => { loreExpanded.value = !loreExpanded.value; }}
+          style="width: 100%; display: flex; align-items: center; gap: 0.5em; background: rgba(255, 215, 0, 0.08); border: 1px solid rgba(255, 166, 77, 0.35); border-radius: 8px; padding: 0.6em 0.8em; color: #FFD700; font-size: 1.05em; cursor: pointer; text-align: left;"
+        >
+          <span aria-hidden="true">🔥</span>
+          <span style="font-weight: 600;">Campfire Lore</span>
+          {summary.length > 0 && (
+            <span style="display: flex; flex-direction: column; color: #d8c06a; font-size: 0.82em; font-weight: 400; line-height: 1.4;">
+              {summary.map(part => <span>{part}</span>)}
+            </span>
+          )}
+          <i
+            class={`fas fa-chevron-${expanded ? 'up' : 'down'}`}
+            aria-hidden="true"
+            style="margin-left: auto; font-size: 0.8em;"
+          />
+        </button>
+        {expanded && (
+          <div style="margin-top: 0.6em;">
+            {contentEntries.value.map(renderContentEntry)}
+          </div>
+        )}
+      </section>
+    );
+  };
+
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER: Goal Details (image + description + Journals button)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -328,6 +594,8 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, lo
           {goal.description}
         </div>
       )}
+
+      {renderGoalContentSection()}
 
       {/* Journals button — full width, styled, only when not locked */}
       {!locked && (

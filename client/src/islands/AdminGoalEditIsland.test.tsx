@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor, fireEvent } from '@testing-library/preact';
+import { render, waitFor, fireEvent, screen } from '@testing-library/preact';
 import { AdminGoalEditIsland } from './AdminGoalEditIsland';
 
 const mockFetch = vi.fn();
@@ -47,7 +47,7 @@ afterEach(() => {
 });
 
 /** Wait for the initial goal load to complete (loading spinner disappears). */
-async function waitForGoalLoaded(container: HTMLElement) {
+async function waitForGoalLoaded(container: Element) {
   await waitFor(() => {
     expect(container.querySelector('.admin-loading')).toBeNull();
   });
@@ -74,6 +74,11 @@ describe('AdminGoalEditIsland', () => {
         ok: true,
         status: 200,
         json: () => Promise.resolve(mockGoalResponse),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ entries: [] }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -166,6 +171,11 @@ describe('AdminGoalEditIsland', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        json: () => Promise.resolve({ entries: [] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
         json: () => Promise.resolve({ ...mockGoalResponse, title: 'Updated Rivendell' }),
       });
 
@@ -193,6 +203,11 @@ describe('AdminGoalEditIsland', () => {
         ok: true,
         status: 200,
         json: () => Promise.resolve(mockGoalResponse),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ entries: [] }),
       })
       .mockResolvedValueOnce({
         ok: false,
@@ -258,5 +273,26 @@ describe('AdminGoalEditIsland', () => {
 
     const distInput = container.querySelector('#goal-distance') as HTMLInputElement;
     expect(distInput.step).toBe('any');
+  });
+
+  it('renders sanitized Markdown preview for goal content body', async () => {
+    const { container } = render(<AdminGoalEditIsland />);
+    await waitForGoalLoaded(container);
+
+    fireEvent.input(container.querySelector('#new-content-title') as HTMLInputElement, {
+      target: { value: 'Campfire tale' },
+    });
+    fireEvent.input(container.querySelector('#new-content-body') as HTMLTextAreaElement, {
+      target: { value: '**Bold** <img src=x onerror="alert(1)">' },
+    });
+
+    const previewButtons = screen.getAllByText('Preview');
+    fireEvent.click(previewButtons[previewButtons.length - 1]);
+
+    await waitFor(() => {
+      const preview = container.querySelector('.admin-goal-content__create .admin-goal-content-preview') as HTMLElement;
+      expect(preview.querySelector('strong')?.textContent).toBe('Bold');
+      expect(preview.innerHTML).not.toContain('onerror');
+    });
   });
 });

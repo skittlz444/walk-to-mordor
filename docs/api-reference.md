@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-05-20
+Last updated: 2026-07-17
 
 ## Conventions
 
@@ -21,6 +21,7 @@ Last updated: 2026-05-20
 | Push | `src/push-handlers.ts` |
 | Progress | `src/progress-handlers.ts` |
 | Goals | `src/goals-handlers.ts` |
+| Goal Content | `src/goal-content-handlers.ts`, `src/goal-content-helpers.ts` |
 | Goal Journals | `src/journal-handlers.ts` |
 | Storylines | `src/storyline-handlers.ts`, `src/storyline-utils.ts` |
 | Party (Fellowship) | `src/party-handlers.ts` |
@@ -85,7 +86,32 @@ Last updated: 2026-05-20
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| GET | `/api/goals` | Yes | Active user's storyline goals. Optional `storylineId` query selects another active storyline; admin-only storylines require an admin user. |
+| GET | `/api/goals` | Yes | Active user's storyline goals. Optional `storylineId` query selects another active storyline; admin-only storylines require an admin user. Each goal includes `has_content: boolean`, which is true when any `goal_content` rows exist, including locked goals for teaser UI. |
+
+## Goal Content Endpoints
+
+Goal content is authenticated and uses the same unlock semantics as goal viewing and journals. Without `partyId`, access is evaluated against the user's personal progress. With `partyId`, access is evaluated against the requesting user's active fellowship context.
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/goals/:goalId/content` | Yes | Optional `partyId=N`. Returns `200 { entries: GoalContentEntry[] }` when the goal is unlocked in the requested context. Returns `403` when locked. Returns an empty `entries` array when unlocked but no content exists. |
+| POST | `/api/goals/:goalId/content/events` | Yes | Body: `{ event_type: 'teaser_impression' | 'content_open', context_type: 'personal' | 'fellowship', content_id?, partyId? }`. Returns `202`. Event writes are best-effort and scheduled with `ExecutionContext.waitUntil`, so analytics failure does not block the user flow. |
+
+`GoalContentEntry` shape:
+
+```json
+{
+  "id": 1,
+  "goal_id": 42,
+  "type": "story",
+  "title": "Campfire at the Crossroads",
+  "body": "Markdown body",
+  "author_attribution": null,
+  "sort_order": 0,
+  "created_at": "2026-07-17T00:00:00.000Z",
+  "updated_at": "2026-07-17T00:00:00.000Z"
+}
+```
 
 ## Goal Journal Endpoints
 
@@ -187,10 +213,15 @@ All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Eve
 | GET | `/api/admin/goals/:id` | Single goal detail |
 | POST | `/api/admin/goals` | Create. Accepts `distance_miles` — stored as `miles × 1.60934` km |
 | PUT | `/api/admin/goals/:id` | Update. All fields validated server-side |
+| GET | `/api/admin/goals/:goalId/content` | Lists ordered goal-content entries. Response: `{ entries: GoalContentEntry[] }` |
+| POST | `/api/admin/goals/:goalId/content` | Creates goal content. Body: `{ type, title, body, author_attribution?, sort_order }`. Returns `201 GoalContentEntry`; `400` validation, `404` missing goal, `409` duplicate `sort_order`. |
+| PUT | `/api/admin/goals/:goalId/content/:contentId` | Updates goal content. Returns `200 GoalContentEntry`; `400` validation, `404` missing goal/content, `409` duplicate `sort_order`. |
+| DELETE | `/api/admin/goals/:goalId/content/:contentId` | Deletes goal content. Returns `200 { message }`; `404` if missing. |
 
 - `image_id` must match `/^[a-z0-9]+(-[a-z0-9]+)*$/` or be null/empty. References static assets in `public/img/`.
 - POST uses `distance_miles` (converted to km); PUT uses `distance` (already km).
 - Empty `special` and `image_id` strings normalized to `null`. Goal IDs must be positive integers.
+- Goal content validation limits: `type` must be `story`, `poetry`, or `appendix`; `title` ≤ 120 characters; `author_attribution` ≤ 255 characters; `body` ≤ 20,000 characters; `sort_order` from `0` to `999`.
 
 ### Storyline Management
 

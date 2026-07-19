@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-05-20 · Migrations: 0001–0138 · Full DDL: `migrations/`
+> Last updated: 2026-07-17 · Migrations: 0001–0141 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -15,6 +15,8 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `sessions` | Active user sessions (token-based) | 0008 |
 | `progress` | Daily walking logs (one entry per user per date) | 0002 |
 | `goals` | Reusable milestone content (title, description, image, default distance compatibility) | 0003 |
+| `goal_content` | Ordered Markdown lore entries attached to canonical goals | 0140 |
+| `content_discovery_events` | Append-only best-effort analytics for goal-content teasers and opens | 0141 |
 | `storylines` | Named journey routes users and fellowships can select | 0132 |
 | `storyline_goals` | Per-storyline goal ordering and distances | 0132 |
 | `password_reset_tokens` | Temporary tokens for password reset flow | 0010 |
@@ -51,6 +53,26 @@ These are rules the schema enforces or that the application layer must uphold �
 - `path_key` lets future storylines select a map path dataset. Unknown client path keys must fall back to the fellowship path until a new path is registered.
 - `storyline_goals` reuses rows from `goals` and stores the storyline-specific `distance` and `sort_order`. This allows the same goal content to appear in multiple routes at different distances.
 - Existing goals are backfilled into `storyline_goals` for `frodo-sam`, preserving current behavior for existing users.
+
+### goal_content
+- Added in migration `0140`.
+- Columns: `id` primary key, `goal_id` foreign key to `goals(id)` with `ON DELETE CASCADE`, `type` text, `title` text, `body` text, `author_attribution` text, `sort_order` integer, `created_at`, and `updated_at`.
+- `type` has a `CHECK` constraint allowing only `story`, `poetry`, or `appendix`.
+- `body` stores Markdown; clients render it as sanitized HTML.
+- `author_attribution` is nullable.
+- `sort_order` has a `CHECK` constraint for the range `0`–`999`.
+- `UNIQUE(goal_id, sort_order)` enforces one ordered content stream per goal.
+- Index: `idx_goal_content_goal_id(goal_id, sort_order)`.
+- Application validation limits: `title` ≤ 120 characters, `author_attribution` ≤ 255 characters, `body` ≤ 20,000 characters, and `sort_order` from `0` to `999`.
+
+### content_discovery_events
+- Added in migration `0141`.
+- Append-only analytics table for goal-content teaser impressions and content opens.
+- Columns: `id` primary key, nullable `user_id`, nullable `party_id`, `goal_id`, nullable `content_id`, `event_type`, `context_type`, and `created_at`.
+- `event_type` has a `CHECK` constraint allowing only `teaser_impression` or `content_open`.
+- `context_type` has a `CHECK` constraint allowing only `personal` or `fellowship`.
+- The table intentionally has no foreign keys. Discovery analytics are best-effort and must not fail user-facing flows if related rows are deleted or event writes are dropped.
+- Indexes exist on `goal_id` and `created_at`.
 
 ### push_subscriptions
 - Stores one row per browser/device subscription endpoint. Multiple rows per user are expected.
@@ -98,9 +120,12 @@ These are rules the schema enforces or that the application layer must uphold �
 |---|---|---|
 | `party_*` tables → `parties.id` | CASCADE | Deleting a party removes all related data |
 | `parties.leader_id` → `users.id` | CASCADE | Leader deletion cascades to party |
+| `goal_content.goal_id` → `goals.id` | CASCADE | Deleting a goal removes its authored lore entries |
 | `email_confirmation_tokens.user_id` | CASCADE | Cleanup on user deletion |
 | `admin_audit_log.admin_user_id` | **No cascade** | Audit records must survive user deletion |
 | All other user FKs | CASCADE | Standard cleanup |
+
+`content_discovery_events` intentionally has no foreign keys because those rows are best-effort analytics.
 
 ## Migration Conventions
 
@@ -108,6 +133,7 @@ These are rules the schema enforces or that the application layer must uphold �
 - Each migration is a single DDL or data-manipulation operation.
 - Schema changes go in migrations; application logic stays in TypeScript.
 - Goal description updates use dedicated migrations (see `0011`–`0019` series).
+- Goal content tables are additive migrations: `0140` for `goal_content`, `0141` for `content_discovery_events`.
 - Deploy: `npx wrangler d1 migrations apply walk-to-mordor-db`.
 
 ## Entity Relationship Diagram
@@ -127,6 +153,7 @@ erDiagram
     users ||--o{ party_messages : "sends"
     users ||--o{ one_more_mile_sent : "receives"
     goals ||--o{ one_more_mile_sent : "targets"
+    goals ||--o{ goal_content : "has lore"
     storylines ||--o{ storyline_goals : "orders"
     goals ||--o{ storyline_goals : "reused by"
     storylines ||--o{ users : "selected by"
