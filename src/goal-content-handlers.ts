@@ -17,7 +17,6 @@ import {
   recordDiscoveryEvent,
   validateGoalContentInput,
   DuplicateSortOrderError,
-  GOAL_CONTENT_TYPES,
   type DiscoveryEventType,
   type DiscoveryContextType,
 } from './goal-content-helpers';
@@ -305,4 +304,3 @@ export async function handleContentDiscoveryEvent(
   return jsonOk({ accepted: true }, 202);
 }
 
-export { GOAL_CONTENT_TYPES };

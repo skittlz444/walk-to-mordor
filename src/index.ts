@@ -291,6 +291,7 @@ app.post('/api/goals/:goalId/content/events', authGuard, async (c) => {
   if (goalId instanceof Response) return goalId;
   const body = await safeJsonBody(c);
   // Plumb ExecutionContext so discovery writes run as non-blocking background work.
+  /* istanbul ignore next -- executionCtx.waitUntil is a Cloudflare-only runtime API */
   const schedule = (promise: Promise<unknown>) => {
     try {
       c.executionCtx.waitUntil(promise);
