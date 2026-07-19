@@ -66,7 +66,7 @@ describe('UpcomingGoalCard', () => {
       />
     );
 
-    const card = container.querySelector('.upcoming-goal');
+    const card = container.querySelector('.upcoming-goal') as HTMLElement | null;
     expect(card).toBeTruthy();
   });
 
@@ -109,7 +109,7 @@ describe('UpcomingGoalCard', () => {
       />
     );
 
-    const card = container.querySelector('.upcoming-goal');
+    const card = container.querySelector('.upcoming-goal') as HTMLElement | null;
     card?.click();
 
     expect(handleClick).toHaveBeenCalledTimes(1);
@@ -216,7 +216,7 @@ describe('UpcomingGoalCard', () => {
       />
     );
 
-    const card = container.querySelector('.upcoming-goal');
+    const card = container.querySelector('.upcoming-goal') as HTMLElement | null;
     card?.click();
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
@@ -235,5 +235,33 @@ describe('UpcomingGoalCard', () => {
 
     const lockIcon = container.querySelector('.fas.fa-lock');
     expect(lockIcon).toBeNull();
+  });
+
+  it('locked goal with has_content=true shows lore teaser', () => {
+    const { container } = render(
+      <UpcomingGoalCard
+        goal={{ ...mockGoal, has_content: true }}
+        currentDistance={50}
+        locked={true}
+        onClick={() => {}}
+      />
+    );
+
+    expect(container.textContent).toContain('Campfire lore waits beyond this milestone');
+    expect(container.querySelector('.goal-content-teaser')).toBeTruthy();
+  });
+
+  it('locked goal without content does not show lore teaser', () => {
+    const { container } = render(
+      <UpcomingGoalCard
+        goal={{ ...mockGoal, has_content: false }}
+        currentDistance={50}
+        locked={true}
+        onClick={() => {}}
+      />
+    );
+
+    expect(container.textContent).not.toContain('Campfire lore waits beyond this milestone');
+    expect(container.querySelector('.goal-content-teaser')).toBeNull();
   });
 });

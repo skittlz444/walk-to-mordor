@@ -20,6 +20,7 @@ export default [
   {
     ignores: [
       "node_modules/",
+      ".wrangler/",
       "public/js/client/",
       "coverage/",
       "dist/",

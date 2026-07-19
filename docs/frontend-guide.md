@@ -5,7 +5,7 @@ description: Island hydration architecture, component patterns, build tooling, a
 
 # Frontend Guide
 
-Last updated: 2026-05-20
+Last updated: 2026-07-17
 
 ## Frontend Shape
 
@@ -107,6 +107,18 @@ The `GoalModal` component now includes a milestone journal section for goal refl
 - **Context:** Pass `partyId` prop for fellowship-context journal access. Pass `storylineGoalId` for storyline-aware context.
 - **No standalone page:** There is no `/journals` page or journal archive in MVP — GoalModal is the only journal surface.
 
+### GoalModal Goal Content (Campfire Lore)
+
+`GoalModal` also renders unlocked goal content attached to the same canonical goal:
+
+- **Fetching:** On open, unlocked modals request `GET /api/goals/:goalId/content`; fellowship contexts pass `partyId` so the API evaluates the same fellowship unlock state as the modal.
+- **Locked goals:** Locked modals do not fetch content bodies. `NextGoalCard`, `UpcomingGoalCard`, and legacy `public/js/goals.js` use `has_content` to show only a blurred or obscured teaser placeholder on locked goal cards.
+- **Empty state:** If the API returns an empty `entries` array, the content section stays hidden.
+- **Rendering:** Entries are shown in `sort_order` with type badges. `story` entries use the campfire-story treatment, `poetry` entries use centered stanza-friendly presentation, and `appendix` entries use structured long-form presentation.
+- **Markdown:** Bodies render through `marked` and then `DOMPurify`; only sanitized HTML is inserted into the DOM.
+- **Appendices:** Appendix entries show attribution when present. If stripped body text is more than 500 words, the appendix is collapsed by default and provides an expand control.
+- **Admin authoring:** Admins manage entries in the existing `AdminGoalEditIsland`, including Markdown preview with `marked` and `DOMPurify`.
+
 ## Creating a New Island
 
 1. Create `client/src/islands/YourIsland.tsx`.
@@ -147,6 +159,8 @@ Each `src/render*.ts` file produces an SSR shell mounting one or more islands. K
 | Map + Social Panel | `client/src/islands/MapIsland.tsx` |
 | Admin Dashboard | `client/src/islands/AdminDashboardIsland.tsx` |
 | Admin Goals CRUD | `client/src/islands/AdminGoalsListIsland.tsx`, `AdminGoalEditIsland.tsx` |
+| Admin Goal Content | `client/src/islands/AdminGoalEditIsland.tsx` with `marked` + `DOMPurify` Markdown preview |
+| Goal Content Display | `GoalModal`, `NextGoalCard`, `UpcomingGoalCard`, and legacy `public/js/goals.js` |
 | Admin Storylines | `client/src/islands/AdminStorylinesIsland.tsx` |
 | User Storyline Selector | `client/src/islands/ProfileIsland.tsx` |
 | Fellowship Storyline Selector | `client/src/islands/PartyManageIsland.tsx` |
@@ -156,7 +170,7 @@ Each `src/render*.ts` file produces an SSR shell mounting one or more islands. K
 
 ## Legacy JS Interop
 
-Legacy vanilla JS lives in `public/js/`. Key modules: `main.js` (bootstrap), `calendar.js`/`progress.js` (CRUD), `goals.js` (goal list), `validators.js` (shared validation). Profile/preferences is now a Preact island at `/profile` (`ProfileIsland`).
+Legacy vanilla JS lives in `public/js/`. Key modules: `main.js` (bootstrap), `calendar.js`/`progress.js` (CRUD), `goals.js` (goal list), `validators.js` (shared validation). Profile/preferences is now a Preact island at `/profile` (`ProfileIsland`). Goal-content teaser placeholders still touch `goals.js` because the journey goal list has not been fully migrated to islands.
 
 ### Bridge Globals
 
@@ -220,6 +234,8 @@ npm run lint:fix      # Auto-fix fixable issues (e.g., import type suggestions)
 - Use unique mock-auth tokens per test worker for isolation.
 - Playwright route interception blocks auth/hydration — use API pre-configuration (e.g., `PUT /api/user/preferences`) instead of `page.route` for session-dependent test setup.
 - Maintain >90% coverage for new client code.
+- Goal-content client tests should cover admin Markdown preview, locked `has_content` teaser rendering, unlocked content rendering, and appendix truncation/expand behavior.
+- Playwright coverage for goal content should include admin authoring plus user-facing locked versus unlocked flows.
 
 ## Pitfalls & Gotchas
 

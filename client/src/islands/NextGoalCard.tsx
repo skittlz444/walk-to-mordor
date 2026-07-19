@@ -1,4 +1,6 @@
 import type { Goal } from '../types/goal';
+import { useEffect } from 'preact/hooks';
+import { recordGoalContentEvent } from '../utils/goalContentEvents';
 
 interface NextGoalCardProps {
   goal: Goal;
@@ -6,19 +8,27 @@ interface NextGoalCardProps {
   previousDistance: number;
   locked?: boolean;
   onClick?: () => void;
+  partyId?: number | null;
 }
 
 /**
  * NextGoalCard - Preact Island for the next goal with progress bar
  * Displays the immediate next goal with visual emphasis and segment progress
  */
-export function NextGoalCard({ goal, currentDistance, previousDistance, locked = false, onClick }: NextGoalCardProps) {
+export function NextGoalCard({ goal, currentDistance, previousDistance, locked = false, onClick, partyId = null }: NextGoalCardProps) {
   // Calculate segment progress
   const segmentTotal = goal.distance - previousDistance;
   const segmentProgress = currentDistance - previousDistance;
   const percentage = Math.max(0, Math.min(100, (segmentProgress / segmentTotal) * 100));
   const hasVisibleProgress = percentage > 0;
   const distanceToGo = goal.distance - currentDistance;
+  const showContentTeaser = locked && goal.has_content === true;
+
+  useEffect(() => {
+    if (showContentTeaser) {
+      recordGoalContentEvent({ goalId: goal.id, eventType: 'teaser_impression', partyId });
+    }
+  }, [showContentTeaser, goal.id, partyId]);
 
   return (
     <div 
@@ -71,7 +81,31 @@ export function NextGoalCard({ goal, currentDistance, previousDistance, locked =
           ({distanceToGo.toFixed(2)} km to go)
         </span>
       </span>
-      
+
+      {showContentTeaser && (
+        <div
+          className="goal-content-teaser"
+          aria-label="Locked campfire lore available"
+          style={{
+            marginTop: '0.7em',
+            width: '100%',
+            padding: '0.55em 0.7em',
+            border: '1px solid rgba(255, 215, 0, 0.35)',
+            borderRadius: '8px',
+            background: 'rgba(255, 215, 0, 0.08)',
+            color: '#d8c06a',
+            fontSize: '0.85em',
+            textAlign: 'center',
+            boxSizing: 'border-box',
+          }}
+        >
+          🔥 Campfire lore waits beyond this milestone
+          <div style={{ marginTop: '0.25em', filter: 'blur(3px)', color: '#aaa', userSelect: 'none' }} aria-hidden="true">
+            Ancient words and hidden tales...
+          </div>
+        </div>
+      )}
+       
       {/* Progress Bar */}
       <div 
         className="goal-progress-track"

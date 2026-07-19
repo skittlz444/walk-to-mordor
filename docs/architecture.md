@@ -5,7 +5,7 @@ description: System architecture, runtime topology, source tree layout, and proj
 
 # Architecture
 
-Last updated: 2026-06-25
+Last updated: 2026-07-17
 
 ## Project Overview
 
@@ -15,6 +15,7 @@ Feature domains:
 - Account management (register, login, email confirmation, password reset)
 - Personal progress (daily logging, calendar history, milestone unlocking)
 - Interactive map (`/map` with friend markers and hover mini-cards)
+- Goal content / campfire lore attached to unlocked milestones
 - Fellowship system (parties, invites, messaging, unified activity feed)
 - Friends (search, requests, profiles)
 - Avatar system (40+ selectable avatars with slug validation)
@@ -76,6 +77,7 @@ app.get('/api/party/:id/progress', async (c) => {
 |---|---|
 | Auth & profile | `auth-handlers.ts` |
 | Progress & goals | `progress-handlers.ts`, `goals-handlers.ts` |
+| Goal content | `goal-content-handlers.ts`, `goal-content-helpers.ts` |
 | Fellowship | `party-handlers.ts`, `fellowship-invite-handlers.ts` |
 | Friends | `friends-handlers.ts` |
 | Admin | `admin-handlers.ts` (requires `validateAdminSession`) |
@@ -97,7 +99,7 @@ walk-to-mordor/
     css/             # Feature-scoped stylesheets
     js/              # Legacy vanilla JS + Vite-built island bundle (js/client/)
     img/             # Map tiles, avatars, goal images, image-manifest.json
-  migrations/        # D1 SQL migrations (0001–0124)
+  migrations/        # D1 SQL migrations (0001–0141)
   tests/api/         # Jest API tests (miniflare environment)
   tests/ui/          # Playwright E2E specs + helpers/
   scripts/           # Asset pipeline (image optimization, tiling, manifest)
@@ -144,6 +146,13 @@ Feature → file discovery: search `src/` for handler modules, `client/src/islan
 - Admin grant: direct D1 only — `UPDATE users SET is_admin = 1 WHERE username = '...';`
 - All admin actions logged to `admin_audit_log` via `logAdminAction()`.
 
+### Goal Content Unlocks and Discovery Analytics
+
+- Goal content APIs live in `src/goal-content-handlers.ts`; shared row validation, persistence helpers, and analytics writes live in `src/goal-content-helpers.ts`.
+- Goal content does not have a separate lock. Public reads reuse the same goal unlock semantics as goal viewing and milestone journals through `journal-helpers`, including personal progress and optional fellowship `partyId` context.
+- `GET /api/goals` exposes `has_content` so clients can show teaser state for locked goals without receiving content bodies.
+- Discovery analytics (`teaser_impression`, `content_open`) are best-effort background writes. Routes schedule them with Cloudflare Workers `ExecutionContext.waitUntil(...)` so failed analytics inserts do not block modal opens, card rendering, or content reads.
+
 ## Database Layer
 
 D1 is the source of truth. Full schema: `docs/data-models.md`. Migrations in `migrations/`.
@@ -151,12 +160,13 @@ D1 is the source of truth. Full schema: `docs/data-models.md`. Migrations in `mi
 | Domain | Tables |
 |---|---|
 | Core | `users`, `sessions`, `progress`, `goals` |
+| Goal content | `goal_content`, `content_discovery_events` |
 | Auth support | `password_reset_tokens`, `email_confirmation_tokens` |
 | Fellowship | `parties`, `party_members`, `party_progress_log`, `party_messages` |
 | Social | `friendships`, `fellowship_invites` |
 | Admin | `admin_audit_log` |
 
-Migration ranges: 0001–0005 core schema · 0006–0010 auth · 0011–0021 goal updates + email · 0022–0116 goal images · 0117–0118 preferences · 0119–0124 fellowship / social / admin.
+Migration ranges: 0001–0005 core schema · 0006–0010 auth · 0011–0021 goal updates + email · 0022–0116 goal images · 0117–0118 preferences · 0119–0124 fellowship / social / admin · 0125–0139 push, storyline, and journals · 0140–0141 goal content and discovery analytics.
 
 ### Read/Write Separation
 

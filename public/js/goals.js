@@ -9,6 +9,34 @@ function getRemainingKm(goal, currentDistance) {
   return Math.max(0, goal.distance - Number(currentDistance));
 }
 
+function recordGoalContentEvent(goal, eventType, partyId, contentId) {
+  if (!goal || !goal.id) return;
+  try {
+    const body = {
+      event_type: eventType,
+      context_type: partyId ? 'fellowship' : 'personal'
+    };
+    if (partyId) body.partyId = partyId;
+    if (contentId) body.content_id = contentId;
+
+    fetch('/api/goals/' + goal.id + '/content/events', {
+      method: 'POST',
+      headers: window.getAuthHeaders(),
+      body: JSON.stringify(body)
+    }).catch(function() {});
+  } catch (e) {
+    // Best-effort analytics only.
+  }
+}
+
+function getGoalContentTeaserHtml(goal) {
+  if (!goal || goal.has_content !== true) return '';
+  return '<div class="goal-content-teaser" aria-label="Locked campfire lore available" style="margin-top:0.7em;width:100%;padding:0.55em 0.7em;border:1px solid rgba(255,215,0,0.35);border-radius:8px;background:rgba(255,215,0,0.08);color:#d8c06a;font-size:0.85em;text-align:center;box-sizing:border-box;">' +
+    '🔥 Campfire lore waits beyond this milestone' +
+    '<div style="margin-top:0.25em;filter:blur(3px);color:#aaa;user-select:none;" aria-hidden="true">Ancient words and hidden tales...</div>' +
+    '</div>';
+}
+
 function showGoalModal(goal, currentDistance, isCongratulations = false, locked = false, partyId = null) {
   // Prevent stacking modals - if one is already open, don't open another
   if (document.getElementById('goal-modal-container')) {
@@ -65,13 +93,13 @@ function showGoalModal(goal, currentDistance, isCongratulations = false, locked 
   );
 }
 
-function makeGoalClickable(element, goal, currentDistance, locked = false) {
+function makeGoalClickable(element, goal, currentDistance, locked = false, partyId = null) {
   if (element) {
     element.style.cursor = 'pointer';
     element.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
-      showGoalModal(goal, currentDistance, false, locked);
+      showGoalModal(goal, currentDistance, false, locked, partyId);
     });
   }
 }
@@ -79,10 +107,12 @@ function makeGoalClickable(element, goal, currentDistance, locked = false) {
 // Track last rendered distance for re-rendering on preference change
 let lastRenderedDistance = null;
 let lastRenderedStorylineId = null;
+let lastRenderedPartyId = null;
 
-function renderGoals(currentDistance, storylineId) {
+function renderGoals(currentDistance, storylineId, partyId = null) {
   lastRenderedDistance = currentDistance;
   lastRenderedStorylineId = storylineId || null;
+  lastRenderedPartyId = partyId || null;
   const goalsUrl = storylineId ? `/api/goals?storylineId=${encodeURIComponent(storylineId)}` : '/api/goals';
   fetch(goalsUrl, {
     headers: window.getAuthHeaders()
@@ -127,8 +157,8 @@ function renderGoals(currentDistance, storylineId) {
         queueMicrotask(() => {
           const headerMain = document.querySelector('.goal-header-main');
           const headerSpecial = document.querySelector('.goal-header-special');
-          if (headerMain) makeGoalClickable(headerMain, lastGoal, currentDistance);
-          if (headerSpecial && lastSpecial) makeGoalClickable(headerSpecial, lastSpecial, currentDistance);
+          if (headerMain) makeGoalClickable(headerMain, lastGoal, currentDistance, false, partyId);
+          if (headerSpecial && lastSpecial) makeGoalClickable(headerSpecial, lastSpecial, currentDistance, false, partyId);
         });
       } else {
         document.getElementById('last-goal').innerHTML = '';
@@ -229,7 +259,8 @@ function renderGoals(currentDistance, storylineId) {
                   currentDistance: Number(currentDistance),
                   previousDistance: previousDistance,
                   locked: !prefUnlocked,
-                  onClick: () => showGoalModal(nextGoal, currentDistance, false, !prefUnlocked)
+                  onClick: () => showGoalModal(nextGoal, currentDistance, false, !prefUnlocked, partyId),
+                  partyId: partyId
                 }),
                 nextGoalMount
               );
@@ -253,13 +284,18 @@ function renderGoals(currentDistance, storylineId) {
                 (nextGoal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + nextGoal.special + '</span>' : '') +
                 '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + (!prefUnlocked ? '<i class="fas fa-lock" style="margin-right:0.4em;font-size:0.85em;color:#888;"></i>' : '') + nextGoal.title + '</span>' +
                 '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + nextGoal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + getRemainingKm(nextGoal, currentDistance).toFixed(2) + ' km to go)</span></span>' +
+                (!prefUnlocked ? getGoalContentTeaserHtml(nextGoal) : '') +
                 '<div class="goal-progress-track" style="width:100%;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;margin-top:0.6em;overflow:hidden;">' +
                   '<div class="goal-progress-fill" style="width:' + percentage.toFixed(1) + '%;min-width:' + fillMinWidth + ';height:100%;background:#FFD700;transition:width 0.3s ease;"></div>' +
                 '</div>' +
                 '</div>';
 
+              if (!prefUnlocked && nextGoal.has_content === true) {
+                recordGoalContentEvent(nextGoal, 'teaser_impression', partyId);
+              }
+
               // Make fallback always clickable
-              makeGoalClickable(nextGoalMount.querySelector('.next-goal'), nextGoal, currentDistance, !prefUnlocked);
+              makeGoalClickable(nextGoalMount.querySelector('.next-goal'), nextGoal, currentDistance, !prefUnlocked, partyId);
             }
 
             // Always apply next-target styling to the first upcoming goal
@@ -293,7 +329,8 @@ function renderGoals(currentDistance, storylineId) {
                   goal: goal,
                   currentDistance: Number(currentDistance),
                   locked: !prefUnlocked,
-                  onClick: () => showGoalModal(goal, currentDistance, false, !prefUnlocked)
+                  onClick: () => showGoalModal(goal, currentDistance, false, !prefUnlocked, partyId),
+                  partyId: partyId
                 }),
                 mountPoint
               );
@@ -324,22 +361,27 @@ function renderGoals(currentDistance, storylineId) {
                 (goal.special ? '<span style="display:block;color:#FFD700;font-size:1.3em;font-weight:bold;margin-bottom:0.2em;">' + goal.special + '</span>' : '') +
                 '<span style="font-size:1.1em;color:#fff;font-weight:bold;max-width:90vw;">' + (!prefUnlocked ? '<i class="fas fa-lock" style="margin-right:0.4em;font-size:0.85em;color:#888;"></i>' : '') + goal.title + '</span>' +
                 '<span style="font-size:0.95em;color:#FFD700;margin-top:0.2em;">' + goal.distance.toFixed(2) + ' km <span style="color:#aaa;font-size:0.9em;">(' + getRemainingKm(goal, currentDistance).toFixed(2) + ' km to go)</span></span>' +
+                (!prefUnlocked ? getGoalContentTeaserHtml(goal) : '') +
                 '</div>';
 
+              if (!prefUnlocked && goal.has_content === true) {
+                recordGoalContentEvent(goal, 'teaser_impression', partyId);
+              }
+
               // Make fallback always clickable
-              makeGoalClickable(mountPoint.querySelector('.upcoming-goal'), goal, currentDistance, !prefUnlocked);
+              makeGoalClickable(mountPoint.querySelector('.upcoming-goal'), goal, currentDistance, !prefUnlocked, partyId);
             }
           });
         }
 
         // Completed goals (last 3)
         document.querySelectorAll('.completed-goal').forEach((element, index) => {
-          makeGoalClickable(element, lastCompleted[index], currentDistance);
+          makeGoalClickable(element, lastCompleted[index], currentDistance, false, partyId);
         });
 
         // All completed goals
         document.querySelectorAll('.all-completed-goal').forEach((element, index) => {
-          makeGoalClickable(element, completed[index], currentDistance);
+          makeGoalClickable(element, completed[index], currentDistance, false, partyId);
         });
       });
     })
@@ -420,7 +462,7 @@ window.goalsModule = {
 // Re-render goals when preference changes (dynamic toggle reactivity)
 window.addEventListener('preferenceChanged', function() {
   if (lastRenderedDistance !== null) {
-    renderGoals(lastRenderedDistance, lastRenderedStorylineId);
+    renderGoals(lastRenderedDistance, lastRenderedStorylineId, lastRenderedPartyId);
   }
 });
 
@@ -454,7 +496,7 @@ function mountPartySelector() {
         el.textContent = pd + ' km';
       }
       if (pd !== undefined) {
-        renderGoals(pd);
+        renderGoals(pd, null, null);
       }
     } else if (progress) {
       // Show party progress
@@ -462,7 +504,7 @@ function mountPartySelector() {
       if (el) {
         el.textContent = progress.total_distance.toFixed(2) + ' km';
       }
-      renderGoals(progress.total_distance, progress.active_storyline && progress.active_storyline.id);
+      renderGoals(progress.total_distance, progress.active_storyline && progress.active_storyline.id, typeof selection === 'number' ? selection : null);
     }
   }
 
@@ -474,7 +516,10 @@ function mountPartySelector() {
           ? window.partyStore.partyProgress.value.total_distance
           : (window._personalDistance || 0);
         setTimeout(function() {
-          window.goalsModule.showGoalModal(latest, currentDist, true);
+          var selectedPartyId = window.partyStore && typeof window.partyStore.selectedView.value === 'number'
+            ? window.partyStore.selectedView.value
+            : null;
+          window.goalsModule.showGoalModal(latest, currentDist, true, false, selectedPartyId);
         }, 300);
       }
     }

@@ -88,6 +88,7 @@
 /* General application layout */
 body {
   background-color: var(--bg-primary);
+  color: var(--text-primary);
   margin: 0;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
 }

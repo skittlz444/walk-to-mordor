@@ -27,6 +27,7 @@ export interface StorylineGoal {
   image_id: string | null;
   special: string | null;
   sort_order: number;
+  has_content: boolean;
 }
 
 interface StorylineRow {
@@ -205,12 +206,13 @@ export async function listStorylineGoals(db: DbClient, storylineId: number): Pro
             g.description,
             g.image_id,
             g.special,
-            sg.sort_order
+            sg.sort_order,
+            EXISTS(SELECT 1 FROM goal_content gc WHERE gc.goal_id = g.id) as has_content
      FROM storyline_goals sg
      JOIN goals g ON g.id = sg.goal_id
      WHERE sg.storyline_id = ?
      ORDER BY sg.distance ASC, sg.sort_order ASC, g.id ASC`,
-  ).bind(storylineId).all<StorylineGoal>();
+  ).bind(storylineId).all<Omit<StorylineGoal, 'has_content'> & { has_content: number }>();
 
   return results.map((goal) => ({
     storyline_goal_id: goal.storyline_goal_id,
@@ -221,6 +223,7 @@ export async function listStorylineGoals(db: DbClient, storylineId: number): Pro
     image_id: goal.image_id ?? null,
     special: goal.special ?? null,
     sort_order: goal.sort_order,
+    has_content: Number(goal.has_content) === 1,
   }));
 }
 

@@ -21,8 +21,8 @@ describe('Goals Handlers', () => {
   describe('handleGoalsGet', () => {
     it('should return goals successfully', async () => {
       const mockResults = [
-        { storyline_goal_id: 10, id: 1, distance: 100, title: 'Rivendell', description: null, special: true, image_id: '1', sort_order: 1 },
-        { storyline_goal_id: 11, id: 2, distance: 200, title: 'Lothlorien', description: null, special: false, image_id: '2', sort_order: 2 }
+        { storyline_goal_id: 10, id: 1, distance: 100, title: 'Rivendell', description: null, special: true, image_id: '1', sort_order: 1, has_content: false },
+        { storyline_goal_id: 11, id: 2, distance: 200, title: 'Lothlorien', description: null, special: false, image_id: '2', sort_order: 2, has_content: false }
       ];
 
       // Mock session validation
@@ -127,7 +127,7 @@ describe('Goals Handlers', () => {
 
     it('should use explicit storylineId when provided as query param', async () => {
       const mockResults = [
-        { storyline_goal_id: 20, id: 3, distance: 300, title: 'Edoras', description: null, special: false, image_id: null, sort_order: 1 },
+        { storyline_goal_id: 20, id: 3, distance: 300, title: 'Edoras', description: null, special: false, image_id: null, sort_order: 1, has_content: false },
       ];
 
       // Mock session validation
