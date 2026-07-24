@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-07-17 · Migrations: 0001–0141 · Full DDL: `migrations/`
+> Last updated: 2026-07-24 · Migrations: 0001–0143 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -31,6 +31,8 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `push_subscriptions` | Per-device browser push subscriptions for authenticated users | 0126 |
 | `one_more_mile_sent` | Tracks which "One More Mile" nudge notifications have been sent per user per goal | 0128 |
 | `milestone_journals` | Plain-text journal entries (one per user per canonical goal), shared across storylines | 0139 |
+| `achievement_definitions` | Shared reusable badge metadata (slug, name, image, type, repeatability) registered by any feature | 0142 |
+| `user_achievement_instances` | Append-only earned-badge records with idempotency keys, shared across features | 0143 |
 
 ## Key Constraints & Invariants
 
@@ -93,6 +95,23 @@ These are rules the schema enforces or that the application layer must uphold �
 - Indexes: `idx_milestone_journals_goal_id` (fast goal-scoped reads) and `idx_milestone_journals_user_id_goal_id` (covering index for dominant lookup pattern).
 - Foreign keys cascade on user/goal deletion.
 
+### achievement_definitions
+- Added in migration `0142`. Shared across all consuming features — no feature creates its own badge-definition table.
+- `slug` is unique (indexed) and human-readable (e.g. `nazgul-outrun`, `book-fellowship-1-complete`). Consuming features reference definitions by slug when calling `awardAchievement`. Recommended slug prefix convention per feature (`book-*`, `challenge-*`, `field-guide-*`) to avoid collisions.
+- `badge_type` is a free-form string defined by consuming features (no enum/CHECK constraint at the schema layer).
+- `is_repeatable` (`0`/`1`) is enforced by the domain service, not just documentation: `awardAchievement` blocks a second award of a non-repeatable badge regardless of idempotency key.
+- `metadata` is a nullable TEXT column for feature-specific JSON metadata about the definition itself (not the earned instance).
+- This change is data-layer-only: no admin UI manages these rows. Each consuming feature manages its own definitions (via migration seed data or its own admin surface).
+
+### user_achievement_instances
+- Added in migration `0143`. Append-only: rows are **never updated or deleted** by application code, even on walk edits, walk deletes, or progress reconciliation. This is the single source of truth for both idempotency and repeat counts.
+- `UNIQUE(user_id, achievement_id, idempotency_key)` is the idempotency mechanism. Consuming features must supply a domain-meaningful key (e.g. `book_attempt:<attempt_id>`, `encounter_occurrence:<occurrence_id>`) — the same logical award event must always produce the same key so retries are safe no-ops. This caller-supplied key is stored as-is only for **repeatable** badges.
+- For **non-repeatable** definitions, `src/achievement-utils.ts`'s `awardAchievement` ignores the caller-supplied idempotency key for storage purposes and writes a fixed sentinel (`NON_REPEATABLE_IDEMPOTENCY_KEY`) instead. This makes the single `UNIQUE(user_id, achievement_id, idempotency_key)` constraint behave as `UNIQUE(user_id, achievement_id)` for those rows, so the database itself — not just the pre-insert lookup — rejects a second award even when two concurrent requests race each other using different caller-supplied keys.
+- Repeat counts (`earned_count` in `AchievementSummary`) are always derived via `COUNT(*) GROUP BY achievement_id` in `getUserAchievementSummary` — there is no mutable counter column, so counts can never drift from the underlying rows.
+- `context_metadata` is a nullable TEXT column for per-occurrence JSON context (e.g. storyline name, book title, distance at award time). It is read-only display/audit data; only `user_id`, `achievement_id`, and `earned_at` are indexed for querying.
+- `achievement_id` has no `ON DELETE CASCADE` — removing a definition (not currently supported by any UI) would orphan instances. Definitions should be soft-deleted or archived rather than hard-deleted if this becomes necessary later.
+- No standalone API routes or UI are part of this change. `src/achievement-utils.ts` exposes `awardAchievement`, `getUserAchievements`, and `getUserAchievementSummary` as a plain TypeScript module (following the `-utils.ts` convention of `auth-utils.ts`, `storyline-utils.ts`); consuming features call these directly, and endpoint/UI wiring belongs to those consuming changes.
+
 ### parties
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.
 - `leave_distance_behavior` (`keep` | `remove`): leader-updatable.
@@ -123,6 +142,8 @@ These are rules the schema enforces or that the application layer must uphold �
 | `goal_content.goal_id` → `goals.id` | CASCADE | Deleting a goal removes its authored lore entries |
 | `email_confirmation_tokens.user_id` | CASCADE | Cleanup on user deletion |
 | `admin_audit_log.admin_user_id` | **No cascade** | Audit records must survive user deletion |
+| `user_achievement_instances.user_id` | CASCADE | Standard cleanup on user deletion |
+| `user_achievement_instances.achievement_id` | **No cascade** | Definitions are not expected to be deleted; earned instances must never be silently orphaned by app-level cleanup |
 | All other user FKs | CASCADE | Standard cleanup |
 
 `content_discovery_events` intentionally has no foreign keys because those rows are best-effort analytics.
@@ -152,6 +173,8 @@ erDiagram
     users ||--o{ fellowship_invites : "invites/receives"
     users ||--o{ party_messages : "sends"
     users ||--o{ one_more_mile_sent : "receives"
+    users ||--o{ user_achievement_instances : "earns"
+    achievement_definitions ||--o{ user_achievement_instances : "defines"
     goals ||--o{ one_more_mile_sent : "targets"
     goals ||--o{ goal_content : "has lore"
     storylines ||--o{ storyline_goals : "orders"
