@@ -92,5 +92,29 @@
     "konva": "^10.3.0",
     "marked": "^18.0.6",
     "preact": "^10.29.7"
+  },
+  "overrides": {
+    "@miniflare/cache": {
+      "undici": "^5.29.0"
+    },
+    "@miniflare/core": {
+      "undici": "^5.29.0"
+    },
+    "@miniflare/durable-objects": {
+      "undici": "^5.29.0"
+    },
+    "@miniflare/html-rewriter": {
+      "undici": "^5.29.0"
+    },
+    "@miniflare/r2": {
+      "undici": "^5.29.0"
+    },
+    "@miniflare/web-sockets": {
+      "undici": "^5.29.0"
+    },
+    "babel-plugin-istanbul": {
+      "test-exclude": "^7.0.1"
+    },
+    "glob": "^11.0.0"
   }
 }
