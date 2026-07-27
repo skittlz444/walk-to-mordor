@@ -73,11 +73,11 @@ Alternative considered: returning `null` or `{ isNew: false, instanceId: 0 }`. R
 
 ### Enforce `is_repeatable` in the award service
 
-`awardAchievement` will check the definition's `is_repeatable` flag. For non-repeatable badges, if the user already has any earned instance (regardless of idempotency key), the service will return `{ instanceId: existingId, isNew: false }` without inserting a new row. The unique constraint on `(user_id, achievement_id, idempotency_key)` remains as a defense-in-depth guard for repeatable badges.
+`awardAchievement` will check the definition's `is_repeatable` flag. For non-repeatable badges, the caller-supplied idempotency key is ignored for storage purposes and replaced with a fixed sentinel (`NON_REPEATABLE_IDEMPOTENCY_KEY`) before the pre-insert lookup and the insert itself. This makes the single `UNIQUE(user_id, achievement_id, idempotency_key)` constraint behave as `UNIQUE(user_id, achievement_id)` for non-repeatable rows, so the database -- not just the pre-insert SELECT -- rejects a second award even if two concurrent requests race each other using different caller-supplied keys. If the user already has any earned instance, the service returns `{ instanceId: existingId, isNew: false }` without inserting a new row.
 
-Rationale: leaving `is_repeatable` as a display-only hint would allow a buggy caller to award a one-time badge multiple times with different idempotency keys. The service should enforce the intended behavior, not just document it.
+Rationale: leaving `is_repeatable` as a display-only hint would allow a buggy caller to award a one-time badge multiple times with different idempotency keys. The service should enforce the intended behavior at the database level, not just via an app-level pre-check that a race could slip past.
 
-Alternative considered: letting the unique constraint alone enforce it via a `UNIQUE(user_id, achievement_id)` constraint for non-repeatable badges. Rejected because it would require two different table schemas depending on repeatability, making the model harder to evolve.
+Alternative considered: letting a separate `UNIQUE(user_id, achievement_id)` constraint enforce it for non-repeatable badges. Rejected because it would require two different table schemas depending on repeatability, making the model harder to evolve. The sentinel-key approach gets the same database-enforced guarantee from the single existing constraint.
 
 ### Store per-occurrence context as JSON metadata
 
