@@ -88,7 +88,7 @@
     "@block65/webcrypto-web-push": "^1.0.2",
     "@preact/signals": "^2.11.0",
     "dompurify": "^3.4.13",
-    "hono": "^4.13.0",
+    "hono": "^4.13.2",
     "konva": "^10.3.0",
     "marked": "^18.0.9",
     "preact": "^10.29.8"
