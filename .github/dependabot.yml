@@ -47,6 +47,15 @@ updates:
     # ignore:
     #   - dependency-name: "package-name"
     #     versions: ["x.x.x"]
+
+    # wrangler 4.114.0-4.125.x contains a regression where wrangler dev
+    # fatally exits on a recoverable workerd crash, killing the E2E
+    # webServer (cloudflare/workers-sdk#14926). Pinned to 4.113.0 in
+    # package.json; ignore only the broken window so releases with the
+    # fix (4.126.0+, workers-sdk#15252) are still proposed.
+    ignore:
+      - dependency-name: "wrangler"
+        versions: [">=4.114.0 <4.126.0"]
   
   # GitHub Actions dependencies
   - package-ecosystem: "github-actions"
