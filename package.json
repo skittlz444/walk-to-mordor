@@ -44,7 +44,7 @@
     "jest": "^30.5.0",
     "jest-environment-miniflare": "^2.14.4",
     "jest-junit": "^17.0.0",
-    "pnpm": "^11.25.0",
+    "pnpm": "^12.3.1",
     "sharp": "^0.35.4",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
