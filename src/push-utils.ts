@@ -1,13 +1,12 @@
 import type { PushMessage as WebPushMessage, PushSubscription as WebPushSubscription, VapidKeys } from '@block65/webcrypto-web-push';
 import type { DbClient } from './db';
 
-export interface PushPayload {
-  [key: string]: string | undefined;
+export type PushPayload = {
   title: string;
   body: string;
   url?: string;
   icon?: string;
-}
+} & Record<string, string>;
 
 export interface PushSubscriptionKeys {
   p256dh: string;
