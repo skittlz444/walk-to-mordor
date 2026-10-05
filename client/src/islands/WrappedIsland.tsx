@@ -1,5 +1,6 @@
 import { useSignal, useComputed } from '@preact/signals';
 import { useEffect, useRef, useCallback } from 'preact/hooks';
+import type { TargetedEvent } from 'preact';
 import { isAdmin, storeInitialized, isAuthenticated } from '../stores/appStore';
 import { fetchWrappedStats, type WrappedData, type WrappedMilestone } from '../utils/wrapped';
 
@@ -16,14 +17,14 @@ function WrappedMilestoneImage({ m }: { m: WrappedMilestone }) {
     highResLoaded.value = true;
   };
 
-  const handleThumbError = (e: preact.JSX.TargetedEvent<HTMLImageElement, Event>) => {
+  const handleThumbError = (e: TargetedEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget as HTMLImageElement;
     if (!img.src.endsWith('0-thumb.webp')) {
       img.src = '/img/thumbs/0-thumb.webp';
     }
   };
 
-  const handleHighResError = (e: preact.JSX.TargetedEvent<HTMLImageElement, Event>) => {
+  const handleHighResError = (e: TargetedEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget as HTMLImageElement;
     if (!img.src.endsWith('0.webp')) {
       img.src = '/img/highres/0.webp';
