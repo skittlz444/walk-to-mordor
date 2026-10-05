@@ -1,5 +1,6 @@
 import { useSignal, useComputed } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
+import type { TargetedEvent } from 'preact';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import type { Goal } from '../types/goal';
@@ -340,7 +341,7 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, lo
     }
   };
 
-  const handleOverlayClick = (e: preact.JSX.TargetedEvent<HTMLDivElement, MouseEvent>) => {
+  const handleOverlayClick = (e: TargetedEvent<HTMLDivElement, MouseEvent>) => {
     if ((e.target as HTMLElement).classList.contains('modal-overlay')) {
       onClose();
     }
@@ -350,7 +351,7 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, lo
     highResLoaded.value = true;
   };
 
-  const handleThumbError = (e: preact.JSX.TargetedEvent<HTMLImageElement, Event>) => {
+  const handleThumbError = (e: TargetedEvent<HTMLImageElement, Event>) => {
     const img = e.target as HTMLImageElement;
     if (thumbFormat.value === 'webp') {
       thumbFormat.value = 'jpg';
@@ -360,7 +361,7 @@ export function GoalModal({ goal, currentDistance, isCongratulations = false, lo
     }
   };
 
-  const handleHighResError = (e: preact.JSX.TargetedEvent<HTMLImageElement, Event>) => {
+  const handleHighResError = (e: TargetedEvent<HTMLImageElement, Event>) => {
     const img = e.target as HTMLImageElement;
     if (highResFormat.value === 'webp') {
       highResFormat.value = 'jpg';
