@@ -1,21 +1,4 @@
 {
 	"servers": {
-		"microsoft/playwright-mcp": {
-			"type": "stdio",
-			"command": "${workspaceFolder}/.vscode/run-mcp.sh",
-			"args": [
-				"-y",
-				"@playwright/mcp@latest"
-			]
-		},
-		"cloudflare": {
-			"type": "stdio",
-			"command": "${workspaceFolder}/.vscode/run-mcp.sh",
-			"args": [
-				"-y",
-				"mcp-remote",
-				"https://docs.mcp.cloudflare.com/mcp"
-			]
-		}
 	}
 }
