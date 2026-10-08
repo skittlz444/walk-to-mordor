@@ -4,8 +4,8 @@
 
 ## Workflow
 
-1. **Generate** each prompt at 1024×1024 (current generator limit).
-2. **Pass reference images** for style adherence (max 3) — actual files are `.webp` (skill doc says `.jpg`; stale):
+1. **Generate** each prompt at **768×768 with z-image turbo** (this project's badge generator).
+2. **Pass reference images** for style adherence if the generator supports image conditioning (max 3) — actual files are `.webp` (skill doc says `.jpg`; stale):
    - `public/img/highres/2.webp` — warm golden light, stone bridge, soft reflections
    - `public/img/highres/30.webp` — elven ruins, misty atmosphere, small figures for scale
    - `public/img/highres/28.webp` — rider in forest, dappled light, green/gold harmony

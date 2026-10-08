@@ -86,7 +86,7 @@ Seed via `migrations/0XXX_seed_initial_badges.sql` — `INSERT INTO achievement_
 
 ### Badge image prompts — COMPLETE
 
-Full ready-to-use prompts for all 9 badges are in [`badge-image-prompts.md`](./badge-image-prompts.md) — each 116–127 words (limit 200), structured as style prefix → scene → atmosphere → characters → technical suffix per the skill. That file also contains: the generation workflow (1024×1024, reference images), exact `resize-webp.js` commands (including the `--targetKB 0` gotcha — default 20 KB target silently degrades main-image quality), output paths (`public/img/achievements/<slug>.webp` @512px + `<slug>-thumb.webp` @200px <20KB), and a character-accuracy validation table checked against in-repo goal descriptions.
+Full ready-to-use prompts for all 9 badges are in [`badge-image-prompts.md`](./badge-image-prompts.md) — each 116–127 words (limit 200), structured as style prefix → scene → atmosphere → characters → technical suffix per the skill. That file also contains: the generation workflow (768×768 via z-image turbo, reference images), exact `resize-webp.js` commands (including the `--targetKB 0` gotcha — default 20 KB target silently degrades main-image quality), output paths (`public/img/achievements/<slug>.webp` @512px + `<slug>-thumb.webp` @200px <20KB), and a character-accuracy validation table checked against in-repo goal descriptions.
 
 ### Changed tasks groups (add to change's tasks.md during implementation)
 - **5. Badge catalog seeding** — migration with 9 definitions; Jest for seed idempotency.
