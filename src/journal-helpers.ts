@@ -395,31 +395,6 @@ export async function deleteJournalEntry(
 }
 
 /**
- * Determine if the viewer should be able to read a specific friend's journal entry.
- * Rules:
- * 1. Must be accepted friends
- * 2. If milestone previews are locked, viewer must also have reached the goal
- * 3. If milestone previews are enabled, friendship alone is sufficient
- */
-export async function canReadFriendEntry(
-  db: DbClient,
-  viewerId: number,
-  authorId: number,
-  goalId: number,
-): Promise<boolean> {
-  // Check friendship
-  const areFriends = await areAcceptedFriends(db, viewerId, authorId);
-  if (!areFriends) return false;
-
-  // Check preview preference
-  const previewsEnabled = await getMilestonePreviewsEnabled(db, viewerId);
-  if (previewsEnabled) return true;
-
-  // Previews locked: viewer must have reached the goal
-  return hasUserReachedGoal(db, viewerId, goalId);
-}
-
-/**
  * Compute the full permission state for a viewer on a goal.
  * Does NOT require friendship checks for canWrite/canEditOwn/canDeleteOwn.
  * canReadFriends is computed from whether the viewer has any accepted friends.
