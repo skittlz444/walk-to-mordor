@@ -86,23 +86,11 @@ describe('mapStore', () => {
   });
 
   describe('initial state', () => {
-    it('userProgress starts as null', () => {
+    it('starts with default values for all signals', () => {
       expect(userProgress.value).toBeNull();
-    });
-
-    it('milestones starts as empty array', () => {
       expect(milestones.value).toEqual([]);
-    });
-
-    it('mapViewState starts with default values', () => {
       expect(mapViewState.value).toEqual({ x: 0, y: 0, scale: 1.0 });
-    });
-
-    it('loadingState starts as idle', () => {
       expect(loadingState.value).toBe('idle');
-    });
-
-    it('error starts as null', () => {
       expect(error.value).toBeNull();
     });
   });

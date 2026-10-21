@@ -61,39 +61,15 @@ describe('appStore', () => {
   });
 
   describe('initial state', () => {
-    it('userId starts as null', () => {
+    it('starts with default values for all signals', () => {
       expect(userId.value).toBeNull();
-    });
-
-    it('username starts as empty string', () => {
       expect(username.value).toBe('');
-    });
-
-    it('avatarId starts as null', () => {
       expect(avatarId.value).toBeNull();
-    });
-
-    it('isAdmin starts as false', () => {
       expect(isAdmin.value).toBe(false);
-    });
-
-    it('showFutureGoalsUnlocked starts as false', () => {
       expect(showFutureGoalsUnlocked.value).toBe(false);
-    });
-
-    it('defaultViewMap starts as false', () => {
       expect(defaultViewMap.value).toBe(false);
-    });
-
-    it('totalDistance starts as null', () => {
       expect(totalDistance.value).toBeNull();
-    });
-
-    it('storeInitialized starts as false', () => {
       expect(storeInitialized.value).toBe(false);
-    });
-
-    it('storeError starts as null', () => {
       expect(storeError.value).toBeNull();
     });
   });

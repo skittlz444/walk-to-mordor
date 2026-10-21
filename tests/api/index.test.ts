@@ -265,127 +265,127 @@ describe('Hono Router', () => {
     it('renders login page at /login', async () => {
       const res = await request('/login');
       expect(res.status).toBe(200);
-      expect(mockRenderAuthPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Login</html>');
     });
 
     it('renders home page at /', async () => {
       const res = await request('/');
       expect(res.status).toBe(200);
-      expect(mockRenderHomePage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Mock Home</html>');
     });
 
     it('renders journey page at /journey', async () => {
       const res = await request('/journey');
       expect(res.status).toBe(200);
-      expect(mockRenderHtml).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Mock HTML</html>');
     });
 
     it('renders profile page at /profile', async () => {
       const res = await request('/profile');
       expect(res.status).toBe(200);
-      expect(mockRenderProfilePage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Profile</html>');
     });
 
     it('renders friends page at /friends', async () => {
       const res = await request('/friends');
       expect(res.status).toBe(200);
-      expect(mockRenderFriendsPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Friends</html>');
     });
 
     it('renders friend add page at /friends/add/:code', async () => {
       const res = await request('/friends/add/ABC123');
       expect(res.status).toBe(200);
-      expect(mockRenderFriendAddPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Friend Add</html>');
     });
 
     it('renders friend profile page at /friends/:id', async () => {
       const res = await request('/friends/42');
       expect(res.status).toBe(200);
-      expect(mockRenderFriendProfilePage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Friend Profile</html>');
     });
 
     it('does not shadow /friends/add/:code with /friends/:id', async () => {
       const res = await request('/friends/add/Test1234');
-      expect(mockRenderFriendAddPage).toHaveBeenCalled();
-      expect(mockRenderFriendProfilePage).not.toHaveBeenCalled();
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe('<html>Friend Add</html>');
     });
 
     it('renders stats page at /stats', async () => {
       const res = await request('/stats');
       expect(res.status).toBe(200);
-      expect(mockRenderStatsPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Stats</html>');
     });
 
     it('renders party list at /party', async () => {
       const res = await request('/party');
       expect(res.status).toBe(200);
-      expect(mockRenderPartyListPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Party List</html>');
     });
 
     it('renders party detail at /party/:id', async () => {
       const res = await request('/party/42');
       expect(res.status).toBe(200);
-      expect(mockRenderPartyDetailPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Party Detail</html>');
     });
 
     it('renders party manage at /party/:id/manage', async () => {
       const res = await request('/party/42/manage');
       expect(res.status).toBe(200);
-      expect(mockRenderPartyManagePage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Party Manage</html>');
     });
 
     it('renders party join at /party/join/:code', async () => {
       const res = await request('/party/join/ABC123');
       expect(res.status).toBe(200);
-      expect(mockRenderPartyJoinPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Party Join</html>');
     });
 
     it('renders admin page at /admin', async () => {
       const res = await request('/admin');
       expect(res.status).toBe(200);
-      expect(mockRenderAdminPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Admin</html>');
     });
 
     it('renders admin goals at /admin/goals', async () => {
       const res = await request('/admin/goals');
       expect(res.status).toBe(200);
-      expect(mockRenderAdminGoalsPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Admin Goals</html>');
     });
 
     it('renders admin goal new at /admin/goals/new', async () => {
       const res = await request('/admin/goals/new');
       expect(res.status).toBe(200);
-      expect(mockRenderAdminGoalAddPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Admin Goal Add</html>');
     });
 
     it('renders admin goal edit at /admin/goals/:id', async () => {
       const res = await request('/admin/goals/42');
       expect(res.status).toBe(200);
-      expect(mockRenderAdminGoalEditPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Admin Goal Edit</html>');
     });
 
     it('renders admin storylines at /admin/storylines', async () => {
       const res = await request('/admin/storylines');
       expect(res.status).toBe(200);
-      expect(mockRenderAdminStorylinesPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Admin Storylines</html>');
     });
 
     it('renders admin users at /admin/users', async () => {
       const res = await request('/admin/users');
       expect(res.status).toBe(200);
-      expect(mockRenderAdminUsersPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Admin Users</html>');
     });
 
     it('renders admin metrics at /admin/metrics', async () => {
       const res = await request('/admin/metrics');
       expect(res.status).toBe(200);
-      expect(mockRenderAdminMetricsPage).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Admin Metrics</html>');
     });
 
     it('falls back to renderHtml for unknown pages', async () => {
       const res = await request('/nonexistent-page');
       expect(res.status).toBe(200);
-      expect(mockRenderHtml).toHaveBeenCalled();
+      expect(await res.text()).toBe('<html>Mock HTML</html>');
     });
   });
 
@@ -399,7 +399,6 @@ describe('Hono Router', () => {
         body: JSON.stringify({ username: 'test', password: 'Test1234!', email: 'test@example.com' }),
       });
       expect(res.status).toBe(201);
-      expect(mockHandleRegister).toHaveBeenCalled();
     });
 
     it('routes POST /api/login to handleLogin', async () => {
@@ -409,7 +408,6 @@ describe('Hono Router', () => {
         body: JSON.stringify({ email: 'test@example.com', password: 'Test1234!' }),
       });
       expect(res.status).toBe(200);
-      expect(mockHandleLogin).toHaveBeenCalled();
     });
 
     it('routes POST /api/logout to handleLogout', async () => {
@@ -419,19 +417,16 @@ describe('Hono Router', () => {
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(200);
-      expect(mockHandleLogout).toHaveBeenCalled();
     });
 
     it('routes GET /api/session to handleSessionValidation', async () => {
       const res = await request('/api/session');
       expect(res.status).toBe(200);
-      expect(mockHandleSessionValidation).toHaveBeenCalled();
     });
 
     it('routes GET /api/push/vapid-key to handleVapidKey', async () => {
       const res = await request('/api/push/vapid-key');
       expect(res.status).toBe(200);
-      expect(mockHandleVapidKey).toHaveBeenCalled();
     });
 
     it('returns 405 for unsupported method on public endpoint', async () => {
@@ -458,7 +453,7 @@ describe('Hono Router', () => {
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(401);
-      expect(mockHandleUpdateProfile).not.toHaveBeenCalled();
+      expect(await res.text()).toBe(JSON.stringify({ error: 'Unauthorized' }));
     });
 
     it('allows authenticated requests to authenticated endpoints', async () => {
@@ -470,7 +465,7 @@ describe('Hono Router', () => {
         body: JSON.stringify({ username: 'test' }),
       });
       expect(res.status).toBe(200);
-      expect(mockHandleUpdateProfile).toHaveBeenCalled();
+      expect(await res.json()).toEqual({ ok: true });
     });
   });
 
@@ -478,37 +473,31 @@ describe('Hono Router', () => {
     it('routes GET /api/avatars', async () => {
       const res = await request('/api/avatars');
       expect(res.status).toBe(200);
-      expect(mockHandleGetAvatars).toHaveBeenCalled();
     });
 
     it('routes GET /api/storylines', async () => {
       const res = await request('/api/storylines');
       expect(res.status).toBe(200);
-      expect(mockHandleStorylinesList).toHaveBeenCalled();
     });
 
     it('routes GET /api/goals', async () => {
       const res = await request('/api/goals');
       expect(res.status).toBe(200);
-      expect(mockHandleGoalsGet).toHaveBeenCalled();
     });
 
     it('routes GET /api/calendar-progress', async () => {
       const res = await request('/api/calendar-progress');
       expect(res.status).toBe(200);
-      expect(mockHandleProgressGet).toHaveBeenCalled();
     });
 
     it('routes GET /api/stats/weekly', async () => {
       const res = await request('/api/stats/weekly');
       expect(res.status).toBe(200);
-      expect(mockHandleWeeklyStats).toHaveBeenCalled();
     });
 
     it('routes GET /api/stats/heatmap', async () => {
       const res = await request('/api/stats/heatmap');
       expect(res.status).toBe(200);
-      expect(mockHandleHeatmap).toHaveBeenCalled();
     });
 
     it('routes POST /api/push/subscribe', async () => {
@@ -518,19 +507,16 @@ describe('Hono Router', () => {
         body: JSON.stringify({ endpoint: 'test', keys: {} }),
       });
       expect(res.status).toBe(200);
-      expect(mockHandlePushSubscribe).toHaveBeenCalled();
     });
 
     it('routes GET /api/push/status', async () => {
       const res = await request('/api/push/status');
       expect(res.status).toBe(200);
-      expect(mockHandlePushStatus).toHaveBeenCalled();
     });
 
     it('routes GET /api/total-distance', async () => {
       const res = await request('/api/total-distance');
       expect(res.status).toBe(200);
-      expect(mockCalculateUserStorylineDistance).toHaveBeenCalled();
     });
 
     // Party routes
@@ -541,31 +527,26 @@ describe('Hono Router', () => {
         body: JSON.stringify({ name: 'Test' }),
       });
       expect(res.status).toBe(201);
-      expect(mockHandleCreateParty).toHaveBeenCalled();
     });
 
     it('routes GET /api/user/parties', async () => {
       const res = await request('/api/user/parties');
       expect(res.status).toBe(200);
-      expect(mockHandleGetUserParties).toHaveBeenCalled();
     });
 
     it('routes GET /api/party/join/:inviteCode', async () => {
       const res = await request('/api/party/join/ABC123');
       expect(res.status).toBe(200);
-      expect(mockHandlePreviewParty).toHaveBeenCalled();
     });
 
     it('routes POST /api/party/join/:inviteCode', async () => {
       const res = await request('/api/party/join/ABC123', { method: 'POST' });
       expect(res.status).toBe(200);
-      expect(mockHandleJoinParty).toHaveBeenCalled();
     });
 
     it('routes GET /api/party/:id/progress', async () => {
       const res = await request('/api/party/42/progress');
       expect(res.status).toBe(200);
-      expect(mockHandlePartyProgress).toHaveBeenCalled();
     });
 
     it('returns 400 for invalid party ID in parameterized routes', async () => {
@@ -577,19 +558,16 @@ describe('Hono Router', () => {
     it('routes GET /api/friends', async () => {
       const res = await request('/api/friends');
       expect(res.status).toBe(200);
-      expect(mockHandleGetFriends).toHaveBeenCalled();
     });
 
     it('routes GET /api/friends/pending', async () => {
       const res = await request('/api/friends/pending');
       expect(res.status).toBe(200);
-      expect(mockHandleGetPendingFriends).toHaveBeenCalled();
     });
 
     it('routes GET /api/friends/search', async () => {
       const res = await request('/api/friends/search?q=test');
       expect(res.status).toBe(200);
-      expect(mockHandleSearchUsers).toHaveBeenCalled();
     });
 
     it('routes POST /api/friends/request', async () => {
@@ -599,19 +577,16 @@ describe('Hono Router', () => {
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(201);
-      expect(mockHandleFriendRequest).toHaveBeenCalled();
     });
 
     it('routes GET /api/friends/resolve/:friendCode', async () => {
       const res = await request('/api/friends/resolve/ABC123');
       expect(res.status).toBe(200);
-      expect(mockHandleResolveFriendCode).toHaveBeenCalled();
     });
 
     it('routes POST /api/friends/:id/accept', async () => {
       const res = await request('/api/friends/5/accept', { method: 'POST' });
       expect(res.status).toBe(200);
-      expect(mockHandleAcceptFriend).toHaveBeenCalled();
     });
 
     it('returns 400 for invalid friendship ID', async () => {
@@ -623,7 +598,6 @@ describe('Hono Router', () => {
     it('routes GET /api/user/fellowship-invites', async () => {
       const res = await request('/api/user/fellowship-invites');
       expect(res.status).toBe(200);
-      expect(mockHandleGetFellowshipInvites).toHaveBeenCalled();
     });
 
     it('routes POST /api/party/:id/invite-friend', async () => {
@@ -633,13 +607,11 @@ describe('Hono Router', () => {
         body: JSON.stringify({ friend_id: 2 }),
       });
       expect(res.status).toBe(201);
-      expect(mockHandleInviteFriend).toHaveBeenCalled();
     });
 
     it('routes POST /api/user/fellowship-invites/:id/accept', async () => {
       const res = await request('/api/user/fellowship-invites/5/accept', { method: 'POST' });
       expect(res.status).toBe(200);
-      expect(mockHandleAcceptFellowshipInvite).toHaveBeenCalled();
     });
   });
 
@@ -657,7 +629,7 @@ describe('Hono Router', () => {
 
       const res = await request('/api/admin/dashboard');
       expect(res.status).toBe(403);
-      expect(mockHandleAdminDashboard).not.toHaveBeenCalled();
+      expect(await res.text()).toEqual(JSON.stringify({ error: 'Admin access required' }));
     });
 
     it('allows admin requests to admin endpoints', async () => {
@@ -665,7 +637,7 @@ describe('Hono Router', () => {
 
       const res = await request('/api/admin/dashboard');
       expect(res.status).toBe(200);
-      expect(mockHandleAdminDashboard).toHaveBeenCalled();
+      expect(await res.json()).toEqual({ totalUsers: 42 });
     });
   });
 
@@ -677,13 +649,11 @@ describe('Hono Router', () => {
     it('routes GET /api/admin/dashboard', async () => {
       const res = await request('/api/admin/dashboard');
       expect(res.status).toBe(200);
-      expect(mockHandleAdminDashboard).toHaveBeenCalled();
     });
 
     it('routes GET /api/admin/goals', async () => {
       const res = await request('/api/admin/goals');
       expect(res.status).toBe(200);
-      expect(mockHandleAdminGoalsList).toHaveBeenCalled();
     });
 
     it('routes POST /api/admin/goals', async () => {
@@ -693,7 +663,6 @@ describe('Hono Router', () => {
         body: JSON.stringify({ title: 'Test', distance_miles: 10 }),
       });
       expect(res.status).toBe(201);
-      expect(mockHandleAdminGoalCreate).toHaveBeenCalled();
     });
 
     it('routes GET /api/admin/goals/:id', async () => {

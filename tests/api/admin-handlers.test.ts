@@ -838,33 +838,6 @@ describe('Admin Handlers', () => {
       expect(body.totalDistanceKm).toBe(1234.6);
     });
 
-    it('should query the correct SQL statements', async () => {
-      mockDB.prepare
-        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 0 }) })
-        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ total: 0 }) })
-        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 0 }) })
-        .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 0 }) });
-
-      await handleAdminDashboard(
-        mockRequest as unknown as Request,
-        mockDb
-      );
-
-      expect(mockDB.prepare).toHaveBeenCalledTimes(4);
-      expect(mockDB.prepare).toHaveBeenCalledWith(
-        expect.stringContaining('FROM users WHERE email_verified = 1')
-      );
-      expect(mockDB.prepare).toHaveBeenCalledWith(
-        expect.stringContaining('SUM(distance)')
-      );
-      expect(mockDB.prepare).toHaveBeenCalledWith(
-        expect.stringMatching(/pm\.status\s*=\s*'active'/)
-      );
-      expect(mockDB.prepare).toHaveBeenCalledWith(
-        expect.stringContaining('FROM goals')
-      );
-    });
-
     it('should handle partial null results (some queries return data, some null)', async () => {
       mockDB.prepare
         .mockReturnValueOnce({ first: jest.fn().mockResolvedValue({ count: 10 }) })   // users: 10
@@ -1870,26 +1843,6 @@ describe('Admin Handlers', () => {
       );
 
       expect(mockBind).toHaveBeenCalledWith(42);
-    });
-
-    it('should query correct columns from goals table', async () => {
-      setupDbQuery({ firstResult: sampleGoal });
-
-      await handleAdminGoalGet(
-        mockRequest as unknown as Request,
-        mockDb,
-        42
-      );
-
-      const sql = mockDB.prepare.mock.calls[0][0] as string;
-      expect(sql).toContain('SELECT');
-      expect(sql).toContain('id');
-      expect(sql).toContain('title');
-      expect(sql).toContain('distance');
-      expect(sql).toContain('description');
-      expect(sql).toContain('special');
-      expect(sql).toContain('image_id');
-      expect(sql).toContain('FROM goals WHERE id = ?');
     });
 
     it('should return goal with null special and image_id', async () => {

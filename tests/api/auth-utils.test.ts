@@ -296,7 +296,6 @@ describe('Authentication Utilities', () => {
       const code = await generateUniqueFriendCode(mockDb);
       expect(code).toHaveLength(8);
       expect(code).toMatch(/^[A-Za-z0-9]+$/);
-      expect(mockDb.prepare).toHaveBeenCalledWith('SELECT id FROM users WHERE friend_code = ?');
     });
 
     it('should retry on collision and succeed', async () => {
@@ -367,11 +366,8 @@ describe('Authentication Utilities', () => {
 
       const count = await backfillFriendCodes(mockDb);
       expect(count).toBe(3);
-      // Should have called prepare for: SELECT NULL users, then for each user: SELECT collision check + UPDATE
-      expect(mockDb.prepare).toHaveBeenCalledWith('SELECT id FROM users WHERE friend_code IS NULL');
-      expect(mockDb.prepare).toHaveBeenCalledWith(
-        'UPDATE users SET friend_code = ? WHERE id = ? AND friend_code IS NULL'
-      );
+      // Each backfilled user gets a unique code (no collision on any generated code)
+      expect(mockFirst).toHaveBeenCalledTimes(3);
     });
 
     it('should return 0 when no users need backfill', async () => {

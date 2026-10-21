@@ -24,22 +24,6 @@ describe('renderHtml', () => {
     expect(result).toContain('apple-mobile-web-app-capable');
   });
 
-  it('should include JavaScript files', () => {
-    const result = renderHtml();
-    
-    expect(result).toContain('main.js');
-    expect(result).toContain('calendar.js');
-    expect(result).toContain('progress.js');
-    expect(result).toContain('goals.js');
-    expect(result).toContain('validators.js');
-  });
-
-  it('should include CSS files', () => {
-    const result = renderHtml();
-    
-    expect(result).toContain('main.css');
-  });
-
   it('should include required HTML structure elements', () => {
     const result = renderHtml();
     

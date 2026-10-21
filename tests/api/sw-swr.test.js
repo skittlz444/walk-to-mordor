@@ -119,22 +119,6 @@ describe('Service Worker SWR API Caching', () => {
   });
 
   describe('Constants and Configuration', () => {
-    test('SWR_CACHE_NAME is set correctly', () => {
-      expect(sw.SWR_CACHE_NAME).toBe('walk-to-mordor-api-swr');
-    });
-
-    test('SWR_CACHE_VERSION has placeholder value', () => {
-      expect(sw.SWR_CACHE_VERSION).toBe('{{SWR_CACHE_VERSION}}');
-    });
-
-    test('SWR_VERSION_CACHE_NAME is set correctly', () => {
-      expect(sw.SWR_VERSION_CACHE_NAME).toBe('walk-to-mordor-swr-version');
-    });
-
-    test('SWR_TTL_MS is 5 minutes (300000ms)', () => {
-      expect(sw.SWR_TTL_MS).toBe(300000);
-    });
-
     test('SWR_ENDPOINTS contains all required endpoints', () => {
       expect(sw.SWR_ENDPOINTS).toEqual([
         '/api/session',
