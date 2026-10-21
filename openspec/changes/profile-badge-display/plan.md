@@ -2,6 +2,17 @@
 
 > **Note:** This is an implementation/assessment plan companion for the `profile-badge-display` change — not a core OpenSpec artifact (those are `proposal.md`, `design.md`, `specs/`, `tasks.md`). Saved here so future sessions can find it alongside the change it implements. Generated 2026-10-08.
 
+## Status update (2026-10-21)
+
+This plan was written against `main` @ `34ae53d`; the branch was rebased onto `main` @ `f9d5cd1` after PR #526 (`chore: repo cleanup and test-hygiene pass`) merged. The assessment section below is kept as the historical snapshot — re-read it with these updates:
+
+- **`tsc` is fixed.** `src/env.d.ts` declares `RESEND_API_KEY`; `npx tsc --noEmit` and `wrangler types --check --strict-vars=false` are now CI gates. `npm run check` works.
+- **Housekeeping is done** (PR #526): dead `.agent/` and `_bmad/core/skills` trees removed, unused deps (`supertest`, `pnpm`, `jest-environment-miniflare`) dropped, one-off scripts/screenshots/stale lockfile removed, 45 MB map sources untracked, admin handlers split, client validators generated, duplicated tests pruned.
+- **Current suite sizes** (not the 1,378/49 above): Jest 43 suites / 1,302 tests, Vitest 52 / 787, Playwright 202 Chromium (0 skipped), legacy Jest 4 / 104.
+- **Still true:** `src/achievement-utils.ts` and migrations `0142`/`0143` exist and were deliberately kept for this UI; zero achievement definitions are seeded and nothing awards badges yet.
+- **Not started:** `tasks.md` is still 0/15; no badge code, seeds, award hook, or images have been implemented. The badge catalog and image prompts in this file remain the plan of record.
+- **Before implementing:** run `npm ci` in the worktree — its `node_modules` predates the PR #526 dependency changes.
+
 ## Problem
 Walk-to-Mordor has been idle on feature work; 11 OpenSpec change proposals sit unimplemented. Repo needs a state assessment, housekeeping, and a chosen next feature stream.
 
