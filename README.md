@@ -69,8 +69,8 @@ Track your real-world exercise progress as you virtually follow in the footsteps
 ## Getting Started
 
 ### Prerequisites
-- Node.js 20+
-- pnpm (recommended) or npm
+- Node.js 22+
+- npm
 - Cloudflare account (for deployment)
 
 ### Local Development
