@@ -335,14 +335,21 @@ test.describe('Goals Functionality', () => {
       // No congratulations popup, continue
     }
     
-    // Try to find any clickable goal - prioritize completed goals if available
-    let goalToClick = page.locator('.completed-goal').first();
+    // Find a completed goal — the large distance fixture should have completed
+    // at least one goal.
+    const goalToClick = page.locator('.completed-goal').first();
     const completedCount = await page.locator('.completed-goal').count();
-    
-    if (completedCount === 0) {
-      // If no completed goals, try any clickable goal
-      goalToClick = page.locator('#goals-list li[role="button"], #goals-list li').first();
-    }
+    expect(completedCount, 'large logged distance should have completed at least one goal').toBeGreaterThan(0);
+
+    // The completed goal must actually be struck through (computed style,
+    // not just the class name).
+    const decorationLine = await goalToClick.evaluate(
+      (el) => window.getComputedStyle(el).textDecorationLine,
+    );
+    expect(
+      decorationLine,
+      `completed goal should be struck through, got text-decoration-line: "${decorationLine}"`,
+    ).toContain('line-through');
     
     // Double-check no popups are blocking the click
     try {
@@ -681,30 +688,48 @@ test.describe('Goals Functionality', () => {
 
     test('Next goal displays progress bar with correct structure', async ({ page }) => {
       await page.waitForLoadState('domcontentloaded');
-      
+
+      // Establish known progress: log a fixed distance so the next goal's
+      // segment progress is strictly positive (a 0% fill would mean the
+      // progress calculation failed).
+      await createTestEvent(page, 7.31);
+      await page.waitForLoadState('domcontentloaded');
+
       // Wait for goals to load
       await waitForGoalsLoaded(page);
-      
+
       // Get first upcoming goal
       const firstUpcomingGoal = page.locator('.upcoming-goal.next-goal').first();
       const nextGoalExists = await firstUpcomingGoal.count() > 0;
-      
+
       expect(nextGoalExists).toBe(true);
-      
+
       // Progress bar should exist inside next goal (AC2)
       const progressTrack = firstUpcomingGoal.locator('.goal-progress-track');
       await expect(progressTrack).toBeVisible();
-      
+
       // Progress fill should exist
       const progressFill = progressTrack.locator('.goal-progress-fill');
       await expect(progressFill).toBeVisible();
 
-      // Fill width is set as a percentage of the track (0-100%)
+      // Fill width is a percentage of the track, strictly > 0 for the
+      // known-progress fixture, and at most 100%.
+      await expect
+        .poll(
+          async () => {
+            const fill = page.locator('.upcoming-goal.next-goal .goal-progress-fill').first();
+            const width = await fill.evaluate((el) => el.style.width);
+            const match = width.match(/^(\d+(?:\.\d+)?)%$/);
+            return match ? parseFloat(match[1]) : -1;
+          },
+          { timeout: 10000, message: 'next-goal progress fill should reach a positive percentage' },
+        )
+        .toBeGreaterThan(0);
       const width = await progressFill.evaluate(el => el.style.width);
       const match = width.match(/^(\d+(?:\.\d+)?)%$/);
       expect(match, `progress fill width should be a percentage, got "${width}"`).not.toBeNull();
       const pct = parseFloat(match[1]);
-      expect(pct).toBeGreaterThanOrEqual(0);
+      expect(pct).toBeGreaterThan(0);
       expect(pct).toBeLessThanOrEqual(100);
     });
 

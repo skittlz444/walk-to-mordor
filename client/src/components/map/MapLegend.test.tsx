@@ -33,6 +33,6 @@ describe('MapLegend', () => {
     const { container } = render(
       <MapLegend members={[]} partyName="Test Party" />
     );
-    expect(container.textContent).toBe('');
+    expect(container.firstChild).toBeNull();
   });
 });

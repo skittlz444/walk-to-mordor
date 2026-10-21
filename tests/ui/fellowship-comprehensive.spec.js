@@ -218,16 +218,16 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
 
     // Leave name empty and submit
     const submitBtn = page.locator('button[type="submit"]:has-text("Create Fellowship")');
-    // Button should be disabled or form should require name
-    const isDisabled = await submitBtn.isDisabled();
-    if (!isDisabled) {
-      await submitBtn.click();
-      // Should show validation error or not navigate
-      const currentUrl = page.url();
-      expect(currentUrl).toContain('/party');
-    } else {
-      expect(isDisabled).toBeTruthy();
-    }
+    // Empty name must leave the submit button disabled/blocked.
+    await expect(submitBtn).toBeDisabled();
+
+    // Defense in depth: even a forced click on the disabled button must not
+    // create a party — no new entry may appear in the list.
+    const partyNames = page.locator('.party-list-item__name');
+    const before = await partyNames.count();
+    await submitBtn.click({ force: true });
+    await page.waitForTimeout(500);
+    expect(await partyNames.count()).toBe(before);
   });
 
   test('Join Fellowship by invite code with preview', async ({ page, request, leader1Token, member1Token }) => {
@@ -758,6 +758,13 @@ test.describe('Story 3-8: Activity Feed', () => {
     const items = page.locator('.party-activity-item');
     await expect(items.first()).toBeVisible({ timeout: 15000 });
     expect(await items.count()).toBeGreaterThanOrEqual(2);
+
+    // The entries must actually name both members, not just exist.
+    const feedText = await page.locator('.party-activity-feed').textContent();
+    const member1Name = member1Token.replace('TEST_MOCK_TOKEN_', '');
+    const member2Name = member2Token.replace('TEST_MOCK_TOKEN_', '');
+    expect(feedText).toContain(member1Name);
+    expect(feedText).toContain(member2Name);
   });
 
   test('Kicked member sees 403 error or redirect', async ({ page, request, leader1Token, member1Token }) => {
@@ -1015,11 +1022,20 @@ test.describe('Cross-Story: Multi-Fellowship Interactions', () => {
     const progress = await getPartyProgress(request, leader1Token, party.id);
     const expectedName = member1Token.replace('TEST_MOCK_TOKEN_', '');
     const target = progress.members.find(m => m.display_name === expectedName);
-    if (target) {
-      await request.post(`${BASE_URL}/api/party/${party.id}/kick/${target.user_id}`, {
-        headers: { Authorization: `Bearer ${leader1Token}`, 'Content-Type': 'application/json' },
-      });
-    }
+    expect(target, `member1 not found in party progress: ${JSON.stringify(progress.members)}`).toBeTruthy();
+
+    await request.post(`${BASE_URL}/api/party/${party.id}/kick/${target.user_id}`, {
+      headers: { Authorization: `Bearer ${leader1Token}`, 'Content-Type': 'application/json' },
+    });
+
+    // The kick must be observable: a subsequent progress fetch must no longer
+    // list member1 as an active member (absent, or marked kicked/left).
+    const progressAfter = await getPartyProgress(request, leader1Token, party.id);
+    const kickedMember = progressAfter.members.find(m => m.display_name === expectedName);
+    expect(
+      !kickedMember || kickedMember.status !== 'active',
+      `member1 still active after kick: ${JSON.stringify(progressAfter.members)}`,
+    ).toBeTruthy();
 
     // Visit detail - should show kicked member status or only 2 active
     await loginAs(page, leader1Token, `/party/${party.id}`);

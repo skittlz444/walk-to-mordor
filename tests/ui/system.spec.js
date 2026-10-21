@@ -39,6 +39,9 @@ test.describe('System & Network', () => {
         // Unknown routes resolve either to the login redirect or to the
         // authenticated in-app shell — never an unstyled error/crash page
         const url = page.url();
+        // Positive URL assertion: the SPA fallback keeps the original path,
+        // and unauthenticated users are sent to /login — never elsewhere.
+        expect(url.includes('/non-existent-page') || url.includes('/login')).toBe(true);
         if (url.includes('/login')) {
             await expect(page.locator('.auth-container')).toBeVisible();
         } else {

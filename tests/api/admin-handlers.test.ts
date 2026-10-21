@@ -213,8 +213,8 @@ describe('Admin Handlers', () => {
       expect(result.valid).toBe(false);
       if (!result.valid) {
         expect(result.error.status).toBe(403);
-        // 403 response must be JSON (port of unique E2E assertion from tests/ui/admin.spec.js)
-        expect(result.error.headers.get('content-type')).toContain('application/json');
+        // Content-type is asserted (exactly) in the dedicated
+        // "should return JSON (not HTML) in 403 response body" test below.
         const body = await result.error.json();
         expect(body.error).toBe('Admin access required');
       }

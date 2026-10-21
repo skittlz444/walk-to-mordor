@@ -99,6 +99,7 @@ Located in `tests/ui/`:
   - Goal completion scenarios
   
 - **`tests/ui/progress.spec.js`** - Walking activity management
+  *(historical — superseded; UI edit/delete coverage restored in `tests/ui/walk-edit-delete.spec.js`)*
   - Event creation, editing, and deletion
   - Distance logging
   - Progress updates

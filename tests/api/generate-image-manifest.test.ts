@@ -48,6 +48,14 @@ describe('generate-image-manifest.js', () => {
       expect(manifest.images).toHaveLength(webpFiles.length);
     });
 
+    it('equals the exact sorted slug list of public/img/highres/*.webp', () => {
+      const expectedSlugs = webpFiles
+        .map((f) => f.replace(/\.webp$/, ''))
+        .sort((a: string, b: string) => a.localeCompare(b));
+      // Exact comparison: same slugs, same order, nothing extra.
+      expect(manifest.images).toEqual(expectedSlugs);
+    });
+
     it('lists slugs without file extensions, sorted', () => {
       const sorted = [...manifest.images].sort((a: string, b: string) => a.localeCompare(b));
       expect(manifest.images).toEqual(sorted);

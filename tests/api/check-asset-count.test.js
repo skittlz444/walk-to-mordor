@@ -190,6 +190,35 @@ describe('check-asset-count', () => {
     });
   });
 
+  describe('summary formatters', () => {
+    const {
+      buildMarkdownSummary,
+      buildTerminalOutput,
+      WARN_THRESHOLD,
+      FAIL_THRESHOLD,
+    } = require('../../.github/scripts/check-asset-count.js');
+
+    const cases = [
+      { status: 'warn', total: 16000, exceeded: '⚠️ Exceeded', mdLabel: '⚠️ Warning', termLabel: 'WARNING' },
+      { status: 'fail', total: 19000, exceeded: '❌ Exceeded', mdLabel: '❌ Fail', termLabel: 'FAIL' },
+    ];
+
+    it.each(cases)('buildMarkdownSummary marks the $status status and the exceeded threshold', (c) => {
+      const md = buildMarkdownSummary(c.total, [{ name: 'img', count: c.total }], c.status, 'public');
+      expect(md).toContain(c.mdLabel);
+      expect(md).toContain(`**Total files in \`public/\`:** ${new Intl.NumberFormat('en-US').format(c.total)}`);
+      // The threshold row for the breached limit is annotated as exceeded.
+      expect(md).toContain(c.exceeded);
+    });
+
+    it.each(cases)('buildTerminalOutput marks the $status status and the threshold values', (c) => {
+      const out = buildTerminalOutput(c.total, [{ name: 'img', count: c.total }], c.status, 'public');
+      expect(out).toContain(c.termLabel);
+      expect(out).toContain(`Warn threshold: ${new Intl.NumberFormat('en-US').format(WARN_THRESHOLD)}`);
+      expect(out).toContain(`Fail threshold: ${new Intl.NumberFormat('en-US').format(FAIL_THRESHOLD)}`);
+    });
+  });
+
   describe('main (integration)', () => {
     let originalArgv;
     let originalEnv;

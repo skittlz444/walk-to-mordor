@@ -57,6 +57,10 @@ async function waitForMapReady(page) {
 }
 
 test.describe('Waypoint Detail Popup - Functional Tests', () => {
+  // Desktop-only: the app renders `.waypoint-sheet` instead of `.waypoint-popup`
+  // at mobile widths (e.g. Mobile Chrome's Pixel 5).
+  test.use({ viewport: { width: 1280, height: 720 } });
+
   test.beforeEach(async ({ page, authToken }) => {
     await page.addInitScript((token) => {
       localStorage.setItem('sessionToken', token);

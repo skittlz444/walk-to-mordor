@@ -399,6 +399,7 @@ describe('Hono Router', () => {
         body: JSON.stringify({ username: 'test', password: 'Test1234!', email: 'test@example.com' }),
       });
       expect(res.status).toBe(201);
+      expect(await res.json()).toEqual({ ok: true });
     });
 
     it('routes POST /api/login to handleLogin', async () => {
@@ -408,6 +409,7 @@ describe('Hono Router', () => {
         body: JSON.stringify({ email: 'test@example.com', password: 'Test1234!' }),
       });
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
     });
 
     it('routes POST /api/logout to handleLogout', async () => {
@@ -417,16 +419,19 @@ describe('Hono Router', () => {
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
     });
 
     it('routes GET /api/session to handleSessionValidation', async () => {
       const res = await request('/api/session');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ valid: true });
     });
 
     it('routes GET /api/push/vapid-key to handleVapidKey', async () => {
       const res = await request('/api/push/vapid-key');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ key: 'test-key' });
     });
 
     it('returns 405 for unsupported method on public endpoint', async () => {
@@ -473,31 +478,37 @@ describe('Hono Router', () => {
     it('routes GET /api/avatars', async () => {
       const res = await request('/api/avatars');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ avatars: [] });
     });
 
     it('routes GET /api/storylines', async () => {
       const res = await request('/api/storylines');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ storylines: [] });
     });
 
     it('routes GET /api/goals', async () => {
       const res = await request('/api/goals');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ goals: [] });
     });
 
     it('routes GET /api/calendar-progress', async () => {
       const res = await request('/api/calendar-progress');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ entries: [] });
     });
 
     it('routes GET /api/stats/weekly', async () => {
       const res = await request('/api/stats/weekly');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ stats: {} });
     });
 
     it('routes GET /api/stats/heatmap', async () => {
       const res = await request('/api/stats/heatmap');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ heatmap: [] });
     });
 
     it('routes POST /api/push/subscribe', async () => {
@@ -507,16 +518,19 @@ describe('Hono Router', () => {
         body: JSON.stringify({ endpoint: 'test', keys: {} }),
       });
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
     });
 
     it('routes GET /api/push/status', async () => {
       const res = await request('/api/push/status');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ subscribed: false });
     });
 
     it('routes GET /api/total-distance', async () => {
       const res = await request('/api/total-distance');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ totalDistance: 10, rawTotalDistance: 10, activeStoryline: null });
     });
 
     // Party routes
@@ -527,26 +541,31 @@ describe('Hono Router', () => {
         body: JSON.stringify({ name: 'Test' }),
       });
       expect(res.status).toBe(201);
+      expect(await res.json()).toEqual({ id: 1 });
     });
 
     it('routes GET /api/user/parties', async () => {
       const res = await request('/api/user/parties');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ parties: [] });
     });
 
     it('routes GET /api/party/join/:inviteCode', async () => {
       const res = await request('/api/party/join/ABC123');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ name: 'Party' });
     });
 
     it('routes POST /api/party/join/:inviteCode', async () => {
       const res = await request('/api/party/join/ABC123', { method: 'POST' });
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ party_id: 1 });
     });
 
     it('routes GET /api/party/:id/progress', async () => {
       const res = await request('/api/party/42/progress');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ progress: 0 });
     });
 
     it('returns 400 for invalid party ID in parameterized routes', async () => {
@@ -558,16 +577,19 @@ describe('Hono Router', () => {
     it('routes GET /api/friends', async () => {
       const res = await request('/api/friends');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ friends: [] });
     });
 
     it('routes GET /api/friends/pending', async () => {
       const res = await request('/api/friends/pending');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ pending: [] });
     });
 
     it('routes GET /api/friends/search', async () => {
       const res = await request('/api/friends/search?q=test');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ results: [] });
     });
 
     it('routes POST /api/friends/request', async () => {
@@ -577,16 +599,19 @@ describe('Hono Router', () => {
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(201);
+      expect(await res.json()).toEqual({ friendship_id: 1 });
     });
 
     it('routes GET /api/friends/resolve/:friendCode', async () => {
       const res = await request('/api/friends/resolve/ABC123');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ username: 'alice' });
     });
 
     it('routes POST /api/friends/:id/accept', async () => {
       const res = await request('/api/friends/5/accept', { method: 'POST' });
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: 'accepted' });
     });
 
     it('returns 400 for invalid friendship ID', async () => {
@@ -598,6 +623,7 @@ describe('Hono Router', () => {
     it('routes GET /api/user/fellowship-invites', async () => {
       const res = await request('/api/user/fellowship-invites');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ invites: [] });
     });
 
     it('routes POST /api/party/:id/invite-friend', async () => {
@@ -607,11 +633,19 @@ describe('Hono Router', () => {
         body: JSON.stringify({ friend_id: 2 }),
       });
       expect(res.status).toBe(201);
+      expect(await res.json()).toEqual({ id: 1 });
     });
 
     it('routes POST /api/user/fellowship-invites/:id/accept', async () => {
       const res = await request('/api/user/fellowship-invites/5/accept', { method: 'POST' });
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ party_id: 1 });
+    });
+
+    it('returns 400 for invalid goal id on public content route', async () => {
+      const res = await request('/api/goals/abc/content');
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: 'Invalid goalId' });
     });
   });
 
@@ -649,11 +683,13 @@ describe('Hono Router', () => {
     it('routes GET /api/admin/dashboard', async () => {
       const res = await request('/api/admin/dashboard');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ totalUsers: 42 });
     });
 
     it('routes GET /api/admin/goals', async () => {
       const res = await request('/api/admin/goals');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ goals: [] });
     });
 
     it('routes POST /api/admin/goals', async () => {
@@ -663,22 +699,87 @@ describe('Hono Router', () => {
         body: JSON.stringify({ title: 'Test', distance_miles: 10 }),
       });
       expect(res.status).toBe(201);
+      expect(await res.json()).toEqual({ id: 1 });
     });
 
     it('routes GET /api/admin/goals/:id', async () => {
       const res = await request('/api/admin/goals/42');
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ id: 42, title: 'Test' });
     });
 
     it('returns 400 for invalid goal ID', async () => {
       const res = await request('/api/admin/goals/abc');
       expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: 'Invalid goal ID' });
     });
 
     it('returns 404 for unknown admin API endpoint', async () => {
       const res = await request('/api/admin/nonexistent');
       expect(res.status).toBe(404);
     });
+  });
+
+  describe('Admin guard matrix (every /api/admin/* route)', () => {
+    // Every admin route registered in src/index.ts (dashboard, users, metrics,
+    // goals, goal content, storylines, image inventory).
+    const adminRoutes: Array<{ method: string; path: string }> = [
+      { method: 'GET', path: '/api/admin/dashboard' },
+      { method: 'GET', path: '/api/admin/users' },
+      { method: 'PUT', path: '/api/admin/users/1/verify' },
+      { method: 'PUT', path: '/api/admin/users/1/reset' },
+      { method: 'PUT', path: '/api/admin/users/1/admin' },
+      { method: 'DELETE', path: '/api/admin/users/1' },
+      { method: 'GET', path: '/api/admin/metrics' },
+      { method: 'GET', path: '/api/admin/metrics/leaderboard' },
+      { method: 'GET', path: '/api/admin/metrics/timeline' },
+      { method: 'GET', path: '/api/admin/goals' },
+      { method: 'POST', path: '/api/admin/goals' },
+      { method: 'GET', path: '/api/admin/goals/1' },
+      { method: 'PUT', path: '/api/admin/goals/1' },
+      { method: 'GET', path: '/api/admin/goals/1/content' },
+      { method: 'POST', path: '/api/admin/goals/1/content' },
+      { method: 'PUT', path: '/api/admin/goals/1/content/1' },
+      { method: 'DELETE', path: '/api/admin/goals/1/content/1' },
+      { method: 'GET', path: '/api/admin/storylines' },
+      { method: 'POST', path: '/api/admin/storylines' },
+      { method: 'GET', path: '/api/admin/storylines/1' },
+      { method: 'PUT', path: '/api/admin/storylines/1' },
+      { method: 'PUT', path: '/api/admin/storylines/1/goals' },
+      { method: 'GET', path: '/api/admin/images' },
+    ];
+
+    function denyWith(status: number, message: string) {
+      mockValidateAdminSession.mockResolvedValue({
+        valid: false,
+        error: new Response(JSON.stringify({ error: message }), {
+          status,
+          headers: { 'content-type': 'application/json' },
+        }),
+      });
+    }
+
+    it.each(adminRoutes)(
+      'rejects $method $path with 403 and a JSON error for non-admin sessions',
+      async ({ method, path }) => {
+        denyWith(403, 'Admin access required');
+        const res = await request(path, { method });
+        expect(res.status).toBe(403);
+        expect(res.headers.get('content-type')).toContain('application/json');
+        expect(await res.json()).toEqual({ error: 'Admin access required' });
+      },
+    );
+
+    it.each(adminRoutes)(
+      'rejects $method $path with 401 and a JSON error when no session',
+      async ({ method, path }) => {
+        denyWith(401, 'Unauthorized');
+        const res = await request(path, { method });
+        expect(res.status).toBe(401);
+        expect(res.headers.get('content-type')).toContain('application/json');
+        expect(await res.json()).toEqual({ error: 'Unauthorized' });
+      },
+    );
   });
 
   // ── Method validation ──────────────────────────────────────────────────

@@ -109,6 +109,7 @@ The cache versioning system ensures each deployment gets a fresh cache by using 
 - `tests/ui/navigation.spec.js` - Navigation and responsiveness
 - `tests/ui/profile.spec.js` - User profile management
 - `tests/ui/progress.spec.js` - Walking activity tracking
+  (historical — superseded; UI edit/delete coverage restored in `tests/ui/walk-edit-delete.spec.js`)
 - `tests/ui/system.spec.js` - System health, network, and accessibility
 
 #### Helper Files
