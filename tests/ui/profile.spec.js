@@ -233,25 +233,12 @@ test.describe('User Profile Page', () => {
         await page.click('#save-profile-btn');
 
         const saveResponse = await saveResponsePromise;
-        if (saveResponse) {
-            expect(saveResponse.status()).toBe(400);
-        }
+        // The app must issue the PUT (no native type=email gating) and the API must reject it
+        expect(saveResponse, 'PUT /api/profile should be sent for an invalid email').not.toBeNull();
+        expect(saveResponse.status()).toBe(400);
 
-        await page.waitForFunction(() => {
-            const error = document.querySelector('#profile-error');
-            const errorText = (error?.textContent || '').toLowerCase();
-
-            const emailInput = document.querySelector('#profile-email');
-            const hasTypeMismatch = emailInput instanceof HTMLInputElement
-                ? emailInput.validity.typeMismatch
-                : false;
-
-            const validationMessage = emailInput instanceof HTMLInputElement
-                ? (emailInput.validationMessage || '').toLowerCase()
-                : '';
-
-            return errorText.includes('invalid email format') || hasTypeMismatch || validationMessage.includes('email');
-        });
+        // The app surfaces the server validation error
+        await expect(page.locator('#profile-error')).toContainText(/invalid email/i);
     });
 
     test('should show error for invalid username format', async ({ page }) => {
@@ -290,27 +277,13 @@ test.describe('User Profile Page', () => {
 
         const saveResponse = await saveResponsePromise;
 
-        if (saveResponse && saveResponse.status() === 200) {
-            return;
-        }
-
+        // Contract: the API must never accept an empty update
         if (saveResponse) {
             expect(saveResponse.status()).toBe(400);
         }
 
-        await page.waitForFunction(() => {
-            const error = document.querySelector('#profile-error');
-            const errorText = (error?.textContent || '').toLowerCase();
-
-            const usernameInput = document.querySelector('#profile-username');
-            const emailInput = document.querySelector('#profile-email');
-
-            const hasNativeValidation =
-                (usernameInput instanceof HTMLInputElement && !!usernameInput.validationMessage) ||
-                (emailInput instanceof HTMLInputElement && !!emailInput.validationMessage);
-
-            return errorText.includes('at least one field') || hasNativeValidation;
-        });
+        // The app must surface an error, never report success for an empty form
+        await expect(page.locator('#profile-error')).toContainText(/at least one field/i);
     });
 
     test('should have logout button on profile page', async ({ page }) => {

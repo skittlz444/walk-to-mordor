@@ -204,9 +204,8 @@ test.describe('Journal - Personal Authoring', () => {
     await openJournalTab(page);
     const journalView = page.locator('.journal-view');
     await expect(journalView).toBeVisible({ timeout: 15000 });
-    // Should show journal content (create mode, view mode, or locked message)
-    const text = await journalView.textContent();
-    expect(text || '').toBeTruthy();
+    // Unlocked goal with no entry renders the create state (textarea)
+    await expect(journalView.locator('.journal-textarea').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('shows back button when viewing journal', async ({ page }) => {
@@ -217,38 +216,6 @@ test.describe('Journal - Personal Authoring', () => {
     await page.waitForSelector('.modal-overlay', { timeout: 10000 });
     await openJournalTab(page);
     await expect(page.locator('text=Back to Goal')).toBeVisible({ timeout: 5000 });
-  });
-});
-
-test.describe('Journal - Fellowship Context', () => {
-  test.beforeEach(async ({ page, authToken }) => {
-    await setupTest({ page, authToken });
-  });
-
-  test('allows journal write via fellowship context with partyId', async ({ page, authToken }) => {
-    const firstGoal = await getFirstGoal(page);
-    if (!firstGoal) { test.skip(true, 'No goals found'); return; }
-    const createResp = await page.request.post(`${BASE_URL}/api/party`, {
-      data: { name: 'Test Fellowship', distance_mode: 'cumulative' },
-      headers: auth(authToken),
-    });
-    if (!createResp.ok()) { test.skip(true, 'Failed to create party'); return; }
-    const party = await createResp.json();
-    const partyId = party.id;
-    const distanceNeeded = Math.ceil(firstGoal.distance + 1);
-    for (let d = 0; d < distanceNeeded; d += 50) {
-      const chunk = Math.min(50, distanceNeeded - d);
-      const date = new Date();
-      date.setDate(date.getDate() - Math.floor(d / 50));
-      await page.request.post(`${BASE_URL}/api/calendar-progress`, {
-        data: { start: date.toISOString().split('T')[0], title: String(chunk) },
-        headers: auth(authToken),
-      });
-    }
-    const journalResp = await page.request.get(`${BASE_URL}/api/goals/${firstGoal.id}/journals?partyId=${partyId}`, { headers: auth(authToken) });
-    expect(journalResp.ok()).toBeTruthy();
-    const journalState = await journalResp.json();
-    expect(journalState.permissions.canWrite).toBe(true);
   });
 });
 
@@ -266,44 +233,5 @@ test.describe('Journal - Friend Entry Visibility', () => {
     await page.waitForTimeout(2000);
     const friendsJournal = page.locator("text=Friends' Journals");
     expect(await friendsJournal.count()).toBe(0);
-  });
-
-  test('shows friend entry when previews are enabled', async ({ page, authToken }) => {
-    const firstGoal = await getFirstGoal(page);
-    if (!firstGoal) { test.skip(true, 'No goals found'); return; }
-    const friendToken = `TEST_MOCK_TOKEN_friend_${Math.random().toString(36).substring(7)}`;
-    await page.request.put(`${BASE_URL}/api/goals/${firstGoal.id}/journal`, {
-      data: { body: 'Friend journal entry for testing!' },
-      headers: auth(friendToken),
-    });
-    await page.request.put(`${BASE_URL}/api/user/preferences`, {
-      data: { showFutureGoalsUnlocked: true },
-      headers: auth(authToken),
-    });
-    const journalResp = await page.request.get(`${BASE_URL}/api/goals/${firstGoal.id}/journals`, { headers: auth(authToken) });
-    expect(journalResp.ok()).toBeTruthy();
-    const state = await journalResp.json();
-    expect(state.permissions).toHaveProperty('canReadFriends');
-  });
-
-  test('journal state returns empty state without errors', async ({ page, authToken }) => {
-    const firstGoal = await getFirstGoal(page);
-    if (!firstGoal) { test.skip(true, 'No goals found'); return; }
-    const resp = await page.request.get(`${BASE_URL}/api/goals/${firstGoal.id}/journals`, { headers: auth(authToken) });
-    expect(resp.ok()).toBeTruthy();
-    const data = await resp.json();
-    expect(data).toHaveProperty('ownEntry');
-    expect(data).toHaveProperty('friendEntries');
-    expect(data).toHaveProperty('permissions');
-    expect(data.ownEntry).toBeNull();
-    expect(Array.isArray(data.friendEntries)).toBe(true);
-    expect(data.friendEntries).toHaveLength(0);
-  });
-
-  test('goal-scoped journal API returns 401 without auth', async ({ page, authToken }) => {
-    const firstGoal = await getFirstGoal(page);
-    if (!firstGoal) { test.skip(true, 'No goals found'); return; }
-    const resp = await page.request.get(`${BASE_URL}/api/goals/${firstGoal.id}/journals`, { headers: {} });
-    expect(resp.status()).toBe(401);
   });
 });

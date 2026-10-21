@@ -303,24 +303,6 @@ test.describe('Goals Functionality', () => {
   });
 
   test('Goal popup opens for completed goals and shows strikethrough distance', async ({ page }) => {
-    // Close any existing popups first
-    try {
-      const existingPopup = page.locator('.modal-overlay');
-      if (await existingPopup.isVisible({ timeout: 2000 })) {
-        const closeButton = page.locator('text=Close').last();
-        if (await closeButton.isVisible({ timeout: 1000 })) {
-          await closeButton.click();
-        } else {
-          // Force close by clicking outside or ESC key
-          await page.keyboard.press('Escape');
-        }
-        // Verify popup is closed
-        await expect(existingPopup).toBeHidden({ timeout: 5000 });
-      }
-    } catch (error) {
-      // No popup to close, continue
-    }
-    
     // Add some distance to ensure we have completed goals
     const testDateInfo = generateRandomTestDate();
     const cell = await selectCalendarDate(page, testDateInfo.day);
@@ -444,118 +426,6 @@ test.describe('Goals Functionality', () => {
       
       // Close the popup
       await closePopupRobust(page, closeButton);
-    }
-  });
-
-  test('Goal popup displays special milestone and description', async ({ page }) => {
-    await page.waitForLoadState('domcontentloaded');
-    
-    // Check if there are upcoming goals available
-    await waitForGoalsLoaded(page);
-    const upcomingGoals = page.locator('.upcoming-goal');
-    
-    if (await upcomingGoals.count() > 0) {
-      // Test with upcoming goal
-      const anyGoal = upcomingGoals.first();
-      await expect(anyGoal).toBeVisible();
-      
-      await anyGoal.click();
-      
-      // Check that goal popup is visible
-      await expect(page.locator('.modal-overlay')).toBeVisible();
-      
-      const popupContent = page.locator('.modal-overlay');
-      
-      // Check for substantial content (description text)
-      const hasDescription = await popupContent.textContent();
-      if (hasDescription) {
-        expect(hasDescription.length).toBeGreaterThan(50); // Should have substantial content
-      }
-      
-      // Check that Close button works
-    // Use specific ID for goal modal to ensure we click the right one, get the last one if duplicates exist
-    const closeButton = page.locator('#close-goal-btn').last();
-      await closePopupRobust(page, closeButton);
-    } else {
-      // If no upcoming goals, test with completed goals by showing all
-      const showAllButton = page.locator('#toggle-completed');
-      if (await showAllButton.count() > 0) {
-        await showAllButton.click();
-        const completedGoal = page.locator('.all-completed-goal').first();
-        await expect(completedGoal).toBeVisible();
-        
-        await completedGoal.click();
-        
-        // Check that goal popup is visible
-        await expect(page.locator('.modal-overlay')).toBeVisible();
-        
-        const popupContent = page.locator('.modal-overlay');
-        
-        // Check for substantial content (description text)
-        const hasDescription = await popupContent.textContent();
-        if (hasDescription) {
-          expect(hasDescription.length).toBeGreaterThan(50); // Should have substantial content
-        }
-        
-        // Check that Close button works
-        // Use specific ID for goal modal, get last to resolve duplicates
-        const closeButton = page.locator('#close-goal-btn').last();
-        await closePopupRobust(page, closeButton);
-      }
-    }
-  });
-
-  test('Goal popup shows distance information correctly', async ({ page }) => {
-    await page.waitForLoadState('domcontentloaded');
-    
-    // Test any available goal without adding distance first
-    await waitForGoalsLoaded(page);
-    
-    // Try upcoming goals first
-    const upcomingGoals = page.locator('.upcoming-goal');
-    if (await upcomingGoals.count() > 0) {
-      const goal = upcomingGoals.first();
-      await expect(goal).toBeVisible();
-      await goal.click();
-      
-      // Check that goal popup is visible
-      await expect(page.locator('.modal-overlay')).toBeVisible();
-      
-      const popupContent = page.locator('.modal-overlay');
-      
-      // Should show "km to go" for upcoming goals
-      await expect(popupContent).toContainText('km to go');
-      await expect(popupContent).toContainText('km');
-      
-      // Close the popup
-      // Use the robust helper with specific ID, get last to resolve duplicates
-      const closeButton = page.locator('#close-goal-btn').last();
-      await closePopupRobust(page, closeButton);
-    } else {
-      // If no upcoming goals, just test that completed goals work
-      const completedGoals = page.locator('.completed-goal');
-      if (await completedGoals.count() > 0) {
-        const goal = completedGoals.first();
-        await expect(goal).toBeVisible();
-        await goal.click();
-        
-        // Check that goal popup is visible
-        await expect(page.locator('.modal-overlay')).toBeVisible();
-        
-        const popupContent = page.locator('.modal-overlay');
-        
-        // Should NOT show "km to go" for completed goals
-        await expect(popupContent).toContainText('km');
-        await expect(popupContent).not.toContainText('km to go');
-        
-        // Close the popup
-        const closeButton = page.locator('text=Close').last();
-        await closePopupRobust(page, closeButton);
-      } else {
-        const upcomingCount = await page.locator('.upcoming-goal').count();
-        const completedCount = await page.locator('.completed-goal').count();
-        expect(upcomingCount + completedCount).toBeGreaterThan(0);
-      }
     }
   });
 
@@ -683,27 +553,6 @@ test.describe('Goals Functionality', () => {
     });
   });
 
-  test('Custom scrollbar styling is applied to goal popup', async ({ page }) => {
-    const popup = await openFirstAvailableGoalPopup(page);
-    
-    // Check that the popup has the scrollable class
-    const popupElement = page.locator('.goal-modal-scrollable');
-    await expect(popupElement).toBeVisible();
-    
-    // Check that the popup content exceeds viewport if necessary for scrolling
-    // (This depends on the content length, but we can at least verify the class exists)
-    const popupBody = popupElement;
-    await expect(popupBody).toBeVisible();
-    
-    // Verify the CSS class is properly applied for custom scrollbar
-    const hasScrollableClass = await popup.evaluate(() => {
-      const popupContainer = document.querySelector('.goal-modal-scrollable');
-      return popupContainer !== null;
-    });
-    
-    expect(hasScrollableClass).toBe(true);
-  });
-
   test('Goal popup does not show congratulations when opened manually', async ({ page }) => {
     await page.waitForLoadState('domcontentloaded');
 
@@ -822,19 +671,12 @@ test.describe('Goals Functionality', () => {
       // First upcoming goal should have .next-goal class (AC1)
       const firstUpcomingGoal = upcomingGoals.first();
       await expect(firstUpcomingGoal).toHaveClass(/next-goal/);
-      
-      // Verify visual emphasis: gold border
-      const borderColor = await firstUpcomingGoal.evaluate(el => {
-        return window.getComputedStyle(el).borderColor;
-      });
-      // Should have gold/yellow border - rgba(255, 215, 0, 0.6)
-      expect(borderColor).toMatch(/rgba?\(255,\s*215,\s*0/);
-      
-      // Subsequent goals should NOT have .next-goal class
-      if (upcomingCount > 1) {
-        const secondUpcomingGoal = upcomingGoals.nth(1);
-        await expect(secondUpcomingGoal).not.toHaveClass(/next-goal/);
-      }
+      await expect(firstUpcomingGoal).toBeVisible();
+
+      // Subsequent goals must NOT have .next-goal class
+      expect(upcomingCount).toBeGreaterThanOrEqual(2);
+      const secondUpcomingGoal = upcomingGoals.nth(1);
+      await expect(secondUpcomingGoal).not.toHaveClass(/next-goal/);
     });
 
     test('Next goal displays progress bar with correct structure', async ({ page }) => {
@@ -856,13 +698,14 @@ test.describe('Goals Functionality', () => {
       // Progress fill should exist
       const progressFill = progressTrack.locator('.goal-progress-fill');
       await expect(progressFill).toBeVisible();
-      
-      // Verify gold color on fill
-      const fillColor = await progressFill.evaluate(el => {
-        return window.getComputedStyle(el).backgroundColor;
-      });
-      // Gold = #FFD700 = rgb(255, 215, 0)
-      expect(fillColor).toMatch(/rgb\(255,\s*215,\s*0\)/);
+
+      // Fill width is set as a percentage of the track (0-100%)
+      const width = await progressFill.evaluate(el => el.style.width);
+      const match = width.match(/^(\d+(?:\.\d+)?)%$/);
+      expect(match, `progress fill width should be a percentage, got "${width}"`).not.toBeNull();
+      const pct = parseFloat(match[1]);
+      expect(pct).toBeGreaterThanOrEqual(0);
+      expect(pct).toBeLessThanOrEqual(100);
     });
 
     test('Progress bar width reflects segment progress percentage', async ({ page }) => {

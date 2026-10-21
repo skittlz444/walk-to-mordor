@@ -21,8 +21,8 @@ describe('Goals Handlers', () => {
   describe('handleGoalsGet', () => {
     it('should return goals successfully', async () => {
       const mockResults = [
-        { storyline_goal_id: 10, id: 1, distance: 100, title: 'Rivendell', description: null, special: true, image_id: '1', sort_order: 1, has_content: false },
-        { storyline_goal_id: 11, id: 2, distance: 200, title: 'Lothlorien', description: null, special: false, image_id: '2', sort_order: 2, has_content: false }
+        { storyline_goal_id: 10, id: 1, distance: 100, title: 'Rivendell', description: null, special: true, image_id: '1', sort_order: 1, has_content: 1 },
+        { storyline_goal_id: 11, id: 2, distance: 200, title: 'Lothlorien', description: null, special: false, image_id: '2', sort_order: 2, has_content: 0 }
       ];
 
       // Mock session validation
@@ -68,7 +68,14 @@ describe('Goals Handlers', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data).toEqual(mockResults);
+      // Every goal exposes has_content as a boolean (D1's EXISTS integer is mapped;
+      // port of the unique E2E assertion from tests/ui/goal-content.spec.js)
+      for (const goal of data) {
+        expect(goal).toHaveProperty('has_content');
+        expect(typeof goal.has_content).toBe('boolean');
+      }
+      expect(data[0].has_content).toBe(true);
+      expect(data[1].has_content).toBe(false);
     });
 
     it('should handle database errors', async () => {
