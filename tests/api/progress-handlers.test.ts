@@ -14,8 +14,7 @@ jest.mock('../../src/auth-handlers');
 jest.mock('../../src/validators', () => ({
   ...jest.requireActual('../../src/validators'),
   isValidDateFormat: jest.fn(),
-  isValidDistance: jest.fn(),
-  safeJsonParse: jest.fn()
+  isValidDistance: jest.fn()
 }));
 
 describe('Progress Handlers', () => {

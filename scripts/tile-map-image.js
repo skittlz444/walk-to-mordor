@@ -1,3 +1,8 @@
+// Tile-map the full journey map image into a zoom-level tile pyramid.
+//
+// This is NOT runnable from a clean clone: it requires the local-only,
+// gitignored source asset public/img/map/ctd58g7fsmyf1.webp (SOURCE_FILE
+// below). Obtain that file first, then run `npm run tile:map`.
 const fs = require('fs/promises');
 const path = require('path');
 const sharp = require('sharp');

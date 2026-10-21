@@ -1,12 +1,30 @@
 import type { DbClient } from './db';
-import type {
-  AdminStorylineSummary,
-  AdminStorylineGoalRow,
-} from './admin-shared';
 import {
   SLUG_REGEX,
   logAdminAction,
 } from './admin-shared';
+
+export interface AdminStorylineSummary {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  path_key: string;
+  sort_order: number;
+  is_active: boolean;
+  admin_only: boolean;
+  goal_count: number;
+  min_distance: number | null;
+  max_distance: number | null;
+}
+
+export interface AdminStorylineGoalRow {
+  storyline_goal_id: number;
+  goal_id: number;
+  title: string;
+  distance: number;
+  sort_order: number;
+}
 
 interface AdminStorylineDbRow {
   id: number;
@@ -358,7 +376,3 @@ export async function handleAdminStorylineGoalsUpdate(
     });
   }
 }
-
-/**
- * Row shape for goals queried for image cross-referencing.
- */

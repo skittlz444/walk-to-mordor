@@ -1,14 +1,29 @@
 import type { DbClient } from './db';
 import { generatePasswordResetToken, getPasswordResetExpiry } from './auth-utils';
 import { sendPasswordResetEmail } from './email-utils';
-import type {
-  AdminUserRow,
-  AdminUsersListResponse,
-} from './admin-shared';
 import {
   escapeLikeSearch,
   logAdminAction,
 } from './admin-shared';
+
+export interface AdminUserRow {
+  id: number;
+  username: string;
+  email: string;
+  email_verified: boolean;
+  is_admin: boolean;
+  total_distance_km: number;
+  last_active_date: string | null;
+  fellowship_names: string[];
+}
+
+export interface AdminUsersListResponse {
+  users: AdminUserRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
 
 /**
  * Handle GET /api/admin/users — returns a paginated support view of user accounts.
@@ -131,10 +146,6 @@ export async function handleAdminUsersList(request: Request, db: DbClient): Prom
 /**
  * Handle PUT /api/admin/users/:id/verify — marks a user's email as verified.
  */
-
-/**
- * Handle PUT /api/admin/users/:id/verify — marks a user's email as verified.
- */
 export async function handleAdminUserVerify(
   request: Request,
   db: DbClient,
@@ -181,10 +192,6 @@ export async function handleAdminUserVerify(
     });
   }
 }
-
-/**
- * Handle PUT /api/admin/users/:id/reset — sends the password reset email directly.
- */
 
 /**
  * Handle PUT /api/admin/users/:id/reset — sends the password reset email directly.
@@ -263,10 +270,6 @@ export async function handleAdminUserResetPassword(
 /**
  * Handle PUT /api/admin/users/:id/admin — toggles admin privileges.
  */
-
-/**
- * Handle PUT /api/admin/users/:id/admin — toggles admin privileges.
- */
 export async function handleAdminUserToggleAdmin(
   request: Request,
   db: DbClient,
@@ -321,10 +324,6 @@ export async function handleAdminUserToggleAdmin(
     });
   }
 }
-
-/**
- * Handle DELETE /api/admin/users/:id — hard deletes a user account after confirmation.
- */
 
 /**
  * Handle DELETE /api/admin/users/:id — hard deletes a user account after confirmation.
@@ -410,7 +409,3 @@ export async function handleAdminUserDelete(
     });
   }
 }
-
-/**
- * Handle GET /api/admin/metrics — returns the community summary cards.
- */

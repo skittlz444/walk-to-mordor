@@ -126,7 +126,7 @@ Feature → file discovery: search `src/` for handler modules, `client/src/islan
 - New features: Preact islands in `client/src/`, hydrated via `client/src/index.tsx`.
 - Legacy flow logic: vanilla JS in `public/js/` — do not rewrite without explicit permission.
 - Bridge globals (`window.preact`, `window.preactIslands`, `window.partyStore`) allow cross-boundary communication.
-- Validators mirrored: `src/validators.ts` and `public/js/validators.js` must stay in sync.
+- Validators: `public/js/validators.js` is generated from `src/validators.ts` + `src/validators-client.ts` by `npm run build:validators`; never edit it by hand.
 
 ### Map Stack
 

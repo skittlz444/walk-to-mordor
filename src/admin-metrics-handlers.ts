@@ -1,16 +1,52 @@
 import type { DbClient } from './db';
 import { isValidDateFormat } from './validators';
-import type {
-  DashboardStats,
-  AdminMetricsSummary,
-  AdminLeaderboardRow,
-  AdminLeaderboardResponse,
-  AdminTimelinePoint,
-  AdminTimelineResponse,
-} from './admin-shared';
-import {
-  getIsoDateOffset,
-} from './admin-shared';
+
+/**
+ * Dashboard statistics returned by the admin dashboard API.
+ */
+export interface DashboardStats {
+  totalUsers: number;
+  totalDistanceKm: number;
+  activeParties: number;
+  totalGoals: number;
+}
+
+export interface AdminMetricsSummary {
+  totalGroupDistanceKm: number;
+  activeWalkers: number;
+  milestonesUnlocked: number;
+}
+
+export interface AdminLeaderboardRow {
+  id: number;
+  username: string;
+  email: string;
+  distance_km: number;
+}
+
+export interface AdminLeaderboardResponse {
+  rows: AdminLeaderboardRow[];
+  start: string | null;
+  end: string | null;
+  maxDistanceKm: number;
+}
+
+export interface AdminTimelinePoint {
+  date: string;
+  distance_km: number;
+}
+
+export interface AdminTimelineResponse {
+  points: AdminTimelinePoint[];
+  maxDistanceKm: number;
+}
+
+function getIsoDateOffset(daysAgo: number): string {
+  const now = new Date();
+  const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  utcDate.setUTCDate(utcDate.getUTCDate() - daysAgo);
+  return utcDate.toISOString().slice(0, 10);
+}
 
 /**
  * Handle GET /api/admin/dashboard — returns live system statistics.
@@ -52,11 +88,6 @@ export async function handleAdminDashboard(_request: Request, db: DbClient): Pro
 }
 
 /**
- * Handle GET /api/admin/users — returns a paginated support view of user accounts.
- * Requires admin authentication (enforced by the route guard in index.ts).
- */
-
-/**
  * Handle GET /api/admin/metrics — returns the community summary cards.
  */
 export async function handleAdminMetricsSummary(_request: Request, db: DbClient): Promise<Response> {
@@ -94,10 +125,6 @@ export async function handleAdminMetricsSummary(_request: Request, db: DbClient)
     });
   }
 }
-
-/**
- * Handle GET /api/admin/metrics/leaderboard — returns distance totals for the chosen date range.
- */
 
 /**
  * Handle GET /api/admin/metrics/leaderboard — returns distance totals for the chosen date range.
@@ -178,10 +205,6 @@ export async function handleAdminMetricsLeaderboard(request: Request, db: DbClie
 /**
  * Handle GET /api/admin/metrics/timeline — returns the last 30 days of group activity.
  */
-
-/**
- * Handle GET /api/admin/metrics/timeline — returns the last 30 days of group activity.
- */
 export async function handleAdminMetricsTimeline(_request: Request, db: DbClient): Promise<Response> {
   try {
     const start = getIsoDateOffset(29);
@@ -223,15 +246,3 @@ export async function handleAdminMetricsTimeline(_request: Request, db: DbClient
     });
   }
 }
-
-/**
- * Handle GET /api/admin/goals — returns a paginated, searchable, sortable list of goals.
- * Requires admin authentication (enforced by the route guard in index.ts).
- *
- * Query parameters:
- *   - page (default 1)
- *   - pageSize (default 25, max 100)
- *   - search (optional, performs a text search over goal fields)
- *   - imageFilter ('missing' optional, limits goals to rows without image_id)
- *   - order ('asc' | 'desc', default 'asc' — by distance)
- */

@@ -120,26 +120,6 @@ export async function getAcceptedFriendIds(
 }
 
 /**
- * Check if two users are accepted friends (bidirectional check).
- */
-export async function areAcceptedFriends(
-  db: DbClient,
-  userA: number,
-  userB: number,
-): Promise<boolean> {
-  const row = await db.read.prepare(
-    `SELECT 1 as exists_
-     FROM friendships
-     WHERE ((requester_id = ? AND addressee_id = ?)
-         OR (requester_id = ? AND addressee_id = ?))
-       AND status = 'accepted'
-     LIMIT 1`,
-  ).bind(userA, userB, userB, userA).first<{ exists_: number }>();
-
-  return row !== null;
-}
-
-/**
  * Get the viewer's milestone preview preference.
  * Returns true if previews are enabled (show future goals unlocked).
  */

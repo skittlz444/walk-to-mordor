@@ -1,8 +1,8 @@
 import { renderLayout } from './renderLayout';
 
-export type AdminNavKey = 'dashboard' | 'goals' | 'storylines' | 'users' | 'metrics';
+type AdminNavKey = 'dashboard' | 'goals' | 'storylines' | 'users' | 'metrics';
 
-export interface AdminBreadcrumbItem {
+interface AdminBreadcrumbItem {
   label: string;
   href?: string;
 }

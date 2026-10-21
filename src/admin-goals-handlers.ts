@@ -1,11 +1,4 @@
 import type { DbClient } from './db';
-import type {
-  AdminGoalRow,
-  AdminGoalsListResponse,
-  AdminGoalDetail,
-  ImageManifest,
-  ImageInventoryResponse,
-} from './admin-shared';
 import {
   SLUG_REGEX,
   escapeLikeSearch,
@@ -13,10 +6,59 @@ import {
 } from './admin-shared';
 
 /**
- * Handle PUT /api/admin/goals/:id — update a goal's editable fields.
- * Requires admin authentication (enforced by the route guard in index.ts).
- * The adminUserId is needed for audit logging.
+ * A single goal row returned by the admin goals list API.
  */
+export interface AdminGoalRow {
+  id: number;
+  title: string;
+  distance: number;
+  description: string | null;
+  special: string | null;
+  image_id: string | null;
+  has_image: boolean;
+}
+
+/**
+ * Paginated response returned by GET /api/admin/goals.
+ */
+export interface AdminGoalsListResponse {
+  goals: AdminGoalRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+/**
+ * A single goal's full data for the admin goal edit API.
+ */
+export interface AdminGoalDetail {
+  id: number;
+  title: string;
+  distance: number;
+  description: string | null;
+  special: string | null;
+  image_id: string | null;
+}
+
+/**
+ * Shape of the build-time image manifest (public/img/image-manifest.json).
+ */
+export interface ImageManifest {
+  generated: string;
+  images: string[];
+  count: number;
+}
+
+/**
+ * Response shape for GET /api/admin/images.
+ */
+export interface ImageInventoryResponse {
+  images: Array<{ image_id: string; has_highres: boolean; has_thumb: boolean }>;
+  total: number;
+  orphaned: string[];
+  missing: Array<{ goal_id: number; title: string; image_id: string }>;
+}
 
 /**
  * Handle GET /api/admin/goals — returns a paginated, searchable, sortable list of goals.
@@ -127,10 +169,6 @@ export async function handleAdminGoalsList(request: Request, db: DbClient): Prom
 }
 
 /**
- * A single goal's full data for the admin goal edit API.
- */
-
-/**
  * Handle GET /api/admin/goals/:id — returns a single goal's full details.
  * Requires admin authentication (enforced by the route guard in index.ts).
  */
@@ -159,8 +197,6 @@ export async function handleAdminGoalGet(_request: Request, db: DbClient, goalId
     });
   }
 }
-
-/** Slug validation regex: lowercase alphanumeric segments separated by single hyphens */
 
 /**
  * Handle PUT /api/admin/goals/:id — update a goal's editable fields.
@@ -266,10 +302,6 @@ export async function handleAdminGoalUpdate(
     });
   }
 }
-
-/**
- * Request body for POST /api/admin/goals.
- */
 
 /**
  * Handle POST /api/admin/goals — create a new goal.
@@ -477,13 +509,3 @@ export async function handleAdminImageInventory(request: Request, db: DbClient, 
     });
   }
 }
-
-/**
- * Log an admin action to the admin_audit_log table.
- * This is append-only — entries are never deleted by the application.
- *
- * Designed for fire-and-forget usage: callers should NOT await this function
- * in the request path. In Cloudflare Workers, use `ctx.waitUntil(logAdminAction(...))`
- * to ensure the log write completes after the response is sent.
- * The function never throws — errors are logged to console.
- */
