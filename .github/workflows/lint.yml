@@ -34,7 +34,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Check Generated Worker Types
-        run: npx wrangler types --check
+        run: npx wrangler types --check --strict-vars=false
 
       - name: Check Generated Client Validators
         run: npm run check:validators

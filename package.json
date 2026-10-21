@@ -51,7 +51,7 @@
     "wrangler": "4.151.0"
   },
   "scripts": {
-    "cf-typegen": "wrangler types",
+    "cf-typegen": "wrangler types --strict-vars=false",
     "check": "tsc && wrangler deploy --dry-run",
     "check:assets": "node .github/scripts/check-asset-count.js",
     "lint": "eslint .",
