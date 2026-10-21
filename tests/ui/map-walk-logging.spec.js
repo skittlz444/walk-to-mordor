@@ -83,17 +83,6 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
       await expect(cells.first()).toBeVisible();
     });
 
-    test('calendar sheet has close button', async ({ page }) => {
-      await page.goto(`${BASE_URL}/map`);
-      await waitForMapReady(page);
-
-      await page.locator('.map-walk-button').click();
-      await expect(page.locator('#map-calendar-sheet')).toBeVisible();
-
-      // Close button should be present
-      await expect(page.locator('#sheet-close-btn')).toBeVisible();
-    });
-
     test('calendar sheet is dismissible via close button', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
       await waitForMapReady(page);

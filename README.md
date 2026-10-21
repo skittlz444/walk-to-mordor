@@ -69,8 +69,8 @@ Track your real-world exercise progress as you virtually follow in the footsteps
 ## Getting Started
 
 ### Prerequisites
-- Node.js 20+
-- pnpm (recommended) or npm
+- Node.js 22+
+- npm
 - Cloudflare account (for deployment)
 
 ### Local Development
@@ -123,7 +123,7 @@ The `deploy` script automatically:
 | `npm run build:manifest` | Generate image-manifest.json |
 | `npm run build:sw` | Stamp service worker cache version |
 | `npm run optimize:images` | Optimize goal images + rebuild manifest |
-| `npm run tile:map` | Generate map tile pyramid |
+| `npm run tile:map` | Generate map tile pyramid (requires the local, gitignored source image `public/img/map/ctd58g7fsmyf1.webp` — not present in a clean clone) |
 
 ## Documentation
 

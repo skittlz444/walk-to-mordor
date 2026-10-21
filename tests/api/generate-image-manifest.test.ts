@@ -1,115 +1,98 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
-const MANIFEST_PATH = path.join(__dirname, '..', '..', 'public', 'img', 'image-manifest.json');
-const HIGHRES_DIR = path.join(__dirname, '..', '..', 'public', 'img', 'highres');
-const SCRIPT_PATH = path.join(__dirname, '..', '..', 'scripts', 'generate-image-manifest.js');
+const ROOT = path.join(__dirname, '..', '..');
+const SCRIPT_PATH = path.join(ROOT, 'scripts', 'generate-image-manifest.js');
+const MANIFEST_PATH = path.join(ROOT, 'public', 'img', 'image-manifest.json');
+const HIGHRES_DIR = path.join(ROOT, 'public', 'img', 'highres');
+
+const sandboxes: string[] = [];
+
+function createSandbox(slugs: string[]): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wtm-manifest-test-'));
+  sandboxes.push(dir);
+  fs.mkdirSync(path.join(dir, 'scripts'), { recursive: true });
+  fs.copyFileSync(SCRIPT_PATH, path.join(dir, 'scripts', 'generate-image-manifest.js'));
+  const highres = path.join(dir, 'public', 'img', 'highres');
+  fs.mkdirSync(highres, { recursive: true });
+  for (const slug of slugs) {
+    fs.writeFileSync(path.join(highres, `${slug}.webp`), '');
+  }
+  return dir;
+}
+
+function runGenerator(dir: string): Record<string, unknown> {
+  execFileSync(process.execPath, [path.join(dir, 'scripts', 'generate-image-manifest.js')], {
+    cwd: dir,
+    stdio: 'pipe',
+  });
+  const manifestPath = path.join(dir, 'public', 'img', 'image-manifest.json');
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+}
+
+afterAll(() => {
+  for (const dir of sandboxes) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 describe('generate-image-manifest.js', () => {
-  // Save original manifest before tests
-  let originalManifest: string | null = null;
+  describe('committed manifest matches the real image directory', () => {
+    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+    const webpFiles = fs.readdirSync(HIGHRES_DIR).filter((f) => f.endsWith('.webp'));
 
-  beforeAll(() => {
-    if (fs.existsSync(MANIFEST_PATH)) {
-      originalManifest = fs.readFileSync(MANIFEST_PATH, 'utf-8');
-    }
+    it('has one entry per high-res image', () => {
+      expect(manifest.count).toBe(webpFiles.length);
+      expect(manifest.images).toHaveLength(webpFiles.length);
+    });
+
+    it('equals the exact sorted slug list of public/img/highres/*.webp', () => {
+      const expectedSlugs = webpFiles
+        .map((f) => f.replace(/\.webp$/, ''))
+        .sort((a: string, b: string) => a.localeCompare(b));
+      // Exact comparison: same slugs, same order, nothing extra.
+      expect(manifest.images).toEqual(expectedSlugs);
+    });
+
+    it('lists slugs without file extensions, sorted', () => {
+      const sorted = [...manifest.images].sort((a: string, b: string) => a.localeCompare(b));
+      expect(manifest.images).toEqual(sorted);
+      for (const slug of manifest.images) {
+        expect(slug).not.toMatch(/\.(webp|jpe?g|png)$/);
+      }
+    });
+
+    it('has a valid ISO 8601 timestamp', () => {
+      expect(new Date(manifest.generated).getTime()).not.toBeNaN();
+    });
   });
 
-  afterAll(() => {
-    // Restore original manifest
-    if (originalManifest !== null) {
-      fs.writeFileSync(MANIFEST_PATH, originalManifest);
-    }
-  });
+  it('generates a sorted manifest of slugs from the image directory', () => {
+    const dir = createSandbox(['zulu', 'alpha', 'mike']);
+    const manifest = runGenerator(dir);
 
-  it('should generate a valid JSON manifest', () => {
-    execSync(`node "${SCRIPT_PATH}"`, { cwd: path.join(__dirname, '..', '..') });
-
-    expect(fs.existsSync(MANIFEST_PATH)).toBe(true);
-
-    const raw = fs.readFileSync(MANIFEST_PATH, 'utf-8');
-    const manifest = JSON.parse(raw);
-
-    expect(manifest).toHaveProperty('generated');
-    expect(manifest).toHaveProperty('images');
-    expect(manifest).toHaveProperty('count');
-    expect(Array.isArray(manifest.images)).toBe(true);
-    expect(typeof manifest.count).toBe('number');
+    expect(manifest.images).toEqual(['alpha', 'mike', 'zulu']);
+    expect(manifest.count).toBe(3);
     expect(typeof manifest.generated).toBe('string');
   });
 
-  it('should have count matching the number of highres .webp files', () => {
-    execSync(`node "${SCRIPT_PATH}"`, { cwd: path.join(__dirname, '..', '..') });
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
+  it('writes an empty manifest when the image directory is missing', () => {
+    const dir = createSandbox([]);
+    fs.rmSync(path.join(dir, 'public', 'img', 'highres'), { recursive: true });
 
-    const webpFiles = fs.readdirSync(HIGHRES_DIR).filter((f: string) => f.endsWith('.webp'));
-    expect(manifest.count).toBe(webpFiles.length);
-    expect(manifest.images.length).toBe(webpFiles.length);
+    const manifest = runGenerator(dir);
+
+    expect(manifest.images).toEqual([]);
+    expect(manifest.count).toBe(0);
+    expect(manifest.generated).toBeDefined();
   });
 
-  it('should have slugs sorted alphabetically', () => {
-    execSync(`node "${SCRIPT_PATH}"`, { cwd: path.join(__dirname, '..', '..') });
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
-
-    const sorted = [...manifest.images].sort((a: string, b: string) => a.localeCompare(b));
-    expect(manifest.images).toEqual(sorted);
-  });
-
-  it('should contain correct slugs (no .webp extension)', () => {
-    execSync(`node "${SCRIPT_PATH}"`, { cwd: path.join(__dirname, '..', '..') });
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
-
-    for (const slug of manifest.images) {
-      expect(slug).not.toContain('.webp');
-      expect(slug).not.toContain('.jpg');
-      expect(slug).not.toContain('.png');
-    }
-  });
-
-  it('should have a valid ISO 8601 generated timestamp', () => {
-    execSync(`node "${SCRIPT_PATH}"`, { cwd: path.join(__dirname, '..', '..') });
-    const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
-
-    const date = new Date(manifest.generated);
-    expect(date.getTime()).not.toBeNaN();
-  });
-
-  it('should handle empty directory gracefully', () => {
-    // Create a temp empty directory to simulate no images
-    const tempDir = path.join(__dirname, '..', '..', 'public', 'img', 'highres-empty-test');
-    fs.mkdirSync(tempDir, { recursive: true });
-
-    const realDir = HIGHRES_DIR;
-    const backupDir = realDir + '-backup';
-
-    // Recover from a previously crashed test run
-    if (!fs.existsSync(realDir) && fs.existsSync(backupDir)) {
-      fs.renameSync(backupDir, realDir);
-    }
-
-    try {
-      // Temporarily rename real dir and point script at empty one
-      fs.renameSync(realDir, backupDir);
-      fs.renameSync(tempDir, realDir);
-
-      try {
-        execSync(`node "${SCRIPT_PATH}"`, { cwd: path.join(__dirname, '..', '..') });
-        const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
-
-        expect(manifest.images).toEqual([]);
-        expect(manifest.count).toBe(0);
-        expect(manifest.generated).toBeDefined();
-      } finally {
-        // Restore original directory
-        if (fs.existsSync(realDir)) fs.renameSync(realDir, tempDir);
-        if (fs.existsSync(backupDir)) fs.renameSync(backupDir, realDir);
-      }
-    } finally {
-      // Clean up temp dir
-      if (fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true });
-      }
-    }
+  it('does not mutate the repository manifest', () => {
+    const before = fs.readFileSync(MANIFEST_PATH, 'utf8');
+    const dir = createSandbox(['fixture']);
+    runGenerator(dir);
+    expect(fs.readFileSync(MANIFEST_PATH, 'utf8')).toBe(before);
   });
 });

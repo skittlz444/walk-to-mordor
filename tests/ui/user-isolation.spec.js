@@ -238,7 +238,7 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
             // User 2 attempts to modify User 1's entry via API
             // (Direct API call since UI doesn't show other users' data)
-            const response = await context2.request.put('http://localhost:8787/api/calendar-progress', {
+            const response = await context2.request.put(`${BASE_URL}/api/calendar-progress`, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${authToken2}`
@@ -331,8 +331,8 @@ test.describe('User Isolation - Multi-User Scenarios', () => {
             
         } finally {
             // Cleanup both users' data
-            await cleanupAllTestData('http://localhost:8787', authToken1);
-            await cleanupAllTestData('http://localhost:8787', authToken2);
+            await cleanupAllTestData(BASE_URL, authToken1);
+            await cleanupAllTestData(BASE_URL, authToken2);
             
             await page1.close();
             await page2.close();

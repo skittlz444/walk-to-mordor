@@ -6,10 +6,6 @@ const {
   countFiles,
   getBreakdown,
   classify,
-  buildMarkdownSummary,
-  buildTerminalOutput,
-  WARN_THRESHOLD,
-  FAIL_THRESHOLD,
 } = require('../../.github/scripts/check-asset-count.js');
 
 describe('check-asset-count', () => {
@@ -194,86 +190,32 @@ describe('check-asset-count', () => {
     });
   });
 
-  describe('threshold constants', () => {
-    it('has correct warn threshold', () => {
-      expect(WARN_THRESHOLD).toBe(15000);
+  describe('summary formatters', () => {
+    const {
+      buildMarkdownSummary,
+      buildTerminalOutput,
+      WARN_THRESHOLD,
+      FAIL_THRESHOLD,
+    } = require('../../.github/scripts/check-asset-count.js');
+
+    const cases = [
+      { status: 'warn', total: 16000, exceeded: '⚠️ Exceeded', mdLabel: '⚠️ Warning', termLabel: 'WARNING' },
+      { status: 'fail', total: 19000, exceeded: '❌ Exceeded', mdLabel: '❌ Fail', termLabel: 'FAIL' },
+    ];
+
+    it.each(cases)('buildMarkdownSummary marks the $status status and the exceeded threshold', (c) => {
+      const md = buildMarkdownSummary(c.total, [{ name: 'img', count: c.total }], c.status, 'public');
+      expect(md).toContain(c.mdLabel);
+      expect(md).toContain(`**Total files in \`public/\`:** ${new Intl.NumberFormat('en-US').format(c.total)}`);
+      // The threshold row for the breached limit is annotated as exceeded.
+      expect(md).toContain(c.exceeded);
     });
 
-    it('has correct fail threshold', () => {
-      expect(FAIL_THRESHOLD).toBe(18000);
-    });
-  });
-
-  describe('buildMarkdownSummary', () => {
-    it('builds pass summary with breakdown', () => {
-      const md = buildMarkdownSummary(897, [{ name: 'img', count: 866 }, { name: 'css', count: 13 }], 'pass', 'public');
-
-      expect(md).toContain('✅ Pass');
-      expect(md).toContain('897');
-      expect(md).toContain('`public/`');
-      expect(md).toContain('`img`');
-      expect(md).toContain('866');
-      expect(md).toContain('`css`');
-      expect(md).toContain('13');
-      expect(md).toContain('Cloudflare Workers Assets limit');
-    });
-
-    it('builds warn summary', () => {
-      const md = buildMarkdownSummary(16000, [{ name: 'img', count: 15500 }], 'warn', 'public');
-
-      expect(md).toContain('⚠️ Warning');
-      expect(md).toContain('16,000');
-      expect(md).toContain('⚠️ Exceeded');
-    });
-
-    it('builds fail summary', () => {
-      const md = buildMarkdownSummary(20000, [{ name: 'img', count: 19000 }], 'fail', 'public');
-
-      expect(md).toContain('❌ Fail');
-      expect(md).toContain('20,000');
-      expect(md).toContain('❌ Exceeded');
-    });
-
-    it('handles empty breakdown', () => {
-      const md = buildMarkdownSummary(0, [], 'pass', 'dist');
-
-      expect(md).toContain('✅ Pass');
-      expect(md).toContain('`dist/`');
-      expect(md).not.toContain('Breakdown by Directory');
-    });
-  });
-
-  describe('buildTerminalOutput', () => {
-    it('builds pass output with breakdown', () => {
-      const output = buildTerminalOutput(897, [{ name: 'img', count: 866 }], 'pass', 'public');
-
-      expect(output).toContain('PASS');
-      expect(output).toContain('✅');
-      expect(output).toContain('897');
-      expect(output).toContain('img');
-      expect(output).toContain('866');
-      expect(output).toContain('public/');
-    });
-
-    it('builds warn output', () => {
-      const output = buildTerminalOutput(16000, [], 'warn', 'public');
-
-      expect(output).toContain('WARNING');
-      expect(output).toContain('⚠️');
-    });
-
-    it('builds fail output', () => {
-      const output = buildTerminalOutput(20000, [], 'fail', 'public');
-
-      expect(output).toContain('FAIL');
-      expect(output).toContain('❌');
-    });
-
-    it('includes threshold values', () => {
-      const output = buildTerminalOutput(100, [], 'pass', 'public');
-
-      expect(output).toContain('15,000');
-      expect(output).toContain('18,000');
+    it.each(cases)('buildTerminalOutput marks the $status status and the threshold values', (c) => {
+      const out = buildTerminalOutput(c.total, [{ name: 'img', count: c.total }], c.status, 'public');
+      expect(out).toContain(c.termLabel);
+      expect(out).toContain(`Warn threshold: ${new Intl.NumberFormat('en-US').format(WARN_THRESHOLD)}`);
+      expect(out).toContain(`Fail threshold: ${new Intl.NumberFormat('en-US').format(FAIL_THRESHOLD)}`);
     });
   });
 

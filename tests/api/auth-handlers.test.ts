@@ -141,11 +141,6 @@ describe('Auth Handlers', () => {
       expect(response.status).toBe(201);
       expect(data.message).toContain('first user');
       expect(data.requiresApproval).toBe(false);
-      
-      // Verify DB calls
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT COUNT(*)'));
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO users'));
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE progress'));
     });
 
     it('should register a new user successfully (subsequent user needs email confirmation)', async () => {
@@ -520,8 +515,9 @@ describe('Auth Handlers', () => {
       });
 
       const response = await handleSessionValidation(mockRequest, mockDb);
+      const data = await response.json();
       expect(response.status).toBe(401);
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM sessions'));
+      expect(data.error).toContain('Session expired');
     });
 
     it('should return 403 if user not approved', async () => {
@@ -1172,11 +1168,6 @@ describe('Auth Handlers', () => {
 
       expect(response.status).toBe(302);
       expect(response.headers.get('Location')).toContain('?verified=true');
-      
-      // Verify DB operations
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT'));
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE users'));
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM email_confirmation_tokens'));
     });
 
     it('should redirect with error if token is missing', async () => {

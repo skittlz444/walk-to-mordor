@@ -1,7 +1,8 @@
-// Validation constants - keep in sync with client-side validators.js
+// Shared validation constants. The client bundle is generated from this module
+// by scripts/generate-client-validators.js — do not duplicate these values.
 // Year range 1000-9999 provides a reasonable range for date validation
-// while supporting historical dates and far future dates if needed
-const VALIDATION_CONSTANTS = {
+// while supporting historical dates and far future dates if needed.
+export const VALIDATION_CONSTANTS = {
   MIN_YEAR: 1000,
   MAX_YEAR: 9999,
   MAX_DISTANCE_VALUE: 999999999
@@ -41,41 +42,6 @@ export function isValidDistance(value: unknown): boolean {
   
   const num = Number(value);
   return !isNaN(num) && isFinite(num) && num >= 0 && num <= VALIDATION_CONSTANTS.MAX_DISTANCE_VALUE;
-}
-
-// Helper function to safely parse JSON
-export async function safeJsonParse(request: Request): Promise<{success: boolean, data?: unknown, error?: string}> {
-  try {
-    const text = await request.text();
-    if (!text || text.trim() === '') {
-      return { success: true, data: {} };
-    }
-    
-    const data = JSON.parse(text);
-    
-    // Additional validation for request structure
-    if (typeof data !== 'object' || data === null) {
-      return { success: false, error: 'Request body must be a JSON object' };
-    }
-    
-    return { success: true, data };
-  } catch (_error) {
-    return { success: false, error: 'Invalid JSON format' };
-  }
-}
-
-// Helper function to validate HTTP method for endpoint
-export function isValidMethod(pathname: string, method: string): boolean {
-  if (pathname === "/api/calendar-progress") {
-    return ['GET', 'POST', 'PUT', 'DELETE'].includes(method);
-  }
-  if (pathname === "/api/goals") {
-    return method === 'GET';
-  }
-  if (pathname === "/api/total-distance") {
-    return method === 'GET';
-  }
-  return false;
 }
 
 // Helper function to create error response

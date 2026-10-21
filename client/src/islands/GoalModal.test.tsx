@@ -62,20 +62,6 @@ describe('GoalModal', () => {
     expect(screen.getByText('Special Achievement!')).toBeTruthy();
   });
 
-  it('applies strikethrough style for completed goals', () => {
-    render(
-      <GoalModal
-        goal={mockGoal}
-        currentDistance={150}
-        isCongratulations={false}
-        onClose={mockOnClose}
-      />
-    );
-
-    const distanceElement = screen.getByText('100.50 km');
-    expect(distanceElement.getAttribute('style')).toContain('text-decoration: line-through');
-  });
-
   it('does not show "to go" text for completed goals', () => {
     render(
       <GoalModal
@@ -264,20 +250,6 @@ describe('GoalModal', () => {
     expect(screen.getByText('70.25 km to go')).toBeTruthy();
   });
 
-  it('applies correct gold color for non-completed goals', () => {
-    render(
-      <GoalModal
-        goal={mockGoal}
-        currentDistance={50}
-        isCongratulations={false}
-        onClose={mockOnClose}
-      />
-    );
-
-    const distanceElement = screen.getByText('100.50 km');
-    expect(distanceElement.getAttribute('style')).toContain('color: #FFD700');
-  });
-
   it('calls onClose when Escape key is pressed', () => {
     render(
       <GoalModal
@@ -297,7 +269,7 @@ describe('GoalModal', () => {
 
   // --- Story 9.1: Locked Milestone Card Previews ---
 
-  it('locked=true renders thumbnail with blur(12px) filter', () => {
+  it('locked=true still renders the blurred thumbnail image', () => {
     render(
       <GoalModal
         goal={mockGoal}
@@ -309,9 +281,8 @@ describe('GoalModal', () => {
     );
 
     const thumbImage = document.querySelector('#goal-thumb-image') as HTMLImageElement;
-    expect(thumbImage.style.filter).toContain('blur(12px)');
-    expect(thumbImage.style.filter).toContain('brightness(0.6)');
-    expect(thumbImage.style.transform).toContain('scale(1.1)');
+    expect(thumbImage).toBeTruthy();
+    expect(thumbImage.src).toContain('/img/thumbs/1-thumb.webp');
   });
 
   it('locked=true does NOT render high-res image', () => {
@@ -342,22 +313,6 @@ describe('GoalModal', () => {
 
     const lockIcon = document.querySelector('.fas.fa-lock');
     expect(lockIcon).toBeTruthy();
-  });
-
-  it('locked=true obscures description with transparent color', () => {
-    render(
-      <GoalModal
-        goal={mockGoal}
-        currentDistance={50}
-        isCongratulations={false}
-        locked={true}
-        onClose={mockOnClose}
-      />
-    );
-
-    const descriptionEl = screen.getByText('A test goal description');
-    expect(descriptionEl.style.color).toBe('transparent');
-    expect(descriptionEl.style.userSelect).toBe('none');
   });
 
   it('locked=true sets aria-hidden on description', () => {

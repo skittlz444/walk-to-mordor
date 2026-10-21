@@ -19,36 +19,41 @@ const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function stubMobile() {
+/** User agents exercised by the detection matrix and component tests. */
+const UA = {
+  androidChrome:
+    'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+  firefoxAndroid:
+    'Mozilla/5.0 (Android 13; Mobile; rv:120.0) Gecko/120.0 Firefox/120.0',
+  iosSafari:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  desktopChrome:
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  desktopFirefox:
+    'Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0',
+};
+
+function setUserAgent(userAgent: string) {
   Object.defineProperty(navigator, 'userAgent', {
-    value:
-      'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+    value: userAgent,
     configurable: true,
   });
+}
+
+function stubMobile() {
+  setUserAgent(UA.androidChrome);
 }
 
 function stubFirefoxMobile() {
-  Object.defineProperty(navigator, 'userAgent', {
-    value:
-      'Mozilla/5.0 (Android 13; Mobile; rv:120.0) Gecko/120.0 Firefox/120.0',
-    configurable: true,
-  });
+  setUserAgent(UA.firefoxAndroid);
 }
 
 function stubIOSSafari() {
-  Object.defineProperty(navigator, 'userAgent', {
-    value:
-      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-    configurable: true,
-  });
+  setUserAgent(UA.iosSafari);
 }
 
 function stubDesktop() {
-  Object.defineProperty(navigator, 'userAgent', {
-    value:
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    configurable: true,
-  });
+  setUserAgent(UA.desktopChrome);
 }
 
 function stubStandalone(standalone: boolean) {
@@ -99,67 +104,30 @@ afterEach(() => {
 
 // ── Utility function tests ──────────────────────────────────────────────────
 
-describe('isMobileDevice', () => {
-  it('returns true for Android Chrome', () => {
-    stubMobile();
-    expect(isMobileDevice()).toBe(true);
-  });
+describe('user-agent detection matrix', () => {
+  // One row per original (detector × user agent) case; every case preserved.
+  type DetectionCase = [name: string, userAgent: string, detector: () => boolean | BannerMode, expected: boolean | BannerMode];
 
-  it('returns true for Firefox on Android', () => {
-    stubFirefoxMobile();
-    expect(isMobileDevice()).toBe(true);
-  });
+  const detectionCases: DetectionCase[] = [
+    ['isMobileDevice returns true for Android Chrome', UA.androidChrome, isMobileDevice, true],
+    ['isMobileDevice returns true for Firefox on Android', UA.firefoxAndroid, isMobileDevice, true],
+    ['isMobileDevice returns true for iOS Safari', UA.iosSafari, isMobileDevice, true],
+    ['isMobileDevice returns false for desktop user agents', UA.desktopChrome, isMobileDevice, false],
+    ['isIOSDevice returns true for iPhone Safari', UA.iosSafari, isIOSDevice, true],
+    ['isIOSDevice returns false for Android Chrome', UA.androidChrome, isIOSDevice, false],
+    ['isIOSDevice returns false for Firefox on Android', UA.firefoxAndroid, isIOSDevice, false],
+    ['isFirefoxMobile returns true for Firefox on Android', UA.firefoxAndroid, isFirefoxMobile, true],
+    ['isFirefoxMobile returns false for Android Chrome', UA.androidChrome, isFirefoxMobile, false],
+    ['isFirefoxMobile returns false for iOS Safari', UA.iosSafari, isFirefoxMobile, false],
+    ['isFirefoxMobile returns false for desktop Firefox', UA.desktopFirefox, isFirefoxMobile, false],
+    ['getFallbackMode returns "ios" on iOS devices', UA.iosSafari, getFallbackMode, 'ios'],
+    ['getFallbackMode returns "firefox" on Firefox mobile', UA.firefoxAndroid, getFallbackMode, 'firefox'],
+    ['getFallbackMode returns "manual" on Android Chrome (non-iOS, non-Firefox)', UA.androidChrome, getFallbackMode, 'manual'],
+  ];
 
-  it('returns true for iOS Safari', () => {
-    stubIOSSafari();
-    expect(isMobileDevice()).toBe(true);
-  });
-
-  it('returns false for desktop user agents', () => {
-    stubDesktop();
-    expect(isMobileDevice()).toBe(false);
-  });
-});
-
-describe('isIOSDevice', () => {
-  it('returns true for iPhone Safari', () => {
-    stubIOSSafari();
-    expect(isIOSDevice()).toBe(true);
-  });
-
-  it('returns false for Android Chrome', () => {
-    stubMobile();
-    expect(isIOSDevice()).toBe(false);
-  });
-
-  it('returns false for Firefox on Android', () => {
-    stubFirefoxMobile();
-    expect(isIOSDevice()).toBe(false);
-  });
-});
-
-describe('isFirefoxMobile', () => {
-  it('returns true for Firefox on Android', () => {
-    stubFirefoxMobile();
-    expect(isFirefoxMobile()).toBe(true);
-  });
-
-  it('returns false for Android Chrome', () => {
-    stubMobile();
-    expect(isFirefoxMobile()).toBe(false);
-  });
-
-  it('returns false for iOS Safari', () => {
-    stubIOSSafari();
-    expect(isFirefoxMobile()).toBe(false);
-  });
-
-  it('returns false for desktop Firefox', () => {
-    Object.defineProperty(navigator, 'userAgent', {
-      value: 'Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0',
-      configurable: true,
-    });
-    expect(isFirefoxMobile()).toBe(false);
+  it.each(detectionCases)('%s', (_name, userAgent, detector, expected) => {
+    setUserAgent(userAgent);
+    expect(detector()).toBe(expected);
   });
 });
 

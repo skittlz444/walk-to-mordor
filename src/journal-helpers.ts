@@ -120,26 +120,6 @@ export async function getAcceptedFriendIds(
 }
 
 /**
- * Check if two users are accepted friends (bidirectional check).
- */
-export async function areAcceptedFriends(
-  db: DbClient,
-  userA: number,
-  userB: number,
-): Promise<boolean> {
-  const row = await db.read.prepare(
-    `SELECT 1 as exists_
-     FROM friendships
-     WHERE ((requester_id = ? AND addressee_id = ?)
-         OR (requester_id = ? AND addressee_id = ?))
-       AND status = 'accepted'
-     LIMIT 1`,
-  ).bind(userA, userB, userB, userA).first<{ exists_: number }>();
-
-  return row !== null;
-}
-
-/**
  * Get the viewer's milestone preview preference.
  * Returns true if previews are enabled (show future goals unlocked).
  */
@@ -392,31 +372,6 @@ export async function deleteJournalEntry(
   ).bind(userId, goalId).run();
 
   return result.meta.changes > 0;
-}
-
-/**
- * Determine if the viewer should be able to read a specific friend's journal entry.
- * Rules:
- * 1. Must be accepted friends
- * 2. If milestone previews are locked, viewer must also have reached the goal
- * 3. If milestone previews are enabled, friendship alone is sufficient
- */
-export async function canReadFriendEntry(
-  db: DbClient,
-  viewerId: number,
-  authorId: number,
-  goalId: number,
-): Promise<boolean> {
-  // Check friendship
-  const areFriends = await areAcceptedFriends(db, viewerId, authorId);
-  if (!areFriends) return false;
-
-  // Check preview preference
-  const previewsEnabled = await getMilestonePreviewsEnabled(db, viewerId);
-  if (previewsEnabled) return true;
-
-  // Previews locked: viewer must have reached the goal
-  return hasUserReachedGoal(db, viewerId, goalId);
 }
 
 /**

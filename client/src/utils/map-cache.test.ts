@@ -53,11 +53,8 @@ describe('map-cache', () => {
   });
 
   describe('CACHE_KEYS', () => {
-    it('has correct milestone key', () => {
+    it('has stable cache keys', () => {
       expect(CACHE_KEYS.MILESTONES).toBe('walk-to-mordor-milestones');
-    });
-
-    it('has correct map view key', () => {
       expect(CACHE_KEYS.MAP_VIEW).toBe('walk-to-mordor-map-state');
     });
   });

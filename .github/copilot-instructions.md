@@ -23,7 +23,7 @@ Always ensure that your code changes are covered by appropriate tests.
 - **Playwright**: Use `npm run test:ui`. Use `--run` flag to avoid interactive prompts.
 - **Coverage**: Maintain >90% coverage for new code.
 - **Visual Testing**: Use Snapshots for Konva/Canvas elements.
-- **Docs**: Update `docs/`, `TESTING.md` when patterns change.
+- **Docs**: Update `docs/` when patterns change.
 
 ## Documentation
 - Location: `docs/`.

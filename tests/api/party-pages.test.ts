@@ -3,109 +3,61 @@ import { renderPartyDetailPage } from '../../src/renderPartyDetailPage';
 import { renderPartyManagePage } from '../../src/renderPartyManagePage';
 import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
 
+interface PartyPageFixture {
+  renderer: () => string;
+  title: string;
+  stylesheet: string;
+  mountId: string;
+}
+
+const partyPages: PartyPageFixture[] = [
+  {
+    renderer: renderPartyListPage,
+    title: 'Walk to Mordor - Fellowships',
+    stylesheet: '/css/party.css',
+    mountId: 'PartyListIsland',
+  },
+  {
+    renderer: renderPartyDetailPage,
+    title: 'Walk to Mordor - Fellowship',
+    stylesheet: '/css/party.css',
+    mountId: 'PartyDetailIsland',
+  },
+  {
+    renderer: renderPartyManagePage,
+    title: 'Walk to Mordor - Manage Fellowship',
+    stylesheet: '/css/party.css',
+    mountId: 'PartyManageIsland',
+  },
+  {
+    renderer: renderPartyJoinPage,
+    title: 'Walk to Mordor - Join Fellowship',
+    stylesheet: '/css/party.css',
+    mountId: 'PartyJoinIsland',
+  },
+];
+
 describe('Party SSR Shells', () => {
-  describe('renderPartyListPage', () => {
-    it('should render valid HTML document', () => {
-      const result = renderPartyListPage();
-      expect(result).toContain('<!DOCTYPE html>');
-      expect(result).toContain('<html lang="en">');
-    });
-
-    it('should include party.css stylesheet', () => {
-      const result = renderPartyListPage();
-      expect(result).toContain('party.css');
-    });
-
-    it('should include PartyListIsland mount point', () => {
-      const result = renderPartyListPage();
-      expect(result).toContain('data-island="PartyListIsland"');
-    });
-
-    it('should include page title', () => {
-      const result = renderPartyListPage();
-      expect(result).toContain('<title>Walk to Mordor - Fellowships</title>');
-    });
-
-    it('should include PWA meta tags', () => {
-      const result = renderPartyListPage();
-      expect(result).toContain('manifest.json');
-      expect(result).toContain('theme-color');
-    });
-
-    it('should include DrawerIsland mount point', () => {
-      const result = renderPartyListPage();
-      expect(result).toContain('data-island="DrawerIsland"');
-    });
-
-    it('should include islands.js for Preact hydration', () => {
-      const result = renderPartyListPage();
-      expect(result).toContain('islands.js');
-    });
+  // Shared layout behavior — asserted once, applies to every party page shell
+  it('renders a valid HTML document with the common shell', () => {
+    const result = partyPages[0].renderer();
+    expect(result).toContain('<!DOCTYPE html>');
+    expect(result).toContain('<html lang="en">');
+    expect(result).toContain('</body>');
+    // Common layout mounts and hydration/PWA wiring
+    expect(result).toContain('data-island="DrawerIsland"');
+    expect(result).toContain('islands.js');
+    expect(result).toContain('manifest.json');
+    expect(result).toContain('theme-color');
   });
 
-  describe('renderPartyDetailPage', () => {
-    it('should render valid HTML document', () => {
-      const result = renderPartyDetailPage();
-      expect(result).toContain('<!DOCTYPE html>');
-    });
-
-    it('should include PartyDetailIsland mount point', () => {
-      const result = renderPartyDetailPage();
-      expect(result).toContain('data-island="PartyDetailIsland"');
-    });
-
-    it('should include party.css stylesheet', () => {
-      const result = renderPartyDetailPage();
-      expect(result).toContain('party.css');
-    });
-
-    it('should include page title', () => {
-      const result = renderPartyDetailPage();
-      expect(result).toContain('<title>Walk to Mordor - Fellowship</title>');
-    });
-  });
-
-  describe('renderPartyManagePage', () => {
-    it('should render valid HTML document', () => {
-      const result = renderPartyManagePage();
-      expect(result).toContain('<!DOCTYPE html>');
-    });
-
-    it('should include PartyManageIsland mount point', () => {
-      const result = renderPartyManagePage();
-      expect(result).toContain('data-island="PartyManageIsland"');
-    });
-
-    it('should include party.css stylesheet', () => {
-      const result = renderPartyManagePage();
-      expect(result).toContain('party.css');
-    });
-
-    it('should include page title', () => {
-      const result = renderPartyManagePage();
-      expect(result).toContain('<title>Walk to Mordor - Manage Fellowship</title>');
-    });
-  });
-
-  describe('renderPartyJoinPage', () => {
-    it('should render valid HTML document', () => {
-      const result = renderPartyJoinPage();
-      expect(result).toContain('<!DOCTYPE html>');
-    });
-
-    it('should include PartyJoinIsland mount point', () => {
-      const result = renderPartyJoinPage();
-      expect(result).toContain('data-island="PartyJoinIsland"');
-    });
-
-    it('should include party.css stylesheet', () => {
-      const result = renderPartyJoinPage();
-      expect(result).toContain('party.css');
-    });
-
-    it('should include page title', () => {
-      const result = renderPartyJoinPage();
-      expect(result).toContain('<title>Walk to Mordor - Join Fellowship</title>');
-    });
-  });
+  it.each(partyPages)(
+    '$mountId renders shell with title, stylesheet, and mount point',
+    ({ renderer, title, stylesheet, mountId }) => {
+      const result = renderer();
+      expect(result).toContain(`<title>${title}</title>`);
+      expect(result).toContain(`href="${stylesheet}"`);
+      expect(result).toContain(`data-island="${mountId}"`);
+    }
+  );
 });

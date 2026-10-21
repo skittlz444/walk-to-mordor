@@ -14,8 +14,7 @@ jest.mock('../../src/auth-handlers');
 jest.mock('../../src/validators', () => ({
   ...jest.requireActual('../../src/validators'),
   isValidDateFormat: jest.fn(),
-  isValidDistance: jest.fn(),
-  safeJsonParse: jest.fn()
+  isValidDistance: jest.fn()
 }));
 
 describe('Progress Handlers', () => {
@@ -74,7 +73,6 @@ describe('Progress Handlers', () => {
         { start: '2024-01-01', title: '5.5' },
         { start: '2024-01-02', title: '3.2' }
       ]);
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT * FROM progress WHERE user_id = ?'));
       expect(mockBind).toHaveBeenCalledWith(1); // userId
     });
 

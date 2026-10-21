@@ -24,30 +24,26 @@ describe('renderHtml', () => {
     expect(result).toContain('apple-mobile-web-app-capable');
   });
 
-  it('should include JavaScript files', () => {
-    const result = renderHtml();
-    
-    expect(result).toContain('main.js');
-    expect(result).toContain('calendar.js');
-    expect(result).toContain('progress.js');
-    expect(result).toContain('goals.js');
-    expect(result).toContain('validators.js');
-  });
-
-  it('should include CSS files', () => {
-    const result = renderHtml();
-    
-    expect(result).toContain('main.css');
-  });
-
   it('should include required HTML structure elements', () => {
     const result = renderHtml();
-    
+
     expect(result).toContain('<header>');
     expect(result).toContain('<section id="goals-section">');
     expect(result).toContain('<div id="eventcalendar-container">');
     expect(result).toContain('<div id="goals-list">');
     expect(result).toContain('<div id="eventcalendar">');
+  });
+
+  it('should include the journey page script and stylesheet dependencies', () => {
+    const result = renderHtml();
+
+    // These are functional page dependencies: without them the journey
+    // shell loses validation, calendar, progress and goals behavior.
+    expect(result).toContain('/js/validators.js');
+    expect(result).toContain('/js/calendar.js');
+    expect(result).toContain('/js/progress.js');
+    expect(result).toContain('/js/goals.js');
+    expect(result).toContain('/css/main.css');
   });
 
   it('should include service worker registration script', () => {

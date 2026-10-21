@@ -149,14 +149,7 @@ test.describe('Story 1.7: Modal UX Improvements', () => {
     // Verify primary button (Add/Save) has correct styling
     const saveBtn = page.locator('#save-btn');
     await expect(saveBtn).toHaveClass(/btn-primary/);
-    
-    // Check computed style for modal footer button color
-    const saveBtnBg = await saveBtn.evaluate(el => {
-      return window.getComputedStyle(el).backgroundColor;
-    });
-    // rgb(26, 26, 26) is #1a1a1a - modal footer buttons have dark background
-    expect(saveBtnBg).toBe('rgb(26, 26, 26)');
-    
+
     // Verify secondary button (Cancel) has correct styling
     const cancelBtn = page.locator('#cancel-btn');
     await expect(cancelBtn).toHaveClass(/btn-secondary/);

@@ -296,7 +296,6 @@ describe('Authentication Utilities', () => {
       const code = await generateUniqueFriendCode(mockDb);
       expect(code).toHaveLength(8);
       expect(code).toMatch(/^[A-Za-z0-9]+$/);
-      expect(mockDb.prepare).toHaveBeenCalledWith('SELECT id FROM users WHERE friend_code = ?');
     });
 
     it('should retry on collision and succeed', async () => {
@@ -351,27 +350,31 @@ describe('Authentication Utilities', () => {
     it('should backfill users without friend codes', async () => {
       const mockRun = jest.fn().mockResolvedValue({});
       const mockFirst = jest.fn().mockResolvedValue(null); // No collisions
-      const mockAll = jest.fn().mockResolvedValue({
-        results: [{ id: 1 }, { id: 2 }, { id: 3 }]
+      const mockBind = jest.fn().mockReturnValue({
+        run: mockRun,
+        all: jest.fn().mockResolvedValue({ results: [{ id: 1 }, { id: 2 }, { id: 3 }] }),
+        first: mockFirst
       });
-
       const mockDb = {
-        prepare: jest.fn().mockReturnValue({
-          bind: jest.fn().mockReturnValue({
-            run: mockRun,
-            all: mockAll,
-            first: mockFirst
-          })
-        })
+        prepare: jest.fn().mockReturnValue({ bind: mockBind })
       };
 
       const count = await backfillFriendCodes(mockDb);
       expect(count).toBe(3);
-      // Should have called prepare for: SELECT NULL users, then for each user: SELECT collision check + UPDATE
-      expect(mockDb.prepare).toHaveBeenCalledWith('SELECT id FROM users WHERE friend_code IS NULL');
-      expect(mockDb.prepare).toHaveBeenCalledWith(
-        'UPDATE users SET friend_code = ? WHERE id = ? AND friend_code IS NULL'
-      );
+      // Each backfilled user gets a unique code (no collision on any generated code)
+      expect(mockFirst).toHaveBeenCalledTimes(3);
+      // The backfill actually wrote: one bound write per user carrying the
+      // generated code and that user's id (2-arg binds are the UPDATEs; the
+      // no-arg binds are the SELECT lookups).
+      expect(mockRun).toHaveBeenCalledTimes(3);
+      const writePairs = mockBind.mock.calls.filter((args) => args.length === 2);
+      expect(writePairs).toHaveLength(3);
+      writePairs.forEach(([code, id], i) => {
+        expect(typeof code).toBe('string');
+        expect(code.length).toBeGreaterThan(0);
+        expect(id).toBe(i + 1);
+      });
+      expect(new Set(writePairs.map(([code]) => code)).size).toBe(3);
     });
 
     it('should return 0 when no users need backfill', async () => {

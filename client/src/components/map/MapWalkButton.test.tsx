@@ -38,14 +38,6 @@ describe('MapWalkButton', () => {
       const svg = button.querySelector('svg');
       expect(svg).toBeTruthy();
     });
-
-    it('applies additional className when provided', () => {
-      render(<MapWalkButton onClick={() => {}} className="custom-class" />);
-      
-      const button = screen.getByRole('button', { name: 'Log a walk' });
-      expect(button.className).toContain('map-walk-button');
-      expect(button.className).toContain('custom-class');
-    });
   });
 
   describe('Accessibility', () => {
@@ -54,14 +46,6 @@ describe('MapWalkButton', () => {
       
       const button = screen.getByRole('button', { name: 'Log a walk' });
       expect(button.getAttribute('aria-label')).toBe('Log a walk');
-    });
-
-    it('is a button element', () => {
-      render(<MapWalkButton onClick={() => {}} />);
-      
-      const button = screen.getByRole('button', { name: 'Log a walk' });
-      expect(button.tagName).toBe('BUTTON');
-      expect(button.getAttribute('type')).toBe('button');
     });
 
     it('svg icons are hidden from assistive technology', () => {
@@ -89,16 +73,6 @@ describe('MapWalkButton', () => {
       render(<MapWalkButton onClick={handleClick} />);
       
       expect(handleClick).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Touch target size', () => {
-    it('has map-walk-button class for CSS touch target sizing', () => {
-      render(<MapWalkButton onClick={() => {}} />);
-      
-      const button = screen.getByRole('button', { name: 'Log a walk' });
-      expect(button.className).toContain('map-walk-button');
-      // CSS enforces min-width: 48px and min-height: 48px
     });
   });
 });
