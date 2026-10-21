@@ -36,5 +36,8 @@ jobs:
       - name: Check Generated Worker Types
         run: npx wrangler types --check
 
+      - name: Check Generated Client Validators
+        run: npm run check:validators
+
       - name: Check Asset Count
         run: npm run check:assets

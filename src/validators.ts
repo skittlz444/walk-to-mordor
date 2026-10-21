@@ -1,7 +1,8 @@
-// Validation constants - keep in sync with client-side validators.js
+// Shared validation constants. The client bundle is generated from this module
+// by scripts/generate-client-validators.js — do not duplicate these values.
 // Year range 1000-9999 provides a reasonable range for date validation
-// while supporting historical dates and far future dates if needed
-const VALIDATION_CONSTANTS = {
+// while supporting historical dates and far future dates if needed.
+export const VALIDATION_CONSTANTS = {
   MIN_YEAR: 1000,
   MAX_YEAR: 9999,
   MAX_DISTANCE_VALUE: 999999999
