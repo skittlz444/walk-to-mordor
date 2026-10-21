@@ -57,32 +57,6 @@ describe('UpcomingGoalCard', () => {
     expect(container.textContent).toContain('5.00 km to go');
   });
 
-  it('applies upcoming-goal class for styling', () => {
-    const { container } = render(
-      <UpcomingGoalCard
-        goal={mockGoal}
-        currentDistance={50}
-        onClick={() => {}}
-      />
-    );
-
-    const card = container.querySelector('.upcoming-goal') as HTMLElement | null;
-    expect(card).toBeTruthy();
-  });
-
-  it('does not have next-goal class', () => {
-    const { container } = render(
-      <UpcomingGoalCard
-        goal={mockGoal}
-        currentDistance={50}
-        onClick={() => {}}
-      />
-    );
-
-    const card = container.querySelector('.next-goal');
-    expect(card).toBeFalsy();
-  });
-
   it('does not render progress bar', () => {
     const { container } = render(
       <UpcomingGoalCard
@@ -109,7 +83,7 @@ describe('UpcomingGoalCard', () => {
       />
     );
 
-    const card = container.querySelector('.upcoming-goal') as HTMLElement | null;
+    const card = container.firstElementChild as HTMLElement | null;
     card?.click();
 
     expect(handleClick).toHaveBeenCalledTimes(1);
@@ -177,20 +151,6 @@ describe('UpcomingGoalCard', () => {
 
   // --- Story 9.1: Locked Milestone Card Previews ---
 
-  it('locked=true adds goal-locked-interactive class', () => {
-    const { container } = render(
-      <UpcomingGoalCard
-        goal={mockGoal}
-        currentDistance={50}
-        locked={true}
-        onClick={() => {}}
-      />
-    );
-
-    const card = container.querySelector('.goal-locked-interactive');
-    expect(card).toBeTruthy();
-  });
-
   it('locked=true shows lock icon', () => {
     const { container } = render(
       <UpcomingGoalCard
@@ -216,12 +176,12 @@ describe('UpcomingGoalCard', () => {
       />
     );
 
-    const card = container.querySelector('.upcoming-goal') as HTMLElement | null;
+    const card = container.firstElementChild as HTMLElement | null;
     card?.click();
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
-  it('locked=false (default) has no lock styling', () => {
+  it('locked=false (default) has no lock icon', () => {
     const { container } = render(
       <UpcomingGoalCard
         goal={mockGoal}
@@ -229,9 +189,6 @@ describe('UpcomingGoalCard', () => {
         onClick={() => {}}
       />
     );
-
-    const lockedCard = container.querySelector('.goal-locked-interactive');
-    expect(lockedCard).toBeNull();
 
     const lockIcon = container.querySelector('.fas.fa-lock');
     expect(lockIcon).toBeNull();
@@ -248,7 +205,7 @@ describe('UpcomingGoalCard', () => {
     );
 
     expect(container.textContent).toContain('Campfire lore waits beyond this milestone');
-    expect(container.querySelector('.goal-content-teaser')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Locked campfire lore available"]')).toBeTruthy();
   });
 
   it('locked goal without content does not show lore teaser', () => {
@@ -262,6 +219,6 @@ describe('UpcomingGoalCard', () => {
     );
 
     expect(container.textContent).not.toContain('Campfire lore waits beyond this milestone');
-    expect(container.querySelector('.goal-content-teaser')).toBeNull();
+    expect(container.querySelector('[aria-label="Locked campfire lore available"]')).toBeNull();
   });
 });

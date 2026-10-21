@@ -68,25 +68,16 @@ afterEach(() => {
 // ── isPushNudgeDismissed ─────────────────────────────────────────────────────
 
 describe('isPushNudgeDismissed', () => {
-  it('returns false when no dismiss timestamp exists', () => {
-    expect(isPushNudgeDismissed()).toBe(false);
-  });
-
-  it('returns true when dismissed less than 2 weeks ago', () => {
-    const recent = String(Date.now() - 1000);
-    (localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(recent);
-    expect(isPushNudgeDismissed()).toBe(true);
-  });
-
-  it('returns false when dismissed more than 2 weeks ago', () => {
-    const old = String(Date.now() - TWO_WEEKS_MS - 1000);
-    (localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(old);
-    expect(isPushNudgeDismissed()).toBe(false);
-  });
-
-  it('returns false for an invalid stored value', () => {
-    (localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue('not-a-number');
-    expect(isPushNudgeDismissed()).toBe(false);
+  it.each([
+    ['returns false when no dismiss timestamp exists', null, false],
+    ['returns true when dismissed less than 2 weeks ago', String(Date.now() - 1000), true],
+    ['returns false when dismissed more than 2 weeks ago', String(Date.now() - TWO_WEEKS_MS - 1000), false],
+    ['returns false for an invalid stored value', 'not-a-number', false],
+  ] as [string, string | null, boolean][])('%s', (_name, stored, expected) => {
+    if (stored !== null) {
+      (localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(stored);
+    }
+    expect(isPushNudgeDismissed()).toBe(expected);
   });
 });
 

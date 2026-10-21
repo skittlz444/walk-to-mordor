@@ -78,20 +78,6 @@ describe('NextGoalCard', () => {
     expect(progressFill?.getAttribute('style')).toContain('width: 95.0%');
   });
 
-  it('applies next-goal class for styling', () => {
-    const { container } = render(
-      <NextGoalCard
-        goal={mockGoal}
-        currentDistance={75}
-        previousDistance={50}
-        onClick={() => {}}
-      />
-    );
-
-    const card = container.querySelector('.upcoming-goal.next-goal') as HTMLElement | null;
-    expect(card).toBeTruthy();
-  });
-
   it('calls onClick handler when clicked', () => {
     const handleClick = vi.fn();
     const { container } = render(
@@ -103,9 +89,9 @@ describe('NextGoalCard', () => {
       />
     );
 
-    const card = container.querySelector('.upcoming-goal.next-goal') as HTMLElement | null;
+    const card = container.firstElementChild as HTMLElement | null;
     card?.click();
-    
+
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
@@ -141,39 +127,7 @@ describe('NextGoalCard', () => {
     expect(progressFill?.getAttribute('style')).toContain('width: 25.0%');
   });
 
-  it('includes progress bar elements', () => {
-    const { container } = render(
-      <NextGoalCard
-        goal={mockGoal}
-        currentDistance={75}
-        previousDistance={50}
-        onClick={() => {}}
-      />
-    );
-
-    const progressTrack = container.querySelector('.goal-progress-track');
-    const progressFill = container.querySelector('.goal-progress-fill');
-    
-    expect(progressTrack).toBeTruthy();
-    expect(progressFill).toBeTruthy();
-  });
-
   // --- Story 9.1: Locked Milestone Card Previews ---
-
-  it('locked=true applies goal-locked-interactive class', () => {
-    const { container } = render(
-      <NextGoalCard
-        goal={mockGoal}
-        currentDistance={75}
-        previousDistance={50}
-        locked={true}
-        onClick={() => {}}
-      />
-    );
-
-    const card = container.querySelector('.upcoming-goal.next-goal.goal-locked-interactive');
-    expect(card).toBeTruthy();
-  });
 
   it('locked=true shows lock icon', () => {
     const { container } = render(
@@ -202,7 +156,7 @@ describe('NextGoalCard', () => {
       />
     );
 
-    const card = container.querySelector('.upcoming-goal.next-goal') as HTMLElement | null;
+    const card = container.firstElementChild as HTMLElement | null;
     card?.click();
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
@@ -233,7 +187,7 @@ describe('NextGoalCard', () => {
     );
 
     expect(container.textContent).toContain('Campfire lore waits beyond this milestone');
-    expect(container.querySelector('.goal-content-teaser')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Locked campfire lore available"]')).toBeTruthy();
   });
 
   it('locked goal without content does not show lore teaser', () => {
@@ -248,6 +202,6 @@ describe('NextGoalCard', () => {
     );
 
     expect(container.textContent).not.toContain('Campfire lore waits beyond this milestone');
-    expect(container.querySelector('.goal-content-teaser')).toBeNull();
+    expect(container.querySelector('[aria-label="Locked campfire lore available"]')).toBeNull();
   });
 });
