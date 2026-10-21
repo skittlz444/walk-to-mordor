@@ -43,41 +43,6 @@ export function isValidDistance(value: unknown): boolean {
   return !isNaN(num) && isFinite(num) && num >= 0 && num <= VALIDATION_CONSTANTS.MAX_DISTANCE_VALUE;
 }
 
-// Helper function to safely parse JSON
-export async function safeJsonParse(request: Request): Promise<{success: boolean, data?: unknown, error?: string}> {
-  try {
-    const text = await request.text();
-    if (!text || text.trim() === '') {
-      return { success: true, data: {} };
-    }
-    
-    const data = JSON.parse(text);
-    
-    // Additional validation for request structure
-    if (typeof data !== 'object' || data === null) {
-      return { success: false, error: 'Request body must be a JSON object' };
-    }
-    
-    return { success: true, data };
-  } catch (_error) {
-    return { success: false, error: 'Invalid JSON format' };
-  }
-}
-
-// Helper function to validate HTTP method for endpoint
-export function isValidMethod(pathname: string, method: string): boolean {
-  if (pathname === "/api/calendar-progress") {
-    return ['GET', 'POST', 'PUT', 'DELETE'].includes(method);
-  }
-  if (pathname === "/api/goals") {
-    return method === 'GET';
-  }
-  if (pathname === "/api/total-distance") {
-    return method === 'GET';
-  }
-  return false;
-}
-
 // Helper function to create error response
 export function createErrorResponse(error: string, status: number = 400) {
   return new Response(JSON.stringify({ error }), {

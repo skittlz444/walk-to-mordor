@@ -1,8 +1,6 @@
 import { 
   isValidDateFormat, 
   isValidDistance, 
-  safeJsonParse, 
-  isValidMethod,
   createErrorResponse,
   createSuccessResponse
 } from '../../src/validators';
@@ -76,91 +74,6 @@ describe('Validators', () => {
       expect(isValidDistance(999999999)).toBe(true); // At limit
       expect(isValidDistance(1000000000)).toBe(false); // Over limit
       expect(isValidDistance('9999999999')).toBe(false); // Way over limit
-    });
-  });
-
-  describe('safeJsonParse', () => {
-    it('should parse valid JSON', async () => {
-      const mockRequest = {
-        text: async () => '{"start": "2024-01-15", "title": "100"}'
-      } as Request;
-      
-      const result = await safeJsonParse(mockRequest);
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({ start: "2024-01-15", title: "100" });
-    });
-
-    it('should reject invalid JSON', async () => {
-      const mockRequest = {
-        text: async () => '{ invalid json }'
-      } as Request;
-      
-      const result = await safeJsonParse(mockRequest);
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Invalid JSON format');
-    });
-
-    it('should treat empty request body as empty object', async () => {
-      const mockRequest = {
-        text: async () => ''
-      } as Request;
-      
-      const result = await safeJsonParse(mockRequest);
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({});
-    });
-
-    it('should treat whitespace-only request body as empty object', async () => {
-      const mockRequest = {
-        text: async () => '   '
-      } as Request;
-      
-      const result = await safeJsonParse(mockRequest);
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({});
-    });
-
-    it('should reject non-object JSON', async () => {
-      const mockRequest = {
-        text: async () => '"just a string"'
-      } as Request;
-      
-      const result = await safeJsonParse(mockRequest);
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Request body must be a JSON object');
-    });
-
-    it('should reject null JSON', async () => {
-      const mockRequest = {
-        text: async () => 'null'
-      } as Request;
-      
-      const result = await safeJsonParse(mockRequest);
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Request body must be a JSON object');
-    });
-  });
-
-  describe('isValidMethod', () => {
-    it('should validate calendar-progress endpoint methods', () => {
-      expect(isValidMethod('/api/calendar-progress', 'GET')).toBe(true);
-      expect(isValidMethod('/api/calendar-progress', 'POST')).toBe(true);
-      expect(isValidMethod('/api/calendar-progress', 'PUT')).toBe(true);
-      expect(isValidMethod('/api/calendar-progress', 'DELETE')).toBe(true);
-      expect(isValidMethod('/api/calendar-progress', 'PATCH')).toBe(false);
-      expect(isValidMethod('/api/calendar-progress', 'HEAD')).toBe(false);
-    });
-
-    it('should validate goals endpoint methods', () => {
-      expect(isValidMethod('/api/goals', 'GET')).toBe(true);
-      expect(isValidMethod('/api/goals', 'POST')).toBe(false);
-      expect(isValidMethod('/api/goals', 'PUT')).toBe(false);
-      expect(isValidMethod('/api/goals', 'DELETE')).toBe(false);
-    });
-
-    it('should reject unknown endpoints', () => {
-      expect(isValidMethod('/api/unknown', 'GET')).toBe(false);
-      expect(isValidMethod('/other/endpoint', 'GET')).toBe(false);
     });
   });
 
