@@ -147,14 +147,6 @@ async function waitForJourneyReady(page) {
   await dismissPwaInstallBanner(page);
 }
 
-/**
- * Wait for a specific Preact island to be hydrated.
- * Islands get `data-hydrated="true"` after Preact renders them.
- */
-async function waitForIsland(page, islandName) {
-  await page.waitForSelector(`[data-island="${islandName}"][data-hydrated="true"]`);
-}
-
 async function setupTest({ page, authToken }) {
     // Ensure clean state for this user
     await cleanupAllTestData(BASE_URL, authToken);
@@ -298,15 +290,12 @@ module.exports = {
     test,
     expect,
     setupTest,
-  seedAuthenticatedSession,
   navigateAuthenticated,
     waitForAuthenticated,
-  waitForTotalDistanceLoaded,
   waitForGoalsLoaded,
   waitForJourneyReady,
   dismissPwaInstallBanner,
   closeVisibleModal,
-    waitForIsland,
     generateRealisticTestDistance,
     generateLargeTestDistance,
     generateRandomTestDate,
