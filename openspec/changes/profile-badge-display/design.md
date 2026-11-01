@@ -118,6 +118,12 @@ Both are generated once, composited over the base emblem in PhotoCraft, and expo
 
 Rationale: a shared rank ring gives consistent rank semantics across families and costs four masters instead of a 6×4 matrix. Baking the composite avoids runtime layering, extra requests, and alpha-composition bugs in CSS.
 
+### Generate a broad candidate pool, then narrow to two per asset
+
+Single-seed sampling is noisy and prompt variants diverge sharply for stylised metalwork. Every asset is generated across multiple prompt variants and seeds — twelve candidates per emblem, eight per frame or rank ring — reviewed on a per-asset contact sheet, and narrowed to two finalists. Only those two finalists go to the user for the final pick.
+
+Rationale: the review stays small and decisive while the selection is informed by enough samples to avoid settling for the best of four. Seeds stay configurable so one weak asset can be expanded without regenerating the whole set. Generation is a batch job; the review gate is the only blocking step.
+
 ### Collection numbering is typographic, not artwork
 
 The badge card shows `index/size` and the rank label as text, sourced from the API. Numbers are never baked into images.
@@ -161,7 +167,7 @@ Skeletons render only after a short delay to avoid flashing on fast responses. A
 
 ## Risks / Trade-offs
 
-- [Artwork review blocks implementation] → Generation produces multiple candidates per asset and the pipeline stops at a review gate before compositing. Wiring can proceed against the CSS placeholder while art is approved.
+- [Artwork review blocks implementation] → Each asset is generated 8–12 times across variants and seeds, narrowed to two finalists on a contact sheet, and only then presented for the final pick. The pipeline stops at that review gate before compositing. Wiring can proceed against the CSS placeholder while art is approved.
 - [Friend profile adds a second API call] → Badge data is small and indexed; the page already makes one profile call. If latency matters later, the friend profile response can embed achievements without changing the island contract.
 - [Rank thresholds drift from seed data] → Thresholds live in `metadata` and are read by both the hook and the presentation resolver; a single seed migration is the source of truth. Tests assert the seeded values.
 - [Award hook adds work to every walk write] → The hook loads only journey/habit definitions and exits early for non-matching storylines; most writes cross no threshold. It runs after the write, and failures are swallowed.
@@ -177,7 +183,7 @@ Skeletons render only after a short delay to avoid flashing on fast responses. A
 5. Add `src/achievement-awards.ts` and call it from `handleProgressPost` and `handleProgressPut`.
 6. Create `BadgeDisplayIsland`, register it, and add the SSR placeholders.
 7. Create `public/css/badge-display.css` and reference it from both renderers.
-8. Generate, review, and composite the badge artwork into `public/img/achievements/`.
+8. Generate the broad candidate pool, narrow each asset to two finalists, collect the user's final picks, then composite and optimise into `public/img/achievements/`.
 9. Update `docs/api-reference.md`, `docs/data-models.md`, and `docs/design-guide.md`.
 
 Rollback strategy: remove the island placeholders, route, island registration, handler, award hook call, and stylesheet; drop migration 0144. Earned instances remain append-only and harmless if the display is rolled back.
