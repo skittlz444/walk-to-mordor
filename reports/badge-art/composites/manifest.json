@@ -1,0 +1,4065 @@
+{
+  "generated_at": "2026-11-01T18:41:01+00:00",
+  "plan": "reports/badge-art/composite-test-plan.md",
+  "shortlist": "reports/badge-art/shortlist.json",
+  "backgrounds": {
+    "preview": "#14181f",
+    "sheet": "#0d1117"
+  },
+  "geometry": {
+    "canvas": 1024,
+    "centre": [
+      512,
+      512
+    ],
+    "circle": {
+      "emblem": "800",
+      "rank": "880/800",
+      "frame": "1016/880"
+    },
+    "hexagon": {
+      "emblem": "R400",
+      "rank": "R440/400",
+      "frame": "R508/440",
+      "overall": "880 wide x 1016 tall",
+      "vertices": "pi/6 + k*pi/3"
+    },
+    "variant_c": {
+      "circle": "rank 840/920 diameter (420..460 radius)",
+      "hexagon": "rank R410/450 circumradius"
+    },
+    "variant_e": {
+      "circle": "rank scaled 1016/880 about centre (band 461.8..508 radius); emblem 880/800 fills the frame opening",
+      "hexagon": "rank R468/508 circumradius; emblem R440 fills the frame opening"
+    },
+    "variant_f": {
+      "stack": "emblem 800 -> family frame 880..1016 -> 6 o'clock rank boss; no rank ring",
+      "boss": {
+        "centre": [
+          511.0,
+          979.0
+        ],
+        "bezel_diameter": 70,
+        "disc_diameter": 54,
+        "gem_diameter": 25
+      },
+      "f1": "family frame keeps its original metal",
+      "f2": "frame band gradient-mapped to the rank alloy (duotone, alpha and engraving preserved) before the boss"
+    }
+  },
+  "outputs": [
+    {
+      "output": "reports/badge-art/composites/circle/habit-first-steps.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-first-steps",
+      "display_name": "First Steps",
+      "family": "habit",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 68644,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/circle/journey-frodo-sam-buckleberry-ferry.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 70934,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/circle/journey-frodo-sam-weathertop-survivor.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+      "display_name": "Survivor of Weathertop",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-161803",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 78908,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/circle/journey-frodo-sam-through-khazad-dum.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+      "display_name": "Through Khazad-dûm",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 78314,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/circle/journey-frodo-sam-lothlorien-guest.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+      "display_name": "Guest of the Golden Wood",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-314159",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 75094,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/circle/journey-frodo-sam-rauros-parting.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-rauros-parting",
+      "display_name": "The Breaking of the Fellowship",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 82700,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/circle/journey-frodo-sam-mordor-threshold.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-mordor-threshold",
+      "display_name": "Standing at Mount Doom",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 76952,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/circle/journey-frodo-sam-home-at-sunset.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-home-at-sunset",
+      "display_name": "Home Again at Sunset",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "mithril",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 84860,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/circle/habit-faithful-walker.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-faithful-walker",
+      "display_name": "Faithful Walker",
+      "family": "habit",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "gold",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 74712,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/habit-first-steps.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-first-steps",
+      "display_name": "First Steps",
+      "family": "habit",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 51658,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/journey-frodo-sam-buckleberry-ferry.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 55450,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/journey-frodo-sam-weathertop-survivor.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+      "display_name": "Survivor of Weathertop",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-161803",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 63830,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/journey-frodo-sam-through-khazad-dum.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+      "display_name": "Through Khazad-dûm",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 64554,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/journey-frodo-sam-lothlorien-guest.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+      "display_name": "Guest of the Golden Wood",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-314159",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 61198,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/journey-frodo-sam-rauros-parting.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-rauros-parting",
+      "display_name": "The Breaking of the Fellowship",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 67984,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/journey-frodo-sam-mordor-threshold.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-mordor-threshold",
+      "display_name": "Standing at Mount Doom",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 61686,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/journey-frodo-sam-home-at-sunset.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-home-at-sunset",
+      "display_name": "Home Again at Sunset",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "mithril",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 70734,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon/habit-faithful-walker.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-faithful-walker",
+      "display_name": "Faithful Walker",
+      "family": "habit",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "gold",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 58252,
+      "format": "webp",
+      "note": null
+    },
+    {
+      "output": "reports/badge-art/composites/coherence-circle.jpg",
+      "kind": "coherence-grid",
+      "asset": "multiple",
+      "shape": "circle",
+      "variant": "A",
+      "components": [
+        {
+          "asset": "emblem/habit-first-steps",
+          "display_name": "First Steps",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+          "display_name": "Survivor of Weathertop",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-161803",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+          "display_name": "Through Khazad-dûm",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+          "display_name": "Guest of the Golden Wood",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-314159",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-rauros-parting",
+          "display_name": "The Breaking of the Fellowship",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-mordor-threshold",
+          "display_name": "Standing at Mount Doom",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-home-at-sunset",
+          "display_name": "Home Again at Sunset",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/habit-faithful-walker",
+          "display_name": "Faithful Walker",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": null
+        }
+      ],
+      "dimensions": [
+        1640,
+        1886
+      ],
+      "bytes": 1317238,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 3,
+        "tile_px": 512,
+        "label_px": 56
+      }
+    },
+    {
+      "output": "reports/badge-art/composites/coherence-hexagon.jpg",
+      "kind": "coherence-grid",
+      "asset": "multiple",
+      "shape": "hexagon",
+      "variant": "A",
+      "components": [
+        {
+          "asset": "emblem/habit-first-steps",
+          "display_name": "First Steps",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+          "display_name": "Survivor of Weathertop",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-161803",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+          "display_name": "Through Khazad-dûm",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+          "display_name": "Guest of the Golden Wood",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-314159",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-rauros-parting",
+          "display_name": "The Breaking of the Fellowship",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-mordor-threshold",
+          "display_name": "Standing at Mount Doom",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-home-at-sunset",
+          "display_name": "Home Again at Sunset",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/habit-faithful-walker",
+          "display_name": "Faithful Walker",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": null
+        }
+      ],
+      "dimensions": [
+        1640,
+        1886
+      ],
+      "bytes": 1113259,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 3,
+        "tile_px": 512,
+        "label_px": 56
+      }
+    },
+    {
+      "output": "reports/badge-art/composites/stack-circle.png",
+      "kind": "stack-sheet",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "panels": [
+        {
+          "label": "1 · Emblem",
+          "layers": [
+            "emblem"
+          ]
+        },
+        {
+          "label": "2 · + Rank ring",
+          "layers": [
+            "emblem",
+            "rank"
+          ]
+        },
+        {
+          "label": "3 · + Family frame",
+          "layers": [
+            "emblem",
+            "rank",
+            "frame"
+          ]
+        },
+        {
+          "label": "4 · Final badge",
+          "layers": [
+            "emblem",
+            "rank",
+            "frame"
+          ]
+        }
+      ],
+      "dimensions": [
+        1404,
+        514
+      ],
+      "bytes": 427412,
+      "format": "png",
+      "note": "fixed sheet uses the hero badge with a representative gold rank (asset journey rank: bronze)"
+    },
+    {
+      "output": "reports/badge-art/composites/stack-hexagon.png",
+      "kind": "stack-sheet",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "panels": [
+        {
+          "label": "1 · Emblem",
+          "layers": [
+            "emblem"
+          ]
+        },
+        {
+          "label": "2 · + Rank ring",
+          "layers": [
+            "emblem",
+            "rank"
+          ]
+        },
+        {
+          "label": "3 · + Family frame",
+          "layers": [
+            "emblem",
+            "rank",
+            "frame"
+          ]
+        },
+        {
+          "label": "4 · Final badge",
+          "layers": [
+            "emblem",
+            "rank",
+            "frame"
+          ]
+        }
+      ],
+      "dimensions": [
+        1404,
+        514
+      ],
+      "bytes": 348892,
+      "format": "png",
+      "note": "fixed sheet uses the hero badge with a representative gold rank (asset journey rank: bronze)"
+    },
+    {
+      "output": "reports/badge-art/composites/stack-variants.jpg",
+      "kind": "variants-sheet",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "shape": "both",
+      "variant": "A/C/D/E",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "components": [
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "C",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to 840/920 diameter band"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "D",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "C",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R410/R450 circumradius band"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "D",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        }
+      ],
+      "dimensions": [
+        1564,
+        986
+      ],
+      "bytes": 540110,
+      "format": "jpeg",
+      "layout": {
+        "cols": 4,
+        "rows": 2,
+        "tile_px": 360,
+        "label_px": 52
+      },
+      "note": "fixed sheet uses the hero badge with a representative gold rank (asset journey rank: bronze)"
+    },
+    {
+      "output": "reports/badge-art/composites/rank-matrix-circle.jpg",
+      "kind": "rank-matrix",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "shape": "circle",
+      "variant": "A",
+      "rank": "all four",
+      "frame": "frame/journey",
+      "components": [
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "A",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        }
+      ],
+      "dimensions": [
+        1318,
+        490
+      ],
+      "bytes": 215515,
+      "format": "jpeg",
+      "layout": {
+        "cols": 4,
+        "rows": 1,
+        "tile_px": 300,
+        "label_px": 48
+      },
+      "note": "four rank rings over the hero badge; the gold base is a representative rank"
+    },
+    {
+      "output": "reports/badge-art/composites/rank-matrix-hexagon.jpg",
+      "kind": "rank-matrix",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "all four",
+      "frame": "frame/journey",
+      "components": [
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        }
+      ],
+      "dimensions": [
+        1318,
+        490
+      ],
+      "bytes": 183613,
+      "format": "jpeg",
+      "layout": {
+        "cols": 4,
+        "rows": 1,
+        "tile_px": 300,
+        "label_px": 48
+      },
+      "note": "four rank rings over the hero badge; the gold base is a representative rank"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/habit-first-steps.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-first-steps",
+      "display_name": "First Steps",
+      "family": "habit",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 64858,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/journey-frodo-sam-buckleberry-ferry.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 65326,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/journey-frodo-sam-weathertop-survivor.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+      "display_name": "Survivor of Weathertop",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-161803",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 75910,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/journey-frodo-sam-through-khazad-dum.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+      "display_name": "Through Khazad-dûm",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 73898,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/journey-frodo-sam-lothlorien-guest.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+      "display_name": "Guest of the Golden Wood",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-314159",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 70940,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/journey-frodo-sam-rauros-parting.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-rauros-parting",
+      "display_name": "The Breaking of the Fellowship",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 80718,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/journey-frodo-sam-mordor-threshold.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-mordor-threshold",
+      "display_name": "Standing at Mount Doom",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 73128,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/journey-frodo-sam-home-at-sunset.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-home-at-sunset",
+      "display_name": "Home Again at Sunset",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "mithril",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 82068,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-e/habit-faithful-walker.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-faithful-walker",
+      "display_name": "Faithful Walker",
+      "family": "habit",
+      "shape": "circle",
+      "variant": "E",
+      "rank": "gold",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 71740,
+      "format": "webp",
+      "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/habit-first-steps.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-first-steps",
+      "display_name": "First Steps",
+      "family": "habit",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 48456,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/journey-frodo-sam-buckleberry-ferry.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 51284,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/journey-frodo-sam-weathertop-survivor.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+      "display_name": "Survivor of Weathertop",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-161803",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 61400,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/journey-frodo-sam-through-khazad-dum.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+      "display_name": "Through Khazad-dûm",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 61114,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/journey-frodo-sam-lothlorien-guest.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+      "display_name": "Guest of the Golden Wood",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-314159",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 58860,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/journey-frodo-sam-rauros-parting.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-rauros-parting",
+      "display_name": "The Breaking of the Fellowship",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 66954,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/journey-frodo-sam-mordor-threshold.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-mordor-threshold",
+      "display_name": "Standing at Mount Doom",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 58660,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/journey-frodo-sam-home-at-sunset.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-home-at-sunset",
+      "display_name": "Home Again at Sunset",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "mithril",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 69008,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-e/habit-faithful-walker.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-faithful-walker",
+      "display_name": "Faithful Walker",
+      "family": "habit",
+      "shape": "hexagon",
+      "variant": "E",
+      "rank": "gold",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 56058,
+      "format": "webp",
+      "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+    },
+    {
+      "output": "reports/badge-art/composites/coherence-circle-e.jpg",
+      "kind": "coherence-grid",
+      "asset": "multiple",
+      "shape": "circle",
+      "variant": "E",
+      "components": [
+        {
+          "asset": "emblem/habit-first-steps",
+          "display_name": "First Steps",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+          "display_name": "Survivor of Weathertop",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-161803",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+          "display_name": "Through Khazad-dûm",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+          "display_name": "Guest of the Golden Wood",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-314159",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-rauros-parting",
+          "display_name": "The Breaking of the Fellowship",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-mordor-threshold",
+          "display_name": "Standing at Mount Doom",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-home-at-sunset",
+          "display_name": "Home Again at Sunset",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        },
+        {
+          "asset": "emblem/habit-faithful-walker",
+          "display_name": "Faithful Walker",
+          "shape": "circle",
+          "variant": "E",
+          "rank": "gold",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "rank scaled 1016/880 about centre (outer diameter 1016); emblem 880/800 fills the frame opening"
+        }
+      ],
+      "dimensions": [
+        1640,
+        1886
+      ],
+      "bytes": 1273458,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 3,
+        "tile_px": 512,
+        "label_px": 56
+      }
+    },
+    {
+      "output": "reports/badge-art/composites/coherence-hexagon-e.jpg",
+      "kind": "coherence-grid",
+      "asset": "multiple",
+      "shape": "hexagon",
+      "variant": "E",
+      "components": [
+        {
+          "asset": "emblem/habit-first-steps",
+          "display_name": "First Steps",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+          "display_name": "Survivor of Weathertop",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-161803",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+          "display_name": "Through Khazad-dûm",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+          "display_name": "Guest of the Golden Wood",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-314159",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-rauros-parting",
+          "display_name": "The Breaking of the Fellowship",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-mordor-threshold",
+          "display_name": "Standing at Mount Doom",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-home-at-sunset",
+          "display_name": "Home Again at Sunset",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        },
+        {
+          "asset": "emblem/habit-faithful-walker",
+          "display_name": "Faithful Walker",
+          "shape": "hexagon",
+          "variant": "E",
+          "rank": "gold",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "rank remapped to R468/R508 circumradius outer border; emblem R440 fills the frame opening"
+        }
+      ],
+      "dimensions": [
+        1640,
+        1886
+      ],
+      "bytes": 1091637,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 3,
+        "tile_px": 512,
+        "label_px": 56
+      }
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke/hex-test-buckleberry-ferry-a-112358.webp",
+      "kind": "badge",
+      "asset": "emblem/hex-test-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry (hex test)",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/hex-test-buckleberry-ferry/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 57848,
+      "format": "webp",
+      "note": "bespoke hexagon shape test; not a shortlist change"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke/hex-test-buckleberry-ferry-a-271828.webp",
+      "kind": "badge",
+      "asset": "emblem/hex-test-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry (hex test)",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/hex-test-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 59492,
+      "format": "webp",
+      "note": "bespoke hexagon shape test; not a shortlist change"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke/hex-test-buckleberry-ferry-b-112358.webp",
+      "kind": "badge",
+      "asset": "emblem/hex-test-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry (hex test)",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "b-112358",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/hex-test-buckleberry-ferry/b-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 63110,
+      "format": "webp",
+      "note": "bespoke hexagon shape test; not a shortlist change"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke/hex-test-buckleberry-ferry-b-271828.webp",
+      "kind": "badge",
+      "asset": "emblem/hex-test-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry (hex test)",
+      "family": "journey",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "b-271828",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/hex-test-buckleberry-ferry/b-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 66734,
+      "format": "webp",
+      "note": "bespoke hexagon shape test; not a shortlist change"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke/hex-test-first-steps-a-112358.webp",
+      "kind": "badge",
+      "asset": "emblem/hex-test-first-steps",
+      "display_name": "First Steps (hex test)",
+      "family": "habit",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/hex-test-first-steps/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 55558,
+      "format": "webp",
+      "note": "bespoke hexagon shape test; not a shortlist change"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke/hex-test-first-steps-a-271828.webp",
+      "kind": "badge",
+      "asset": "emblem/hex-test-first-steps",
+      "display_name": "First Steps (hex test)",
+      "family": "habit",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/hex-test-first-steps/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 57460,
+      "format": "webp",
+      "note": "bespoke hexagon shape test; not a shortlist change"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke/hex-test-first-steps-b-112358.webp",
+      "kind": "badge",
+      "asset": "emblem/hex-test-first-steps",
+      "display_name": "First Steps (hex test)",
+      "family": "habit",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "b-112358",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/hex-test-first-steps/b-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 60236,
+      "format": "webp",
+      "note": "bespoke hexagon shape test; not a shortlist change"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke/hex-test-first-steps-b-271828.webp",
+      "kind": "badge",
+      "asset": "emblem/hex-test-first-steps",
+      "display_name": "First Steps (hex test)",
+      "family": "habit",
+      "shape": "hexagon",
+      "variant": "A",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "b-271828",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/hex-test-first-steps/b-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 58542,
+      "format": "webp",
+      "note": "bespoke hexagon shape test; not a shortlist change"
+    },
+    {
+      "output": "reports/badge-art/composites/hexagon-bespoke-grid.jpg",
+      "kind": "hexagon-test-grid",
+      "asset": "multiple",
+      "shape": "hexagon",
+      "variant": "A",
+      "components": [
+        {
+          "asset": "emblem/hex-test-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry (hex test)",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/hex-test-buckleberry-ferry/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          }
+        },
+        {
+          "asset": "emblem/hex-test-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry (hex test)",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/hex-test-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          }
+        },
+        {
+          "asset": "emblem/hex-test-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry (hex test)",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "b-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/hex-test-buckleberry-ferry/b-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          }
+        },
+        {
+          "asset": "emblem/hex-test-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry (hex test)",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "b-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/hex-test-buckleberry-ferry/b-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          }
+        },
+        {
+          "asset": "emblem/hex-test-first-steps",
+          "display_name": "First Steps (hex test)",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/hex-test-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          }
+        },
+        {
+          "asset": "emblem/hex-test-first-steps",
+          "display_name": "First Steps (hex test)",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/hex-test-first-steps/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          }
+        },
+        {
+          "asset": "emblem/hex-test-first-steps",
+          "display_name": "First Steps (hex test)",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "b-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/hex-test-first-steps/b-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          }
+        },
+        {
+          "asset": "emblem/hex-test-first-steps",
+          "display_name": "First Steps (hex test)",
+          "shape": "hexagon",
+          "variant": "A",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "b-271828",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/hex-test-first-steps/b-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          }
+        }
+      ],
+      "dimensions": [
+        1660,
+        1110
+      ],
+      "bytes": 594837,
+      "format": "jpeg",
+      "layout": {
+        "cols": 4,
+        "rows": 2,
+        "tile_px": 384,
+        "label_px": 56
+      },
+      "note": "bespoke hexagon shape test; variant/seed labelled"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/habit-first-steps.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-first-steps",
+      "display_name": "First Steps",
+      "family": "habit",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 59492,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/journey-frodo-sam-buckleberry-ferry.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 63188,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/journey-frodo-sam-weathertop-survivor.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+      "display_name": "Survivor of Weathertop",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-161803",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 71644,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/journey-frodo-sam-through-khazad-dum.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+      "display_name": "Through Khazad-dûm",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 70112,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/journey-frodo-sam-lothlorien-guest.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+      "display_name": "Guest of the Golden Wood",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-314159",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 67818,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/journey-frodo-sam-rauros-parting.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-rauros-parting",
+      "display_name": "The Breaking of the Fellowship",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 71000,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/journey-frodo-sam-mordor-threshold.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-mordor-threshold",
+      "display_name": "Standing at Mount Doom",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 66312,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/journey-frodo-sam-home-at-sunset.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-home-at-sunset",
+      "display_name": "Home Again at Sunset",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "mithril",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 76226,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f1/habit-faithful-walker.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-faithful-walker",
+      "display_name": "Faithful Walker",
+      "family": "habit",
+      "shape": "circle",
+      "variant": "F1",
+      "rank": "gold",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 62232,
+      "format": "webp",
+      "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/coherence-circle-f1.jpg",
+      "kind": "coherence-grid",
+      "asset": "multiple",
+      "shape": "circle",
+      "variant": "F1",
+      "components": [
+        {
+          "asset": "emblem/habit-first-steps",
+          "display_name": "First Steps",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+          "display_name": "Survivor of Weathertop",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-161803",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+          "display_name": "Through Khazad-dûm",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+          "display_name": "Guest of the Golden Wood",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-314159",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-rauros-parting",
+          "display_name": "The Breaking of the Fellowship",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-mordor-threshold",
+          "display_name": "Standing at Mount Doom",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-home-at-sunset",
+          "display_name": "Home Again at Sunset",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/habit-faithful-walker",
+          "display_name": "Faithful Walker",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "gold",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        }
+      ],
+      "dimensions": [
+        1640,
+        1886
+      ],
+      "bytes": 1200086,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 3,
+        "tile_px": 512,
+        "label_px": 56
+      }
+    },
+    {
+      "output": "reports/badge-art/composites/legibility-96-circle-f1.jpg",
+      "kind": "legibility-sheet",
+      "asset": "multiple",
+      "shape": "circle",
+      "variant": "F1",
+      "components": [
+        {
+          "asset": "emblem/habit-first-steps",
+          "display_name": "First Steps",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+          "display_name": "Survivor of Weathertop",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-161803",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+          "display_name": "Through Khazad-dûm",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+          "display_name": "Guest of the Golden Wood",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-314159",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-rauros-parting",
+          "display_name": "The Breaking of the Fellowship",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-mordor-threshold",
+          "display_name": "Standing at Mount Doom",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-home-at-sunset",
+          "display_name": "Home Again at Sunset",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/habit-faithful-walker",
+          "display_name": "Faithful Walker",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "gold",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        }
+      ],
+      "dimensions": [
+        336,
+        508
+      ],
+      "bytes": 110799,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 3,
+        "tile_px": 96,
+        "label_px": 42
+      },
+      "note": "badges rendered at their actual 96 px card size"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/habit-first-steps.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-first-steps",
+      "display_name": "First Steps",
+      "family": "habit",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "bronze",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 57862,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/journey-frodo-sam-buckleberry-ferry.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 60652,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/journey-frodo-sam-weathertop-survivor.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+      "display_name": "Survivor of Weathertop",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "bronze",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-161803",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+        "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 69170,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/journey-frodo-sam-through-khazad-dum.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+      "display_name": "Through Khazad-dûm",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-271828",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 66386,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/journey-frodo-sam-lothlorien-guest.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+      "display_name": "Guest of the Golden Wood",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "silver",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-314159",
+        "rank": "a-112358",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+        "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 64670,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/journey-frodo-sam-rauros-parting.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-rauros-parting",
+      "display_name": "The Breaking of the Fellowship",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 70518,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/journey-frodo-sam-mordor-threshold.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-mordor-threshold",
+      "display_name": "Standing at Mount Doom",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 65338,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/journey-frodo-sam-home-at-sunset.webp",
+      "kind": "badge",
+      "asset": "emblem/journey-frodo-sam-home-at-sunset",
+      "display_name": "Home Again at Sunset",
+      "family": "journey",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "mithril",
+      "frame": "frame/journey",
+      "candidates": {
+        "emblem": "a-112358",
+        "rank": "a-314159",
+        "frame": "a-271828"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+        "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+        "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 74554,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/circle-f2/habit-faithful-walker.webp",
+      "kind": "badge",
+      "asset": "emblem/habit-faithful-walker",
+      "display_name": "Faithful Walker",
+      "family": "habit",
+      "shape": "circle",
+      "variant": "F2",
+      "rank": "gold",
+      "frame": "frame/habit",
+      "candidates": {
+        "emblem": "a-173205",
+        "rank": "a-161803",
+        "frame": "a-112358"
+      },
+      "layers": {
+        "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+        "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+        "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+      },
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 63646,
+      "format": "webp",
+      "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+    },
+    {
+      "output": "reports/badge-art/composites/coherence-circle-f2.jpg",
+      "kind": "coherence-grid",
+      "asset": "multiple",
+      "shape": "circle",
+      "variant": "F2",
+      "components": [
+        {
+          "asset": "emblem/habit-first-steps",
+          "display_name": "First Steps",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+          "display_name": "Survivor of Weathertop",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-161803",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+          "display_name": "Through Khazad-dûm",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+          "display_name": "Guest of the Golden Wood",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-314159",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-rauros-parting",
+          "display_name": "The Breaking of the Fellowship",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-mordor-threshold",
+          "display_name": "Standing at Mount Doom",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-home-at-sunset",
+          "display_name": "Home Again at Sunset",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/habit-faithful-walker",
+          "display_name": "Faithful Walker",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "gold",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        }
+      ],
+      "dimensions": [
+        1640,
+        1886
+      ],
+      "bytes": 1177897,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 3,
+        "tile_px": 512,
+        "label_px": 56
+      }
+    },
+    {
+      "output": "reports/badge-art/composites/legibility-96-circle-f2.jpg",
+      "kind": "legibility-sheet",
+      "asset": "multiple",
+      "shape": "circle",
+      "variant": "F2",
+      "components": [
+        {
+          "asset": "emblem/habit-first-steps",
+          "display_name": "First Steps",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "bronze",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-first-steps/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-weathertop-survivor",
+          "display_name": "Survivor of Weathertop",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "bronze",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-161803",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-weathertop-survivor/a-161803.png",
+            "rank": "raw_assets/badges/processed/rank/bronze/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-through-khazad-dum",
+          "display_name": "Through Khazad-dûm",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-through-khazad-dum/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-lothlorien-guest",
+          "display_name": "Guest of the Golden Wood",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "silver",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-314159",
+            "rank": "a-112358",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-lothlorien-guest/a-314159.png",
+            "rank": "raw_assets/badges/processed/rank/silver/a-112358.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-rauros-parting",
+          "display_name": "The Breaking of the Fellowship",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-rauros-parting/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-mordor-threshold",
+          "display_name": "Standing at Mount Doom",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-mordor-threshold/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-home-at-sunset",
+          "display_name": "Home Again at Sunset",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "mithril",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-112358",
+            "rank": "a-314159",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-home-at-sunset/a-112358.png",
+            "rank": "raw_assets/badges/processed/rank/mithril/a-314159.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        },
+        {
+          "asset": "emblem/habit-faithful-walker",
+          "display_name": "Faithful Walker",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "gold",
+          "frame": "frame/habit",
+          "candidates": {
+            "emblem": "a-173205",
+            "rank": "a-161803",
+            "frame": "a-112358"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/habit-faithful-walker/a-173205.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/habit/a-112358.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        }
+      ],
+      "dimensions": [
+        336,
+        508
+      ],
+      "bytes": 108861,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 3,
+        "tile_px": 96,
+        "label_px": 42
+      },
+      "note": "badges rendered at their actual 96 px card size"
+    },
+    {
+      "output": "reports/badge-art/composites/stack-f.jpg",
+      "kind": "stack-sheet",
+      "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "display_name": "Across the Buckleberry Ferry",
+      "shape": "circle",
+      "variant": "D/F1/F2",
+      "rank": "gold",
+      "frame": "frame/journey",
+      "components": [
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "D",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": null
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "F1",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame only + 6 o'clock rank boss (70 px bezel, 54 px rank-metal disc); no rank ring"
+        },
+        {
+          "asset": "emblem/journey-frodo-sam-buckleberry-ferry",
+          "display_name": "Across the Buckleberry Ferry",
+          "shape": "circle",
+          "variant": "F2",
+          "rank": "gold",
+          "frame": "frame/journey",
+          "candidates": {
+            "emblem": "a-271828",
+            "rank": "a-161803",
+            "frame": "a-271828"
+          },
+          "layers": {
+            "emblem": "raw_assets/badges/processed/emblem/journey-frodo-sam-buckleberry-ferry/a-271828.png",
+            "rank": "raw_assets/badges/processed/rank/gold/a-161803.png",
+            "frame": "raw_assets/badges/processed/frame/journey/a-271828.png"
+          },
+          "note": "frame gradient-mapped to the rank alloy + 6 o'clock rank boss; alpha and engraving preserved; no rank ring"
+        }
+      ],
+      "dimensions": [
+        1244,
+        576
+      ],
+      "bytes": 246294,
+      "format": "jpeg",
+      "layout": {
+        "cols": 3,
+        "rows": 1,
+        "tile_px": 380,
+        "label_px": 54
+      },
+      "note": "fixed sheet uses the hero badge with a representative gold rank (asset journey rank: bronze)"
+    }
+  ],
+  "hexagon_test": {
+    "prompts": "scripts/badge-art/hexagon-test-prompts.json",
+    "session": "birefnet-general",
+    "geometry": "pointy-top hexagon R400 emblem, R440/400 rank, R508/440 frame",
+    "note": "bespoke hexagon emblems; shape test only, shortlist unchanged"
+  }
+}

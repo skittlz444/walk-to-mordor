@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Badge Composite Review — Shape, Coherence, Rank/Frame</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#14181f; --panel2:#0d1117; --line:#2b3440;
+    --text:#e6edf3; --muted:#8b94a7; --gold:#d4a017; --gold2:#ffe8a3;
+    --bronze:#b87333; --silver:#b9c2cc; --mithril:#9fc6d8; --danger:#d08a4a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{padding:36px 28px 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#111821,#0b0f14)}
+  h1{margin:0 0 6px;font-size:30px;letter-spacing:.2px}
+  .sub{color:var(--muted);max-width:1000px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .chip{border:1px solid var(--line);background:#111821;border-radius:999px;padding:7px 13px;font-size:13px}
+  .chip b{color:var(--gold2)}
+  main{max-width:1200px;margin:0 auto;padding:28px}
+  section{margin:0 0 40px}
+  h2{font-size:22px;margin:0 0 8px;color:var(--gold2)}
+  h3{font-size:17px;margin:22px 0 8px}
+  p{max-width:1000px}
+  .muted{color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-top:14px}
+  figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  figure img{display:block;width:100%;height:auto;background:var(--panel2)}
+  figcaption{padding:10px 13px;font-size:13px;color:var(--muted)}
+  figcaption b{color:var(--text)}
+  .hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:18px;align-items:start}
+  .hero figure img{max-height:720px;object-fit:contain}
+  .callout{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:16px 18px}
+  .callout p{margin:6px 0}
+  .verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}
+  .verdict div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+  .verdict span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+  .verdict strong{font-size:18px;color:var(--gold2)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:14px}
+  th{color:var(--gold2);background:#111821;font-weight:600}
+  tr:last-child td{border-bottom:0}
+  ul{max-width:1000px}
+  li{margin:5px 0}
+  a{color:var(--gold2)}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-left:6px}
+  footer{border-top:1px solid var(--line);padding:24px 28px 40px;color:var(--muted);font-size:13px}
+  @media(max-width:820px){.hero{grid-template-columns:1fr}header{padding:26px 18px 16px}main{padding:18px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Badge Composite Review</h1>
+  <div class="sub">Nine recommended badges, tested as a set: circle vs hexagon, rank/frame stacking, and coherence at 512 px and 96 px. Review copies only — no production assets.</div>
+  <div class="chips">
+    <div class="chip">Shape <b>Circle</b></div>
+    <div class="chip">Stack <b>F1 — frame + 6 o'clock rank boss</b></div>
+    <div class="chip">Coherence <b>3/5</b></div>
+    <div class="chip">Hexagon <b>Parked — bespoke test archived</b></div>
+  </div>
+</header>
+<main>
+
+<section>
+  <h2>Recommendation</h2>
+  <div class="verdict">
+    <div><span>Shape</span><strong>Circle</strong></div>
+    <div><span>Rank + frame</span><strong>F1 — frame + boss</strong></div>
+    <div><span>Rank ring</span><strong>Remove</strong></div>
+    <div><span>Rank source of truth</span><strong>Card label</strong></div>
+  </div>
+  <div class="callout">
+    <p><b>F1</b> keeps the family frame as the badge's identity — gold laurel for journey, steel/copper notches for habit — and moves rank to a single 6 o'clock cabochon in the rank metal. The boss is a visual cue; the rank label on the card is authoritative. No rank ring, no emblem regeneration, no frame regeneration.</p>
+    <p><b>F2</b> (plated frame + boss) makes rank unmistakable at 96 px, but it retires the family metal: journey-gold and habit-steel both become the rank alloy. It is the rank-forward alternative, not the default.</p>
+  </div>
+  <div class="hero" style="margin-top:18px">
+    <figure>
+      <img src="composites/coherence-circle-f1.jpg" alt="F1 circle set, family frame plus 6 o'clock rank boss">
+      <figcaption><b>F1 set</b> — family frame + 6 o'clock rank boss, circle. Recommended.</figcaption>
+    </figure>
+    <div>
+      <figure>
+        <img src="composites/legibility-96-circle-f1.jpg" alt="F1 set at 96 pixels">
+        <figcaption><b>96 px</b> — actual card size. The boss reads as a coloured dot; the label carries the exact tier.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Why not the current rank ring</h2>
+  <p>The ring is 40 px at the 1016 master — <b>3.8 px at 96 px</b>. The 3/4/5/6 studs are about 2 px and cannot be counted. Four metals collapse to two visual families (bronze≈gold, silver≈mithril), and gold-on-gold disappears against the journey frame. In the current stack the ring reads as a separate element on only two of nine badges; the other seven merge with the emblem rim or the frame.</p>
+  <div class="grid">
+    <figure>
+      <img src="composites/rank-matrix-circle.jpg" alt="Rank matrix, circle, four rank rings">
+      <figcaption><b>Rank matrix — circle.</b> The four columns are nearly identical at a glance; bronze and gold disappear into the gold frame.</figcaption>
+    </figure>
+    <figure>
+      <img src="composites/stack-variants.jpg" alt="A C D E stack variants">
+      <figcaption><b>A / C / D / E.</b> A is a third ring; C is a bezel but still thin; D is the cleanest object; E moves rank to the outer rim but demotes the family frame.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>F1 vs F2</h2>
+  <div class="grid">
+    <figure>
+      <img src="composites/coherence-circle-f1.jpg" alt="F1 set">
+      <figcaption><b>F1 — family frame + boss.</b> Family identity preserved. Rank is a small coloured dot; the card label does the exact tier.</figcaption>
+    </figure>
+    <figure>
+      <img src="composites/coherence-circle-f2.jpg" alt="F2 set, plated frame plus boss">
+      <figcaption><b>F2 — plated frame + boss.</b> Rank is unmistakable at 96 px, but journey-gold and habit-steel both become the rank alloy.</figcaption>
+    </figure>
+  </div>
+  <table>
+    <tr><th></th><th>F1 — frame + boss</th><th>F2 — plated frame + boss</th></tr>
+    <tr><td>Family identity</td><td>Preserved: gold laurel vs steel/copper notches</td><td>Lost: the whole band becomes the rank alloy</td></tr>
+    <tr><td>Rank at 96 px</td><td>Subtle coloured dot; label carries the exact tier</td><td>Strong: the whole ring changes colour</td></tr>
+    <tr><td>Regeneration</td><td>None</td><td>None, but the family metal is retired</td></tr>
+    <tr><td>Set coherence</td><td><b>Stronger</b></td><td>Stronger rank axis, weaker family axis</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Circle vs hexagon</h2>
+  <p>The masked hexagon is not a fair test: circular art cropped into a hexagon reads as a coin in a tray. The bespoke hexagon grid is the fair test and it is promising — but it is a different art style, needs nine new emblems and a re-shortlist, and loses about 17% of the area in the same card box. Both reviewers choose circle for this change and archive the bespoke hex masters as a future optional family.</p>
+  <div class="grid">
+    <figure>
+      <img src="composites/coherence-circle-e.jpg" alt="Circle set, variant E">
+      <figcaption><b>Circle, E.</b> The rank border is integrated but covers the family frame and crops edge-composed art.</figcaption>
+    </figure>
+    <figure>
+      <img src="composites/coherence-hexagon-e.jpg" alt="Hexagon set, masked circular art">
+      <figcaption><b>Hexagon, E (masked).</b> Circular dome, vignette and rim survive inside the hexagon; corners are dead space.</figcaption>
+    </figure>
+    <figure>
+      <img src="composites/hexagon-bespoke-grid.jpg" alt="Bespoke hexagon emblems">
+      <figcaption><b>Bespoke hexagon.</b> The fair test. Strong object design, but a different style and a full nine-emblem re-run.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>Set coherence — 3/5</h2>
+  <p>The shared enamel medium and family frames hold the set together. The breaks are field treatment, palette outliers, habit-vs-journey reading as silver-vs-gold, motif density, and the inconsistent rank ring.</p>
+  <div class="grid">
+    <figure>
+      <img src="composites/coherence-circle.jpg" alt="Circle set, current stack A">
+      <figcaption><b>Circle, A.</b> Four field treatments, two palette outliers, and a rank ring that disappears on seven of nine badges.</figcaption>
+    </figure>
+    <figure>
+      <img src="composites/coherence-hexagon.jpg" alt="Hexagon set, current stack A">
+      <figcaption><b>Hexagon, A (masked).</b> The silhouette is stronger, but the circular art and the hexagonal frame disagree.</figcaption>
+    </figure>
+  </div>
+  <h3>Fix list</h3>
+  <ul>
+    <li><b>Must:</b> adopt F1; group by collection in the UI; swap Home at Sunset to <code>b-161803</code> and First Steps to <code>b-141421</code>; normalize frame geometry to 1016/880 before 8.6.</li>
+    <li><b>Should:</b> strengthen the habit frame's copper line and notches; unify the field treatment (matte flat + soft top-light, no hard dome); desaturate Faithful Walker; test the boss at 200 px.</li>
+    <li><b>Nice:</b> archive the bespoke hexagons; add a second rank axis (boss cut); add a family mark at 12 o'clock; 1 px dark keyline between emblem and frame.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Full reviews</h2>
+  <ul>
+    <li><a href="art-review-deepseek.md">DeepSeek V4.1 Flash #max</a> — circle, OTHER (D + frame boss), coherence 3/5.</li>
+    <li><a href="art-review-glm.md">GLM-5.3-Flash #max</a> — circle, OTHER (frame plating + roundel), coherence 3/5.</li>
+  </ul>
+  <p class="muted">The reviews are independent of each other. DeepSeek shares the builder's model family; GLM does not. Their agreement on circle and on removing the rank ring is the strongest signal in this test.</p>
+</section>
+
+<section>
+  <h2>Next step</h2>
+  <ol>
+    <li>Pick <b>F1</b> (recommended) or <b>F2</b> (rank-forward).</li>
+    <li>Update <code>design.md</code> and <code>tasks.md</code> 8.6: circle only; no concentric rank ring; 6 o'clock rank boss; rank label authoritative; family frames unchanged.</li>
+    <li>Re-normalize the frame geometry to 1016/880 and composite the nine final badges in PhotoCraft.</li>
+    <li>Export 512 px main and 200 px thumb WebPs; verify at 96 px and 200 px.</li>
+    <li>Optional before 8.6: the two finalist swaps and the habit-frame copper edit.</li>
+  </ol>
+</section>
+
+</main>
+<footer>
+  Composite test for the <code>profile-badge-display</code> OpenSpec change. Review copies only; no <code>public/img/achievements/</code> writes, no application code. Images are relative to <code>reports/badge-art/</code>.
+</footer>
+</body>
+</html>
