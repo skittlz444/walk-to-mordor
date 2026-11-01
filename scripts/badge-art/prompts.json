@@ -1,0 +1,409 @@
+{
+  "version": 1,
+  "style_prefix": "Collectible fantasy profile badge in a high-end hard enamel pin and engraved metal style, circular badge face filling the frame, crisp vector-like shapes, strong readable silhouette, centred symmetrical composition, rich saturated colour with gold and steel accents, subtle bevel and rim light, isolated on a flat pure black background field.",
+  "style_suffix": "Single centred motif only, no scene, no landscape, no background elements, no characters, no faces, no hands, no text, no letters, no numbers, no runes, no watermark, no signature, no extra props; clean crisp silhouette against the flat pure black field.",
+  "seeds": {
+    "emblem": [
+      112358,
+      271828,
+      314159,
+      161803,
+      141421,
+      173205
+    ],
+    "frame": [
+      112358,
+      271828,
+      314159,
+      161803
+    ],
+    "rank": [
+      112358,
+      271828,
+      314159,
+      161803
+    ]
+  },
+  "assets": [
+    {
+      "id": "emblem/habit-first-steps",
+      "slug": "habit-first-steps",
+      "name": "First Steps",
+      "group": "emblem",
+      "family": "habit",
+      "rank": 1,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A round green hobbit door with a brass knob and a stone step, warm lamplight glowing through the crack beneath the door. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A round green hobbit door with a brass knob and a stone step, warm lamplight glowing through the crack beneath the door. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/journey-frodo-sam-buckleberry-ferry",
+      "slug": "journey-frodo-sam-buckleberry-ferry",
+      "name": "Across the Buckleberry Ferry",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 1,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A small wooden ferry carrying one glowing lantern on stylised dark water, beside a weathered mooring post. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A small wooden ferry carrying one glowing lantern on stylised dark water, beside a weathered mooring post. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/journey-frodo-sam-weathertop-survivor",
+      "slug": "journey-frodo-sam-weathertop-survivor",
+      "name": "Survivor of Weathertop",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 1,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A broken ring of standing stones around a blazing torch, with scattered embers rising. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A broken ring of standing stones around a blazing torch, with scattered embers rising. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/journey-frodo-sam-through-khazad-dum",
+      "slug": "journey-frodo-sam-through-khazad-dum",
+      "name": "Through Khazad-dûm",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 2,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "An arched stone doorway carved with an interlacing silver tree-and-crown motif, seven small silver stars above the arch and two holly branches flanking its base, the silver lines woven smoothly into the stone. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "An arched stone doorway carved with an interlacing silver tree-and-crown motif, seven small silver stars above the arch and two holly branches flanking its base, the silver lines woven smoothly into the stone. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/journey-frodo-sam-lothlorien-guest",
+      "slug": "journey-frodo-sam-lothlorien-guest",
+      "name": "Guest of the Golden Wood",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 2,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A cluster of golden mallorn leaves on a pale silver branch. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A cluster of golden mallorn leaves on a pale silver branch. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/journey-frodo-sam-rauros-parting",
+      "slug": "journey-frodo-sam-rauros-parting",
+      "name": "The Breaking of the Fellowship",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 3,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A cloven silver-bound horn above a crescent of falling water. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A cloven silver-bound horn above a crescent of falling water. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/journey-frodo-sam-mordor-threshold",
+      "slug": "journey-frodo-sam-mordor-threshold",
+      "name": "Standing at Mount Doom",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 3,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A black volcanic cone split by a molten fissure, circled by a thin ring of embers. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A black volcanic cone split by a molten fissure, circled by a thin ring of embers. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/journey-frodo-sam-home-at-sunset",
+      "slug": "journey-frodo-sam-home-at-sunset",
+      "name": "Home Again at Sunset",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 4,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A round hobbit door with lit windows and a rose trellis, low sunset rays behind the round door. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A round hobbit door with lit windows and a rose trellis, low sunset rays behind the round door. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/habit-faithful-walker",
+      "slug": "habit-faithful-walker",
+      "name": "Faithful Walker",
+      "group": "emblem",
+      "family": "habit",
+      "rank": "thresholds",
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A winding path marked by seven milestone stones, with a planted walking staff at its end. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A winding path marked by seven milestone stones, with a planted walking staff at its end. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "frame/journey",
+      "slug": "journey",
+      "name": "Journey Frame",
+      "group": "frame",
+      "family": "journey",
+      "rank": null,
+      "canvas": 1024,
+      "target_outer_px": 1016,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "An empty circular ring frame: a broad braided band of gold and dark steel with engraved leaves and weathered notches, enclosing a completely hollow, empty, flat black centre. Polished precious metal with crisp engine-turned engraving and glossy enamel inlay; a hollow ring only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "An empty circular ring frame: a broad braided band of gold and dark steel with engraved leaves and weathered notches, enclosing a completely hollow, empty, flat black centre. Aged hand-engraved metal with dark patina, a hammered surface and worn edges; a hollow ring only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "frame/habit",
+      "slug": "habit",
+      "name": "Habit Frame",
+      "group": "frame",
+      "family": "habit",
+      "rank": null,
+      "canvas": 1024,
+      "target_outer_px": 1016,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "An empty circular ring frame: a broad brushed steel band with seven evenly spaced notches and a thin copper inner line, enclosing a completely hollow, empty, flat black centre. Polished precious metal with crisp engine-turned engraving and glossy enamel inlay; a hollow ring only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "An empty circular ring frame: a broad brushed steel band with seven evenly spaced notches and a thin copper inner line, enclosing a completely hollow, empty, flat black centre. Aged hand-engraved metal with dark patina, a hammered surface and worn edges; a hollow ring only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "frame/challenge",
+      "slug": "challenge",
+      "name": "Challenge Frame",
+      "group": "frame",
+      "family": "challenge",
+      "rank": null,
+      "canvas": 1024,
+      "target_outer_px": 1016,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "An empty circular ring frame: a broad black iron band split by molten red cracks with hooked barbs, enclosing a completely hollow, empty, flat black centre. Polished precious metal with crisp engine-turned engraving and glossy enamel inlay; a hollow ring only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "An empty circular ring frame: a broad black iron band split by molten red cracks with hooked barbs, enclosing a completely hollow, empty, flat black centre. Aged hand-engraved metal with dark patina, a hammered surface and worn edges; a hollow ring only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "frame/book",
+      "slug": "book",
+      "name": "Book Frame",
+      "group": "frame",
+      "family": "book",
+      "rank": null,
+      "canvas": 1024,
+      "target_outer_px": 1016,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "An empty circular ring frame: a broad embossed dark leather band with gold filigree, small page-corner tabs and a brass clasp, enclosing a completely hollow, empty, flat black centre. Polished precious metal with crisp engine-turned engraving and glossy enamel inlay; a hollow ring only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "An empty circular ring frame: a broad embossed dark leather band with gold filigree, small page-corner tabs and a brass clasp, enclosing a completely hollow, empty, flat black centre. Aged hand-engraved metal with dark patina, a hammered surface and worn edges; a hollow ring only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "frame/community",
+      "slug": "community",
+      "name": "Community Frame",
+      "group": "frame",
+      "family": "community",
+      "rank": null,
+      "canvas": 1024,
+      "target_outer_px": 1016,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "An empty circular ring frame: a broad warm bronze band of interlocking knotwork with small round studs and woven clasp motifs, enclosing a completely hollow, empty, flat black centre. Polished precious metal with crisp engine-turned engraving and glossy enamel inlay; a hollow ring only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "An empty circular ring frame: a broad warm bronze band of interlocking knotwork with small round studs and woven clasp motifs, enclosing a completely hollow, empty, flat black centre. Aged hand-engraved metal with dark patina, a hammered surface and worn edges; a hollow ring only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "frame/field-guide",
+      "slug": "field-guide",
+      "name": "Field Guide Frame",
+      "group": "frame",
+      "family": "field-guide",
+      "rank": null,
+      "canvas": 1024,
+      "target_outer_px": 1016,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "An empty circular ring frame: a broad aged brass band set with pressed leaves, seed pods and small rivets, enclosing a completely hollow, empty, flat black centre. Polished precious metal with crisp engine-turned engraving and glossy enamel inlay; a hollow ring only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "An empty circular ring frame: a broad aged brass band set with pressed leaves, seed pods and small rivets, enclosing a completely hollow, empty, flat black centre. Aged hand-engraved metal with dark patina, a hammered surface and worn edges; a hollow ring only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "rank/bronze",
+      "slug": "bronze",
+      "name": "Bronze Rank Ring",
+      "group": "rank",
+      "family": "rank",
+      "rank": 1,
+      "canvas": 1024,
+      "target_outer_px": 880,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A thin circular rank band with three evenly spaced round studs, warm bronze, softly worn, enclosing a completely hollow, empty, flat black centre. Polished metal with bright turned edges and a clean enamel inlay; a thin band only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "A thin circular rank band with three evenly spaced round studs, warm bronze, softly worn, enclosing a completely hollow, empty, flat black centre. Aged hand-finished metal with soft patina, fine hammer marks and worn highlights; a thin band only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "rank/silver",
+      "slug": "silver",
+      "name": "Silver Rank Ring",
+      "group": "rank",
+      "family": "rank",
+      "rank": 2,
+      "canvas": 1024,
+      "target_outer_px": 880,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A thin circular rank band with four evenly spaced round studs, polished silver, bright edge, enclosing a completely hollow, empty, flat black centre. Polished metal with bright turned edges and a clean enamel inlay; a thin band only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "A thin circular rank band with four evenly spaced round studs, polished silver, bright edge, enclosing a completely hollow, empty, flat black centre. Aged hand-finished metal with soft patina, fine hammer marks and worn highlights; a thin band only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "rank/gold",
+      "slug": "gold",
+      "name": "Gold Rank Ring",
+      "group": "rank",
+      "family": "rank",
+      "rank": 3,
+      "canvas": 1024,
+      "target_outer_px": 880,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A thin circular rank band with five evenly spaced round studs, deep gold, beaded edge, enclosing a completely hollow, empty, flat black centre. Polished metal with bright turned edges and a clean enamel inlay; a thin band only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "A thin circular rank band with five evenly spaced round studs, deep gold, beaded edge, enclosing a completely hollow, empty, flat black centre. Aged hand-finished metal with soft patina, fine hammer marks and worn highlights; a thin band only, with nothing inside the opening."
+        }
+      ]
+    },
+    {
+      "id": "rank/mithril",
+      "slug": "mithril",
+      "name": "Mithril Rank Ring",
+      "group": "rank",
+      "family": "rank",
+      "rank": 4,
+      "canvas": 1024,
+      "target_outer_px": 880,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A thin circular rank band with six evenly spaced round studs, pale blue-white elven metal, faint cool glow, enclosing a completely hollow, empty, flat black centre. Polished metal with bright turned edges and a clean enamel inlay; a thin band only, with nothing inside the opening."
+        },
+        {
+          "id": "b",
+          "prompt": "A thin circular rank band with six evenly spaced round studs, pale blue-white elven metal, faint cool glow, enclosing a completely hollow, empty, flat black centre. Aged hand-finished metal with soft patina, fine hammer marks and worn highlights; a thin band only, with nothing inside the opening."
+        }
+      ]
+    }
+  ]
+}

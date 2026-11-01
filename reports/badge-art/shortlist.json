@@ -1,0 +1,308 @@
+{
+  "assets": {
+    "emblem/habit-first-steps": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.5,
+          "rationale": "Full circular face; the round green door, brass knob and stone step read instantly at 96 px, with clean glossy enamel, a thin bright rim and no text or baked frame."
+        },
+        {
+          "candidate": "b-141421",
+          "score": 4.0,
+          "rationale": "Aged bronze door face is centred and fully circular; the warm crack glow and stone step stay legible at 96 px, slightly darker than the a variant but artifact-free."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": "a-112358 has the cleanest silhouette; b-141421 is the strongest aged-metal option."
+    },
+    "emblem/journey-frodo-sam-buckleberry-ferry": {
+      "finalists": [
+        {
+          "candidate": "a-271828",
+          "score": 4.5,
+          "rationale": "Full circular green-and-navy ferry badge; hull, single lantern and mooring post read clearly at 96 px, with crisp enamel, a clean gold rim and no text."
+        },
+        {
+          "candidate": "b-141421",
+          "score": 4.0,
+          "rationale": "Aged metal ferry on dark water; the full circle and lantern/hull silhouette remain readable at 96 px, lower contrast than the a variant but clean with no baked border ring."
+        }
+      ],
+      "recommended": "a-271828",
+      "notes": "b-271828 rejected: baked ornate engraved border ring. b-161803 has a cloud/landscape background; b-141421 is the cleanest aged option."
+    },
+    "emblem/journey-frodo-sam-weathertop-survivor": {
+      "finalists": [
+        {
+          "candidate": "a-161803",
+          "score": 4.5,
+          "rationale": "Full circular torch-and-standing-stones badge; flame, torch shaft and broken stone ring read strongly at 96 px, with clean enamel, a thin rim and no text on the torch rerun."
+        },
+        {
+          "candidate": "b-161803",
+          "score": 4.0,
+          "rationale": "Aged-metal torch scene, fully circular; flame and stones remain legible at 96 px, darker patina than the a variant but with no text or artifacts."
+        }
+      ],
+      "recommended": "a-161803",
+      "notes": "a-161803 has the strongest flame silhouette; b-161803 is the best aged alternative."
+    },
+    "emblem/journey-frodo-sam-through-khazad-dum": {
+      "finalists": [
+        {
+          "candidate": "a-271828",
+          "score": 4.5,
+          "rationale": "Full circular arched-door badge; the silver tree, crown and seven stars read at 96 px, with clean grey stone, a blue door and a crisp gold rim, no text."
+        },
+        {
+          "candidate": "b-112358",
+          "score": 3.5,
+          "rationale": "Aged bronze arched door, fully circular; the tree-and-crown motif reads but the silver tree is low contrast against the grey door; no text or baked frame."
+        }
+      ],
+      "recommended": "a-271828",
+      "notes": "b-161803 rejected: signature-like squiggle below the step. a-173205 is a clean alternate if a brighter second a variant is preferred."
+    },
+    "emblem/journey-frodo-sam-lothlorien-guest": {
+      "finalists": [
+        {
+          "candidate": "a-314159",
+          "score": 4.5,
+          "rationale": "Full circular navy badge; the gold mallorn leaf cluster on a pale silver branch reads instantly at 96 px, with clean enamel, a thin silver rim and no text."
+        },
+        {
+          "candidate": "b-161803",
+          "score": 4.0,
+          "rationale": "Aged bronze disc with gold leaves and a pale silver branch; the full circle and leaf silhouette stay clear at 96 px, darker patina but artifact-free."
+        }
+      ],
+      "recommended": "a-314159",
+      "notes": "a-112358 rejected: broken disc with a transparent bite. a-271828 rejected: loose sprig with no badge face. a-141421 rejected: broken crescent face."
+    },
+    "emblem/journey-frodo-sam-rauros-parting": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.0,
+          "rationale": "Full circular blue badge; the cloven horn halves and falling-water crescent read at 96 px, with clean enamel, a gold rim and no text."
+        },
+        {
+          "candidate": "b-161803",
+          "score": 4.0,
+          "rationale": "Aged metal version with larger horn halves and a strong water crescent; fully circular and clean at 96 px, with no text or baked frame."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": "The motif reads as two horn halves rather than one cloven horn, but it is consistent and legible. a-161803 is an equally clean alternate."
+    },
+    "emblem/journey-frodo-sam-mordor-threshold": {
+      "finalists": [
+        {
+          "candidate": "a-173205",
+          "score": 4.5,
+          "rationale": "Full circular red-sky badge; the black volcanic cone and molten fissure read strongly at 96 px, with a clean ember ring, gold rim and no text."
+        },
+        {
+          "candidate": "b-314159",
+          "score": 4.0,
+          "rationale": "Aged bronze cone with a molten fissure and ember ring; the full circle and cone silhouette stay strong at 96 px, darker patina but clean and artifact-free."
+        }
+      ],
+      "recommended": "a-173205",
+      "notes": "a-161803 and b-271828 rejected: broken/non-circular outer face with large transparent gaps. a-112358 is a clean alternate but its dotted ember ring is busier."
+    },
+    "emblem/journey-frodo-sam-home-at-sunset": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.5,
+          "rationale": "Full circular sunset badge; the round door, lit windows and rose wreath read at 96 px, with clean enamel, a thin gold rim and no text."
+        },
+        {
+          "candidate": "b-161803",
+          "score": 4.0,
+          "rationale": "Aged bronze door with a rose wreath and sunset sky; fully circular and legible at 96 px, darker patina but clean and artifact-free."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": "b-314159 is a clean alternate; a-112358 has the most symmetric door-and-wreath composition."
+    },
+    "emblem/habit-faithful-walker": {
+      "finalists": [
+        {
+          "candidate": "a-173205",
+          "score": 4.5,
+          "rationale": "Full circular blue badge; the winding path, milestone stones and planted staff read at 96 px, with clean enamel, a gold rim and no text."
+        },
+        {
+          "candidate": "b-112358",
+          "score": 3.5,
+          "rationale": "Aged metal path scene, fully circular; the staff and stones read but the path is low contrast at 96 px; no text or baked frame."
+        }
+      ],
+      "recommended": "a-173205",
+      "notes": "b-314159 rejected: baked ornate border ring. a-112358 is a clean alternate with a green foreground."
+    },
+    "frame/journey": {
+      "finalists": [
+        {
+          "candidate": "a-271828",
+          "score": 4.5,
+          "rationale": "Hollow laurel-wreath ring with an even gold-and-steel band; the inner opening is clean and centred, with no gap or filled centre."
+        },
+        {
+          "candidate": "b-112358",
+          "score": 4.0,
+          "rationale": "Aged gold laurel ring, continuous and hollow; the band is even and the opening clean, with a patina that still reads at 96 px."
+        }
+      ],
+      "recommended": "a-271828",
+      "notes": ""
+    },
+    "frame/habit": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.5,
+          "rationale": "Hollow brushed-steel ring with seven notches and a thin copper inner line; the band is even and the opening clean, with no gap or filled centre."
+        },
+        {
+          "candidate": "b-314159",
+          "score": 4.0,
+          "rationale": "Aged hammered-steel ring with the same notch rhythm; the band is continuous and the hollow centre clean, with no artifacts."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": ""
+    },
+    "frame/challenge": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.0,
+          "rationale": "Hollow black-iron ring with molten red cracks and symmetric gold barbs; the band is continuous and the opening clean, with no text."
+        },
+        {
+          "candidate": "b-161803",
+          "score": 4.0,
+          "rationale": "Aged black-iron ring with red cracks and a gold rim; continuous, hollow and evenly weighted, with a strong 96 px read."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": "a-112358 has the clearer barb motif; b-161803 is the cleaner aged band."
+    },
+    "frame/book": {
+      "finalists": [
+        {
+          "candidate": "a-271828",
+          "score": 4.5,
+          "rationale": "Hollow leather-and-gold filigree ring with a small centred clasp; the band is even and the opening clean, with no side tabs or filled centre."
+        },
+        {
+          "candidate": "b-271828",
+          "score": 4.0,
+          "rationale": "Aged leather ring with gold filigree and a centred clasp; the hollow band is continuous and clean, with a darker but artifact-free patina."
+        }
+      ],
+      "recommended": "a-271828",
+      "notes": "Chosen over the side-tab seeds (a-112358, a-161803, b-112358, b-161803), which protrude and shrink the ring."
+    },
+    "frame/community": {
+      "finalists": [
+        {
+          "candidate": "a-314159",
+          "score": 4.5,
+          "rationale": "Hollow bronze knotwork ring; the band is continuous and even with a well-defined opening and a clean 96 px read, no text."
+        },
+        {
+          "candidate": "b-271828",
+          "score": 4.0,
+          "rationale": "Aged bronze knotwork with small studs; the hollow band is continuous and the opening clean, with a darker patina but no artifacts."
+        }
+      ],
+      "recommended": "a-314159",
+      "notes": ""
+    },
+    "frame/field-guide": {
+      "finalists": [
+        {
+          "candidate": "a-314159",
+          "score": 4.5,
+          "rationale": "Hollow aged-brass ring with pressed leaves; the band is even and the opening clean, with no protrusions and a crisp 96 px silhouette."
+        },
+        {
+          "candidate": "b-271828",
+          "score": 4.0,
+          "rationale": "Aged brass leaf ring with a darker patina; the hollow band is continuous and the opening clean, with no text or filled centre."
+        }
+      ],
+      "recommended": "a-314159",
+      "notes": ""
+    },
+    "rank/bronze": {
+      "finalists": [
+        {
+          "candidate": "a-314159",
+          "score": 4.0,
+          "rationale": "Thin hollow bronze band with three round studs and a bottom clasp; continuous and evenly weighted, with no gap or filled centre."
+        },
+        {
+          "candidate": "b-161803",
+          "score": 3.5,
+          "rationale": "Aged bronze band with the same three-stud rhythm; continuous and hollow, though the patina lowers contrast at 96 px; no artifacts."
+        }
+      ],
+      "recommended": "a-314159",
+      "notes": ""
+    },
+    "rank/silver": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.5,
+          "rationale": "Bright silver band with four evenly spaced studs; continuous, hollow and crisp at 96 px, with no gap and no text."
+        },
+        {
+          "candidate": "b-112358",
+          "score": 4.0,
+          "rationale": "Aged silver band with four studs; continuous and hollow, with a softer patina but clean, even weighting."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": "a-314159 rejected: six studs instead of the specified four."
+    },
+    "rank/gold": {
+      "finalists": [
+        {
+          "candidate": "a-161803",
+          "score": 4.5,
+          "rationale": "Deep-gold beaded band with five round studs and a bottom clasp; continuous, hollow and clean at 96 px, with no gap."
+        },
+        {
+          "candidate": "b-271828",
+          "score": 4.0,
+          "rationale": "Aged gold beaded band with five studs; continuous and hollow, with a darker patina but the rank colour still reads."
+        }
+      ],
+      "recommended": "a-161803",
+      "notes": "a-314159 rejected: visible gap at 12 o'clock. a-112358 has a blue enamel band; b-314159 has a steel inner band."
+    },
+    "rank/mithril": {
+      "finalists": [
+        {
+          "candidate": "a-314159",
+          "score": 4.5,
+          "rationale": "Pale blue-white mithril band with six evenly spaced studs; continuous, hollow and crisp at 96 px, with no gold contamination."
+        },
+        {
+          "candidate": "b-271828",
+          "score": 3.5,
+          "rationale": "Aged pale-silver band with six studs; continuous and hollow, though the cool glow is weaker at 96 px; the rank colour is still correct."
+        }
+      ],
+      "recommended": "a-314159",
+      "notes": "a-271828 and b-314159 rejected: gold/brass rims contradict the mithril set."
+    }
+  }
+}
