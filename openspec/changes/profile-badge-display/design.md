@@ -2,102 +2,194 @@
 
 Walk to Mordor's profile page (`/profile`) renders `ProfileIsland` and `PushPermissionIsland` Preact islands inside SSR shells from `renderProfilePage.ts`. The friend profile page (`/friends/:userId`) renders `FriendProfileIsland` inside an SSR shell from `renderFriendProfilePage.ts`. Both islands fetch their own data from authenticated API endpoints.
 
-The `shared-achievement-infrastructure` change (already proposed) provides `getUserAchievementSummary(db, userId)` which returns aggregated badge data as `AchievementSummary[]`. This change wires that data to the profile surfaces through a new endpoint and a new self-contained Preact island.
+`src/index.ts` is a Hono app. Authenticated routes use `authGuard`, which validates the session once and sets `c.get('userId')`; API 405 responses are derived from `app.routes` in `app.notFound`, so no method registry needs editing when a route is added.
 
-The codebase uses auto-hydrated islands registered in `client/src/index.tsx` by name. SSR shells place `<div data-island="<IslandName>"></div>` placeholders that the island registry picks up at hydration time.
+The `shared-achievement-infrastructure` change provides `getUserAchievementSummary(db, userId)`, which returns aggregated badge data as `AchievementSummary[]`. This change wires that data to the profile surfaces through a new endpoint and a new self-contained Preact island, seeds the first catalog, and awards those badges from walk logging.
+
+The codebase uses auto-hydrated islands registered in `client/src/index.tsx` by name. SSR shells place `<div data-island="<IslandName>"></div>` placeholders that the island registry picks up at hydration time. Static assets are served from `public/` at the site root, so `public/img/achievements/x.webp` is reachable at `/img/achievements/x.webp`.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Add a `GET /api/achievements` endpoint that returns the authenticated user's badge summary using the shared achievement infrastructure.
-- Support an optional `?userId=<id>` query parameter so the friend profile page can fetch a specific user's badges, with friendship verification before returning data.
-- Add a `BadgeDisplayIsland` Preact island that fetches from the achievements endpoint, renders a badge grid (image, name, repeat count), and handles loading, error, and empty states.
-- Add the island to the profile page and friend profile page SSR shells without modifying existing island internals.
-- Add focused CSS for badge grid layout.
+- Add `GET /api/achievements` for the authenticated user, with an optional `?userId=` variant for accepted friends.
+- Resolve badge presentation server-side: rank (1–4 + label), storyline scope, and collection position.
+- Add a `BadgeDisplayIsland` that renders badges grouped by collection, with rank chrome, repeat counts, loading skeletons, and graceful image fallback.
+- Add the island to the profile and friend-profile SSR shells with a dedicated stylesheet.
+- Seed nine badge definitions and award them from progress writes, scoped to the user's active storyline.
+- Produce and commit composited badge artwork from a reproducible ComfyUI + PhotoCraft pipeline.
 
 **Non-Goals:**
-- No badge detail modal or click-to-expand behavior (earned badges are simple display items).
+- No badge detail modal or click-to-expand behaviour.
 - No badge notification toasts (those fire from consuming changes at award time via `isNew`).
-- No badge sorting, filtering, or categorization in this change (badges render in the order returned by the endpoint).
 - No admin badge management UI.
+- No runtime compositing of base art, frames, or rank rings — borders are baked at build time.
+- No Pippin (or other storyline) badge set in this change; the model is storyline-aware, the seeded catalog is Frodo/Sam only.
+- No pagination, filtering, or search; the grid renders every earned badge.
+- No mutable counters or schema changes to the achievement tables.
 
 ## Decisions
 
-### Use a standalone BadgeDisplayIsland rather than embedding badges in existing islands
+### Add the route directly to the Hono app
 
-Create `BadgeDisplayIsland` as a self-contained Preact island that fetches its own data and renders independently. Add `<div data-island="BadgeDisplayIsland"></div>` to both profile and friend profile SSR shells. A single island handles both contexts by detecting the page from `window.location.pathname`:
+`app.get('/api/achievements', authGuard, …)` is added beside `/api/total-distance` in `src/index.ts`. `authGuard` already validates the session and sets `userId`, so the handler receives `c.get('userId')!` and never calls `validateSession` itself. Adding the route is sufficient for 405 handling because `app.notFound` inspects `app.routes`.
 
-- On `/profile`: fetches `GET /api/achievements` (own badges, no query parameter).
-- On `/friends/:id`: extracts the user ID from the URL pathname and fetches `GET /api/achievements?userId=<id>`.
+Rationale: this is the current pattern for every authenticated endpoint. The old design text about an if/else chain and `getAllowedMethods` described a router that no longer exists.
 
-Rationale: existing `ProfileIsland` and `FriendProfileIsland` already manage their own data fetching, form state, and error handling. Adding badge rendering logic to both would duplicate code and couple display concerns. A standalone island is registered once and placed wherever badges should appear. URL-based detection follows the same pattern as `FriendProfileIsland`, which extracts its user ID from `window.location.pathname` rather than relying on SSR-injected data attributes.
+### Return a named collection envelope
 
-Alternative considered: injecting `data-user-id` from the SSR renderer. Rejected because the renderer functions are static (no parameters), and the existing friend profile island already demonstrates the URL-based pattern works correctly.
+The endpoint returns `{ achievements: [...] }`, matching the `{ friends: [...] }` and `{ storylines: [...] }` convention. Each entry carries the existing summary fields plus a `presentation` block:
 
-### Place the achievements route near /api/total-distance in the fetch handler
+```json
+{
+  "achievement_id": 3,
+  "slug": "journey-frodo-sam-buckleberry-ferry",
+  "name": "Across the Buckleberry Ferry",
+  "description": "…",
+  "image_slug": "journey-frodo-sam-buckleberry-ferry",
+  "badge_type": "journey",
+  "is_repeatable": false,
+  "earned_count": 1,
+  "first_earned_at": "…",
+  "last_earned_at": "…",
+  "presentation": {
+    "rank": 1,
+    "rank_label": "bronze",
+    "storyline": "frodo-sam",
+    "collection": {
+      "slug": "frodo-sam-journey",
+      "label": "The Road to Mordor",
+      "index": 1,
+      "size": 7
+    }
+  }
+}
+```
 
-The `GET /api/achievements` route will be added in the authenticated utility section of `src/index.ts`, right before or after the `/api/total-distance` handler. This section already validates sessions inline and handles simple GET requests. The route must be placed before the final fallback `Unknown API endpoint` 404 return.
+Rationale: an envelope leaves room for later metadata (totals, per-collection progress) without breaking clients, and a server-resolved `presentation` block keeps threshold logic out of the island.
 
-Rationale: `/api/achievements` is an authenticated data endpoint like `/api/total-distance` and `/api/goals`. Grouping them together keeps the if/else chain organized. The existing monolithic if/else chain is not ideal, but restructuring it into a proper router is a separate concern — this change follows the established pattern.
+### Put rank, collection, and storyline in `achievement_definitions.metadata`
 
-Alternative considered: adding a router abstraction. Rejected as out of scope — touching every route in `src/index.ts` would make this change far larger than intended. A follow-on change could refactor the routing.
+The table already has a nullable `metadata` TEXT column and no enum constraints on `badge_type`. Seeded definitions carry:
 
-### Register the endpoint in getAllowedMethods
+```json
+{
+  "storyline": "frodo-sam",
+  "rank": 2,
+  "rank_thresholds": [1, 4, 12, 26],
+  "collection": {
+    "slug": "frodo-sam-journey",
+    "label": "The Road to Mordor",
+    "index": 3,
+    "size": 7
+  }
+}
+```
 
-Add `case "/api/achievements":` to the `['GET']` return group in `getAllowedMethods`. The `?userId=` query parameter does not affect method routing — `getAllowedMethods` operates on pathname only, which is always `/api/achievements` regardless of query string.
+All fields are optional. `storyline: null` or absent means global. `rank` is a fixed 1–4. `rank_thresholds` (ascending, four values) derives rank from `earned_count` for repeatable badges and takes precedence only when `rank` is absent. `collection` is absent for standalone badges.
 
-### Use URL-based image paths with extension fallback
+Rationale: no migration and no schema churn; metadata is the documented extension point for consuming features. It also keeps rank/collection authoring next to the badge definition instead of in client code.
 
-`BadgeDisplayIsland` constructs image URLs as `/images/achievements/<image_slug>.png`. If the image fails to load, the island tries `/images/achievements/<image_slug>.webp` as a fallback. If both fail, the image is hidden (the badge card shows only the name).
+### Resolve presentation in the API layer, not the island
 
-Rationale: this matches the existing asset pattern where images are served via the Assets binding under `/images/`. Supporting both PNG and WebP gives content authors flexibility. The onerror fallback prevents broken layout from missing images.
+`src/badge-presentation.ts` exposes pure functions that parse metadata and resolve rank/collection. `src/achievement-handlers.ts` maps each summary row through them. The island renders what it receives.
 
-### Use hexagonal shadow placeholders during loading
+Rationale: threshold comparison and fallback rules are business logic with edge cases (malformed JSON, missing thresholds, out-of-range ranks). Jest covers pure functions cheaply; the island stays a view.
 
-The `BadgeDisplayIsland` shows hexagonal skeleton/shadow shapes while the API request is in-flight. These are rendered as CSS-drawn hexagons (using `clip-path: polygon(...)`) with a subtle shimmer or pulse animation. The number of placeholder shapes matches a reasonable column count (e.g., 3-5 hexagons) rather than attempting to predict how many badges the user has.
+### Non-friends receive 404, not 403
 
-Rationale: an empty space during loading looks like a bug or missing feature. Hexagonal shadows signal "something unlockable lives here" which aligns with the motivational intent of the badge system. CSS-only hexagons have zero JavaScript cost and no additional network requests.
+The friend-scoped branch verifies an accepted `friendships` row in either direction and returns 404 when it is absent, matching `handleGetFriendProfile`. A `userId` equal to the caller resolves to the own-summary path with no friendship check. Non-integer or non-positive `userId` returns 400.
 
-Alternative considered: showing nothing during load (the simplest option). Rejected because a blank space on first paint followed by badges appearing would look like a layout glitch.
+Rationale: the existing friend-profile surface already returns 404 to avoid leaking whether a user exists, and the client already treats 404 as "not a friend". Introducing 403 for the same condition would split the contract.
 
-### Add badge-display.css to both profile and friend profile renderers
+### Badge images use one path, one format
 
-`renderProfilePage.ts` and `renderFriendProfilePage.ts` will each include `'/css/badge-display.css'` in their stylesheet arrays. This is the established pattern — each page declares its own stylesheet dependencies.
+Images are constructed as `/img/achievements/<image_slug>.webp`. There is no PNG→WebP fallback. A null `image_slug`, a load error, or a path that fails the slug pattern falls back to a CSS-drawn hexagon placeholder.
 
-Rationale: badges render on both pages, and each page is responsible for declaring its own CSS. Adding to an existing file (e.g., `profile.css`) would couple badge rendering to profile-specific layout concerns and create confusion when badges also render on the friend profile page.
+Rationale: `public/` has no `images/` directory, content images are WebP-only, and a fallback 404 costs a request to reach the same visual result. Keeping the placeholder in CSS means no extra asset.
 
-### Do not add migrations or schema changes
+### Borders encode two axes and are baked at build time
 
-This change uses only the tables created by `shared-achievement-infrastructure`. No new D1 migrations are needed.
+Badge chrome has two reusable layers:
 
-Rationale: the achievement data model is already handled. This change is purely an API + UI layer.
+1. **Family frame** — one master per `badge_type` (`journey`, `habit`, `challenge`, `book`, `community`, `field-guide`).
+2. **Rank ring** — one master per rank (`bronze`, `silver`, `gold`, `mithril`), designed to a shared circular aperture.
+
+Both are generated once, composited over the base emblem in PhotoCraft, and exported as a single WebP per badge. The client never loads frames or rings.
+
+Rationale: a shared rank ring gives consistent rank semantics across families and costs four masters instead of a 6×4 matrix. Baking the composite avoids runtime layering, extra requests, and alpha-composition bugs in CSS.
+
+### Collection numbering is typographic, not artwork
+
+The badge card shows `index/size` and the rank label as text, sourced from the API. Numbers are never baked into images.
+
+Rationale: text stays crisp at every size, is localizable, is readable by assistive technology, and avoids per-badge numeral assets.
+
+### Group earned badges by collection
+
+The island renders one section per collection when at least one enrolled badge is earned, ordered by `collection.index`, with a header showing `label · earned/size`. Global and standalone badges render in a trailing "Other" section ordered newest-earned first. Within a collection, cards sort by `index`; elsewhere the API order is preserved.
+
+Rationale: a numbered set is only legible when its members sit together and the missing slots are obvious. Re-sorting inside a collection is deliberate; the API still returns newest-first for consumers that want recency.
+
+### Award from progress writes against the displayed storyline distance
+
+`src/achievement-awards.ts` exposes `checkAndAwardJourneyBadges(db, userId)`:
+
+1. Resolve the active storyline and displayed distance once (`resolveUserStoryline`, `calculateTotalDistance`, `applyStorylineOffset`).
+2. Load journey/habit definitions and parse their metadata.
+3. Skip definitions whose `storyline` is set and does not match the active storyline.
+4. Award each badge whose condition is met via `awardAchievement`, using a deterministic idempotency key.
+
+`first-steps` qualifies on any progress row; journey badges on `threshold_km`; `faithful-walker` on seven distinct walk dates within the trailing seven-day window, keyed by window end date.
+
+Rationale: badge thresholds are expressed in storyline distance, so awarding from raw distance would let a Pippin user earn Frodo/Sam badges. Awarding from the displayed distance and filtering on the definition's storyline keeps the catalog honest. Global habit badges use `storyline: null` and apply to every path.
+
+### Award failures never fail a walk log
+
+The hook is awaited after a successful write and wrapped so any error (missing definition, D1 failure, malformed metadata) is logged and swallowed. Awards are derived state; a walk log is user data and must not be lost to a badge bug.
+
+### Loading, empty, and error states
+
+Skeletons render only after a short delay to avoid flashing on fast responses. An empty summary removes the section entirely. A failed request removes the section and logs to the console. A missing image hides the `<img>` and leaves the name.
+
+### CSS uses design-guide variables only
+
+`public/css/badge-display.css` uses `var(--accent-gold)`, `var(--bg-surface)`, `var(--text-primary)`, and existing spacing variables. No hardcoded hex or rgb values. Hexagon geometry is shared by the skeleton and the fallback placeholder; real badge art supplies its own frame.
+
+### No migrations beyond the seed
+
+`migrations/0144_seed_journey_badges.sql` inserts definitions with `INSERT OR IGNORE`. No table, index, or column changes.
 
 ## Risks / Trade-offs
 
-- [Badge images not yet created] → The `achievement_definitions.image_slug` column stores a slug referencing an image asset. If the image file doesn't exist, the badge renders a broken image. Mitigation: the `BadgeDisplayIsland` should handle image load errors gracefully (e.g., fallback to a placeholder or hide the image).
-- [Friend profile badge fetch adds a second API call] → The friend profile page already loads friend data from `GET /api/friends/:userId/profile`. Adding a separate badge fetch doubles the API calls for that page. Mitigation: this is acceptable for MVP — badge data is small and the endpoint is a single indexed query. If latency becomes an issue later, the friend profile endpoint can include `achievements` in its response without changing the badge display island.
-- [No authorization for own-badge access beyond session] → The endpoint relies on the standard `Authorization: Bearer` header validated through `validateSession`. No additional ownership check is needed for the default (no `userId`) path. Mitigation: this matches all other authenticated endpoints in the app.
+- [Artwork review blocks implementation] → Generation produces multiple candidates per asset and the pipeline stops at a review gate before compositing. Wiring can proceed against the CSS placeholder while art is approved.
+- [Friend profile adds a second API call] → Badge data is small and indexed; the page already makes one profile call. If latency matters later, the friend profile response can embed achievements without changing the island contract.
+- [Rank thresholds drift from seed data] → Thresholds live in `metadata` and are read by both the hook and the presentation resolver; a single seed migration is the source of truth. Tests assert the seeded values.
+- [Award hook adds work to every walk write] → The hook loads only journey/habit definitions and exits early for non-matching storylines; most writes cross no threshold. It runs after the write, and failures are swallowed.
+- [Baked borders require a rerun when a family changes] → Accepted: art changes are batch work, and the PhotoCraft template makes a rerun deterministic.
+- [Metadata is free-form and can be malformed] → Parsing is defensive: invalid JSON or out-of-range values fall back to rank 1, no collection, and the active storyline.
 
 ## Migration Plan
 
-1. Add `GET /api/achievements` handler in a new `src/achievement-handlers.ts` file, importing `getUserAchievementSummary` from `src/achievement-utils.ts`.
-2. Wire the route and allowed methods into `src/index.ts`.
-3. Create `BadgeDisplayIsland` in `client/src/islands/BadgeDisplayIsland.tsx`.
-4. Register `BadgeDisplayIsland` in `client/src/index.tsx` auto-hydrated islands.
-5. Add `<div data-island="BadgeDisplayIsland"></div>` to `renderProfilePage.ts` SSR shell.
-6. Add `<div data-island="BadgeDisplayIsland"></div>` to `renderFriendProfilePage.ts` below `FriendProfileIsland`. The island detects the friend ID from the URL pathname — no `data-user-id` attribute needed.
-7. Create `public/css/badge-display.css` and reference from both page renderers.
-8. Add Jest coverage for the endpoint and Vitest coverage for the island.
-9. Update `docs/api-reference.md`.
+1. Extend `AchievementSummary` and its query with `metadata`; update the shared-infra spec delta.
+2. Add `src/badge-presentation.ts` and its tests.
+3. Add `src/achievement-handlers.ts`, wire `app.get('/api/achievements', authGuard, …)`, and add handler and route tests.
+4. Add `migrations/0144_seed_journey_badges.sql`.
+5. Add `src/achievement-awards.ts` and call it from `handleProgressPost` and `handleProgressPut`.
+6. Create `BadgeDisplayIsland`, register it, and add the SSR placeholders.
+7. Create `public/css/badge-display.css` and reference it from both renderers.
+8. Generate, review, and composite the badge artwork into `public/img/achievements/`.
+9. Update `docs/api-reference.md`, `docs/data-models.md`, and `docs/design-guide.md`.
 
-Rollback strategy: remove the island placeholder divs from the SSR shells, remove the route and island registration, and delete the handler and island files. No data migration to reverse.
+Rollback strategy: remove the island placeholders, route, island registration, handler, award hook call, and stylesheet; drop migration 0144. Earned instances remain append-only and harmless if the display is rolled back.
 
 ## Open Questions
 
-None. All design decisions are resolved:
-- Standalone `BadgeDisplayIsland` island, not embedded in existing islands
-- Single `GET /api/achievements` endpoint with optional `?userId=` query param
-- Friendship verification for friend-scoped access
-- Empty grid (no message) when no badges exist
-- New `badge-display.css` stylesheet, not extending existing CSS
-- No new migrations
+None. Resolved decisions:
+- Hono route with `authGuard`; handler receives `userId`.
+- `{ achievements: [...] }` envelope with a `presentation` block.
+- Non-friend access returns 404.
+- `/img/achievements/<image_slug>.webp`, single format.
+- Family frame + rank ring, baked in PhotoCraft; numbering is text.
+- Storyline-scoped awarding from displayed distance; global habit badges.
+- Grouped collection sections with per-collection progress.
+- No new migrations beyond the seed.
