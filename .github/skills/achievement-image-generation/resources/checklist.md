@@ -16,6 +16,7 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
   - [ ] `field-guide` → `field-guide-collectible-discovery-*`.
 - [ ] No award hook, threshold, or definition row invented for another change's type.
 - [ ] Motif sentence written: one object, one silhouette, two or three colours.
+- [ ] Story beat named: dark/bleak/tense, warm/home, wonder/elder, habit, or community. The 2026-11-02 user picks are examples of the taste, not compositions to copy.
 - [ ] Family frame master exists under `raw_assets/badges/processed/frame/<family>/`.
 - [ ] Rank resolved. Fixed rank → that boss. `rank_thresholds` → bake bronze; label carries the live tier.
 
@@ -24,6 +25,9 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 - [ ] Two variants added to `scripts/badge-art/prompts.json`: `a` polished enamel, `b` aged engraved metal.
 - [ ] `id` is exactly `<group>/<slug>`; `slug`, `name`, `family`, `rank`, `canvas: 1024`, and `target_outer_px` (800 emblem / 1016 frame / 880 rank) present.
 - [ ] Prompt is one object, no scene, no person, no text, no frame, no rank ring.
+- [ ] Treatment follows the story-beat palette matrix: 2–3 colour families, aged/hard metal on dark beats, no candy green/blue.
+- [ ] The recommended variant is chosen for beat fit, not because it is the brightest.
+- [ ] Any sun or moon is a secondary accent, not the dominant shape.
 - [ ] No `watercolour` / `watercolor` anywhere in the matrix (the generator rejects it).
 - [ ] Variants differ in material treatment, not composition.
 - [ ] Prompt under about 140 words joined; silhouette readable at 96 px.
@@ -56,6 +60,13 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 - [ ] `python3 scripts/badge-art/contact_sheets.py --only <asset>` wrote `reports/badge-art/sheets/<asset>.jpg`.
 - [ ] Sheet shows every candidate, labelled by variant and seed.
 - [ ] Exactly two finalists chosen on: silhouette at 96 px, motif clarity, metalwork quality, family consistency, artifact-free edges.
+- [ ] **Story-beat and premium gate** passed for the recommended pick:
+  - [ ] Story-beat fit: the material and palette read as the achievement's emotional beat.
+  - [ ] Palette cohesion: 2–3 colour families; no candy green/blue, no rainbow coding.
+  - [ ] Material credibility: engraving, patina, or hand-chasing is visible; not a flat gloss plate.
+  - [ ] Premium vs cheap: the quieter hard-metal option wins ties; bland-but-premium may beat bright-but-cheap.
+  - [ ] No oversized sun, moon, or celestial symbol dominating the motif.
+  - [ ] 96 px silhouette still reads after the palette is applied.
 - [ ] Both have a score and a one-line rationale in `reports/badge-art/shortlist.json`.
 - [ ] One is marked `recommended`.
 - [ ] `python3 scripts/badge-art/make_report.py --render` completed.
@@ -98,6 +109,8 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 - [ ] 48 px: boss is a colour, not a smudge (optional).
 - [ ] Family check: the badge belongs to its family, not to a metal tier. Habit does not read as "silver journey".
 - [ ] Palette check: dark-fantasy key; no pastel outlier, no saturated cobalt, no neon.
+- [ ] Story-beat check: dark beats stay muted; bright enamel appears only where the beat earns it; 2–3 colour families.
+- [ ] Material check: engraving, patina, or hand-chasing reads at 512 px; not a flat gloss plate.
 - [ ] Density check: mid-density object, not a pin and not a painted plate.
 - [ ] Field check: matte flat base plus soft top-light gradient; no hard dome, vignette, or spotlight.
 - [ ] Gold-on-gold check: gold boss on the gold journey frame still shows the dark bezel at 96 px.

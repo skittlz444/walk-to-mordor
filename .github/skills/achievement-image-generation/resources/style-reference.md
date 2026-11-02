@@ -46,6 +46,51 @@ The current set still carries four field treatments: glossy dome, matte flat, pa
 
 ---
 
+## Story-beat palette matrix
+
+The emblem reads as the achievement's emotional beat, not only its noun. The same motif in bright enamel can look cheap on a dark beat; a quieter hard-metal treatment reads premium. Choose the beat first, then the material and palette.
+
+| Beat | Visual read | Material | Palette | Typical families |
+|---|---|---|---|---|
+| Dark, bleak, tense, sombre after victory | Danger, loss, endurance | Aged or hard metal; patinated, hand-chased, engraved | Charcoal, steel, patinated bronze, umber, deep muted blue; ember red only as an accent; 2–3 families | journey, challenge |
+| Warm, home, hopeful | Safety, return, rest | Aged bronze/brass; soft glow; warm enamel allowed | Amber, honey gold, deep green, warm brown; one gentle light source | journey, habit, community |
+| Wonder, elder, elven | Awe, age, grace | Polished gold/silver, crystal, fine engraving | Gold, pale silver, crystal blue-white; richer but cohesive | journey, field-guide |
+| Habit, consistency | Repetition, small wins | Enamelled field with steel/copper structure | Deep green or blue plus one warm metal; limited | habit |
+| Community, fellowship | Shared fire, belonging | Bare or dark metal with firelight | Iron, bronze, ember orange; minimal cool colour | community |
+
+Rules:
+
+- **Mixed beats:** the dominant beat controls the material; the secondary beat gets one accent. Dark plus warm (a campfire at night, a homecoming after loss) stays dark metal with warmth as glow, not as a bright field.
+- **Bright enamel is a choice, not a default.** It fits wonder and some habit badges. On a dark beat it reads cheap, however clean the rendering.
+- **One palette test at 96 px.** The colour should still say the beat when the motif is a silhouette.
+- **Premium beats bright on ties.** A slightly quiet hard-metal option can be the better pick; "a bit bland but better" is an acceptable verdict, "bright but cheap" is not.
+
+### Approved directions from the 15 picks
+
+These are evidence of the rule, not templates. Do not copy a composition because it was picked; derive the motif from the achievement.
+
+| Emblem | Family | Beat | Approved direction |
+|---|---|---|---|
+| First Steps | habit | warm/home + habit | Aged (b): deep green door, brass knob, warm lamp; aged bronze carries the warmth |
+| Across the Buckleberry Ferry | journey | dark | Aged (b): patinated metal hull, dark water, lantern as the only warm accent; bright green enamel rejected |
+| Survivor of Weathertop | journey | dark/tense | Aged (b): deeper blue-grey, patinated bronze/steel, more engraved detail |
+| Through Khazad-dûm | journey | dark/bleak | Aged (b): dark stone, patinated steel, pale silver linework; bright enamel rejected as cheap |
+| Guest of the Golden Wood | journey | wonder/elven | Polished (a): gold mallorn leaves on pale silver, deep navy field |
+| The Breaking of the Fellowship | journey | dark/sombre | Aged (b): cold steel and silver horn, muted water; hard-metal colour reads premium |
+| Standing at Mount Doom | journey | dark/post-victory | Aged (b): darker hard metal, well-formed detailed mountain; muted ember red as accent only |
+| Home Again at Sunset | journey | warm/home | Aged (b): amber and aged bronze, soft sunset glow |
+| Faithful Walker | habit | habit | Polished (a): bright blue field with gold path and stones; one blue family, metal-structured |
+| The Glittering Caves | journey | wonder | Polished (a): crystal blue-white with a gold lantern; richer palette, still cohesive |
+| Weekend Warrior | habit | habit | Aged (b): sun and moon reduced to small secondary accents, palette cut to 2–3 families |
+| Steady Month | habit | habit | Polished (a): deep forest-green enamel with gold; limited green family |
+| Hundred-K Week | habit | habit/achievement | Aged (b): muted navy-blue, aged metal; the bright blue read cheap |
+| Fellowship Founder | community | community | Aged (b): bare/dark metal flame on bronze stones; minimal colour, bright rejected |
+| Good Company | community | community | Aged (b): aged bronze, warm campfire light, premium night-time read |
+
+A blue field is not banned outright: Faithful Walker's approved blue is a single, deliberate habit enamel with gold structure. The failing blues are washy or oversaturated fills used on dark, community, or generic beats.
+
+---
+
 ## Layer geometry
 
 All layers are authored on a 1024 × 1024 canvas with centre `(512, 512)`. The outer frame is 1016, leaving a 4 px margin for antialiasing.

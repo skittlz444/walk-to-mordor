@@ -69,6 +69,30 @@ Hard rules:
 - **No baked rank, collection number, or text.** Those are typographic on the card.
 - **Matte field discipline.** Flat base plus a soft top-light gradient. No white specular dome, no vignette, no spotlight.
 
+## User commissioning notes — emblem palette
+
+The user's 2026-11-02 review of 15 emblem finalists established a preference: **the story beat chooses the material and palette, and premium beats bright.** Bright enamel is not the default; it is earned by the beat. "Story beat" here is the achievement's emotional context, not the `storyline` metadata slug.
+
+| Story beat | Material / palette | Avoid |
+|---|---|---|
+| Dark, bleak, tense, or sombre after victory | Aged or hard metal: patinated bronze, steel, charcoal, umber, deep muted blue; engraved or hand-chased; 2–3 colour families | Bright candy green/blue enamel; flat polished plates |
+| Warm, home, hopeful | Warm amber/gold, aged bronze, gentle lamplight glow, soft tonal depth | Neon warmth; pastel sunset wash |
+| Wonder, elder, elven | Gold/silver/crystal; richer colour, still cohesive; polished enamel may fit | Oversized celestial symbols; many competing hues |
+| Habit, consistency | Limited deep green or blue enamel may work; keep it premium and metal-structured | Saturated cobalt; rainbow colour-coding |
+| Community, fellowship | Bare or dark metal with warm firelight: bronze, iron, ember orange | Cheap blue; glossy group-scene gloss |
+
+**The "cheap" tells.** Reject a candidate that shows any of these:
+
+- oversaturated candy green or blue;
+- an oversized sun, moon, or other celestial symbol that dominates the motif;
+- too many competing colours instead of a 2–3 family palette;
+- a flat polished plate with no engraving, patina, or hand-chasing;
+- generic mobile-game gloss.
+
+Hard-metal detail, patina, engraving, hand-chasing, tonal depth, and a restrained palette read more premium than bright, flat enamel. A slightly quiet hard-metal option can beat a loud enamel one. Ornament on higher tiers stays controlled: ornate, never noisy or oversized.
+
+The 15 picks are examples of this taste, not a mandate to copy their exact compositions. Derive the motif from the achievement; use the beat and palette rules to choose its treatment.
+
 ## Shape and stack
 
 Circle only. No hexagon badge silhouette. No rank ring.
@@ -129,6 +153,8 @@ Do not repeat the shared style prefix or suffix in the per-asset prompt; `genera
 
 Variant **a** is polished hard enamel with glossy raised gold outlines and smooth saturated fields; variant **b** is aged engraved metal with hand-chased relief and patinated bronze. Both emblem variants end with "no separate outer frame or border ring." Full wording is in `resources/prompt-patterns.md`.
 
+The pair is still mandatory, but the **recommendation follows the story beat, not the polish**: dark, tense, and sombre beats → b; warm/home beats favour aged bronze and gentle glow (usually b); polished a is earned by elven wonder or a deliberately limited habit enamel, and is never the default for a dark beat. Tighten the treatment wording with the per-beat patterns in `resources/prompt-patterns.md`, and mirror the palette across both variants so the shortlist compares finish, not motif.
+
 `generate.py` rejects the matrix if the string `watercolour` or `watercolor` appears anywhere. That is deliberate: this is not the goal pipeline.
 
 Patterns and per-type motif examples are in `resources/prompt-patterns.md`.
@@ -179,7 +205,7 @@ python3 scripts/badge-art/contact_sheets.py --only emblem/<slug>
 
 The sheet is 4 columns, 320 px tiles, 3 rows for twelve emblem candidates and 2 rows for eight frame/ring candidates. It labels variant and seed.
 
-Shortlist **exactly two** candidates on five criteria: silhouette at 96 px, motif clarity, metalwork quality, family consistency, and artifact-free edges.
+Shortlist **exactly two** candidates on five criteria: silhouette at 96 px, motif clarity, metalwork quality, family consistency, and artifact-free edges. Apply the story-beat and premium gate in `resources/checklist.md` before marking `recommended`; the brighter option does not win by default.
 
 Record both with a score and a one-line rationale in `reports/badge-art/shortlist.json`, and mark one as `recommended`. Then render the review pack:
 
@@ -331,6 +357,7 @@ Commit only:
 - Do not write `public/img/achievements/` before sign-off.
 - Do not invent award hooks, thresholds, or definition rows for another change's type.
 - Do not add a LoRA, change CFG/steps/sampler, or upscale the raw candidate.
+- Do not recommend candy green/blue enamel, oversized celestial symbols, or a 4+ colour palette for a dark or sombre beat.
 - Do not ship the flattened `#14181f` proof as production art.
 
 ## Quick reference

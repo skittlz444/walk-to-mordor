@@ -60,14 +60,22 @@ The new handcrafted boss candidates are generated with ComfyUI (4 ranks × 12 ca
 
 The earlier procedural F1v2 bosses and the old frame + boss sheets are superseded as review artifacts. The new handcrafted boss review is still open.
 
-## In progress — image-generation skill
+## Applied — image-generation skill
 
-A subagent is applying the user's palette/material feedback to the emblem-generation skill. After the emblem/boss review settles, the skill should also cover:
+The emblem skill now encodes the user's 2026-11-02 palette/material feedback:
 
-- generating the selected handcrafted bosses with ComfyUI;
-- cutting out/normalising the boss medallions and 90 px placement tiles;
-- seating the chosen boss on the locked family frame in PhotoCraft with a contact shadow;
-- rebuilding the boss finalist and frame + boss review sheets.
+- story-beat matrix (dark/bleak, warm/home, wonder/elder, habit, community);
+- premium-over-bright rule and the “cheap” tells;
+- 15 approved-direction examples from this review;
+- prompt patterns for each beat and an avoid list;
+- a pre-shortlist premium/story-beat gate in the checklist.
+
+The handcrafted-boss pipeline remains a follow-up after boss selection:
+
+- generate the selected bosses with ComfyUI;
+- cut out/normalise the boss medallions and 90 px placement tiles;
+- seat the chosen boss on the locked family frame in PhotoCraft with a contact shadow;
+- rebuild the boss finalist and frame + boss review sheets.
 
 ## Cleanup
 

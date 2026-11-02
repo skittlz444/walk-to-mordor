@@ -64,6 +64,52 @@ Note the last one: "sunset rays behind the door" stays an emblem because the doo
 
 ---
 
+## Story-beat treatments
+
+Choose the beat before writing the treatment clause; the palette matrix is in `style-reference.md`. The asset still ships both finishes. Apply the beat's palette to the recommended finish and mirror the motif colours into the other variant, so the shortlist compares finish rather than composition. The generic variant A/B strings above remain valid defaults; the clauses below are approved alternatives that keep the material split.
+
+### Dark / bleak / tense
+
+> Aged engraved bronze or steel with hand-chased relief, dark patina, deep recessed charcoal, umber, or muted blue colour, worn polished edges, a single small ember or lantern accent, and no separate outer frame or border ring.
+
+Use for Buckleberry Ferry, Weathertop, Khazad-dûm, the Breaking of the Fellowship, and Mount Doom. Keep red to one ember accent; do not flood the field with it. Variant a on these beats stays polished but keeps the same muted palette: deep navy or charcoal enamel, never a candy fill.
+
+### Warm / home / hopeful
+
+> Warm aged bronze and amber enamel with a soft lamplight glow, gentle tonal depth, hand-chased metal edges, and no separate outer frame or border ring.
+
+Use for First Steps and Home Again at Sunset. Warmth comes from the light and the metal, not from raising saturation.
+
+### Wonder / elder / elven
+
+> Polished gold and pale silver with fine engraving, crystal blue-white highlights, a deep cohesive field, restrained ornament, and no separate outer frame or border ring.
+
+Use for Guest of the Golden Wood and The Glittering Caves. Richer is not more colours: hold to three families, and do not let ornament become noisy or oversized.
+
+### Habit / consistency
+
+> Limited deep green or blue enamel with a gold or copper structure, one accent metal, crisp engraved edges, and no separate outer frame or border ring.
+
+Use for Steady Month and Faithful Walker, and for the aged variant of Hundred-K Week. Keep the enamel deep and the palette to one hue plus metal. Do not rainbow-code the repeatable ranks.
+
+### Community / fellowship
+
+> Bare or dark forged metal with warm firelight on the high points, aged bronze and iron, an ember-orange accent, minimal cool colour, and no separate outer frame or border ring.
+
+Use for Fellowship Founder and Good Company. The fire is the only warm block; do not put a blue field behind it. A bare-metal flame is a valid, premium result even when it is quiet.
+
+The canonical beat-to-finish recommendation is the table in `style-reference.md`; each pattern above names the finish it suits.
+
+### Avoid in a beat treatment
+
+- An oversized sun or moon, or any celestial symbol that dominates the motif. Keep it a small secondary accent.
+- Candy or oversaturated green/blue enamel.
+- More than three colour families in one emblem.
+- A flat polished plate with no engraving, patina, or hand-chasing.
+- Generic mobile-game gloss, hard dome, neon rim, or rainbow rank coding.
+
+---
+
 ## Family frame pattern
 
 A frame is a hollow ring. The centre must stay empty so the cutout can open it. The shared prefix still says "badge face filling the frame"; the frame sentence overrides it. Do not add a badge face or an emblem inside the opening.
@@ -260,3 +306,7 @@ Before saving a prompt:
 - [ ] Two variants differ in material, not composition.
 - [ ] The motif is legible as a silhouette at 96 px.
 - [ ] The colours belong to the family, not to a different metal tier.
+- [ ] Story beat named; material and palette follow the matrix.
+- [ ] Palette is 2–3 families, with no candy green/blue.
+- [ ] Any sun or moon is a secondary accent, not the dominant shape.
+- [ ] Material detail (engraving, patina, hand-chasing) is visible; the plate is not flat gloss.
