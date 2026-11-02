@@ -1,6 +1,7 @@
 import { render, h } from 'preact';
 import { DistanceModal } from './islands/DistanceModal';
 import { AuthForms } from './islands/AuthForms';
+import { BadgeDisplayIsland } from './islands/BadgeDisplayIsland';
 import { DrawerIsland } from './islands/DrawerIsland';
 import { GoalModal } from './islands/GoalModal';
 import { MapIsland } from './islands/MapIsland';
@@ -40,6 +41,7 @@ const autoHydratedIslands = {
   AdminStorylinesIsland,
   AdminUsersListIsland,
   AuthForms,
+  BadgeDisplayIsland,
   DrawerIsland,
   FriendAddIsland,
   FriendProfileIsland,
@@ -67,6 +69,7 @@ const allIslands = {
   AdminStorylinesIsland,
   AdminUsersListIsland,
   AuthForms,
+  BadgeDisplayIsland,
   DistanceModal,
   DrawerIsland,
   FriendAddIsland,
