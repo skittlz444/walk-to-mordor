@@ -78,8 +78,10 @@ test.describe('Email Confirmation UI', () => {
                  await page.waitForSelector('body.drawer-open');
                  await page.click('.drawer-profile');
                  await page.waitForURL('**/profile');
-                 await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
-                 await page.click('button:has-text("Logout")');
+                 await page.goto('/profile/settings', { waitUntil: 'domcontentloaded' });
+                 await page.waitForSelector('[data-island="ProfileSettingsIsland"][data-hydrated="true"]', { timeout: 10000 });
+                 await page.waitForSelector('[data-island="ProfileAccountIsland"][data-hydrated="true"]', { timeout: 10000 });
+                 await page.click('[data-island="ProfileAccountIsland"] button:has-text("Logout")');
                  await page.waitForLoadState('domcontentloaded');
              }
         }

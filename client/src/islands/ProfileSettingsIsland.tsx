@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { Avatar } from '../components/Avatar';
-import type { ActiveStoryline } from '../types/session';
+import { AvatarPickerModal } from '../components/AvatarPickerModal';
+import { getAuthHeaders } from '../utils/auth';
 import { clearMapCache } from '../utils/map-cache';
+import type { ActiveStoryline } from '../types/session';
+import { isValidEmail, isValidUsername } from '../../../src/validators';
 
 interface SessionData {
   username: string;
@@ -30,10 +33,45 @@ interface StorylineSwitchResponse {
   activeStoryline: ActiveStoryline;
 }
 
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('sessionToken');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+type FieldName = 'username' | 'email';
+type StatusClass = '' | 'saving' | 'saved' | 'error';
+
+interface FieldStatus {
+  message: string;
+  statusClass: StatusClass;
 }
+
+const EMPTY_STATUS: FieldStatus = { message: '', statusClass: '' };
+const SAVED_STATUS_MS = 1500;
+
+/**
+ * Per-field save bookkeeping.
+ *
+ * `inFlight` counts PUTs the server has not answered yet, so a blur that happens
+ * while a previous value is still saving can never be treated as a no-op: that
+ * older PUT may still land and revert the field. `lastRequested*` remembers the
+ * newest request so a re-blur of the same value does not queue a duplicate PUT
+ * while that request's response is still the one the field is waiting on.
+ */
+interface FieldSaveState {
+  inFlight: number;
+  lastRequestedValue: string | null;
+  lastRequestedSeq: number;
+}
+
+const FIELD_RULES: Record<FieldName, {
+  validate: (value: string) => boolean;
+  invalidMessage: string;
+}> = {
+  username: {
+    validate: isValidUsername,
+    invalidMessage: 'Username must be 3-30 characters using letters, numbers, and underscores.',
+  },
+  email: {
+    validate: isValidEmail,
+    invalidMessage: 'Enter a valid email address.',
+  },
+};
 
 async function clearServiceWorkerSWRCache(): Promise<void> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
@@ -56,45 +94,75 @@ async function clearServiceWorkerSWRCache(): Promise<void> {
   }
 }
 
-export function ProfileIsland() {
+/**
+ * Editable profile settings. The SSR renderer owns the `.profile-page` wrapper
+ * and the Back to profile row; this island renders the settings cards only.
+ * Username/email save on blur with per-field status; the avatar list is owned
+ * by `AvatarPickerModal`, so this island never requests `/api/avatars`.
+ */
+export function ProfileSettingsIsland() {
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [showFutureGoalsUnlocked, setShowFutureGoalsUnlocked] = useState(true);
   const [defaultViewMap, setDefaultViewMap] = useState(false);
   const [avatarId, setAvatarId] = useState<string | null>(null);
-  const [availableAvatars, setAvailableAvatars] = useState<string[]>([]);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<FieldStatus>(EMPTY_STATUS);
+  const [emailStatus, setEmailStatus] = useState<FieldStatus>(EMPTY_STATUS);
   const [preferenceStatus, setPreferenceStatus] = useState('');
-  const [preferenceStatusClass, setPreferenceStatusClass] = useState('');
-  const [avatarStatus, setAvatarStatus] = useState('');
-  const [avatarStatusClass, setAvatarStatusClass] = useState('');
+  const [preferenceStatusClass, setPreferenceStatusClass] = useState<StatusClass>('');
   const [storylines, setStorylines] = useState<StorylineOption[]>([]);
   const [activeStoryline, setActiveStoryline] = useState<ActiveStoryline | null>(null);
   const [pendingStoryline, setPendingStoryline] = useState<StorylineOption | null>(null);
   const [storylineStatus, setStorylineStatus] = useState('');
-  const [storylineStatusClass, setStorylineStatusClass] = useState('');
+  const [storylineStatusClass, setStorylineStatusClass] = useState<StatusClass>('');
   const [switchingStoryline, setSwitchingStoryline] = useState(false);
-  const usernameRef = useRef<HTMLInputElement>(null);
+
+  const usernameSeq = useRef(0);
+  const emailSeq = useRef(0);
+  const savedUsername = useRef('');
+  const savedEmail = useRef('');
+  const usernameSaveState = useRef<FieldSaveState>({ inFlight: 0, lastRequestedValue: null, lastRequestedSeq: 0 });
+  const emailSaveState = useRef<FieldSaveState>({ inFlight: 0, lastRequestedValue: null, lastRequestedSeq: 0 });
+  const usernameSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const emailSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFieldSavedTimer = useCallback((field: FieldName) => {
+    const timerRef = field === 'username' ? usernameSavedTimer : emailSavedTimer;
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchData() {
       try {
-        const [sessionRes, avatarRes, storylinesRes] = await Promise.all([
+        const [sessionRes, storylinesRes] = await Promise.all([
           fetch('/api/session', { headers: getAuthHeaders() }),
-          fetch('/api/avatars', { headers: getAuthHeaders() }),
           fetch('/api/storylines', { headers: getAuthHeaders() }),
         ]);
 
         if (cancelled) return;
 
+        if (sessionRes.status === 401 || storylinesRes.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
+
         if (sessionRes.ok) {
           const data: SessionData = await sessionRes.json();
-          setUsername(data.username || '');
-          setEmail(data.email || '');
+          if (cancelled) return;
+
+          const nextUsername = data.username || '';
+          const nextEmail = data.email || '';
+          setUsername(nextUsername);
+          setEmail(nextEmail);
+          savedUsername.current = nextUsername;
+          savedEmail.current = nextEmail;
           setShowFutureGoalsUnlocked(
             typeof data.showFutureGoalsUnlocked === 'boolean' ? data.showFutureGoalsUnlocked : true
           );
@@ -105,13 +173,9 @@ export function ProfileIsland() {
           setActiveStoryline(data.activeStoryline ?? null);
         }
 
-        if (avatarRes.ok) {
-          const avatars: string[] = await avatarRes.json();
-          setAvailableAvatars(avatars);
-        }
-
         if (storylinesRes.ok) {
           const data: StorylineListResponse = await storylinesRes.json();
+          if (cancelled) return;
           setStorylines(Array.isArray(data.storylines) ? data.storylines : []);
         }
       } catch (err) {
@@ -121,52 +185,142 @@ export function ProfileIsland() {
       }
     }
 
-    fetchData();
-    return () => { cancelled = true; };
+    void fetchData();
+    return () => {
+      cancelled = true;
+      clearFieldSavedTimer('username');
+      clearFieldSavedTimer('email');
+    };
+  }, [clearFieldSavedTimer]);
+
+  const setFieldStatus = useCallback((field: FieldName, status: FieldStatus) => {
+    if (field === 'username') {
+      setUsernameStatus(status);
+    } else {
+      setEmailStatus(status);
+    }
   }, []);
 
-  useEffect(() => {
-    if (!loading && usernameRef.current) {
-      usernameRef.current.focus();
-    }
-  }, [loading]);
+  const handleFieldInput = useCallback((field: FieldName, value: string) => {
+    // Clear any pending "Saved" timer so an older save cannot re-assert its
+    // status after the user starts editing again.
+    clearFieldSavedTimer(field);
 
-  const saveAvatarChoice = useCallback(async (slug: string | null) => {
-    setAvatarStatus('Saving...');
-    setAvatarStatusClass('saving');
+    if (field === 'username') {
+      usernameSeq.current += 1;
+      setUsername(value);
+    } else {
+      emailSeq.current += 1;
+      setEmail(value);
+    }
+
+    setFieldStatus(field, EMPTY_STATUS);
+  }, [clearFieldSavedTimer, setFieldStatus]);
+
+  const saveField = useCallback(async (field: FieldName, rawValue: string) => {
+    const value = rawValue.trim();
+    const rules = FIELD_RULES[field];
+    const sequenceRef = field === 'username' ? usernameSeq : emailSeq;
+    const savedRef = field === 'username' ? savedUsername : savedEmail;
+    const saveState = field === 'username' ? usernameSaveState : emailSaveState;
+
+    // Re-blurring a value the newest in-flight request already carries must not
+    // queue a duplicate PUT, nor invalidate the response that request owns (its
+    // "Saving…" status stays until it settles).
+    if (
+      saveState.current.inFlight > 0 &&
+      saveState.current.lastRequestedValue === value &&
+      saveState.current.lastRequestedSeq === sequenceRef.current
+    ) {
+      return;
+    }
+
+    clearFieldSavedTimer(field);
+    setFieldStatus(field, EMPTY_STATUS);
+
+    if (!value || !rules.validate(value)) {
+      // Invalidate any in-flight save: the field now holds a value the server
+      // must not overwrite while the user is told to fix it.
+      sequenceRef.current += 1;
+      setFieldStatus(field, { message: rules.invalidMessage, statusClass: 'error' });
+      return;
+    }
+
+    // Skip only when the server already confirmed this value AND nothing can
+    // still revert it: an in-flight PUT may land after this blur and persist the
+    // value the user has just typed away from (e.g. save "Samwise", type back
+    // "FrodoBaggins" and blur — the restore must still reach the server).
+    if (value === savedRef.current && saveState.current.inFlight === 0) {
+      return;
+    }
+
+    const sequence = sequenceRef.current + 1;
+    sequenceRef.current = sequence;
+    saveState.current.inFlight += 1;
+    saveState.current.lastRequestedValue = value;
+    saveState.current.lastRequestedSeq = sequence;
+
+    setFieldStatus(field, { message: 'Saving…', statusClass: 'saving' });
 
     try {
-      const response = await fetch('/api/user/preferences', {
+      const response = await fetch('/api/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({ avatarId: slug }),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ [field]: value }),
+        keepalive: true,
       });
 
+      // A newer edit/blur owns the field now; discard this stale response.
+      if (sequence !== sequenceRef.current) return;
+
+      if (response.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
+
       if (response.ok) {
-        setAvatarId(slug);
-        setAvatarStatus('Saved');
-        setAvatarStatusClass('saved');
-        setTimeout(() => { setAvatarStatus(''); setAvatarStatusClass(''); }, 1500);
+        savedRef.current = value;
+        if (field === 'username') {
+          setUsername(value);
+        } else {
+          setEmail(value);
+        }
+
+        setFieldStatus(field, { message: 'Saved', statusClass: 'saved' });
+
+        const timerRef = field === 'username' ? usernameSavedTimer : emailSavedTimer;
+        timerRef.current = setTimeout(() => {
+          setFieldStatus(field, EMPTY_STATUS);
+          timerRef.current = null;
+        }, SAVED_STATUS_MS);
 
         void clearServiceWorkerSWRCache();
-
-        window.dispatchEvent(new CustomEvent('preferenceChanged', {
-          detail: { avatarId: slug },
-        }));
-      } else {
-        const data = await response.json();
-        setAvatarStatus(data.error || 'Failed to save');
-        setAvatarStatusClass('error');
+        return;
       }
+
+      let message = 'Failed to save';
+      try {
+        const data = await response.json() as { error?: unknown };
+        if (typeof data.error === 'string' && data.error) {
+          message = data.error;
+        }
+      } catch {
+        // Non-JSON error body: keep the generic message.
+      }
+
+      setFieldStatus(field, { message, statusClass: 'error' });
     } catch (err) {
-      console.error('Error saving avatar:', err);
-      setAvatarStatus('Network error');
-      setAvatarStatusClass('error');
+      if (sequence !== sequenceRef.current) return;
+      console.error('Error updating profile:', err);
+      setFieldStatus(field, { message: 'Network error. Please try again.', statusClass: 'error' });
+    } finally {
+      saveState.current.inFlight -= 1;
+      if (saveState.current.inFlight === 0) {
+        saveState.current.lastRequestedValue = null;
+        saveState.current.lastRequestedSeq = 0;
+      }
     }
-  }, []);
+  }, [clearFieldSavedTimer, setFieldStatus]);
 
   const switchStoryline = useCallback(async (mode: 'carry' | 'reset') => {
     if (!pendingStoryline) return;
@@ -178,10 +332,7 @@ export function ProfileIsland() {
     try {
       const response = await fetch('/api/user/storyline', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ storylineId: pendingStoryline.id, mode }),
       });
       const data = await response.json() as StorylineSwitchResponse | { error?: string };
@@ -194,7 +345,7 @@ export function ProfileIsland() {
       setPendingStoryline(null);
       setStorylineStatus('Saved');
       setStorylineStatusClass('saved');
-      setTimeout(() => { setStorylineStatus(''); setStorylineStatusClass(''); }, 1500);
+      setTimeout(() => { setStorylineStatus(''); setStorylineStatusClass(''); }, SAVED_STATUS_MS);
 
       clearMapCache();
       window.dispatchEvent(new CustomEvent('storylineChanged', { detail: data }));
@@ -226,17 +377,14 @@ export function ProfileIsland() {
     try {
       const response = await fetch('/api/user/preferences', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ [preferenceKey]: newValue }),
       });
 
       if (response.ok) {
         setPreferenceStatus('Saved');
         setPreferenceStatusClass('saved');
-        setTimeout(() => { setPreferenceStatus(''); setPreferenceStatusClass(''); }, 1500);
+        setTimeout(() => { setPreferenceStatus(''); setPreferenceStatusClass(''); }, SAVED_STATUS_MS);
 
         if (preferenceKey === 'defaultViewMap') {
           try {
@@ -269,76 +417,6 @@ export function ProfileIsland() {
     }
   }, []);
 
-  const handleSave = useCallback(async () => {
-    const trimmedUsername = username.trim();
-    const trimmedEmail = email.trim();
-
-    setError('');
-    setSuccess('');
-
-    if (!trimmedUsername && !trimmedEmail) {
-      setError('Please provide at least one field to update');
-      return;
-    }
-
-    const updates: Record<string, string> = {};
-    if (trimmedUsername) updates.username = trimmedUsername;
-    if (trimmedEmail) updates.email = trimmedEmail;
-
-    try {
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(updates),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(data.message || 'Profile updated successfully!');
-        void clearServiceWorkerSWRCache();
-      } else {
-        setError(data.error || 'Failed to update profile');
-      }
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError('Network error. Please try again.');
-    }
-  }, [username, email]);
-
-  const handleLogout = useCallback(() => {
-    const logoutFn = (window as typeof window & { logout?: () => void }).logout;
-    if (logoutFn) {
-      logoutFn();
-    }
-  }, []);
-
-  const handleBack = useCallback(() => {
-    window.history.back();
-  }, []);
-
-  const handleGalleryKeyDown = useCallback((e: KeyboardEvent) => {
-    const gallery = (e.currentTarget as HTMLElement);
-    const buttons = Array.from(gallery.querySelectorAll('.avatar-option')) as HTMLElement[];
-    const current = document.activeElement as HTMLElement;
-    const idx = buttons.indexOf(current);
-    if (idx === -1) return;
-
-    let next = -1;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      next = (idx + 1) % buttons.length;
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      next = (idx - 1 + buttons.length) % buttons.length;
-    }
-    if (next >= 0) {
-      e.preventDefault();
-      buttons[next].focus();
-    }
-  }, []);
-
   if (loading) {
     return (
       <div className="profile-page-loading">
@@ -348,7 +426,7 @@ export function ProfileIsland() {
   }
 
   return (
-    <div className="profile-page">
+    <>
       <div className="profile-card">
         <div className="profile-card-body">
           <div className="form-group">
@@ -356,12 +434,20 @@ export function ProfileIsland() {
             <input
               type="text"
               id="profile-username"
-              ref={usernameRef}
               value={username}
-              onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
+              onInput={(e) => handleFieldInput('username', (e.target as HTMLInputElement).value)}
+              onBlur={(e) => { void saveField('username', (e.target as HTMLInputElement).value); }}
               placeholder="Enter username"
             />
             <small className="field-hint">3-30 characters, letters, numbers, and underscores only</small>
+            <div
+              id="profile-username-status"
+              className={`profile-field-status ${usernameStatus.statusClass}`}
+              role="status"
+              aria-live="polite"
+            >
+              {usernameStatus.message}
+            </div>
           </div>
 
           <div className="form-group">
@@ -370,58 +456,35 @@ export function ProfileIsland() {
               type="email"
               id="profile-email"
               value={email}
-              onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+              onInput={(e) => handleFieldInput('email', (e.target as HTMLInputElement).value)}
+              onBlur={(e) => { void saveField('email', (e.target as HTMLInputElement).value); }}
               placeholder="Enter email"
             />
             <small className="field-hint">Valid email address</small>
+            <div
+              id="profile-email-status"
+              className={`profile-field-status ${emailStatus.statusClass}`}
+              role="status"
+              aria-live="polite"
+            >
+              {emailStatus.message}
+            </div>
           </div>
 
           <div className="form-group avatar-section">
-            <label>Avatar</label>
+            <span className="avatar-section-label">Avatar</span>
             <div className="avatar-preview" id="avatar-preview">
               <Avatar username={username || 'U'} avatarId={avatarId} size={128} />
             </div>
-            <div
-              className="avatar-gallery"
-              id="avatar-gallery"
-              role="radiogroup"
-              aria-label="Choose avatar"
-              onKeyDown={handleGalleryKeyDown}
-            >
-              {availableAvatars.map((slug) => (
-                <button
-                  key={slug}
-                  type="button"
-                  className={`avatar-option${avatarId === slug ? ' selected' : ''}`}
-                  data-slug={slug}
-                  role="radio"
-                  aria-checked={avatarId === slug ? 'true' : 'false'}
-                  aria-label={slug}
-                  onClick={() => {
-                    if (slug !== avatarId) saveAvatarChoice(slug);
-                  }}
-                >
-                  <img
-                    src={`/img/avatars/${encodeURIComponent(slug)}.webp`}
-                    alt={slug}
-                    width={64}
-                    height={64}
-                    loading="lazy"
-                  />
-                </button>
-              ))}
-            </div>
             <button
               type="button"
-              className="avatar-reset-btn"
-              id="avatar-reset-btn"
-              onClick={() => { if (avatarId !== null) saveAvatarChoice(null); }}
+              className="btn btn-secondary profile-avatar-trigger"
+              id="change-avatar-btn"
+              aria-haspopup="dialog"
+              onClick={() => setPickerOpen(true)}
             >
-              <i className="fas fa-undo" aria-hidden="true"></i> Use initials
+              <i className="fas fa-camera" aria-hidden="true"></i> Change avatar
             </button>
-            <div id="avatar-status" className={`preference-status ${avatarStatusClass}`}>
-              {avatarStatus}
-            </div>
           </div>
 
           <div className="form-group toggle-group">
@@ -437,7 +500,7 @@ export function ProfileIsland() {
                 onChange={(e) => {
                   const newVal = (e.target as HTMLInputElement).checked;
                   setShowFutureGoalsUnlocked(newVal);
-                  savePreference('showFutureGoalsUnlocked', newVal, () => setShowFutureGoalsUnlocked(!newVal));
+                  void savePreference('showFutureGoalsUnlocked', newVal, () => setShowFutureGoalsUnlocked(!newVal));
                 }}
               />
               <span className="toggle-slider"></span>
@@ -457,14 +520,19 @@ export function ProfileIsland() {
                 onChange={(e) => {
                   const newVal = (e.target as HTMLInputElement).checked;
                   setDefaultViewMap(newVal);
-                  savePreference('defaultViewMap', newVal, () => setDefaultViewMap(!newVal));
+                  void savePreference('defaultViewMap', newVal, () => setDefaultViewMap(!newVal));
                 }}
               />
               <span className="toggle-slider"></span>
             </label>
           </div>
 
-          <div id="preference-status" className={`preference-status ${preferenceStatusClass}`}>
+          <div
+            id="preference-status"
+            className={`preference-status ${preferenceStatusClass}`}
+            role="status"
+            aria-live="polite"
+          >
             {preferenceStatus}
           </div>
 
@@ -484,29 +552,25 @@ export function ProfileIsland() {
             {activeStoryline?.description && (
               <small className="field-hint">{activeStoryline.description}</small>
             )}
-            <div className={`preference-status ${storylineStatusClass}`}>
+            <div
+              className={`preference-status ${storylineStatusClass}`}
+              role="status"
+              aria-live="polite"
+            >
               {storylineStatus}
             </div>
           </div>
-
-          {error && <div id="profile-error" className="error-message" style={{ display: 'block' }}>{error}</div>}
-          {success && <div id="profile-success" className="success-message" style={{ display: 'block' }}>{success}</div>}
-        </div>
-
-        <div className="profile-card-footer">
-          <div className="profile-footer-btns">
-            <button type="button" className="btn btn-primary" id="save-profile-btn" onClick={handleSave}>
-              Save Changes
-            </button>
-            <button type="button" className="btn btn-danger" id="logout-modal-btn" onClick={handleLogout}>
-              Logout
-            </button>
-            <button type="button" className="btn btn-secondary" id="cancel-profile-btn" onClick={handleBack}>
-              Back
-            </button>
-          </div>
         </div>
       </div>
+
+      {pickerOpen && (
+        <AvatarPickerModal
+          username={username || 'U'}
+          avatarId={avatarId}
+          onChange={setAvatarId}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
 
       {pendingStoryline && (
         <div className="profile-dialog-overlay" onClick={() => setPendingStoryline(null)}>
@@ -519,16 +583,16 @@ export function ProfileIsland() {
               <button type="button" className="btn btn-secondary" onClick={() => setPendingStoryline(null)} disabled={switchingStoryline}>
                 Cancel
               </button>
-              <button type="button" className="btn btn-secondary" onClick={() => switchStoryline('carry')} disabled={switchingStoryline}>
+              <button type="button" className="btn btn-secondary" onClick={() => { void switchStoryline('carry'); }} disabled={switchingStoryline}>
                 Carry Distance
               </button>
-              <button type="button" className="btn btn-primary" onClick={() => switchStoryline('reset')} disabled={switchingStoryline}>
+              <button type="button" className="btn btn-primary" onClick={() => { void switchStoryline('reset'); }} disabled={switchingStoryline}>
                 Start at 0
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

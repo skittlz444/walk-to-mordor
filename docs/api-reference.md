@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-11-02
+Last updated: 2026-11-03
 
 ## Conventions
 
@@ -18,6 +18,7 @@ Last updated: 2026-11-02
 | Domain | File |
 |---|---|
 | Auth & Profile | `src/auth-handlers.ts` |
+| Profile Overview | `src/profile-handlers.ts` |
 | Push | `src/push-handlers.ts` |
 | Progress | `src/progress-handlers.ts` |
 | Goals | `src/goals-handlers.ts` |
@@ -39,6 +40,7 @@ Last updated: 2026-11-02
 | POST | `/api/login` | No | Returns session token |
 | POST | `/api/logout` | Yes | Body requires `sessionId`; missing → `400` |
 | GET | `/api/session` | Yes | camelCase fields: `userId`, `username`, `email`, `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId`, `activeStoryline`, `expiresAt` |
+| GET | `/api/profile/overview` | Yes | Read-only profile-view payload: `{ username, avatarId, totalDistance, memberSince, currentGoalTitle, activeStoryline, fellowships }` |
 | PUT | `/api/profile` | Yes | Updates username/email/password |
 | PUT | `/api/user/preferences` | Yes | Body: any of `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId` (at least one) |
 | GET | `/api/avatars` | Yes | Valid slugs from `src/avatar-slugs.ts` |
@@ -49,6 +51,17 @@ Last updated: 2026-11-02
 
 - `avatarId` in preferences must be a valid slug or `null`. Invalid → `400 "Invalid avatar_id"`.
 - Session response uses **camelCase** — differs from other endpoints that use snake_case.
+- `GET /api/profile/overview` backs the read-only `/profile` view: `totalDistance` is the storyline-adjusted distance (same as `/api/total-distance`); `memberSince` is ISO 8601 UTC (e.g. `2024-08-15T18:30:00.000Z`, converted server-side — the raw SQLite `YYYY-MM-DD HH:MM:SS` is never returned); `currentGoalTitle` is the next unreached goal in the active storyline, the last goal's title once all are reached, and `null` when the storyline has no goals; `activeStoryline` uses the `/api/session` shape; `fellowships` lists active, non-dissolved memberships as `{ id, name }` with no sharing flag. Missing/invalid session → `401`.
+
+## Page Routes
+
+Page routes return SSR HTML. They are not auth-guarded: `public/js/main.js` redirects unauthenticated boots to `/login`, and islands handle their own `401` responses.
+
+| Method | Path | Renderer | Islands (in order) |
+|---|---|---|---|
+| GET | `/profile` | `src/renderProfileViewPage.ts` | `ProfileViewIsland`, `BadgeDisplayIsland` inside `.party-page` |
+| GET | `/profile/settings` | `src/renderProfileSettingsPage.ts` | SSR back row, then `ProfileSettingsIsland`, `PushPermissionIsland`, `ProfileAccountIsland` inside `.profile-page` |
+| GET | `/friends/:id` | `src/renderFriendProfilePage.ts` | `FriendProfileIsland`, `BadgeDisplayIsland` (unchanged) |
 
 ## Push Endpoints
 

@@ -1,6 +1,8 @@
 import { 
   isValidDateFormat, 
-  isValidDistance, 
+  isValidDistance,
+  isValidEmail,
+  isValidUsername,
   createErrorResponse,
   createSuccessResponse
 } from '../../src/validators';
@@ -74,6 +76,39 @@ describe('Validators', () => {
       expect(isValidDistance(999999999)).toBe(true); // At limit
       expect(isValidDistance(1000000000)).toBe(false); // Over limit
       expect(isValidDistance('9999999999')).toBe(false); // Way over limit
+    });
+  });
+
+  describe('isValidUsername', () => {
+    it('accepts the boundary lengths and allowed characters', () => {
+      expect(isValidUsername('abc')).toBe(true);
+      expect(isValidUsername('a'.repeat(30))).toBe(true);
+      expect(isValidUsername('TestUser_123')).toBe(true);
+    });
+
+    it('rejects values outside the server predicate', () => {
+      expect(isValidUsername('ab')).toBe(false);
+      expect(isValidUsername('a'.repeat(31))).toBe(false);
+      expect(isValidUsername('test-user')).toBe(false);
+      expect(isValidUsername('test user')).toBe(false);
+      expect(isValidUsername('')).toBe(false);
+      expect(isValidUsername(null as any)).toBe(false);
+    });
+  });
+
+  describe('isValidEmail', () => {
+    it('accepts common email shapes', () => {
+      expect(isValidEmail('test@example.com')).toBe(true);
+      expect(isValidEmail('user.name+tag@domain.co.uk')).toBe(true);
+    });
+
+    it('rejects malformed email shapes', () => {
+      expect(isValidEmail('not-an-email')).toBe(false);
+      expect(isValidEmail('@example.com')).toBe(false);
+      expect(isValidEmail('test@')).toBe(false);
+      expect(isValidEmail('test @example.com')).toBe(false);
+      expect(isValidEmail('')).toBe(false);
+      expect(isValidEmail(null as any)).toBe(false);
     });
   });
 

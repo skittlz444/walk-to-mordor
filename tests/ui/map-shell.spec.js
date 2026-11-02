@@ -51,8 +51,8 @@ test.describe('Map Shell (Authenticated)', () => {
     await profileButton.click();
 
     await page.waitForURL('**/profile');
-    await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
-    await expect(page.locator('.profile-page')).toBeVisible();
+    await page.waitForSelector('[data-island="ProfileViewIsland"][data-hydrated="true"]', { timeout: 10000 });
+    await expect(page.locator('.party-page')).toBeVisible();
   });
 
   test('drawer opens and closes via backdrop and escape', async ({ page, authToken }) => {

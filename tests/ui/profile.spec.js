@@ -57,10 +57,70 @@ async function setFieldValueRobust(page, selector, value) {
     }
 }
 
+function fieldStatus(page, field) {
+    return page.locator(`.form-group:has(#profile-${field}) .profile-field-status`);
+}
+
 /**
- * UI Tests - Profile Page Functionality
+ * Counts `PUT /api/profile` requests so invalid/unchanged field values can be
+ * proven never to reach the server.
  */
-test.describe('User Profile Page', () => {
+function trackProfilePutRequests(page) {
+    /** @type {import('@playwright/test').Request[]} */
+    const requests = [];
+    const listener = (request) => {
+        if (request.method() === 'PUT' && new URL(request.url()).pathname === '/api/profile') {
+            requests.push(request);
+        }
+    };
+
+    page.on('request', listener);
+
+    return {
+        requests,
+        stop: () => page.off('request', listener),
+    };
+}
+
+/**
+ * Records every visible status transition of a field so the
+ * "Saving…" → "Saved" sequence can be asserted without racing the response.
+ */
+async function recordFieldStatusTransitions(page, field) {
+    await page.evaluate((selector) => {
+        const status = document.querySelector(selector);
+        window.__profileStatusTransitions = [];
+        if (!status) {
+            return;
+        }
+
+        const record = () => {
+            window.__profileStatusTransitions.push((status.textContent || '').trim());
+        };
+
+        record();
+        window.__profileStatusObserver?.disconnect();
+        window.__profileStatusObserver = new MutationObserver(record);
+        window.__profileStatusObserver.observe(status, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true,
+        });
+    }, `#profile-${field}-status`);
+}
+
+async function getFieldStatusTransitions(page) {
+    return page.evaluate(() => window.__profileStatusTransitions || []);
+}
+
+/**
+ * UI Tests - Profile View / Settings Split
+ *
+ * `/profile` is the read-only view; the editable form lives at
+ * `/profile/settings` and saves username/email on blur.
+ */
+test.describe('User Profile Settings Page', () => {
     const menuSelector = '.menu-icon';
     const profileDrawerSelector = '.drawer-profile';
 
@@ -70,17 +130,19 @@ test.describe('User Profile Page', () => {
         const profileLink = page.locator(profileDrawerSelector);
         await expect(profileLink).toBeVisible();
         await profileLink.click();
-        // Wait for navigation to /profile and island hydration
+        // The drawer opens the read-only view; the editable form is on settings.
         await page.waitForURL('**/profile');
-        await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+        await page.goto(BASE_URL + '/profile/settings', { waitUntil: 'domcontentloaded' });
+        await waitForAuthenticated(page);
+        await page.waitForSelector('[data-island="ProfileSettingsIsland"][data-hydrated="true"]', { timeout: 10000 });
         await dismissPwaInstallBanner(page);
         await waitForProfileFormReady(page);
     }
 
     async function navigateToProfile(page) {
-        await page.goto(BASE_URL + '/profile');
+        await page.goto(BASE_URL + '/profile/settings');
         await waitForAuthenticated(page);
-        await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+        await page.waitForSelector('[data-island="ProfileSettingsIsland"][data-hydrated="true"]', { timeout: 10000 });
         await dismissPwaInstallBanner(page);
     }
 
@@ -96,33 +158,46 @@ test.describe('User Profile Page', () => {
         await expect(menuBtn).toHaveAttribute('aria-label', 'Open Navigation');
     });
 
-    test('should navigate to profile page when clicking Profile link in drawer', async ({ page }) => {
-        // Navigate to profile from drawer
+    test('should navigate to profile settings when clicking Profile link in drawer', async ({ page }) => {
+        // Navigate from the drawer to the profile surfaces
         await openProfileFromDrawer(page);
 
-        // Verify profile page is displayed
+        // Verify settings page is displayed
         await expect(page.locator('.profile-page')).toBeVisible();
 
         // Verify form fields are present
         await expect(page.locator('#profile-username')).toBeVisible();
         await expect(page.locator('#profile-email')).toBeVisible();
 
-        // Verify buttons are present
-        await expect(page.locator('#save-profile-btn')).toHaveText('Save Changes');
-        await expect(page.locator('#logout-modal-btn')).toHaveText('Logout');
-        await expect(page.locator('#cancel-profile-btn')).toHaveText('Back');
+        // The styled Back to profile control is the only page-level action
+        const backButton = page.locator('.profile-back-button');
+        await expect(backButton).toBeVisible();
+        await expect(backButton).toHaveAttribute('href', '/profile');
+
+        // No Save or Cancel controls exist on the auto-saving settings page
+        await expect(page.locator('#save-profile-btn')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Save Changes' })).toHaveCount(0);
+        await expect(page.locator('#cancel-profile-btn')).toHaveCount(0);
     });
 
-    test('should navigate back when clicking Back button', async ({ page }) => {
-        // Navigate to profile page
+    test('should navigate back to the profile view when clicking Back to profile', async ({ page }) => {
+        // Navigate to settings page
         await openProfileFromDrawer(page);
         await expect(page.locator('.profile-page')).toBeVisible();
 
-        // Click Back button
-        await page.click('#cancel-profile-btn');
+        const backButton = page.locator('.profile-back-button');
+        await expect(backButton).toBeVisible();
+        await expect(backButton).toHaveAttribute('href', '/profile');
 
-        // Should navigate back (not on profile page anymore)
-        await page.waitForURL(url => !url.pathname.includes('/profile'), { timeout: 5000 });
+        const box = await backButton.boundingBox();
+        expect(box, 'Back to profile button should be rendered').not.toBeNull();
+        expect(box.height, 'Back to profile button should be at least 44px tall').toBeGreaterThanOrEqual(44);
+
+        await backButton.click();
+
+        // Should navigate to the read-only profile view
+        await page.waitForURL(url => url.pathname === '/profile', { timeout: 5000 });
+        await expect(page.locator('.party-page')).toBeVisible();
     });
 
     test('should display current username and email in form fields', async ({ page, authToken }) => {
@@ -130,7 +205,7 @@ test.describe('User Profile Page', () => {
         const username = authToken.replace('TEST_MOCK_TOKEN_', '');
         const expectedEmail = `${username}@example.com`;
 
-        // Navigate to profile
+        // Navigate to profile settings
         await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
@@ -142,158 +217,243 @@ test.describe('User Profile Page', () => {
         expect(emailValue).toBe(expectedEmail);
     });
 
-    test('should update username successfully', async ({ page }) => {
-        // Navigate to profile
+    test('should update username on blur with inline saved status', async ({ page }) => {
+        // Navigate to profile settings
         await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
-        // Update username
+        // Update username and save by blurring the field
         const newUsername = uniqueUsername('updusr');
         await setFieldValueRobust(page, '#profile-username', newUsername);
+        await recordFieldStatusTransitions(page, 'username');
 
         const saveResponsePromise = waitForProfilePutResponse(page);
-        await page.click('#save-profile-btn');
+        await page.locator('#profile-username').blur();
 
         const saveResponse = await saveResponsePromise;
-        expect(saveResponse).not.toBeNull();
+        expect(saveResponse, 'PUT /api/profile should be sent on blur').not.toBeNull();
         expect(saveResponse.status()).toBe(200);
 
-        // Verify success message appears
-        await page.waitForFunction(() => {
-            const success = document.querySelector('#profile-success');
-            return success && success.textContent && success.textContent.includes('Profile updated');
-        });
+        const status = fieldStatus(page, 'username');
+        await expect(status).toHaveClass(/saved/);
+        await expect(status).toHaveText('Saved');
+
+        const transitions = await getFieldStatusTransitions(page);
+        expect(transitions).toContain('Saving…');
+        expect(transitions).toContain('Saved');
+
+        // Status is announced inline, never through a global banner
+        await expect(status).toHaveAttribute('role', 'status');
+        await expect(page.locator('#profile-success')).toHaveCount(0);
+        await expect(page.locator('#profile-error')).toHaveCount(0);
     });
 
-    test('should update email successfully', async ({ page }) => {
-        // Navigate to profile
+    test('should update email on blur and persist across reload', async ({ page }) => {
+        // Navigate to profile settings
         await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
-        // Update email
+        // Update email and save by blurring the field
         const newEmail = uniqueEmail('newemail');
-        await page.locator('#profile-email').fill(newEmail);
+        await setFieldValueRobust(page, '#profile-email', newEmail);
         await expect(page.locator('#profile-email')).toHaveValue(newEmail);
 
-        const responsePromise = page.waitForResponse(
-            resp => resp.url().includes('/api/profile') && resp.request().method() === 'PUT');
-        await page.click('#save-profile-btn');
+        const responsePromise = waitForProfilePutResponse(page);
+        await page.locator('#profile-email').blur();
         const response = await responsePromise;
+        expect(response, 'PUT /api/profile should be sent on blur').not.toBeNull();
         expect(response.status()).toBe(200);
 
-        // Reload profile page to verify update persisted
+        const status = fieldStatus(page, 'email');
+        await expect(status).toHaveClass(/saved/);
+        await expect(status).toHaveText('Saved');
+
+        // Reload profile settings page to verify update persisted
         await page.reload();
         await waitForAuthenticated(page);
-        await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+        await page.waitForSelector('[data-island="ProfileSettingsIsland"][data-hydrated="true"]', { timeout: 10000 });
         await waitForProfileFormReady(page);
         await expect(page.locator('#profile-email')).toHaveValue(newEmail);
+        // Status starts empty after a fresh load (no pre-rendered "Saved")
+        await expect(fieldStatus(page, 'email')).toHaveText('');
     });
 
-    test('should update both username and email successfully', async ({ page }) => {
-        // Navigate to profile
+    test('should update both username and email on blur', async ({ page }) => {
+        // Navigate to profile settings
         await navigateToProfile(page);
         await waitForProfileFormReady(page);
 
-        let saved = false;
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-            const newUsername = uniqueUsername('fullupd');
-            const newEmail = uniqueEmail('fullupd');
+        const newEmail = uniqueEmail('fullupd');
+        const newUsername = uniqueUsername('fullupd');
 
-            await setFieldValueRobust(page, '#profile-username', newUsername);
-            await setFieldValueRobust(page, '#profile-email', newEmail);
+        // Email first: renaming the mock-auth user invalidates the token-derived
+        // username, so the rename must be the final request in this test.
+        await setFieldValueRobust(page, '#profile-email', newEmail);
+        const emailResponsePromise = waitForProfilePutResponse(page);
+        await page.locator('#profile-email').blur();
+        const emailResponse = await emailResponsePromise;
+        expect(emailResponse, 'PUT /api/profile should be sent for the email').not.toBeNull();
+        expect(emailResponse.status()).toBe(200);
+        await expect(fieldStatus(page, 'email')).toHaveClass(/saved/);
 
-            const saveResponsePromise = waitForProfilePutResponse(page);
-            await page.click('#save-profile-btn');
-            const saveResponse = await saveResponsePromise;
+        await setFieldValueRobust(page, '#profile-username', newUsername);
+        const usernameResponsePromise = waitForProfilePutResponse(page);
+        await page.locator('#profile-username').blur();
+        const usernameResponse = await usernameResponsePromise;
+        expect(usernameResponse, 'PUT /api/profile should be sent for the username').not.toBeNull();
+        expect(usernameResponse.status()).toBe(200);
+        await expect(fieldStatus(page, 'username')).toHaveClass(/saved/);
 
-            if (saveResponse && saveResponse.status() === 200) {
-                saved = true;
-                break;
+        await expect(page.locator('#profile-email')).toHaveValue(newEmail);
+        await expect(page.locator('#profile-username')).toHaveValue(newUsername);
+    });
+
+    test('should show inline error and send no request for invalid email format', async ({ page }) => {
+        // Navigate to profile settings
+        await navigateToProfile(page);
+        await waitForProfileFormReady(page);
+
+        const tracker = trackProfilePutRequests(page);
+
+        try {
+            // Enter invalid email and blur
+            await setFieldValueRobust(page, '#profile-email', 'invalid-email');
+            await page.locator('#profile-email').blur();
+
+            const status = fieldStatus(page, 'email');
+            await expect(status).toHaveClass(/error/);
+            await expect(status).toContainText(/valid email/i);
+
+            expect(tracker.requests, 'Invalid email must never be sent to the API').toHaveLength(0);
+            await expect(page.locator('#profile-error')).toHaveCount(0);
+            await expect(page.locator('#profile-success')).toHaveCount(0);
+        } finally {
+            tracker.stop();
+        }
+    });
+
+    test('should show inline error and send no request for invalid username format', async ({ page }) => {
+        // Navigate to profile settings
+        await navigateToProfile(page);
+        await waitForProfileFormReady(page);
+
+        const tracker = trackProfilePutRequests(page);
+
+        try {
+            // Enter invalid username (too short) and blur
+            await page.fill('#profile-username', 'ab');
+            await page.locator('#profile-username').blur();
+
+            const status = fieldStatus(page, 'username');
+            await expect(status).toHaveClass(/error/);
+            await expect(status).toContainText(/3-30 characters/i);
+
+            expect(tracker.requests, 'Invalid username must never be sent to the API').toHaveLength(0);
+            await expect(page.locator('#profile-error')).toHaveCount(0);
+            await expect(page.locator('#profile-success')).toHaveCount(0);
+        } finally {
+            tracker.stop();
+        }
+    });
+
+    test('should show inline errors and send no request for empty or whitespace-only fields', async ({ page }) => {
+        // Navigate to profile settings
+        await navigateToProfile(page);
+        await waitForProfileFormReady(page);
+
+        const tracker = trackProfilePutRequests(page);
+
+        try {
+            for (const blankValue of ['', '   ']) {
+                // Empty and whitespace-only values both trim to empty
+                await page.fill('#profile-username', blankValue);
+                await page.locator('#profile-username').blur();
+                await page.fill('#profile-email', blankValue);
+                await page.locator('#profile-email').blur();
+
+                await expect(fieldStatus(page, 'username')).toHaveClass(/error/);
+                await expect(fieldStatus(page, 'email')).toHaveClass(/error/);
+                expect(
+                    tracker.requests,
+                    `Fields blanked with ${JSON.stringify(blankValue)} must never be sent to the API`,
+                ).toHaveLength(0);
             }
+
+            await expect(page.locator('#profile-error')).toHaveCount(0);
+        } finally {
+            tracker.stop();
         }
+    });
 
-        expect(saved).toBe(true);
+    test('should show server conflicts inline for duplicate username and email', async ({ page, authToken }) => {
+        // Navigate to profile settings
+        await navigateToProfile(page);
+        await waitForProfileFormReady(page);
 
-        // Verify success message
-        await page.waitForFunction(() => {
-            const success = document.querySelector('#profile-success');
-            return success && success.textContent && success.textContent.includes('Profile updated');
+        const dupId = uniqueToken(8);
+        const duplicateUsername = `dupe_${dupId}`;
+        const duplicateEmail = `dupe_${dupId}@example.com`;
+
+        const registerResponse = await page.request.post(BASE_URL + '/api/register', {
+            data: {
+                username: duplicateUsername,
+                email: duplicateEmail,
+                password: 'Password123!',
+            },
         });
+        expect(registerResponse.ok(), 'Duplicate fixture user should register').toBeTruthy();
+
+        // Duplicate username is rejected by the server and shown inline
+        await setFieldValueRobust(page, '#profile-username', duplicateUsername);
+        const usernameResponsePromise = waitForProfilePutResponse(page);
+        await page.locator('#profile-username').blur();
+        const usernameResponse = await usernameResponsePromise;
+        expect(usernameResponse, 'PUT /api/profile should be sent for the duplicate username').not.toBeNull();
+        expect(usernameResponse.status()).toBe(409);
+
+        const usernameStatus = fieldStatus(page, 'username');
+        await expect(usernameStatus).toHaveClass(/error/);
+        await expect(usernameStatus).toContainText(/username already exists/i);
+        await expect(page.locator('#profile-error')).toHaveCount(0);
+
+        // Restore the saved username so the email save is the only request in flight.
+        // The 409 left the server-confirmed username untouched, so restoring it is a
+        // no-op: the island sends no PUT. Wait for the username field to settle (its
+        // status leaves "Saving…") before starting the email save, so no username
+        // response can be mistaken for the email 409 below.
+        const savedUsername = authToken.replace('TEST_MOCK_TOKEN_', '');
+        await page.fill('#profile-username', savedUsername);
+        await page.locator('#profile-username').blur();
+        await expect(fieldStatus(page, 'username')).toHaveText('', { timeout: 5000 });
+
+        // Duplicate email is rejected by the server and shown inline
+        await setFieldValueRobust(page, '#profile-email', duplicateEmail);
+        const emailResponsePromise = waitForProfilePutResponse(page);
+        await page.locator('#profile-email').blur();
+        const emailResponse = await emailResponsePromise;
+        expect(emailResponse, 'PUT /api/profile should be sent for the duplicate email').not.toBeNull();
+        expect(emailResponse.status()).toBe(409);
+
+        const emailStatus = fieldStatus(page, 'email');
+        await expect(emailStatus).toHaveClass(/error/);
+        await expect(emailStatus).toContainText(/email already registered/i);
+        await expect(page.locator('#profile-error')).toHaveCount(0);
     });
 
-    test('should show error for invalid email format', async ({ page }) => {
-        // Navigate to profile
-        await navigateToProfile(page);
-        await waitForProfileFormReady(page);
-
-        // Enter invalid email
-        await setFieldValueRobust(page, '#profile-email', 'invalid-email');
-
-        const saveResponsePromise = waitForProfilePutResponse(page);
-        await page.click('#save-profile-btn');
-
-        const saveResponse = await saveResponsePromise;
-        // The app must issue the PUT (no native type=email gating) and the API must reject it
-        expect(saveResponse, 'PUT /api/profile should be sent for an invalid email').not.toBeNull();
-        expect(saveResponse.status()).toBe(400);
-
-        // The app surfaces the server validation error
-        await expect(page.locator('#profile-error')).toContainText(/invalid email/i);
-    });
-
-    test('should show error for invalid username format', async ({ page }) => {
-        // Navigate to profile
-        await navigateToProfile(page);
-        await waitForProfileFormReady(page);
-
-        // Enter invalid username (too short)
-        await page.fill('#profile-username', 'ab');
-
-        const saveResponsePromise = waitForProfilePutResponse(page);
-        await page.click('#save-profile-btn');
-
-        const saveResponse = await saveResponsePromise;
-        if (saveResponse) {
-            expect(saveResponse.status()).toBe(400);
-        }
-
-        await page.waitForFunction(() => {
-            const error = document.querySelector('#profile-error');
-            return error && error.textContent && error.textContent.includes('Invalid username');
-        });
-    });
-
-    test('should show error when no fields are provided', async ({ page }) => {
-        // Navigate to profile
-        await navigateToProfile(page);
-        await waitForProfileFormReady(page);
-
-        // Clear both fields
-        await page.fill('#profile-username', '');
-        await page.fill('#profile-email', '');
-
-        const saveResponsePromise = waitForProfilePutResponse(page);
-        await page.click('#save-profile-btn');
-
-        const saveResponse = await saveResponsePromise;
-
-        // Contract: the API must never accept an empty update
-        if (saveResponse) {
-            expect(saveResponse.status()).toBe(400);
-        }
-
-        // The app must surface an error, never report success for an empty form
-        await expect(page.locator('#profile-error')).toContainText(/at least one field/i);
-    });
-
-    test('should have logout button on profile page', async ({ page }) => {
-        // Navigate to profile
+    test('should log out from the Account island on the settings page', async ({ page }) => {
+        // Navigate to profile settings
         await navigateToProfile(page);
 
-        // Verify logout button exists
-        const logoutBtn = page.locator('#logout-modal-btn');
+        // Wait for the Account island that owns the logout action
+        await page.waitForSelector('[data-island="ProfileAccountIsland"][data-hydrated="true"]', { timeout: 10000 });
+        const accountIsland = page.locator('[data-island="ProfileAccountIsland"]');
+        const logoutBtn = accountIsland.locator('button:has-text("Logout")');
+
         await expect(logoutBtn).toBeVisible();
         await expect(logoutBtn).toHaveText('Logout');
         await expect(logoutBtn).toHaveClass(/btn-danger/);
+
+        await logoutBtn.click();
+        await page.waitForURL('**/login', { timeout: 10000 });
     });
 });

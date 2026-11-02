@@ -47,6 +47,7 @@ import { handleMapPage } from "./map-handlers";
 import { handleGetAchievements, handleGetPendingAchievements, handleAcknowledgeAchievements } from "./achievement-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyPositions, handlePartyProgress, handlePartyActivity, handleSendPartyMessage, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile, handleFriendPositions } from "./friends-handlers";
+import { handleGetProfileOverview } from "./profile-handlers";
 import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from "./fellowship-invite-handlers";
 import { renderPartyListPage } from "./renderPartyListPage";
 import { renderPartyDetailPage } from "./renderPartyDetailPage";
@@ -56,7 +57,8 @@ import { renderFriendsPage } from "./renderFriendsPage";
 import { renderStatsPage } from "./renderStatsPage";
 import { renderFriendAddPage } from "./renderFriendAddPage";
 import { renderFriendProfilePage } from "./renderFriendProfilePage";
-import { renderProfilePage } from "./renderProfilePage";
+import { renderProfileSettingsPage } from "./renderProfileSettingsPage";
+import { renderProfileViewPage } from "./renderProfileViewPage";
 import { renderAdminPage } from "./renderAdminPage";
 import { renderAdminGoalsPage } from "./renderAdminGoalsPage";
 import {
@@ -192,7 +194,8 @@ app.get('/admin/storylines', (c) => c.html(renderAdminStorylinesPage()));
 app.get('/admin/users', (c) => c.html(renderAdminUsersPage()));
 app.get('/admin/metrics', (c) => c.html(renderAdminMetricsPage()));
 
-app.get('/profile', (c) => c.html(renderProfilePage()));
+app.get('/profile', (c) => c.html(renderProfileViewPage()));
+app.get('/profile/settings', (c) => c.html(renderProfileSettingsPage()));
 app.get('/friends', (c) => c.html(renderFriendsPage()));
 app.get('/friends/add/:friendCode', (c) => c.html(renderFriendAddPage()));
 app.get('/friends/:id', (c) => c.html(renderFriendProfilePage()));
@@ -326,6 +329,9 @@ app.get('/api/total-distance', authGuard, async (c) => {
     });
   }
 });
+
+app.get('/api/profile/overview', authGuard, (c) =>
+  handleGetProfileOverview(c.req.raw, c.get('db'), c.get('userId')!, c.env.ALLOW_TEST_AUTH));
 
 app.get('/api/achievements', authGuard, (c) =>
   handleGetAchievements(c.req.raw, c.get('db'), c.get('userId')!));

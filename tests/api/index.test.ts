@@ -23,7 +23,8 @@ jest.mock('../../src/renderFriendsPage');
 jest.mock('../../src/renderFriendAddPage');
 jest.mock('../../src/renderFriendProfilePage');
 jest.mock('../../src/renderStatsPage');
-jest.mock('../../src/renderProfilePage');
+jest.mock('../../src/renderProfileSettingsPage');
+jest.mock('../../src/renderProfileViewPage');
 jest.mock('../../src/renderAdminPage');
 jest.mock('../../src/renderAdminGoalsPage');
 jest.mock('../../src/renderAdminGoalEditPage');
@@ -68,7 +69,8 @@ import { renderFriendsPage } from '../../src/renderFriendsPage';
 import { renderFriendAddPage } from '../../src/renderFriendAddPage';
 import { renderFriendProfilePage } from '../../src/renderFriendProfilePage';
 import { renderStatsPage } from '../../src/renderStatsPage';
-import { renderProfilePage } from '../../src/renderProfilePage';
+import { renderProfileSettingsPage } from '../../src/renderProfileSettingsPage';
+import { renderProfileViewPage } from '../../src/renderProfileViewPage';
 import { renderAdminPage } from '../../src/renderAdminPage';
 import { renderAdminGoalsPage } from '../../src/renderAdminGoalsPage';
 import { renderAdminGoalAddPage } from '../../src/renderAdminGoalAddPage';
@@ -121,7 +123,8 @@ const mockRenderFriendsPage = jest.mocked(renderFriendsPage);
 const mockRenderFriendAddPage = jest.mocked(renderFriendAddPage);
 const mockRenderFriendProfilePage = jest.mocked(renderFriendProfilePage);
 const mockRenderStatsPage = jest.mocked(renderStatsPage);
-const mockRenderProfilePage = jest.mocked(renderProfilePage);
+const mockRenderProfileSettingsPage = jest.mocked(renderProfileSettingsPage);
+const mockRenderProfileViewPage = jest.mocked(renderProfileViewPage);
 const mockRenderAdminPage = jest.mocked(renderAdminPage);
 const mockRenderAdminGoalsPage = jest.mocked(renderAdminGoalsPage);
 const mockRenderAdminGoalAddPage = jest.mocked(renderAdminGoalAddPage);
@@ -227,7 +230,8 @@ describe('Hono Router', () => {
     mockRenderFriendAddPage.mockReturnValue('<html>Friend Add</html>');
     mockRenderFriendProfilePage.mockReturnValue('<html>Friend Profile</html>');
     mockRenderStatsPage.mockReturnValue('<html>Stats</html>');
-    mockRenderProfilePage.mockReturnValue('<html>Profile</html>');
+    mockRenderProfileViewPage.mockReturnValue('<html>Profile</html>');
+    mockRenderProfileSettingsPage.mockReturnValue('<html>Profile Settings</html>');
     mockRenderAdminPage.mockReturnValue('<html>Admin</html>');
     mockRenderAdminGoalsPage.mockReturnValue('<html>Admin Goals</html>');
     mockRenderAdminGoalAddPage.mockReturnValue('<html>Admin Goal Add</html>');
@@ -280,10 +284,20 @@ describe('Hono Router', () => {
       expect(await res.text()).toBe('<html>Mock HTML</html>');
     });
 
-    it('renders profile page at /profile', async () => {
+    it('renders profile view page at /profile', async () => {
       const res = await request('/profile');
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('<html>Profile</html>');
+      expect(mockRenderProfileViewPage).toHaveBeenCalled();
+      expect(mockRenderProfileSettingsPage).not.toHaveBeenCalled();
+    });
+
+    it('renders profile settings page at /profile/settings', async () => {
+      const res = await request('/profile/settings');
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe('<html>Profile Settings</html>');
+      expect(mockRenderProfileSettingsPage).toHaveBeenCalled();
+      expect(mockRenderProfileViewPage).not.toHaveBeenCalled();
     });
 
     it('renders friends page at /friends', async () => {

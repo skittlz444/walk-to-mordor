@@ -47,6 +47,21 @@ async function loginAs(page, token, url = '/journey') {
   }
 }
 
+/**
+ * Fellowship specs are not about badges. Walk logging awards badges and the
+ * global award modal can open on this page load, intercepting later clicks.
+ */
+async function dismissBadgeAwardModal(page) {
+  const overlay = page.locator('.badge-award-overlay');
+  try {
+    await overlay.waitFor({ state: 'visible', timeout: 2000 });
+  } catch {
+    return;
+  }
+  await page.getByRole('button', { name: 'Close award' }).click();
+  await overlay.waitFor({ state: 'detached', timeout: 5000 });
+}
+
 async function createFellowship(request, token, name, mode = 'cumulative', leaveBehavior = 'keep') {
   let res;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -447,6 +462,7 @@ test.describe('Story 3-7: Fellowship Detail Page (/party/:id)', () => {
     await logDistance(request, leader1Token, '2026-02-26', 25);
 
     await loginAs(page, leader1Token, `/party/${party.id}`);
+    await dismissBadgeAwardModal(page);
 
     // Wait for progress section to load
     await expect(page.locator('text=Total Progress')).toBeVisible({ timeout: 10000 });
@@ -919,6 +935,7 @@ test.describe('Story 3-6: Party Selector on Map Page', () => {
     await logDistance(request, member1Token, '2026-02-20', 400);
 
     await loginAs(page, leader1Token, '/map');
+    await dismissBadgeAwardModal(page);
     await waitForMapReady(page);
 
     await page.locator('.map-social-toggle').click();

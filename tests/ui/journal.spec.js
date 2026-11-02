@@ -46,6 +46,22 @@ async function goToJourney(page) {
   await closeVisibleModal(page);
 }
 
+/**
+ * Walk logging awards badges; the global award modal can open just after the
+ * journey reload and intercept the goal-card click. Journal specs are not
+ * about badges, so close it before opening a goal.
+ */
+async function dismissBadgeAwardModal(page) {
+  const overlay = page.locator('.badge-award-overlay');
+  try {
+    await overlay.waitFor({ state: 'visible', timeout: 2000 });
+  } catch {
+    return;
+  }
+  await page.getByRole('button', { name: 'Close award' }).click();
+  await overlay.waitFor({ state: 'detached', timeout: 5000 });
+}
+
 async function dismissPalantir(page) {
   try {
     const btn = page.locator('button:has-text("Cast the Palantír aside"), button:has-text("Dismiss")');
@@ -66,6 +82,7 @@ async function dismissPalantir(page) {
 async function openGoalModal(page, goalTitle) {
   await goToJourney(page);
   await dismissPalantir(page);
+  await dismissBadgeAwardModal(page);
   try {
     const goalCard = page.locator('.upcoming-goal, .completed-goal, .all-completed-goal', { hasText: goalTitle }).first();
     if (await goalCard.count() > 0) {

@@ -5,7 +5,7 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 
 # Design Guide
 
-*Last updated: 2026-11-02*
+*Last updated: 2026-11-03*
 
 ## Design Philosophy
 
@@ -36,7 +36,8 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 | `public/css/calendar.css` | Calendar component |
 | `public/css/progress.css` | Progress tracking and modals |
 | `public/css/goals.css` | Goals display and interactions |
-| `public/css/profile.css` | Profile page |
+| `public/css/profile.css` | Profile settings page (form, Back button, auto-save status, Account card) |
+| `public/css/profile-view.css` | Profile view chrome (hero affordances, skeleton) + shared avatar picker modal |
 | `public/css/auth.css` | Authentication pages (light theme) |
 | `public/css/party.css` | Fellowship/party pages |
 | `public/css/friends.css` | Friends feature |
@@ -65,7 +66,28 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 ### Avatar Selection
 - Predefined LOTR-themed avatars only — no user uploads (avoids moderation).
 - Current selection highlighted with gold border.
+- Picker is the shared `AvatarPickerModal` component (styled by `profile-view.css`): radiogroup gallery, arrow-key cycling, "Use initials" resets to `null`, save-on-select via `PUT /api/user/preferences { avatarId }`, and a status line. The current avatar preview sits outside the gallery so it stays visible while the gallery loads.
 - Thumbnails: 64×64 WebP (`public/img/avatars/thumbs/`); display size 128×128.
+
+### Profile View (Self)
+- `/profile` is read-only and reuses the friend-profile hero classes (`party-card friend-profile-header`, `friend-profile-stats`) inside the renderer-owned `.party-page`, so the hero, Settings CTA, Fellowships card, and badge grid share one width.
+- The avatar is a button (`.profile-view-avatar-trigger`) wrapping `Avatar` at 128 px, labelled "Change avatar for <username>", with a gold ring and edit badge. Activating it opens the shared picker modal.
+- Stats are Total Distance (storyline-adjusted, two decimals) and Member Since (formatted from the API's ISO date). "Heading to" renders only when `currentGoalTitle` is non-null; the active journey title is read-only.
+- The Settings CTA is the only edit path; it is full-width on mobile with `box-sizing: border-box`.
+- Fellowships render only when non-empty; earned badges follow via `BadgeDisplayIsland`.
+- Loading uses `.profile-view-skeleton` shimmer blocks (same keyframe as the badge grid; reduced-motion already covered). Errors render a card with Retry instead of fabricated stats; a 401 redirects to `/login`.
+
+### Profile Settings
+- The SSR shell owns `.profile-page` and renders `.profile-back-button` (icon + "Back to profile", href `/profile`) plus the "Changes save automatically as you go." note before hydration. Back is the only page-level navigation/commit control: ≥44 px tall, bordered, with a visible focus ring; never `history.back()`.
+- No Save button and no bottom action bar. Username/email auto-save on blur (trimmed, validated with the server's predicates) and report through a per-field `.profile-field-status` with `role="status"` + `aria-live="polite"`: starts empty, clears on input, then `Saving…` → `Saved` or an inline error. Server 409 conflicts stay inline.
+- Every other control keeps save-on-change semantics: avatar picker, preference toggles, journey select + carry/reset dialog, push toggles.
+- Logout sits last in the `ProfileAccountIsland` Account card; the view page exposes no editing or logout controls.
+- A session-fetch 401 redirects to `/login` instead of rendering a blank form.
+
+### Profile Stylesheet Ownership
+- `profile-view.css` owns view chrome (avatar button, Settings CTA, stat skeleton) and the entire shared avatar picker modal. Both profile renderers load it so the modal renders identically on the view and settings pages.
+- `profile.css` owns the settings page: form/card/toggle/push rules plus the Back button, per-field auto-save status, "Change avatar" trigger, and Account/Logout card. It no longer carries footer/action-bar styles.
+- Do not put settings-only rules in `profile-view.css` or view/modal rules in `profile.css`.
 
 ### Friends & Social
 - Friend code landing (`/friends/add/:friendCode`) must redirect unauthenticated users to login, then return them to the add-friend page.
