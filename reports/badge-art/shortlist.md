@@ -1,6 +1,6 @@
 # Badge Artwork — Shortlist Review
 
-**Date:** 2026-11-01
+**Date:** 2026-11-02
 
 **Scope:** OpenSpec tasks 8.1–8.5 (prompts, generation, processing, shortlist, report, review gate). Final compositing (8.6–8.8) is deferred until sign-off.
 
@@ -20,14 +20,14 @@ Browse the gallery: [review.html](review.html).
 
 | Asset | Family | Rank | Finalist A | Finalist B | Recommended |
 |---|---|---|---|---|---|
-| `emblem/habit-first-steps` | habit | 1 | `a-112358` | `b-141421` | `a-112358` |
+| `emblem/habit-first-steps` | habit | 1 | `a-112358` | `b-141421` | `b-141421` |
 | `emblem/journey-frodo-sam-buckleberry-ferry` | journey | 1 | `a-271828` | `b-141421` | `a-271828` |
 | `emblem/journey-frodo-sam-weathertop-survivor` | journey | 1 | `a-161803` | `b-161803` | `a-161803` |
 | `emblem/journey-frodo-sam-through-khazad-dum` | journey | 2 | `a-271828` | `b-112358` | `a-271828` |
 | `emblem/journey-frodo-sam-lothlorien-guest` | journey | 2 | `a-314159` | `b-161803` | `a-314159` |
 | `emblem/journey-frodo-sam-rauros-parting` | journey | 3 | `a-112358` | `b-161803` | `a-112358` |
 | `emblem/journey-frodo-sam-mordor-threshold` | journey | 3 | `a-173205` | `b-314159` | `a-173205` |
-| `emblem/journey-frodo-sam-home-at-sunset` | journey | 4 | `a-112358` | `b-161803` | `a-112358` |
+| `emblem/journey-frodo-sam-home-at-sunset` | journey | 4 | `a-112358` | `b-161803` | `b-161803` |
 | `emblem/habit-faithful-walker` | habit | thresholds | `a-173205` | `b-112358` | `a-173205` |
 | `frame/journey` | journey | — | `a-271828` | `b-112358` | `a-271828` |
 | `frame/habit` | habit | — | `a-112358` | `b-314159` | `a-112358` |
@@ -52,12 +52,12 @@ Browse the gallery: [review.html](review.html).
 
 | Candidate | Score | Rationale | Image |
 |---|---|---|---|
-| `a-112358` | 4.5 | Full circular face; the round green door, brass knob and stone step read instantly at 96 px, with clean glossy enamel, a thin bright rim and no text or baked frame. | [512 px](finalists/habit-first-steps--a-112358.webp) |
-| `b-141421` | 4 | Aged bronze door face is centred and fully circular; the warm crack glow and stone step stay legible at 96 px, slightly darker than the a variant but artifact-free. | [512 px](finalists/habit-first-steps--b-141421.webp) |
+| `a-112358` | 4 | Full circular face; the round green door, brass knob and stone step read instantly at 96 px, with clean glossy enamel, a thin bright rim and no text or baked frame. | [512 px](finalists/habit-first-steps--a-112358.webp) |
+| `b-141421` | 4.5 | Aged bronze door face is centred and fully circular; the warm crack glow and stone step stay legible at 96 px, slightly darker than the a variant but artifact-free. | [512 px](finalists/habit-first-steps--b-141421.webp) |
 
-**Recommended:** `a-112358` (score 4.5).
+**Recommended:** `b-141421` (score 4.5).
 
-**Notes:** a-112358 has the cleanest silhouette; b-141421 is the strongest aged-metal option.
+**Notes:** B has the full door, step and margin with aged metal; A is cropped at the arch and brighter than the habit frame.
 
 ### Across the Buckleberry Ferry
 
@@ -142,7 +142,7 @@ Browse the gallery: [review.html](review.html).
 
 **Recommended:** `a-112358` (score 4).
 
-**Notes:** The motif reads as two horn halves rather than one cloven horn, but it is consistent and legible. a-161803 is an equally clean alternate.
+**Notes:** Tie 4.0/4.0: A is polished blue, B is aged silver-blue. No set-coherence preference; pick on material.
 
 ### Standing at Mount Doom
 
@@ -171,12 +171,12 @@ Browse the gallery: [review.html](review.html).
 
 | Candidate | Score | Rationale | Image |
 |---|---|---|---|
-| `a-112358` | 4.5 | Full circular sunset badge; the round door, lit windows and rose wreath read at 96 px, with clean enamel, a thin gold rim and no text. | [512 px](finalists/journey-frodo-sam-home-at-sunset--a-112358.webp) |
-| `b-161803` | 4 | Aged bronze door with a rose wreath and sunset sky; fully circular and legible at 96 px, darker patina but clean and artifact-free. | [512 px](finalists/journey-frodo-sam-home-at-sunset--b-161803.webp) |
+| `a-112358` | 3.5 | Full circular sunset badge; the round door, lit windows and rose wreath read at 96 px, with clean enamel, a thin gold rim and no text. | [512 px](finalists/journey-frodo-sam-home-at-sunset--a-112358.webp) |
+| `b-161803` | 4.5 | Aged bronze door with a rose wreath and sunset sky; fully circular and legible at 96 px, darker patina but clean and artifact-free. | [512 px](finalists/journey-frodo-sam-home-at-sunset--b-161803.webp) |
 
-**Recommended:** `a-112358` (score 4.5).
+**Recommended:** `b-161803` (score 4.5).
 
-**Notes:** b-314159 is a clean alternate; a-112358 has the most symmetric door-and-wreath composition.
+**Notes:** Set-coherence pick: B is aged bronze with an amber/rust sunset and muted roses; A is the pastel magenta outlier.
 
 ### Faithful Walker
 
@@ -243,7 +243,7 @@ Browse the gallery: [review.html](review.html).
 
 **Recommended:** `a-112358` (score 4).
 
-**Notes:** a-112358 has the clearer barb motif; b-161803 is the cleaner aged band.
+**Notes:** A has the finer barb motif; B reads stronger at 96 px because its band is broader. Pick on the final frame weight.
 
 ### Book Frame
 

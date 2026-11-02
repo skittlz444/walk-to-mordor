@@ -4,17 +4,17 @@
       "finalists": [
         {
           "candidate": "a-112358",
-          "score": 4.5,
+          "score": 4.0,
           "rationale": "Full circular face; the round green door, brass knob and stone step read instantly at 96 px, with clean glossy enamel, a thin bright rim and no text or baked frame."
         },
         {
           "candidate": "b-141421",
-          "score": 4.0,
+          "score": 4.5,
           "rationale": "Aged bronze door face is centred and fully circular; the warm crack glow and stone step stay legible at 96 px, slightly darker than the a variant but artifact-free."
         }
       ],
-      "recommended": "a-112358",
-      "notes": "a-112358 has the cleanest silhouette; b-141421 is the strongest aged-metal option."
+      "recommended": "b-141421",
+      "notes": "B has the full door, step and margin with aged metal; A is cropped at the arch and brighter than the habit frame."
     },
     "emblem/journey-frodo-sam-buckleberry-ferry": {
       "finalists": [
@@ -94,7 +94,7 @@
         }
       ],
       "recommended": "a-112358",
-      "notes": "The motif reads as two horn halves rather than one cloven horn, but it is consistent and legible. a-161803 is an equally clean alternate."
+      "notes": "Tie 4.0/4.0: A is polished blue, B is aged silver-blue. No set-coherence preference; pick on material."
     },
     "emblem/journey-frodo-sam-mordor-threshold": {
       "finalists": [
@@ -116,17 +116,17 @@
       "finalists": [
         {
           "candidate": "a-112358",
-          "score": 4.5,
+          "score": 3.5,
           "rationale": "Full circular sunset badge; the round door, lit windows and rose wreath read at 96 px, with clean enamel, a thin gold rim and no text."
         },
         {
           "candidate": "b-161803",
-          "score": 4.0,
+          "score": 4.5,
           "rationale": "Aged bronze door with a rose wreath and sunset sky; fully circular and legible at 96 px, darker patina but clean and artifact-free."
         }
       ],
-      "recommended": "a-112358",
-      "notes": "b-314159 is a clean alternate; a-112358 has the most symmetric door-and-wreath composition."
+      "recommended": "b-161803",
+      "notes": "Set-coherence pick: B is aged bronze with an amber/rust sunset and muted roses; A is the pastel magenta outlier."
     },
     "emblem/habit-faithful-walker": {
       "finalists": [
@@ -190,7 +190,7 @@
         }
       ],
       "recommended": "a-112358",
-      "notes": "a-112358 has the clearer barb motif; b-161803 is the cleaner aged band."
+      "notes": "A has the finer barb motif; B reads stronger at 96 px because its band is broader. Pick on the final frame weight."
     },
     "frame/book": {
       "finalists": [

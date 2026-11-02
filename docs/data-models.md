@@ -101,6 +101,7 @@ These are rules the schema enforces or that the application layer must uphold â€
 - `badge_type` is a free-form string defined by consuming features (no enum/CHECK constraint at the schema layer).
 - `is_repeatable` (`0`/`1`) is enforced by the domain service, not just documentation: `awardAchievement` blocks a second award of a non-repeatable badge regardless of idempotency key.
 - `metadata` is a nullable TEXT column for feature-specific JSON metadata about the definition itself (not the earned instance).
+- Catalog expansion (`0145`) adds `criteria` (a stable condition label such as `trailing_7d_km >= 100`, consumed by award hooks but never evaluated by SQL) and `unit` (the display plural for repeatable progress, e.g. `weeks`). These are descriptive labels, not a query language.
 - This change is data-layer-only: no admin UI manages these rows. Each consuming feature manages its own definitions (via migration seed data or its own admin surface).
 
 ### user_achievement_instances

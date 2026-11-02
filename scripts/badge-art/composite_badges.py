@@ -40,6 +40,10 @@ Outputs (default reports/badge-art/composites/):
   coherence-circle-f1.jpg, coherence-circle-f2.jpg  variant F grids
   legibility-96-circle-f1.jpg, legibility-96-circle-f2.jpg  96 px sheets
   stack-f.jpg                                 D / F1 / F2 for the hero badge
+  circle-f1v2/<slug>.webp                     F1v2 previews (--proof f1v2)
+  coherence-circle-f1v2.jpg                   F1v2 3x3 grid
+  legibility-96-circle-f1v2.jpg               F1v2 96 px sheet
+  ../rank-boss-v2.jpg                         F1v2 four-rank comparison sheet
   manifest.json
 
 The fixed sheets (stacks, variants, rank matrices) always use Across the
@@ -114,8 +118,11 @@ VARIANT_LABELS = {
     "D": "frame only",
     "E": "rank as outer border",
     "F1": "frame + 6 o'clock rank boss",
+    "F1v2": "frame + 6 o'clock rank boss v2 (colour + cut)",
     "F2": "plated frame + 6 o'clock rank boss",
 }
+# Compact variant label for the 336 px legibility sheet subtitle.
+VARIANT_SHORT_LABELS = {"F1v2": "colour + cut boss"}
 HERO_SLUG = "journey-frodo-sam-buckleberry-ferry"
 HERO_RANK = "gold"
 
@@ -142,6 +149,29 @@ RANK_PLATING = {
     "mithril": {"shadows": "#1b2b36", "mids": "#8fb6c8", "highlights": "#dff4ff"},
 }
 BOSS_SS = 8
+
+# Variant F1v2: two independent rank axes on the same 6 o'clock boss.
+# Colour is the primary read at 96 px; the cut is a second axis that appears
+# at 512 and 200. Silver is deliberately neutral (no cyan); mithril is the
+# only cool-blue metal and the only star cut, with a low-opacity cyan halo.
+BOSS_V2 = {
+    "bronze": {"bezel": "#24160d", "metal": "#b87333",
+               "highlight": "#f0c090", "gem": "#6e3b1d", "cut": "round"},
+    "silver": {"bezel": "#1b2026", "metal": "#c9ced6",
+               "highlight": "#ffffff", "gem": "#8a949f", "cut": "octagon"},
+    "gold": {"bezel": "#2b2008", "metal": "#e0b23a",
+             "highlight": "#fff0b0", "gem": "#8a6410", "cut": "hexagon"},
+    "mithril": {"bezel": "#12232e", "metal": "#7fc9e8",
+                "highlight": "#d6f6ff", "gem": "#4f9fbd", "cut": "star"},
+}
+BOSS_V2_CUT_LABELS = {
+    "round": "round cabochon",
+    "octagon": "octagon cut",
+    "hexagon": "hexagon cut",
+    "star": "star cut",
+}
+BOSS_V2_GLOW = {"rank": "mithril", "color": "#4f9fbd",
+                "width": 4.0, "alpha": 82}
 
 PREVIEW_BG = "#14181f"
 SHEET_BG = "#0d1117"
@@ -653,6 +683,351 @@ def build_rank_boss(rank):
     return out
 
 
+def cut_points(cut, radius, cx, cy, inner=0.62):
+    """Vertices for a rank-boss cut, circumscribed by `radius`.
+
+    round: 96-gon; octagon: flat-top; hexagon: pointy-top; star: four-point
+    star with alternating outer/inner radii (start at 12 o'clock).
+    """
+    if cut == "round":
+        steps = 96
+        return [
+            (cx + radius * math.cos(2 * PI * step / steps),
+             cy + radius * math.sin(2 * PI * step / steps))
+            for step in range(steps)
+        ]
+    if cut == "octagon":
+        count, start = 8, PI / 8
+    elif cut == "hexagon":
+        count, start = 6, PI / 2
+    elif cut == "star":
+        points = []
+        for step in range(8):
+            angle = -PI / 2 + step * PI / 4
+            point_r = radius if step % 2 == 0 else radius * inner
+            points.append(
+                (cx + point_r * math.cos(angle), cy + point_r * math.sin(angle))
+            )
+        return points
+    else:
+        raise ValueError(f"unknown boss cut {cut!r}")
+    return [
+        (cx + radius * math.cos(start + 2 * PI * step / count),
+         cy + radius * math.sin(start + 2 * PI * step / count))
+        for step in range(count)
+    ]
+
+
+def render_gem_v2(cut, palette, radius_px, ss, size):
+    """Draw one cut gem on a transparent square at supersample scale.
+
+    The round cut stays a smooth cabochon; the polygon cuts are faceted from
+    the centre so the octagon / hexagon / star read as stones, not stickers.
+    """
+    require_numpy()
+    gem_rgb = hex_rgb(palette["gem"])
+    highlight_rgb = hex_rgb(palette["highlight"])
+    layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    cx = cy = size / 2.0
+
+    if cut == "round":
+        gem_size = int(math.ceil(radius_px * 2)) + 2
+        gy, gx = np.mgrid[0:gem_size, 0:gem_size].astype(np.float32)
+        gem_centre = gem_size / 2.0
+        distance = np.sqrt((gx - gem_centre) ** 2 + (gy - gem_centre) ** 2)
+        edge = np.clip(distance / radius_px, 0, 1)
+        cabochon = np.zeros((gem_size, gem_size, 3), np.float32)
+        for channel in range(3):
+            cabochon[..., channel] = gem_rgb[channel]
+        rim = np.clip((edge - 0.55) / 0.45, 0, 1)[..., None]
+        cabochon *= 1 - 0.44 * rim
+        spot_x = gem_centre - 0.30 * radius_px
+        spot_y = gem_centre - 0.34 * radius_px
+        spot_d = (
+            np.sqrt((gx - spot_x) ** 2 + (gy - spot_y) ** 2)
+            / (radius_px * 1.05)
+        )
+        glow = np.clip(1 - spot_d, 0, 1)[..., None] ** 1.35
+        for channel in range(3):
+            cabochon[..., channel] = (
+                cabochon[..., channel] * (1 - 0.78 * glow[..., 0])
+                + highlight_rgb[channel] * 0.78 * glow[..., 0]
+            )
+        cabochon *= 1 - 0.55 * np.clip((edge - 0.86) / 0.14, 0, 1)[..., None]
+        gem_image = Image.fromarray(
+            np.clip(cabochon, 0, 255).astype(np.uint8), "RGB"
+        ).convert("RGBA")
+        gem_mask = Image.new("L", (gem_size, gem_size), 0)
+        ImageDraw.Draw(gem_mask).ellipse(
+            [0, 0, gem_size - 1, gem_size - 1], fill=255
+        )
+        gem_image.putalpha(gem_mask)
+        layer.alpha_composite(
+            gem_image,
+            (int(cx - gem_size / 2), int(cy - gem_size / 2)),
+        )
+        draw = ImageDraw.Draw(layer)
+        spec_r = 0.19 * radius_px
+        draw.ellipse(
+            [cx - 0.30 * radius_px - spec_r,
+             cy - 0.34 * radius_px - spec_r * 0.85,
+             cx - 0.30 * radius_px + spec_r,
+             cy - 0.34 * radius_px + spec_r * 0.85],
+            fill=(255, 255, 255, 255),
+        )
+        return layer
+
+    points = cut_points(cut, radius_px, cx, cy, inner=0.50)
+    count = len(points)
+    light_x, light_y = -0.62, -0.78
+    draw.polygon(points, fill=mix_rgb(gem_rgb, (0, 0, 0), 0.35))
+    for index in range(count):
+        first = points[index]
+        second = points[(index + 1) % count]
+        mid_x = (first[0] + second[0]) / 2 - cx
+        mid_y = (first[1] + second[1]) / 2 - cy
+        length = math.hypot(mid_x, mid_y) or 1.0
+        ndotl = max(0.0, (mid_x * light_x + mid_y * light_y) / length)
+        alternate = 0.07 if index % 2 == 0 else -0.03
+        tint = mix_rgb(gem_rgb, highlight_rgb, 0.06 + 0.46 * ndotl)
+        value = 0.78 + 0.34 * ndotl + alternate
+        draw.polygon(
+            [(cx, cy), first, second],
+            fill=tuple(min(255, int(round(channel * value))) for channel in tint),
+        )
+    seam = mix_rgb(gem_rgb, (0, 0, 0), 0.42) + (255,)
+    for point in points:
+        draw.line(
+            [(cx, cy), point],
+            fill=seam,
+            width=max(1, int(round(0.28 * ss))),
+        )
+    for index in range(count):
+        first = points[index]
+        second = points[(index + 1) % count]
+        mid_x = (first[0] + second[0]) / 2 - cx
+        mid_y = (first[1] + second[1]) / 2 - cy
+        length = math.hypot(mid_x, mid_y) or 1.0
+        ndotl = (mid_x * light_x + mid_y * light_y) / length
+        if ndotl > 0.25:
+            draw.line(
+                [first, second],
+                fill=mix_rgb(highlight_rgb, (255, 255, 255), 0.35) + (255,),
+                width=max(1, int(round(0.30 * ss))),
+            )
+        else:
+            draw.line(
+                [first, second],
+                fill=mix_rgb(gem_rgb, (0, 0, 0), 0.55) + (255,),
+                width=max(1, int(round(0.24 * ss))),
+            )
+
+    # Radial rim darkening gives the facet plane a stone-like falloff.
+    array = np.asarray(layer, dtype=np.float32).copy()
+    gy, gx = np.mgrid[0:size, 0:size].astype(np.float32)
+    distance = np.sqrt((gx - cx) ** 2 + (gy - cy) ** 2) / radius_px
+    factor = 1 - 0.38 * np.clip((distance - 0.58) / 0.42, 0, 1)
+    array[..., :3] *= factor[..., None]
+    layer = Image.fromarray(
+        np.clip(array, 0, 255).astype(np.uint8), "RGBA"
+    )
+    draw = ImageDraw.Draw(layer)
+    spec_r = 0.15 * radius_px
+    draw.ellipse(
+        [cx - 0.27 * radius_px - spec_r,
+         cy - 0.33 * radius_px - spec_r * 0.9,
+         cx - 0.27 * radius_px + spec_r,
+         cy - 0.33 * radius_px + spec_r * 0.9],
+        fill=(255, 255, 255, 255),
+    )
+    return layer
+
+
+def render_rank_boss_v2(rank):
+    """Render a v2 rank boss as a centred square RGBA tile.
+
+    Same nominal geometry as F1 (70 px bezel / 54 px disc / 25 px gem at
+    1024); the disc and gem take the rank's cut.
+    """
+    require_numpy()
+    palette = BOSS_V2[rank]
+    cut = palette["cut"]
+    bezel_rgb = hex_rgb(palette["bezel"])
+    metal_rgb = hex_rgb(palette["metal"])
+    highlight_rgb = hex_rgb(palette["highlight"])
+
+    bezel_r = BOSS["bezel"]
+    ss = BOSS_SS
+    disc_r = BOSS["disc"]
+    gem_r = BOSS["gem"]
+    pad = 10.0
+    size = int(math.ceil((bezel_r + pad) * 2))
+    big = size * ss
+    centre = big / 2.0
+
+    # Contact shadow, scaled from the F1 boss.
+    shadow = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(shadow).ellipse(
+        [
+            centre - (bezel_r + 1) * ss,
+            centre - (bezel_r - 1) * ss + 2.2 * ss,
+            centre + (bezel_r + 1) * ss,
+            centre + (bezel_r + 1) * ss + 2.2 * ss,
+        ],
+        fill=150,
+    )
+    shadow = shadow.filter(ImageFilter.GaussianBlur(2.0 * ss))
+    boss = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    boss.putalpha(shadow.point(lambda value: int(value * 0.55)))
+
+    if rank == BOSS_V2_GLOW["rank"]:
+        glow_r = bezel_r + BOSS_V2_GLOW["width"] * bezel_r / BOSS["bezel"]
+        glow = Image.new("L", (big, big), 0)
+        glow_draw = ImageDraw.Draw(glow)
+        glow_draw.ellipse(
+            [centre - glow_r * ss, centre - glow_r * ss,
+             centre + glow_r * ss, centre + glow_r * ss],
+            fill=BOSS_V2_GLOW["alpha"],
+        )
+        glow_draw.ellipse(
+            [centre - (bezel_r - 0.5) * ss, centre - (bezel_r - 0.5) * ss,
+             centre + (bezel_r - 0.5) * ss, centre + (bezel_r - 0.5) * ss],
+            fill=0,
+        )
+        glow = glow.filter(ImageFilter.GaussianBlur(2.0 * ss))
+        # Drop the invisible blur tail so the halo cannot grow the badge's
+        # alpha bbox (and therefore its 512/96 framing) relative to F1.
+        glow = glow.point(lambda value: 0 if value < 6 else value)
+        glow_layer = Image.new(
+            "RGBA", (big, big), hex_rgb(BOSS_V2_GLOW["color"]) + (0,)
+        )
+        glow_layer.putalpha(glow)
+        boss.alpha_composite(glow_layer)
+
+    # Bezel ring: dark alloy body, lit from the top-left like the badge.
+    gy, gx = np.mgrid[0:big, 0:big].astype(np.float32)
+    normal_x = (gx - centre) / (bezel_r * ss)
+    normal_y = (gy - centre) / (bezel_r * ss)
+    lit = np.clip(0.52 - 0.42 * normal_x - 0.55 * normal_y, 0, 1)
+    ring_mask = Image.new("L", (big, big), 0)
+    ring_draw = ImageDraw.Draw(ring_mask)
+    ring_draw.ellipse(
+        [centre - bezel_r * ss, centre - bezel_r * ss,
+         centre + bezel_r * ss, centre + bezel_r * ss],
+        fill=255,
+    )
+    ring_draw.ellipse(
+        [centre - disc_r * ss, centre - disc_r * ss,
+         centre + disc_r * ss, centre + disc_r * ss],
+        fill=0,
+    )
+    bezel = np.zeros((big, big, 3), np.float32)
+    for channel in range(3):
+        bezel[..., channel] = (
+            bezel_rgb[channel] * (0.86 + 0.40 * lit)
+            + metal_rgb[channel] * 0.10 * lit
+        )
+    bezel_image = Image.fromarray(
+        np.clip(bezel, 0, 255).astype(np.uint8), "RGB"
+    ).convert("RGBA")
+    bezel_image.putalpha(ring_mask)
+    boss.alpha_composite(bezel_image)
+
+    # Recessed socket behind the cut disc, so star concavities read as depth.
+    socket_mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(socket_mask).ellipse(
+        [centre - disc_r * ss, centre - disc_r * ss,
+         centre + disc_r * ss, centre + disc_r * ss],
+        fill=255,
+    )
+    socket = Image.new("RGBA", (big, big), mix_rgb(bezel_rgb, (0, 0, 0), 0.55) + (0,))
+    socket.putalpha(socket_mask)
+    boss.alpha_composite(socket)
+
+    disc_mask = Image.new("L", (big, big), 0)
+    disc_points = cut_points(cut, disc_r * ss, centre, centre)
+    ImageDraw.Draw(disc_mask).polygon(disc_points, fill=255)
+
+    metal = np.zeros((big, big, 3), np.float32)
+    disc_lit = np.clip(0.52 - 0.40 * normal_x - 0.52 * normal_y, 0, 1)
+    for channel in range(3):
+        metal[..., channel] = (
+            metal_rgb[channel] * (0.66 + 0.42 * disc_lit)
+            + highlight_rgb[channel] * 0.14 * disc_lit ** 1.6
+        )
+    metal_image = Image.fromarray(
+        np.clip(metal, 0, 255).astype(np.uint8), "RGB"
+    ).convert("RGBA")
+    metal_image.putalpha(disc_mask)
+    boss.alpha_composite(metal_image)
+
+    # Bevel the cut edge: bright top-left, dark bottom-right.
+    inner_r = disc_r - 0.9
+    inner_mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(inner_mask).polygon(
+        cut_points(cut, inner_r * ss, centre, centre), fill=255
+    )
+    rim_mask = ImageChops.subtract(disc_mask, inner_mask)
+    rim_lit = np.clip(0.5 - 0.50 * normal_x - 0.60 * normal_y, 0, 1)
+    rim = np.zeros((big, big, 3), np.float32)
+    for channel in range(3):
+        rim[..., channel] = (
+            metal_rgb[channel] * (0.58 + 0.54 * rim_lit)
+            + highlight_rgb[channel] * 0.42 * rim_lit ** 1.2
+        )
+    rim_image = Image.fromarray(
+        np.clip(rim, 0, 255).astype(np.uint8), "RGB"
+    ).convert("RGBA")
+    rim_image.putalpha(rim_mask.point(lambda value: int(value * 0.85)))
+    boss.alpha_composite(rim_image)
+
+    # Engraved line following the cut, echoing the F1 engraved disc ring.
+    etch_outer = Image.new("L", (big, big), 0)
+    etch_inner = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(etch_outer).polygon(
+        cut_points(cut, disc_r * 0.80 * ss, centre, centre), fill=255
+    )
+    ImageDraw.Draw(etch_inner).polygon(
+        cut_points(cut, disc_r * 0.76 * ss, centre, centre), fill=255
+    )
+    etch_mask = ImageChops.subtract(etch_outer, etch_inner)
+    etch = Image.new(
+        "RGBA", (big, big), mix_rgb(metal_rgb, bezel_rgb, 0.70) + (0,)
+    )
+    etch.putalpha(etch_mask.point(lambda value: int(value * 0.75)))
+    boss.alpha_composite(etch)
+
+    # Gem well and cut stone.
+    well_r = gem_r + 1.7
+    well_mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(well_mask).polygon(
+        cut_points(cut, well_r * ss, centre, centre, inner=0.50), fill=255
+    )
+    well = Image.new("RGBA", (big, big), mix_rgb(bezel_rgb, (0, 0, 0), 0.50) + (0,))
+    well.putalpha(well_mask)
+    boss.alpha_composite(well)
+    gem = render_gem_v2(cut, palette, gem_r * ss, ss, big)
+    boss.alpha_composite(gem)
+
+    return boss.resize((size, size), Image.LANCZOS)
+
+
+def build_rank_boss_v2(rank):
+    """Place the v2 boss on the 1024 badge canvas at the F1 6 o'clock spot."""
+    key = ("v2", rank)
+    if key in _BOSS_CACHE:
+        return _BOSS_CACHE[key]
+    tile = render_rank_boss_v2(rank)
+    out = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+    cx, cy = BOSS["centre"]
+    out.alpha_composite(
+        tile, (int(round(cx - tile.width / 2)), int(round(cy - tile.height / 2)))
+    )
+    _BOSS_CACHE[key] = out
+    return out
+
+
 def plate_frame(frame, rank):
     """Duotone gradient-map the frame's metal to the rank alloy.
 
@@ -751,13 +1126,18 @@ def compose_badge(asset, shape, variant):
                 asset["layers"]["rank"], shape, *VARIANT_E["hexagon"]["dest"], *RANK_SRC
             )
         badge = flatten([emblem, layers["frame"], rank_border])
-    elif variant in ("F1", "F2"):
+    elif variant in ("F1", "F2", "F1v2"):
         if shape != "circle":
             raise ValueError("variant F is circle-only (frame-mounted boss)")
         frame = layers["frame"]
         if variant == "F2":
             frame = plate_frame(frame, asset["rank"])
-        badge = flatten([layers["emblem"], frame, build_rank_boss(asset["rank"])])
+        boss = (
+            build_rank_boss_v2(asset["rank"])
+            if variant == "F1v2"
+            else build_rank_boss(asset["rank"])
+        )
+        badge = flatten([layers["emblem"], frame, boss])
     else:
         raise ValueError(f"unknown variant {variant!r}")
     _BADGE_CACHE[key] = badge
@@ -859,6 +1239,10 @@ def variant_note(shape, variant):
         return ("frame only + 6 o'clock rank boss "
                 f"({int(BOSS['bezel'] * 2)} px bezel, {int(BOSS['disc'] * 2)} px "
                 "rank-metal disc); no rank ring")
+    if variant == "F1v2":
+        return ("frame only + 6 o'clock rank boss v2 "
+                f"({int(BOSS['bezel'] * 2)} px bezel, {int(BOSS['disc'] * 2)} px "
+                "cut metal disc, 25 px cut gem); colour + cut axes; no rank ring")
     if variant == "F2":
         return ("frame gradient-mapped to the rank alloy + 6 o'clock rank boss; "
                 "alpha and engraving preserved; no rank ring")
@@ -929,7 +1313,8 @@ def build_coherence_grid(assets, shape, variant, out_path):
     draw.text(
         (margin, margin + 40),
         f"{len(assets)} recommended badges \u00b7 "
-        + (f"{variant} \u00b7 {VARIANT_LABELS[variant]}" if variant in ("F1", "F2")
+        + (f"{variant} \u00b7 {VARIANT_LABELS[variant]}"
+           if variant in ("F1", "F2", "F1v2")
            else f"variant {variant}")
         + f" \u00b7 {SHAPE_LABELS[shape]} \u00b7 3\u00d73 review grid",
         font=subtitle_font,
@@ -1223,7 +1608,8 @@ def build_legibility_sheet(assets, shape, variant, out_path):
     )
     draw.text(
         (margin, margin + 30),
-        f"Recommended picks \u00b7 {variant} \u00b7 {VARIANT_LABELS[variant]}",
+        f"Recommended picks \u00b7 {variant} \u00b7 "
+        f"{VARIANT_SHORT_LABELS.get(variant, VARIANT_LABELS[variant])}",
         font=subtitle_font,
         fill=MUTED,
     )
@@ -1398,6 +1784,23 @@ def write_manifest(outputs, out_dir):
                 "f2": "frame band gradient-mapped to the rank alloy (duotone, "
                       "alpha and engraving preserved) before the boss",
             },
+            "variant_f1v2": {
+                "stack": "same as F1: emblem 800 -> family frame 880..1016 -> "
+                         "6 o'clock rank boss; no rank ring",
+                "boss": {"centre": [BOSS["centre"][0], BOSS["centre"][1]],
+                         "bezel_diameter": int(BOSS["bezel"] * 2),
+                         "disc_diameter": int(BOSS["disc"] * 2),
+                         "gem_diameter": int(BOSS["gem"] * 2)},
+                "colour": {rank: {"bezel": palette["bezel"],
+                                  "metal": palette["metal"],
+                                  "highlight": palette["highlight"],
+                                  "gem": palette["gem"]}
+                           for rank, palette in BOSS_V2.items()},
+                "cut": {rank: palette["cut"]
+                        for rank, palette in BOSS_V2.items()},
+                "glow": "mithril only: low-opacity cyan ring outside the bezel "
+                        f"({BOSS_V2_GLOW['width']:.0f} px at 1024)",
+            },
         },
         "outputs": list(merged.values()),
     })
@@ -1438,6 +1841,208 @@ def build_f_proofs(assets, hero_gold, out_dir):
     return outputs
 
 
+def build_rank_boss_sheet(hero, shortlist, out_path):
+    """Four ranks as columns; 200 px boss crop / 96 px badge / 48 px badge."""
+    ranks = list(RANK_ORDER)
+    margin, label_w, gap = 32, 150, 16
+    col_w, boss_panel, badge96_panel, badge48_panel = 210, 200, 104, 56
+    title_h, header_h = 112, 50
+    left = margin + label_w + 20
+    width = left + len(ranks) * col_w + (len(ranks) - 1) * gap + margin
+    boss_top = margin + title_h + header_h
+    badge96_top = boss_top + boss_panel + 18
+    badge48_top = badge96_top + badge96_panel + 18
+    note_top = badge48_top + badge48_panel + 26
+    height = note_top + 38
+
+    canvas = Image.new("RGBA", (width, height), SHEET_BG)
+    draw = ImageDraw.Draw(canvas)
+    title_font = load_font(30, bold=True)
+    subtitle_font = load_font(14)
+    note_font = load_font(16, bold=True)
+    rank_font = load_font(18, bold=True)
+    cut_font = load_font(11)
+    row_font = load_font(17, bold=True)
+    row_sub_font = load_font(11)
+
+    draw.text((margin, 28), "Rank boss v2 \u2014 colour and cut",
+              font=title_font, fill=TEXT)
+    draw.text(
+        (margin, 64),
+        "F1 frame \u00b7 6 o'clock boss \u00b7 same nominal size as F1 "
+        "(70 px bezel / 54 px disc / 25 px gem at 1024)",
+        font=subtitle_font,
+        fill=MUTED,
+    )
+    draw.text(
+        (margin, 85),
+        "rows: 200 px boss crop \u00b7 96 px badge \u00b7 48 px badge",
+        font=subtitle_font,
+        fill=MUTED,
+    )
+
+    for index, rank in enumerate(ranks):
+        x = left + index * (col_w + gap)
+        centre_x = x + col_w / 2
+        cut = BOSS_V2[rank]["cut"]
+        colour = hex_rgb(RANK_COLORS[rank])
+        dot_r = 5
+        name_width = draw.textlength(RANK_LABELS[rank], font=rank_font)
+        start = centre_x - (name_width + dot_r * 2 + 6) / 2
+        draw.ellipse(
+            [start, 143, start + dot_r * 2, 143 + dot_r * 2],
+            fill=colour,
+        )
+        draw.text(
+            (start + dot_r * 2 + 6, 140),
+            RANK_LABELS[rank],
+            font=rank_font,
+            fill=TEXT,
+        )
+        draw.text(
+            (centre_x, 166),
+            BOSS_V2_CUT_LABELS[cut],
+            font=cut_font,
+            fill=MUTED,
+            anchor="ma",
+        )
+
+        asset = with_rank(hero, rank, shortlist)
+        badge = compose_badge(asset, "circle", "F1v2")
+
+        # (a) 200 px boss crop from the 1024 badge.
+        half = 40
+        boss_x, boss_y = BOSS["centre"]
+        crop_left = int(round(boss_x - half))
+        crop_top = int(round(boss_y - half))
+        crop = badge.crop(
+            (crop_left, crop_top, crop_left + half * 2, crop_top + half * 2)
+        )
+        tile = Image.new("RGBA", (half * 2, half * 2), PANEL_BG)
+        tile.alpha_composite(crop)
+        tile = tile.resize((boss_panel, boss_panel), Image.LANCZOS).convert("RGB")
+        tile_x = int(round(centre_x - boss_panel / 2))
+        canvas.paste(tile, (tile_x, boss_top))
+        draw.rectangle(
+            [tile_x, boss_top, tile_x + boss_panel - 1, boss_top + boss_panel - 1],
+            outline=BORDER,
+            width=1,
+        )
+
+        # (b) / (c) full badge at 96 and 48 px.
+        bbox = badge.getchannel("A").getbbox()
+        if bbox is None:
+            raise ValueError("badge is fully transparent")
+        art_size = max(bbox[2] - bbox[0], bbox[3] - bbox[1])
+        for panel, panel_top in (
+            (badge96_panel, badge96_top),
+            (badge48_panel, badge48_top),
+        ):
+            panel_x = int(round(centre_x - panel / 2))
+            draw_panel(draw, (panel_x, panel_top, panel, panel), radius=6)
+            place_badge(
+                canvas,
+                badge,
+                (panel_x, panel_top, panel, panel),
+                padding=0,
+                scale=(panel - 8) / art_size,
+            )
+
+    for label, sublabel, row_top, row_height in (
+        ("200 px", "boss crop", boss_top, boss_panel),
+        ("96 px", "full badge", badge96_top, badge96_panel),
+        ("48 px", "full badge", badge48_top, badge48_panel),
+    ):
+        draw.text(
+            (margin + label_w, row_top + row_height / 2 - 9),
+            label,
+            font=row_font,
+            fill=TEXT,
+            anchor="ra",
+        )
+        draw.text(
+            (margin + label_w, row_top + row_height / 2 + 10),
+            sublabel,
+            font=row_sub_font,
+            fill=MUTED,
+            anchor="ra",
+        )
+
+    draw.rounded_rectangle(
+        [margin, note_top - 12, width - margin - 1, note_top + 24],
+        radius=8,
+        fill=LABEL_BG,
+        outline=BORDER,
+        width=1,
+    )
+    draw.text(
+        (margin + 14, note_top + 6),
+        "silver = neutral chrome \u00b7 mithril = cool blue + star cut",
+        font=note_font,
+        fill=TEXT,
+    )
+    draw.text(
+        (width - margin - 14, note_top + 6),
+        "colour is the 96 px read \u00b7 cut is the second axis",
+        font=subtitle_font,
+        fill=MUTED,
+        anchor="ra",
+    )
+
+    nbytes = save_image(canvas, out_path, "JPEG", quality=94,
+                        subsampling=0, optimize=True)
+    return {
+        "output": repo_relative(out_path),
+        "kind": "rank-boss-sheet",
+        "asset": hero["id"],
+        "display_name": hero["name"],
+        "shape": "circle",
+        "variant": "F1v2",
+        "ranks": ranks,
+        "components": [
+            component_entry(with_rank(hero, rank, shortlist), "circle", "F1v2")
+            for rank in ranks
+        ],
+        "dimensions": dimensions(out_path),
+        "bytes": nbytes,
+        "format": "jpeg",
+        "layout": {"cols": len(ranks), "rows": 3},
+        "note": "200 px boss crop, 96 px badge, 48 px badge per rank; "
+                "silver = neutral chrome; mithril = cool blue + star cut",
+    }
+
+
+def build_f1v2_proofs(assets, hero, shortlist, out_dir):
+    """Build the F1v2 circle proofs: badges, grid, 96 px sheet, rank sheet."""
+    variant = "F1v2"
+    outputs = []
+    shape_dir = "circle-f1v2"
+    print(f"variant {variant} badges: circle")
+    for asset in assets:
+        badge = compose_badge(asset, "circle", variant)
+        preview = Image.new("RGBA", (512, 512), PREVIEW_BG)
+        place_badge(preview, badge, (0, 0, 512, 512), padding=16)
+        path = out_dir / shape_dir / f"{asset['slug']}.webp"
+        nbytes = save_image(preview, path, "WEBP", quality=90, method=6)
+        outputs.append(
+            badge_entry(asset, "circle", variant, path, dimensions(path), nbytes)
+        )
+        print(f"  {repo_relative(path)}")
+
+    grid_path = out_dir / "coherence-circle-f1v2.jpg"
+    outputs.append(build_coherence_grid(assets, "circle", variant, grid_path))
+    print(f"  {repo_relative(grid_path)}")
+
+    legibility_path = out_dir / "legibility-96-circle-f1v2.jpg"
+    outputs.append(build_legibility_sheet(assets, "circle", variant, legibility_path))
+    print(f"  {repo_relative(legibility_path)}")
+
+    rank_path = out_dir.parent / "rank-boss-v2.jpg"
+    outputs.append(build_rank_boss_sheet(hero, shortlist, rank_path))
+    print(f"  {repo_relative(rank_path)}")
+    return outputs
+
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
@@ -1465,9 +2070,10 @@ def main(argv=None):
         help="only individual badges + manifest (quick smoke run)",
     )
     parser.add_argument(
-        "--proof", choices=("f",),
-        help="build the F rank-treatment proofs (F1/F2, circle only): "
-             "badges, coherence grids, 96 px sheets, stack-f.jpg",
+        "--proof", choices=("f", "f1v2"),
+        help="build the F rank-treatment proofs (F1/F2, circle only) or the "
+             "F1v2 colour+cut boss proofs (circle only): badges, coherence "
+             "grid, 96 px sheet, rank-boss-v2.jpg",
     )
     parser.add_argument(
         "--list", action="store_true",
@@ -1528,6 +2134,21 @@ def main(argv=None):
             return 1
         manifest_path = write_manifest(outputs, out_dir)
         print(f"\nwrote {len(outputs)} F composite(s) + manifest")
+        print(f"manifest: {repo_relative(manifest_path)}")
+        return 0
+
+    if args.proof == "f1v2":
+        if args.shape == "hexagon":
+            print("ERROR: --proof f1v2 is circle-only (the boss sits on a circular "
+                  "frame band)", file=sys.stderr)
+            return 1
+        try:
+            outputs = build_f1v2_proofs(assets, hero, shortlist, out_dir)
+        except (OSError, ValueError) as exc:
+            print(f"ERROR: could not build F1v2 proofs: {exc}", file=sys.stderr)
+            return 1
+        manifest_path = write_manifest(outputs, out_dir)
+        print(f"\nwrote {len(outputs)} F1v2 composite(s) + manifest")
         print(f"manifest: {repo_relative(manifest_path)}")
         return 0
 
