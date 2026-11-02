@@ -63,7 +63,7 @@ The system SHALL store earned achievement records as append-only instances, SHAL
 - **AND** no existing row's columns are modified
 
 ### Requirement: Aggregated achievement summary with repeat counts
-The system SHALL return achievement summaries that group earned instances by achievement definition, SHALL include the repeat count for repeatable badges, and SHALL include the full definition metadata for display.
+The system SHALL return achievement summaries that group earned instances by achievement definition, SHALL include the repeat count for repeatable badges, and SHALL include the definition's display fields plus its raw `metadata` payload.
 
 #### Scenario: Summary for a user with no achievements returns empty
 - **GIVEN** a user has no earned achievement instances
@@ -86,3 +86,9 @@ The system SHALL return achievement summaries that group earned instances by ach
 - **GIVEN** a user has earned two different achievements
 - **WHEN** a consuming feature requests the user's achievement summary
 - **THEN** the system returns two summary entries, one per achievement definition
+
+#### Scenario: Summary includes definition metadata
+- **GIVEN** an achievement definition whose `metadata` column contains a JSON payload
+- **WHEN** a consuming feature requests the user's achievement summary
+- **THEN** the matching entry includes that raw `metadata` value
+- **AND** a definition whose `metadata` is null returns null
