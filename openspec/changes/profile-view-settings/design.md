@@ -40,7 +40,7 @@ Today one page and one island serve both jobs:
 Today the islands own their page wrapper (`ProfileIsland` renders `<div class="profile-page">` itself; `FriendProfileIsland` renders `<div class="party-page">` itself). When the view page hosts a second island (`BadgeDisplayIsland`), a self-wrapping island would leave that island full-width outside the hero. Decision:
 
 - `renderProfileViewPage` main content: `<div class="party-page">` containing the `ProfileViewIsland` and `BadgeDisplayIsland` placeholders; the view island renders its hero/CTA/fellowships *content only*, no wrapper.
-- `renderProfileSettingsPage` main content: `<div class="profile-page profile-settings-page">` containing the `ProfileSettingsIsland` and `PushPermissionIsland` placeholders; the settings island renders `.profile-card` blocks directly, and `.profile-settings-page` reserves the bottom padding for the fixed Save bar.
+- `renderProfileSettingsPage` main content: `<div class="profile-page">` containing the SSR back row (styled Back to profile button + "Changes save automatically" note — rendered by the shell so they exist during loading and on 401), then the `ProfileSettingsIsland`, `PushPermissionIsland`, and `ProfileAccountIsland` placeholders; the settings islands render their own cards directly. No bottom action bar or reserved bottom padding.
 - Effect: hero, CTA, fellowships, badge grid, and push card all align to the same wrapper width at every viewport.
 - Renderer tests assert both wrappers and the absence of self-wrapping.
 
@@ -89,11 +89,12 @@ No migration: needs only reads that already exist (`users`, `progress`, `storyli
 
 | Island | Page | Contents |
 |---|---|---|
-| `ProfileViewIsland` (new) | view | hero (avatar button, username, stat grid, goal + journey lines), Fellowships card, Settings CTA, hosts `AvatarPickerModal`; no page wrapper (renderer owns it) |
-| `ProfileSettingsIsland` (new) | settings | username/email form, avatar preview + "Change avatar" trigger, preference toggles, journey select + confirm dialog, "Back to profile" breadcrumb, Account/Logout card, and a viewport-fixed Save/Back action bar; no page wrapper (renderer owns it) |
+| `ProfileViewIsland` (new) | view | hero (avatar button, username, stat grid, goal + journey lines), Settings CTA, Fellowships card (the badge island follows it); hosts `AvatarPickerModal`; no page wrapper (renderer owns it) |
+| `ProfileSettingsIsland` (new) | settings | username/email auto-save-on-blur fields with inline status (fetches `/api/session` + `/api/storylines` only — the avatar list belongs to the modal), avatar preview + "Change avatar" trigger, preference toggles, journey select + confirm dialog; no Save bar; no Back button (the SSR shell renders it); no page wrapper (renderer owns it) |
 | `PushPermissionIsland` (unchanged) | settings | mount moves from view page to settings page |
+| `ProfileAccountIsland` (new) | settings | Account card with the existing Logout action and confirmation; mounted after the push island so sign-out stays last on the page |
 | `BadgeDisplayIsland` (unchanged) | view | zero-badge summary renders nothing, exactly as `profile-badge-display` specifies |
-| `ProfileIsland` | — | **deleted** (replaced by the two islands above) |
+| `ProfileIsland` | — | **deleted** (replaced by the three islands above) |
 
 **Shared components**
 
@@ -108,33 +109,40 @@ No migration: needs only reads that already exist (`users`, `progress`, `storyli
 
 | Current section (`ProfileIsland.tsx`) | Goes to |
 |---|---|
-| Username + email fields, hints, Save handler (`:354-377`, `:272-310`) | `ProfileSettingsIsland` |
+| Username + email fields, hints, Save handler (`:354-377`, `:272-310`) | `ProfileSettingsIsland`, auto-save on blur with per-field inline status; no Save button |
 | Avatar preview/gallery/reset + save logic (`:134-169`, `:379-425`) | `AvatarPickerModal` (settings opens it via "Change avatar"; view via the avatar itself) |
 | `showFutureGoalsUnlocked` toggle (`:427-445`) | `ProfileSettingsIsland` |
 | `defaultViewMap` toggle (`:447-465`) | `ProfileSettingsIsland` |
 | Journey select + description + status (`:471-490`) | `ProfileSettingsIsland` |
 | Carry/reset confirm dialog (`:511-531`) | `ProfileSettingsIsland` |
-| Save / Logout footer buttons (`:496-507`) | Save/Back **viewport-fixed bottom action bar**; Logout moves to a separate Account card at the bottom |
-| `Back` button (`history.back()`, `:319-321`, `:504-506`) | replaced by an explicit "Back to profile" link to `/profile` (deep-link friendly) |
+| Save / Logout footer buttons (`:496-507`) | Save is removed (auto-save); Logout moves to the new `ProfileAccountIsland` (mounted after the push island), which keeps the existing logout flow and confirmation |
+| `Back` button (`history.back()`, `:319-321`, `:504-506`) | replaced by a styled "Back to profile" button rendered by the SSR shell (deep-link friendly, visible before hydration) |
 | Auto-focus username input on load (`:128-132`) | dropped — the settings page is no longer "the form page"; nothing forces focus |
-| Fetch of `/api/session`/`/api/storylines` (`:84-126`) | `ProfileSettingsIsland`, plus a new 401 branch (redirect `/login` instead of a blank form) |
-| Error/success message blocks (`:492-493`) | `ProfileSettingsIsland` |
+| Fetch of `/api/session`, `/api/avatars`, `/api/storylines` in parallel (`:84-126`) | `ProfileSettingsIsland` fetches only `/api/session` + `/api/storylines`; the `/api/avatars` list moves entirely into `AvatarPickerModal`, and the 401 branch (redirect `/login` instead of a blank form) is added |
+| Error/success message blocks (`:492-493`) | per-field inline status in `ProfileSettingsIsland`; no global success/error banner |
 | `.profile-page` wrapper returned by the island (`:351`) | **removed** — wrapper moves to `renderProfileSettingsPage` |
 
-Nothing in the current behaviour is removed; auto-focus-on-load, `history.back()`, the island-owned wrapper, and silent-on-401 are the only behaviours that change shape. `clearMapCache()` (imported in `ProfileIsland.tsx:4`, called in `switchStoryline`) moves with the journey logic and is covered by its test.
+What is removed vs changed shape: the page-level **Save Changes button and its footer bar are removed by design** (replaced by username/email auto-save on blur; every other setting already saved on change and keeps doing so); auto-focus-on-load, `history.back()`, the island-owned wrapper, and silent-on-401 change shape, and Logout leaves the settings island for its own island. `clearMapCache()` (imported in `ProfileIsland.tsx:4`, called in `switchStoryline`) moves with the journey logic and is covered by its test.
+
+## Auto-save behaviour (username/email)
+
+- **Validation reuses the server's exact predicates**: `isValidUsername` (`/^[a-zA-Z0-9_]{3,30}$/`) and `isValidEmail` (`/^[^\s@]+@[^\s@]+\.[^\s@]+$/`) from `src/auth-utils.ts` are pure regex functions with no worker dependency. They move into `src/validators.ts` — the existing client-safe module already compiled to `public/js/validators.js` by `npm run build:validators` — and `src/auth-utils.ts` re-exports them so every worker call site (`src/auth-handlers.ts:60`, `:524`, `:529`) is unchanged. `ProfileSettingsIsland` imports the same module; no duplicate regex, and the client validation can never drift from the server's. Values are trimmed before validation.
+- **Save sequencing per field**: each field has a monotonically increasing sequence counter (or a serialized per-field queue — one mechanism, decided at implementation). On blur, the request captures the current sequence; a response is applied only if it belongs to the newest sequence, so a stale response that resolves after a newer blur is ignored and the field always reflects the latest edit. The newest request wins; in-flight older requests are not cancelled, just discarded on arrival.
+- **Field status lifecycle**: status starts empty on initial load — never a pre-rendered "Saved"; it is cleared as soon as the user edits the field, and it shows `Saving…` → `Saved`/error only per started save. The `keepalive: true` flag on the blur save keeps an in-flight request alive through Back navigation.
+- **Errors stay local**: invalid (including empty/whitespace) values never send a request and show an inline error next to the field; `409` shows the server's duplicate message inline; `401` redirects to `/login`; other network errors set the field error status. No global banner, and other fields are unaffected.
 
 ## Stylesheet ownership
 
-- **`public/css/profile-view.css` (new)** owns every *shared* profile-page style: the avatar-as-button affordance, Settings CTA, stat skeleton, back-row link, "Change avatar" trigger, and the **avatar picker modal** (title row, gallery grid, current-selection ring, status, actions). Both page renderers load it: the view next to `party.css`/`friends.css`/`badge-display.css`, and the settings page next to `profile.css` — the modal and back row must style correctly wherever they mount.
-- `profile.css` keeps the settings form/card/toggle/push styles plus the viewport-fixed Save/Back action bar and Account card.
-- Renderer tests assert the stylesheet lists, including `profile-view.css` on the settings page.
+- **`public/css/profile-view.css` (new) owns the view chrome and the shared avatar picker modal only**: the avatar-as-button affordance, the Settings CTA, the stat skeleton, and the full picker modal (title row, current-avatar preview row, gallery grid, selection ring, status, actions). Both page renderers load it — the modal must style identically wherever it opens.
+- **`public/css/profile.css` owns the settings-page styles**: the form/card/toggle/push rules it has today plus the new styled Back to profile button, the per-field auto-save status (`Saving…`/`Saved`/error with `role="status"`), the "Change avatar" trigger, and the Account/Logout card. It also drops the old Save/footer action-bar rules that die with the Save button.
+- Renderer tests assert the stylesheet lists, including `profile-view.css` on the settings page and the ownership split above.
 
 ## State matrix
 
 | State | View page | Settings page | Avatar modal |
 |---|---|---|---|
-| Loading | hero/stats skeleton (shimmer pattern from `badge-display.css`) | existing `.profile-page-loading` spinner | gallery-loading indicator; current-avatar preview stays visible |
-| Error | error card + Retry; no fabricated stats | per-field status + form error as today (`error-message`/`success-message`) | gallery fetch error → Retry inside modal; save error → status line, modal stays open |
+| Loading | hero/stats skeleton (shimmer pattern from `badge-display.css`) | SSR shell (h1 + Back row) visible immediately; islands show the `.profile-page-loading` spinner | SSR shell visible; gallery-loading indicator; current-avatar preview stays visible |
+| Error | error card + Retry; no fabricated stats | per-field inline status; no global save button/banner | gallery fetch error → Retry inside modal; save error → status line, modal stays open |
 | Empty | no-fellowship card; `currentGoalTitle` null → no "Heading to" line; badges render nothing when summary empty | n/a | n/a |
 | 401 | redirect `/login` | **new explicit branch:** session-fetch 401 → redirect `/login` (never the blank form) | close modal, then redirect `/login` |
 
@@ -143,7 +151,7 @@ Nothing in the current behaviour is removed; auto-focus-on-load, `history.back()
 - Avatar trigger: `<button>` wrapping the `Avatar` at 128 px, `aria-label` "Change avatar for <username>"; the avatar itself is the ≥44 px target at every breakpoint (no compact variant is introduced).
 - Modal: `role="dialog"`, `aria-modal="true"`, `aria-labelledby` on the title; focus moves in on open, Tab/Shift+Tab cycle inside, Escape and backdrop close, focus returns to the trigger. Arrow-key behaviour of the current gallery preserved (`ProfileIsland.tsx:323-340`).
 - Headings: view h1 "Profile" → hero h2 username → h3 "Fellowships" / badge section h3s. Settings h1 "Profile Settings" → form groups labelled as today.
-- Touch: the settings page uses a viewport-fixed bottom action bar with Save Changes (primary, flexible width) and Back (secondary), both ≥44 px. It is centered to the 600 px page column, uses an opaque `--bg-secondary` background, safe-area padding, and a top border. Because the push card is a separate island below the settings island, the bar is fixed to the viewport rather than CSS-sticky (a sticky child would stop at the settings island boundary). The settings page reserves 6 rem bottom padding so the Account card and focused fields can scroll clear of the bar. Logout lives in the Account card above it, not in the bar.
+- Touch: the settings page has one page-level Back to profile button, rendered as a secondary control with an icon and label, 44 px minimum height, consistent padding, a border, and a visible focus ring. Username/email save on blur; their inline status uses `role="status"` + `aria-live="polite"` and announces "Saving…"/"Saved"/error. Outside the settings cards there is no Save control and no bottom action bar — Back is the only page-level navigation/commit control, while the cards keep their own interactive controls (Change avatar, toggles, journey select, push toggles, Logout).
 - Motion: only the existing toggle/dropdown transitions and the skeleton shimmer; shimmer already respects `prefers-reduced-motion` (`badge-display.css:160`); no new keyframes.
 - 360/390 px: page wrapper padding is the only gutter; nothing outside the wrapper may exceed the viewport (`documentElement.scrollWidth === viewport width` verified in the screenshot harness at 360 and 390; the Settings CTA uses `box-sizing: border-box` so `party-btn` padding cannot push it past the edge).
 - Stat grid: two columns above 480 px, single column at ≤480 px — inherited unchanged from `friends.css` `@media (max-width: 480px)`.
@@ -151,8 +159,8 @@ Nothing in the current behaviour is removed; auto-focus-on-load, `history.back()
 ## Navigation
 
 - Drawer `/profile` → view (no drawer change).
-- View: Settings CTA (primary, full-width on mobile) → `/profile/settings`. Settings: "← Back to profile" row (top) and a viewport-fixed Back control in the bottom action bar → `/profile`. Explicit links, not `history.back()`, so deep links and new tabs never dead-end.
-- Logout and journey switching stay settings-only; the view stays read-only (locked product decision).
+- View: Settings CTA (primary, full-width on mobile) → `/profile/settings`. Settings: a styled Back to profile button rendered by the SSR shell above the islands → `/profile`. Explicit link, not `history.back()`, so deep links and new tabs never dead-end — the Back row is present even while the islands load or when a 401 redirects.
+- Logout and journey switching stay settings-only; the view stays read-only (locked product decision). Logout lives in `ProfileAccountIsland` at the bottom of the settings page.
 - Deep link & unauthenticated: page routes stay unguarded; `main.js` boot-redirect catches missing tokens; both new islands explicitly redirect on API 401 (matching `FriendProfileIsland.tsx:38`), fixing `ProfileIsland`'s current silent-blank-form behaviour.
 
 ## Trade-offs
@@ -161,8 +169,9 @@ Nothing in the current behaviour is removed; auto-focus-on-load, `history.back()
 2. **Adjusted vs raw distance in the view** — the friend hero shows the raw all-storyline sum; the self view shows the storyline-adjusted headline the user sees everywhere else (locked decision). Consistency with the user's own mental model wins; the friend page stays untouched.
 3. **Save-on-select modal vs explicit apply** — preserving save-on-click keeps current semantics (no data lost by accidental close, status visible). An explicit Apply/Cancel would be a nicer modal but changes a working behaviour; not this change's job.
 4. **`memberSince` ISO conversion server-side** — the friend endpoint leaks the raw SQLite datetime string; the new endpoint converts to `...Z` ISO so the client can `new Date(...)` reliably. Slight asymmetry with the friend surface, but raw `YYYY-MM-DD HH:MM:SS` is not a documented contract worth propagating.
-5. **New `profile-view.css`** — small shared file (view chrome + picker modal + back row) instead of growing `party.css`/`friends.css` (friend surfaces) or inlining; loaded by both renderers so the modal renders identically on both pages.
-6. **Fixed Save bar vs bottom-only** — the settings page includes a tall push card mounted as a separate island below the settings island. A CSS-sticky bar inside `ProfileSettingsIsland` would be constrained to that island and stop sticking when the push card scrolls; a viewport-fixed bar stays reachable across the whole page. The page reserves bottom padding so the bar never covers the Account card or the focused field. Logout is deliberately separated into an Account card so a destructive action is never adjacent to Save.
+5. **Split stylesheets** — `profile-view.css` deliberately owns only view chrome + the shared picker modal, so the settings-only Back button/status/Account styles live beside the other `profile.css` form rules and the friend surfaces stay untouched; loaded by both renderers so the modal renders identically on both pages. The rejected alternative (one shared file owning all profile styles, or inlining per page) hides ownership and makes the modal diverge per page.
+6. **Auto-save vs explicit Save** — avatar, preferences, journey, and push settings already save on change. Username/email now auto-save on blur with local validation, inline per-field status, and `keepalive` so an in-flight request survives Back navigation. This removes the page-level Save bar and leaves a single Back control. The trade-off is that username/email uniqueness and validation errors must be surfaced inline per field; those errors stay local and never block the rest of the settings page, and `keepalive` requests cannot be retried or awaited after navigation — acceptable because they are tiny single-field PUTs whose feedback is the inline status shown before the user leaves.
+7. **No page-level action bar (previous draft reviewed and rejected)** — an earlier consideration floated a viewport-fixed Save/Back bar with reserved bottom padding so actions would be reachable at every scroll depth. Rejected: auto-save removes the need to "commit" anything from deep in the page, a fixed bar duplicates the single Back journey and costs viewport space on mobile, and reserved bottom padding no longer exists. Per-field inline status gives feedback where the edit happened; the single styled Back button at the top is the only page-level action.
 
 ## Migration plan
 

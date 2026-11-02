@@ -70,7 +70,18 @@
         </a>
       </div>
 
-      <!-- BadgeDisplayIsland (unchanged island; renders nothing when the summary is empty) -->
+      <!-- Fellowships card — present only when the user has fellowships;
+           the overview API returns { id, name }, no shared flag on the self surface.
+           The view island renders hero + CTA + Fellowships BEFORE the badge island. -->
+      <div class="party-card">
+        <h3>Fellowships</h3>
+        <div class="friend-fellowship-item">
+          <span class="friend-fellowship-item__name">Fellowship of the Ring</span>
+        </div>
+      </div>
+
+      <!-- BadgeDisplayIsland (unchanged island; renders after the fellowships card,
+           renders nothing when the summary is empty) -->
       <div class="badge-display">
         <section class="badge-collection">
           <h3 class="badge-collection__header">
@@ -140,15 +151,6 @@
             </li>
           </ul>
         </section>
-      </div>
-
-      <!-- Fellowships card — present only when the user has fellowships;
-           the overview API returns { id, name }, no shared flag on the self surface -->
-      <div class="party-card">
-        <h3>Fellowships</h3>
-        <div class="friend-fellowship-item">
-          <span class="friend-fellowship-item__name">Fellowship of the Ring</span>
-        </div>
       </div>
     </div>
   </main>

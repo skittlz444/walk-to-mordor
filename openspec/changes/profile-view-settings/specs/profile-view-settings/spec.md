@@ -19,7 +19,7 @@ The system SHALL serve a read-only profile view page at `GET /profile` and an ed
 
 - **GIVEN** the app is deployed with this change
 - **WHEN** a browser requests `GET /profile/settings`
-- **THEN** the response is the settings shell with `ProfileSettingsIsland` and `PushPermissionIsland` placeholders inside one page wrapper
+- **THEN** the response is the settings shell with `ProfileSettingsIsland`, `PushPermissionIsland`, and `ProfileAccountIsland` placeholders inside one page wrapper, plus the SSR-rendered back row
 - **AND** the page does not contain a `BadgeDisplayIsland` placeholder
 
 #### Scenario: Friend profile route is untouched
@@ -191,40 +191,95 @@ The system SHALL open a shared avatar picker modal from the view page avatar and
 - **THEN** the modal closes
 - **AND** keyboard focus returns to the view page avatar button
 
-### Requirement: Settings page
+### Requirement: Settings editing and dynamic auto-save
 
-The system SHALL give `/profile/settings` every editing capability the current `GET /profile` page has, preserving behaviour and endpoints, with a viewport-fixed bottom action bar containing Save Changes and a Back control, and a separate Account card for logout. The Save control SHALL NOT sit between the profile form and the push settings card.
+The system SHALL give `/profile/settings` every editing capability the current `GET /profile` page has, saving dynamically: username and email on blur (trimmed, validated with the server's exact predicates, sequenced per field, `keepalive: true` so in-flight saves survive navigation), avatar on selection, preferences on toggle, journey on confirmation, and push settings on toggle, each with per-field inline status and no Save control on the page.
 
 #### Scenario: Settings preserves the profile form
 
 - **GIVEN** an authenticated user loads `/profile/settings`
 - **WHEN** the first session/preferences data resolves
 - **THEN** the username and email fields are populated from `/api/session`
-- **AND** the `showFutureGoalsUnlocked` and `defaultViewMap` toggles reflect the current values via `PUT /api/user/preferences`
+- **AND** the `showFutureGoalsUnlocked` and `defaultViewMap` toggles reflect the current values and each saves on toggle via `PUT /api/user/preferences`
 - **AND** the journey select lists the storylines from `/api/storylines`
 
-#### Scenario: Save profile updates username and email
+#### Scenario: Username saves on blur
 
-- **GIVEN** the settings page with empty username and email fields
-- **WHEN** the user activates Save Changes in the fixed action bar
-- **THEN** the error "Please provide at least one field to update" is shown
-- **AND** after entering a new username and activating Save Changes, a `PUT /api/profile` request carries it and the success message appears
+- **GIVEN** the settings page shows username "FrodoBaggins"
+- **WHEN** the user changes it to "FrodoOfTheShire" and blurs the field
+- **THEN** a `PUT /api/profile` request carries `{ username: "FrodoOfTheShire" }`
+- **AND** the field status announces "Saving…" and then "Saved"
+- **AND** the status is exposed through `role="status"` and `aria-live="polite"`
+- **AND** no Save Changes control exists on the page
 
-#### Scenario: Save action stays reachable
+#### Scenario: Email saves on blur
 
-- **GIVEN** an authenticated user on `/profile/settings`
-- **WHEN** the user scrolls through the profile form and the push settings card
-- **THEN** the Save Changes action remains visible in a viewport-fixed bottom action bar
-- **AND** the bar is not rendered between the profile card and the push settings card
-- **AND** the page reserves bottom space so the Account card and focused fields can scroll clear of the bar
-- **AND** the bar does not cover the form field that currently has focus
+- **GIVEN** the settings page shows the saved email
+- **WHEN** the user enters a new valid email and blurs the field
+- **THEN** a `PUT /api/profile` request carries only the new `email`
+- **AND** the field status announces "Saving…" and then "Saved"
+- **AND** the email field keeps the saved value
 
-#### Scenario: Logout is separate from Save
+#### Scenario: Invalid field value is not sent
 
-- **GIVEN** the settings page
-- **WHEN** the user reaches the Account section at the bottom
-- **THEN** Logout appears in its own Account card above the fixed action bar
-- **AND** the fixed bar contains Save Changes and Back, not Logout
+- **GIVEN** the username or email field contains an invalid value
+- **WHEN** the field blurs
+- **THEN** no `PUT /api/profile` request is made
+- **AND** an inline error is shown next to the field
+- **AND** the value remains editable for correction
+
+#### Scenario: Empty or whitespace-only field is invalid
+
+- **GIVEN** the username or email field contains an empty string, only whitespace, or a value that trims to empty
+- **WHEN** the field blurs
+- **THEN** no `PUT /api/profile` request is made
+- **AND** an inline error describes the required format
+- **AND** the field stays editable (the previous saved value is not silently restored and no other field is affected)
+
+#### Scenario: Field status starts empty and clears on input
+
+- **GIVEN** the settings page has just loaded with saved username and email
+- **WHEN** the page renders
+- **THEN** neither field shows a "Saved" status
+- **AND** editing a field clears its previous status
+- **AND** "Saving…"/"Saved"/error appear only after a save attempt for that field
+
+#### Scenario: Rapid edits keep the latest value
+
+- **GIVEN** the username field
+- **WHEN** the user blurs "Frodo-A" then quickly blurs "Frodo-B" so the first PUT resolves after the second
+- **THEN** the in-flight saves are sequenced per field and the stale "Frodo-A" response is ignored
+- **AND** the field and its status reflect the latest edit ("Frodo-B"), never the older response
+
+#### Scenario: Validation uses the server's exact predicates
+
+- **GIVEN** the client-side field validation
+- **WHEN** the username or email is validated before a blur save
+- **THEN** the same predicates the server applies are used (`isValidUsername`: 3–30 chars, letters/numbers/underscore; `isValidEmail`: the server's email regex)
+- **AND** values are trimmed before validation, so `" Frodo "` validates as `Frodo`
+- **AND** boundary lengths fail or pass exactly as the server treats them (2 and 31 chars invalid; 3 and 30 valid)
+
+#### Scenario: Server conflict is shown inline
+
+- **GIVEN** a username or email auto-save returns `409`
+- **WHEN** the save resolves
+- **THEN** the field shows "Username already exists" or "Email already registered" inline
+- **AND** no global error banner is rendered
+- **AND** the other settings remain usable
+
+#### Scenario: Auto-save 401 redirects to login
+
+- **GIVEN** the settings page with an expired or invalid session
+- **WHEN** a username or email auto-save returns `401`
+- **THEN** the browser is redirected to `/login`
+- **AND** the field does not show a misleading "Saved" status
+
+#### Scenario: In-flight save survives Back
+
+- **GIVEN** a username or email auto-save is in flight
+- **WHEN** the user activates Back to profile
+- **THEN** navigation proceeds to `/profile`
+- **AND** the save request uses `keepalive` so it can complete during navigation
 
 #### Scenario: Journey switch confirm dialog preserved
 
@@ -239,13 +294,6 @@ The system SHALL give `/profile/settings` every editing capability the current `
 - **GIVEN** an authenticated user on `/profile/settings`
 - **WHEN** the push island hydrates
 - **THEN** the existing push notification controls are present and functional (same behaviour as today's profile page)
-
-#### Scenario: Logout lives on the settings page
-
-- **GIVEN** an authenticated user on `/profile/settings`
-- **WHEN** the user activates Logout
-- **THEN** the existing logout flow runs and the user is signed out
-- **AND** no Logout control appears on the profile view page
 
 #### Scenario: Journey switching lives on the settings page
 
@@ -267,12 +315,34 @@ The system SHALL give `/profile/settings` every editing capability the current `
 - **THEN** the browser is redirected to `/login`
 - **AND** the blank username/email form is never shown
 
-#### Scenario: Visible return path to the view
+### Requirement: Settings navigation and logout
+
+The settings page SHALL provide navigation and account actions: no Save control and no bottom action bar; outside the settings cards the styled Back to profile button is the only page-level navigation/commit control; and Logout SHALL live in `ProfileAccountIsland` mounted after the push island, which owns the existing logout flow.
+
+#### Scenario: Logout lives in the Account island
+
+- **GIVEN** an authenticated user on `/profile/settings`
+- **WHEN** the user reaches the bottom of the page and activates Logout in the Account island's card
+- **THEN** the existing logout flow and confirmation run (owned by `ProfileAccountIsland`) and the user is signed out
+- **AND** the Account island is mounted after the push island, so sign-out is last on the page
+- **AND** no Save Changes control is present
+- **AND** no Logout control appears on the profile view page
+
+#### Scenario: Back button is the only page-level navigation/commit control
 
 - **GIVEN** the settings page is loaded
+- **WHEN** the controls outside the settings cards are enumerated
+- **THEN** there is no Save control and the styled Back to profile button is the only page-level navigation/commit action
+- **AND** it renders as a secondary control with an icon and label, at least 44 px tall, with consistent padding, a border, and a visible focus ring
+- **AND** activating it navigates to `/profile` (not `history.back()`)
+- **AND** the settings cards themselves keep their interactive controls (Change avatar, toggles, journey select, push toggles, Logout)
+
+#### Scenario: Visible return path to the view
+
+- **GIVEN** the settings page is loaded (or fails with 401) before the islands hydrate
 - **WHEN** the page is rendered
-- **THEN** a visible "Back to profile" control in the top breadcrumb links to `/profile`
-- **AND** the fixed action bar also offers a Back control to `/profile` (not history-back)
+- **THEN** the SSR shell already shows the styled Back to profile button linking to `/profile` and the "Changes save automatically" note
+- **AND** there is no bottom Save/Back action bar
 
 ### Requirement: Navigation loop and unauthenticated access
 
@@ -355,4 +425,4 @@ The profile pages SHALL follow the app's accessibility conventions for labels, d
 
 - **GIVEN** a 360 px wide viewport
 - **WHEN** the view and settings pages are laid out
-- **THEN** the avatar button, Settings button, back links, toggle rows, fixed Save/Back actions, and Account logout button are at least 44 px tall
+- **THEN** the avatar button, Settings button, Back to profile button, toggle rows, and Account logout button are at least 44 px tall

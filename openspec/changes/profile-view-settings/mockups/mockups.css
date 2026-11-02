@@ -1,6 +1,9 @@
 /*
- * Proposed shared styles for the profile view / settings split
- * (would become `public/css/profile-view.css` at implementation time).
+ * Proposed styles for the profile view / settings split
+ * (draft for implementation-time split: view chrome + picker modal would become
+ * `public/css/profile-view.css`; the settings-page markers — Back to profile
+ * button, per-field auto-save status, "Change avatar" trigger, Account card —
+ * would become part of `profile.css`).
  * Mockup-only: high-fidelity design artifact for the `profile-view-settings`
  * change — not production CSS, not referenced by app code.
  * Uses only main.css design tokens so the mockups render against real variables.
@@ -127,24 +130,67 @@
   }
 }
 
-/* ── Settings page: back row + avatar modal trigger ───────────────────── */
+/* ── Settings page: back button + auto-save status + avatar modal trigger ─ */
 .profile-back-row {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.profile-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  background: var(--bg-dark-alt);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.profile-back-button:hover,
+.profile-back-button:focus-visible {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.profile-back-button:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+.profile-settings-note {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
-.profile-back-link {
-  color: var(--accent-blue);
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
-  min-height: 44px;
-  padding: 0.25rem 0.25rem;
+.profile-field-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
-.profile-back-link:hover {
-  text-decoration: underline;
+.profile-field-status {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.profile-field-status.saved {
+  color: var(--status-success-light);
+}
+
+.profile-field-status.saving {
+  color: var(--text-muted);
+}
+
+.profile-field-status.error {
+  color: var(--status-warning);
 }
 
 .profile-view-modal-trigger {
@@ -311,51 +357,7 @@
   margin-top: 0.75rem;
 }
 
-/* ── Settings: fixed Save bar + separate Account card ─────────────────── */
-.profile-settings-page {
-  /* The fixed action bar overlays the bottom of the viewport; reserve room
-     so the Account card and focused fields can always scroll clear of it. */
-  padding-bottom: 6rem;
-}
-
-.profile-settings-actionbar {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: min(100%, 600px);
-  transform: translateX(-50%);
-  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-medium);
-  box-sizing: border-box;
-}
-
-.profile-settings-actionbar .btn-primary {
-  flex: 1 1 auto;
-  min-height: 44px;
-  background: var(--accent-gold);
-  border-color: var(--accent-gold);
-  color: var(--text-black);
-  font-weight: 600;
-}
-
-.profile-settings-actionbar .btn-primary:hover,
-.profile-settings-actionbar .btn-primary:focus-visible {
-  background: var(--accent-gold);
-  border-color: var(--accent-gold);
-  color: var(--text-black);
-}
-
-.profile-settings-actionbar .btn-secondary {
-  flex: 0 0 auto;
-  min-height: 44px;
-  text-decoration: none;
-}
-
+/* ── Settings: Account card ───────────────────────────────────────────── */
 .profile-account-card {
   margin-top: 1rem;
 }

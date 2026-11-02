@@ -29,13 +29,16 @@
   </header>
 
   <main>
-    <div class="profile-page profile-settings-page">
-      <!-- Back navigation: the loop back to the view page -->
-      <nav class="profile-back-row" aria-label="Breadcrumb">
-        <a class="profile-back-link" href="/profile">
-          <i class="fas fa-arrow-left" aria-hidden="true"></i> Back to profile
+    <div class="profile-page">
+      <!-- Back navigation (rendered by the SSR shell in the real page,
+           present before the islands hydrate): the loop back to the view page -->
+      <div class="profile-back-row">
+        <a class="profile-back-button" href="/profile">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          <span>Back to profile</span>
         </a>
-      </nav>
+      </div>
+      <p class="profile-settings-note">Changes save automatically as you go.</p>
 
       <!-- ProfileSettingsIsland -->
       <div class="profile-card">
@@ -43,13 +46,20 @@
           <div class="form-group">
             <label for="profile-username">Username:</label>
             <input type="text" id="profile-username" value="FrodoBaggins" placeholder="Enter username" />
-            <small class="field-hint">3-30 characters, letters, numbers, and underscores only</small>
+            <div class="profile-field-meta">
+              <small class="field-hint">3-30 characters, letters, numbers, and underscores only</small>
+              <span class="profile-field-status saved" role="status" aria-live="polite">Saved</span>
+            </div>
           </div>
 
           <div class="form-group">
             <label for="profile-email">Email:</label>
             <input type="email" id="profile-email" value="frodo@bag-end.example" placeholder="Enter email" />
-            <small class="field-hint">Valid email address</small>
+            <div class="profile-field-meta">
+              <small class="field-hint">Valid email address</small>
+              <!-- Default state: NO status on load; shows Saving…/Saved/error only after a save starts -->
+              <span class="profile-field-status" role="status" aria-live="polite"></span>
+            </div>
           </div>
 
           <div class="form-group avatar-section" style="text-align:center;">
@@ -180,19 +190,16 @@
         </div>
       </section>
 
-      <!-- Account actions stay separate from the primary Save bar -->
-      <section class="profile-card profile-account-card">
-        <div class="profile-card-body">
-          <h2>Account</h2>
-          <p class="push-permission-muted">Sign out of this device. Your walk history stays safe.</p>
-          <button type="button" class="btn btn-danger">Log out</button>
-        </div>
-      </section>
-
-      <!-- Sticky Save bar: always reachable, never between form sections -->
-      <div class="profile-settings-actionbar" role="region" aria-label="Settings actions">
-        <button type="button" class="btn btn-primary">Save Changes</button>
-        <a class="btn btn-secondary" href="/profile">Back</a>
+      <!-- ProfileAccountIsland (mounted after the push island; owns the existing
+           logout flow and confirmation) -->
+      <div data-island-note="ProfileAccountIsland">
+        <section class="profile-card profile-account-card">
+          <div class="profile-card-body">
+            <h2>Account</h2>
+            <p class="push-permission-muted">Sign out of this device. Your walk history stays safe.</p>
+            <button type="button" class="btn btn-danger">Logout</button>
+          </div>
+        </section>
       </div>
     </div>
   </main>
