@@ -1,5 +1,7 @@
 # Badge Artwork — Generation and Review Plan
 
+> **Current state (2026-11-02):** the catalog is now **15 achievements** — 8 journey (including the Glittering Caves return badge), 5 habit, 2 community. This plan's 9-badge / 188-candidate counts describe the first phase; the current review is `finalist-review.md` (15 achievements, 25 assets, 50 finalists).
+
 Scope: OpenSpec tasks **8.1–8.5** only (author prompts, generate candidates, process, shortlist, report, review gate).
 No application code, no seed migration, no island/CSS work. Final compositing (8.6–8.8) is deliberately **not** run; it happens only after the user signs off on the two finalists per asset.
 

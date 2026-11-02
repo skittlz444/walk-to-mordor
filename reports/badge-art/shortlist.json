@@ -144,6 +144,102 @@
       "recommended": "a-173205",
       "notes": "b-314159 rejected: baked ornate border ring. a-112358 is a clean alternate with a green foreground."
     },
+    "emblem/journey-frodo-sam-glittering-caves": {
+      "finalists": [
+        {
+          "candidate": "a-271828",
+          "score": 4.2,
+          "rationale": "Wide cavern-city vista with a single warm lantern, fine gold linework and a thin bright rim; the densest of the clean options but still reads as a Dwarf hall at 96 px."
+        },
+        {
+          "candidate": "a-173205",
+          "score": 4.6,
+          "rationale": "Thin-rim cave scene with one foreground lantern, a dominant crystal tower and clear water reflections; the cleanest and most legible Glittering Caves composition at 96 px."
+        }
+      ],
+      "recommended": "a-173205",
+      "notes": "a-173205 is the cleaner small-size read with a single lantern; a-271828 is the wider vista. All b variants rejected for heavy gothic/engraved border rings; a-112358, a-141421, a-314159 and a-161803 rejected for multiple lanterns or overloaded foregrounds."
+    },
+    "emblem/habit-weekend-warrior": {
+      "finalists": [
+        {
+          "candidate": "a-141421",
+          "score": 4.5,
+          "rationale": "Polished enamel with a bold sun, crescent moon and S-curved path balanced between the two standing stones; the thin rim and clear colour blocks hold up at 96 px."
+        },
+        {
+          "candidate": "b-271828",
+          "score": 4.0,
+          "rationale": "Aged bronze-and-green take on the same balanced sun/moon/path composition; the muted patina lowers contrast but stays clean and artifact-free."
+        }
+      ],
+      "recommended": "a-141421",
+      "notes": "a-173205 is a close polished alternate; b-271828 supplies the aged-material counterpart. b-112358 is too dark and b-161803 loses the green field."
+    },
+    "emblem/habit-steady-month": {
+      "finalists": [
+        {
+          "candidate": "a-271828",
+          "score": 4.5,
+          "rationale": "Even ring of twenty gold-rimmed green stones around a deep green enamel field, with an ornate diagonal staff; the cleanest polished read of the monthly cycle."
+        },
+        {
+          "candidate": "b-161803",
+          "score": 4.0,
+          "rationale": "Aged bronze version keeps the twenty-stone ring and diagonal staff with a classic key head; richer patina and a slightly busier rim than A."
+        }
+      ],
+      "recommended": "a-271828",
+      "notes": "The central object reads as a key/scepter rather than the intended walking staff in both finalists. a-112358 rejected for crossed twin staffs; b-314159 reads as a clock hand; a-173205 is a close alternate."
+    },
+    "emblem/habit-hundred-week": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.5,
+          "rationale": "Polished deep-blue field with a crisp compass rose, concentric orbit rings and eight gold milestone markers; strongest contrast and cleanest 96 px silhouette."
+        },
+        {
+          "candidate": "b-161803",
+          "score": 4.0,
+          "rationale": "Aged blue-and-bronze version keeps the compass rose, orbit rings and marker circle; warm patina and slightly softer contrast than A."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": "Both read as a compass with an orbit ring, not the prompted spiral, and show eight milestone markers rather than seven. a-173205 is a close polished alternate; b-141421 is the darker aged option."
+    },
+    "emblem/community-fellowship-founder": {
+      "finalists": [
+        {
+          "candidate": "a-141421",
+          "score": 4.5,
+          "rationale": "Solid blue enamel field sets off the flame-carved central stone and two flankers, with crisp gold outlines and no split-colour flag background."
+        },
+        {
+          "candidate": "b-271828",
+          "score": 4.0,
+          "rationale": "Full aged-bronze treatment with a ghosted gold flame and chased stone relief; lower contrast than A but the most cohesive aged option."
+        }
+      ],
+      "recommended": "a-141421",
+      "notes": "a-112358 and a-161803 rejected for split blue/red fields that read as flags; a-173205 loses the flame against a red field. b-161803 is a close aged alternate with a blue field."
+    },
+    "emblem/community-good-company": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.5,
+          "rationale": "Deep blue field makes the red-orange campfire and crossed logs pop, with four standing stones and a thin rim; the strongest 96 px read of the set."
+        },
+        {
+          "candidate": "b-271828",
+          "score": 4.0,
+          "rationale": "Aged bronze field with a warm red-gold flame and chunky logs; richer patina and slightly lower contrast, but artifact-free."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": "b-161803 is a close aged alternate; a-141421 has heavier outlines and a less crisp flame; a-271828's red field competes with the fire."
+    },
     "frame/journey": {
       "finalists": [
         {

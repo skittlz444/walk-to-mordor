@@ -1,6 +1,7 @@
 -- Migration 0145_seed_catalog_expansion.sql
--- First catalog expansion beyond the nine badges seeded by 0144: three global
--- habit definitions and a two-badge community fellowship collection.
+-- First catalog expansion beyond the ten badges seeded by 0144 (eight journey
+-- plus two habit): three global habit definitions and a two-badge community
+-- fellowship collection.
 --
 -- Catalog-only data. No schema change, no award hooks, no artwork. Slugs are
 -- stable identifiers; rows are inserted with INSERT OR IGNORE so re-applying

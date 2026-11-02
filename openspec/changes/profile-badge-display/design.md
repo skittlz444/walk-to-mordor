@@ -15,7 +15,7 @@ The codebase uses auto-hydrated islands registered in `client/src/index.tsx` by 
 - Resolve badge presentation server-side: rank (1–4 + label), storyline scope, and collection position.
 - Add a `BadgeDisplayIsland` that renders badges grouped by collection, with rank chrome, repeat counts, loading skeletons, and graceful image fallback.
 - Add the island to the profile and friend-profile SSR shells with a dedicated stylesheet.
-- Seed nine badge definitions and award them from progress writes, scoped to the user's active storyline.
+- Seed ten badge definitions and award them from progress writes, scoped to the user's active storyline.
 - Produce and commit composited badge artwork from a reproducible ComfyUI + PhotoCraft pipeline.
 
 **Non-Goals:**
@@ -59,7 +59,7 @@ The endpoint returns `{ achievements: [...] }`, matching the `{ friends: [...] }
       "slug": "frodo-sam-journey",
       "label": "The Road to Mordor",
       "index": 1,
-      "size": 7
+      "size": 8
     }
   }
 }
@@ -80,7 +80,7 @@ The table already has a nullable `metadata` TEXT column and no enum constraints 
     "slug": "frodo-sam-journey",
     "label": "The Road to Mordor",
     "index": 3,
-    "size": 7
+    "size": 8
   }
 }
 ```
@@ -88,6 +88,25 @@ The table already has a nullable `metadata` TEXT column and no enum constraints 
 All fields are optional. `storyline: null` or absent means global. `rank` is a fixed 1–4. `rank_thresholds` (ascending, four values) derives rank from `earned_count` for repeatable badges and takes precedence only when `rank` is absent. `collection` is absent for standalone badges.
 
 Rationale: no migration and no schema churn; metadata is the documented extension point for consuming features. It also keeps rank/collection authoring next to the badge definition instead of in client code.
+
+### Seed ten definitions: eight journey badges plus two habits
+
+`migrations/0144_seed_journey_badges.sql` seeds the Frodo/Sam journey collection (`frodo-sam-journey`, "The Road to Mordor", positions 1–8 of 8) in journey order, with the return journey at Helm's Deep added before the final homecoming:
+
+| # | Slug | Name | Rank | `threshold_km` |
+|---|---|---|---|---|
+| 1 | `journey-frodo-sam-buckleberry-ferry` | Across the Buckleberry Ferry | 1 | 112.65 |
+| 2 | `journey-frodo-sam-weathertop-survivor` | Survivor of Weathertop | 1 | 387.85 |
+| 3 | `journey-frodo-sam-through-khazad-dum` | Through Khazad-dûm | 2 | 1284.25 |
+| 4 | `journey-frodo-sam-lothlorien-guest` | Guest of the Golden Wood | 2 | 1375.98 |
+| 5 | `journey-frodo-sam-rauros-parting` | The Breaking of the Fellowship | 3 | 2106.63 |
+| 6 | `journey-frodo-sam-mordor-threshold` | Standing at Mount Doom | 3 | 2863.01 |
+| 7 | `journey-frodo-sam-glittering-caves` | The Glittering Caves | 4 | 3827.0 |
+| 8 | `journey-frodo-sam-home-at-sunset` | Home Again at Sunset | 4 | 6422.49 |
+
+The two global habit badges are `habit-first-steps` (rank 1, non-repeatable, criteria `first_walk`) and `habit-faithful-walker` (repeatable, `rank_thresholds` `[1,4,12,26]`, criteria `seven_day_streak`, unit `weeks`).
+
+The Glittering Caves threshold matches the return-journey goal "Reach Helm's Deep" at 2378 miles (3827.0 km) in `migrations/0003_init_goals.sql`; its description follows the Glittering Caves goal text in `migrations/0016_update_goal_descriptions_06.sql`. Home remains the final badge at `6422.49` km.
 
 ### Resolve presentation in the API layer, not the island
 
@@ -179,7 +198,7 @@ Skeletons render only after a short delay to avoid flashing on fast responses. A
 1. Extend `AchievementSummary` and its query with `metadata`; update the shared-infra spec delta.
 2. Add `src/badge-presentation.ts` and its tests.
 3. Add `src/achievement-handlers.ts`, wire `app.get('/api/achievements', authGuard, …)`, and add handler and route tests.
-4. Add `migrations/0144_seed_journey_badges.sql`.
+4. Add `migrations/0144_seed_journey_badges.sql` with the ten seeded definitions.
 5. Add `src/achievement-awards.ts` and call it from `handleProgressPost` and `handleProgressPut`.
 6. Create `BadgeDisplayIsland`, register it, and add the SSR placeholders.
 7. Create `public/css/badge-display.css` and reference it from both renderers.

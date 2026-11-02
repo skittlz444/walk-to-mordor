@@ -1,8 +1,8 @@
 # Badge Artwork — Final Selections
 
-**Date:** 2026-11-01
+**Date:** 2026-11-02
 
-Replace each `Pending` pick with `a-<seed>` or `b-<seed>` from that asset's two finalists.
+Replace each `Pending` pick with `a-<seed>` or `b-<seed>` from that asset's two finalists. Rank rings are reference only — F1 removes them.
 
 | Asset | Finalist A | Finalist B | Your pick | Notes |
 |---|---|---|---|---|
@@ -15,15 +15,21 @@ Replace each `Pending` pick with `a-<seed>` or `b-<seed>` from that asset's two 
 | `emblem/journey-frodo-sam-mordor-threshold` | `a-173205` | `b-314159` | Pending |  |
 | `emblem/journey-frodo-sam-home-at-sunset` | `a-112358` | `b-161803` | Pending |  |
 | `emblem/habit-faithful-walker` | `a-173205` | `b-112358` | Pending |  |
+| `emblem/journey-frodo-sam-glittering-caves` | `a-271828` | `a-173205` | Pending |  |
+| `emblem/habit-weekend-warrior` | `a-141421` | `b-271828` | Pending |  |
+| `emblem/habit-steady-month` | `a-271828` | `b-161803` | Pending |  |
+| `emblem/habit-hundred-week` | `a-112358` | `b-161803` | Pending |  |
+| `emblem/community-fellowship-founder` | `a-141421` | `b-271828` | Pending |  |
+| `emblem/community-good-company` | `a-112358` | `b-271828` | Pending |  |
 | `frame/journey` | `a-271828` | `b-112358` | Pending |  |
 | `frame/habit` | `a-112358` | `b-314159` | Pending |  |
 | `frame/challenge` | `a-112358` | `b-161803` | Pending |  |
 | `frame/book` | `a-271828` | `b-271828` | Pending |  |
 | `frame/community` | `a-314159` | `b-271828` | Pending |  |
 | `frame/field-guide` | `a-314159` | `b-271828` | Pending |  |
-| `rank/bronze` | `a-314159` | `b-161803` | Pending |  |
-| `rank/silver` | `a-112358` | `b-112358` | Pending |  |
-| `rank/gold` | `a-161803` | `b-271828` | Pending |  |
-| `rank/mithril` | `a-314159` | `b-271828` | Pending |  |
+| `rank/bronze` | `a-314159` | `b-161803` | Reference only |  |
+| `rank/silver` | `a-112358` | `b-112358` | Reference only |  |
+| `rank/gold` | `a-161803` | `b-271828` | Reference only |  |
+| `rank/mithril` | `a-314159` | `b-271828` | Reference only |  |
 
 Picks are recorded here only; no compositing or production assets exist yet.

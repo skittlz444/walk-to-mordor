@@ -10,7 +10,7 @@ The `shared-achievement-infrastructure` change provides domain services to award
 - Add a `BadgeDisplayIsland` Preact island that renders earned badges grouped by collection, with rank chrome, repeat counts, and accessible labels.
 - Add the island to the profile page and friend-profile page SSR shells.
 - Add focused `badge-display.css` styles using design-guide variables only.
-- Seed the initial catalog: seven Frodo/Sam journey badges (one numbered, ranked collection) and two global habit badges (one fixed rank, one ranked by repeat count).
+- Seed the initial catalog: eight Frodo/Sam journey badges (one numbered, ranked collection, including The Glittering Caves return badge at Helm's Deep) and two global habit badges (one fixed rank, one ranked by repeat count).
 - Award journey and habit badges from `POST`/`PUT` progress writes, scoped to the active storyline, idempotent, and isolated from walk-log failures.
 - Add the badge artwork pipeline: FLUX.3 Klein emblems, reusable family frames and rank rings, composited in PhotoCraft and optimized to WebP.
 - Extend the shared achievement summary so it includes the definition's `metadata`; rank, collection, and storyline resolution then needs no extra queries.
@@ -27,8 +27,8 @@ The `shared-achievement-infrastructure` change provides domain services to award
 
 - Worker APIs: `GET /api/achievements` wired through `src/index.ts` under the existing `authGuard`; new `src/achievement-handlers.ts` and `src/badge-presentation.ts`; `src/achievement-utils.ts` summary query gains `metadata`.
 - Award hook: new `src/achievement-awards.ts`, called from `POST` and `PUT` progress writes in `src/progress-handlers.ts`.
-- D1: `migrations/0144_seed_journey_badges.sql` inserts nine definitions. No schema change.
+- D1: `migrations/0144_seed_journey_badges.sql` inserts ten definitions. No schema change.
 - Frontend: new `BadgeDisplayIsland` registered in `client/src/index.tsx`; new `data-island` placeholders in `renderProfilePage.ts` and `renderFriendProfilePage.ts`.
-- Assets: nine composited badge images in `public/img/achievements/`; generation masters, frames, and rings under gitignored `raw_assets/badges/`; generator scripts and prompts under `scripts/badge-art/`.
+- Assets: ten composited badge images in `public/img/achievements/`; generation masters, frames, and rings under gitignored `raw_assets/badges/`; generator scripts and prompts under `scripts/badge-art/`.
 - Documentation: `docs/api-reference.md` (endpoint), `docs/data-models.md` (metadata conventions), `docs/design-guide.md` (badge ranks and collection chrome).
 - Tests: Jest for the shared summary change, presentation resolution, endpoint behavior, seed migration, and award hook; Vitest for the island and grouping.

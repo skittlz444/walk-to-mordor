@@ -1,6 +1,6 @@
 ## Why
 
-`profile-badge-display` seeds nine badges — seven Frodo/Sam journey badges and two habit badges — which covers the core journey and the first habit loop but leaves the catalog thin. Habit badges reward only a first walk and seven active days, and the community family has no catalog entries at all. The shared achievement infrastructure already exists, so this next catalog slice ships as data alone: no schema change and no new service code.
+`profile-badge-display` seeds ten badges — eight Frodo/Sam journey badges and two habit badges — which covers the core journey and the first habit loop but leaves the catalog thin. Habit badges reward only a first walk and seven active days, and the community family has no catalog entries at all. The shared achievement infrastructure already exists, so this next catalog slice ships as data alone: no schema change and no new service code.
 
 ## What Changes
 

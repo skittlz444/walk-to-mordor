@@ -4,6 +4,8 @@
 
 **Scope:** nine recommended badges, composited at 512 px and 96 px. No application code, no production assets. This report decides the shape and the rank/frame treatment before task 8.6.
 
+> **Catalog update:** the catalog is now **15 achievements** (the nine direction-test badges plus the Glittering Caves return badge, three new habit badges and two community badges). The F1/circle decision applies to all of them; the six new achievements still need their composites.
+
 ## Verdict
 
 | Decision | Recommendation |

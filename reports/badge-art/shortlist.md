@@ -12,9 +12,9 @@ Browse the gallery: [review.html](review.html).
 |---|---|
 | Model (plan §4) | `flux3-image-klein-int8-convrot.safetensors` |
 | Config (plan §4) | qwen3vl_4b_int8_convrot text encoder · flux2-vae · 1024 × 1024 · 16 steps · CFG 1.0 · er_sde / simple |
-| Candidate pool | 188 planned (108 emblems, 48 frames, 32 rings) |
-| Generation log | unique candidates: 188 logged; matrix pool 188; log 200 records: 200 success, 0 failed |
-| Processing log | unique cutouts: 188; log 361 records: 361 success, 0 failed; session birefnet-general |
+| Candidate pool | 260 planned (180 emblems, 48 frames, 32 rings) |
+| Generation log | unique candidates: 260 logged; matrix pool 260; log 272 records: 272 success, 0 failed |
+| Processing log | unique cutouts: 260; log 433 records: 433 success, 0 failed; session birefnet-general |
 
 ## Summary
 
@@ -29,6 +29,12 @@ Browse the gallery: [review.html](review.html).
 | `emblem/journey-frodo-sam-mordor-threshold` | journey | 3 | `a-173205` | `b-314159` | `a-173205` |
 | `emblem/journey-frodo-sam-home-at-sunset` | journey | 4 | `a-112358` | `b-161803` | `b-161803` |
 | `emblem/habit-faithful-walker` | habit | thresholds | `a-173205` | `b-112358` | `a-173205` |
+| `emblem/journey-frodo-sam-glittering-caves` | journey | 4 | `a-271828` | `a-173205` | `a-173205` |
+| `emblem/habit-weekend-warrior` | habit | thresholds | `a-141421` | `b-271828` | `a-141421` |
+| `emblem/habit-steady-month` | habit | thresholds | `a-271828` | `b-161803` | `a-271828` |
+| `emblem/habit-hundred-week` | habit | thresholds | `a-112358` | `b-161803` | `a-112358` |
+| `emblem/community-fellowship-founder` | community | 1 | `a-141421` | `b-271828` | `a-141421` |
+| `emblem/community-good-company` | community | 2 | `a-112358` | `b-271828` | `a-112358` |
 | `frame/journey` | journey | — | `a-271828` | `b-112358` | `a-271828` |
 | `frame/habit` | habit | — | `a-112358` | `b-314159` | `a-112358` |
 | `frame/challenge` | challenge | — | `a-112358` | `b-161803` | `a-112358` |
@@ -40,7 +46,7 @@ Browse the gallery: [review.html](review.html).
 | `rank/gold` | rank | 3 | `a-161803` | `b-271828` | `a-161803` |
 | `rank/mithril` | rank | 4 | `a-314159` | `b-271828` | `a-314159` |
 
-## Emblems (9)
+## Emblems (15)
 
 ### First Steps
 
@@ -194,6 +200,108 @@ Browse the gallery: [review.html](review.html).
 **Recommended:** `a-173205` (score 4.5).
 
 **Notes:** b-314159 rejected: baked ornate border ring. a-112358 is a clean alternate with a green foreground.
+
+### The Glittering Caves
+
+`emblem/journey-frodo-sam-glittering-caves` · family **journey** · rank **4**
+
+**Motif:** A cavern of luminous crystal columns rising from still dark pools, carved Dwarf stone-gardens and a single warm lantern glow, silver-blue and gold.
+
+[Contact sheet](sheets/emblem/journey-frodo-sam-glittering-caves.jpg) — all candidates.
+
+| Candidate | Score | Rationale | Image |
+|---|---|---|---|
+| `a-271828` | 4.2 | Wide cavern-city vista with a single warm lantern, fine gold linework and a thin bright rim; the densest of the clean options but still reads as a Dwarf hall at 96 px. | [512 px](finalists/journey-frodo-sam-glittering-caves--a-271828.webp) |
+| `a-173205` | 4.6 | Thin-rim cave scene with one foreground lantern, a dominant crystal tower and clear water reflections; the cleanest and most legible Glittering Caves composition at 96 px. | [512 px](finalists/journey-frodo-sam-glittering-caves--a-173205.webp) |
+
+**Recommended:** `a-173205` (score 4.6).
+
+**Notes:** a-173205 is the cleaner small-size read with a single lantern; a-271828 is the wider vista. All b variants rejected for heavy gothic/engraved border rings; a-112358, a-141421, a-314159 and a-161803 rejected for multiple lanterns or overloaded foregrounds.
+
+### Weekend Warrior
+
+`emblem/habit-weekend-warrior` · family **habit** · rank **thresholds**
+
+**Motif:** Two milestone stones flanking a winding path, a sun on one side and a crescent moon on the other, fresh green and gold.
+
+[Contact sheet](sheets/emblem/habit-weekend-warrior.jpg) — all candidates.
+
+| Candidate | Score | Rationale | Image |
+|---|---|---|---|
+| `a-141421` | 4.5 | Polished enamel with a bold sun, crescent moon and S-curved path balanced between the two standing stones; the thin rim and clear colour blocks hold up at 96 px. | [512 px](finalists/habit-weekend-warrior--a-141421.webp) |
+| `b-271828` | 4 | Aged bronze-and-green take on the same balanced sun/moon/path composition; the muted patina lowers contrast but stays clean and artifact-free. | [512 px](finalists/habit-weekend-warrior--b-271828.webp) |
+
+**Recommended:** `a-141421` (score 4.5).
+
+**Notes:** a-173205 is a close polished alternate; b-271828 supplies the aged-material counterpart. b-112358 is too dark and b-161803 loses the green field.
+
+### Steady Month
+
+`emblem/habit-steady-month` · family **habit** · rank **thresholds**
+
+**Motif:** A circular ring of twenty small milestone stones around a central walking staff, deep forest green and gold.
+
+[Contact sheet](sheets/emblem/habit-steady-month.jpg) — all candidates.
+
+| Candidate | Score | Rationale | Image |
+|---|---|---|---|
+| `a-271828` | 4.5 | Even ring of twenty gold-rimmed green stones around a deep green enamel field, with an ornate diagonal staff; the cleanest polished read of the monthly cycle. | [512 px](finalists/habit-steady-month--a-271828.webp) |
+| `b-161803` | 4 | Aged bronze version keeps the twenty-stone ring and diagonal staff with a classic key head; richer patina and a slightly busier rim than A. | [512 px](finalists/habit-steady-month--b-161803.webp) |
+
+**Recommended:** `a-271828` (score 4.5).
+
+**Notes:** The central object reads as a key/scepter rather than the intended walking staff in both finalists. a-112358 rejected for crossed twin staffs; b-314159 reads as a clock hand; a-173205 is a close alternate.
+
+### Hundred-K Week
+
+`emblem/habit-hundred-week` · family **habit** · rank **thresholds**
+
+**Motif:** A path spiralling around a central compass rose, seven small milestone stones along the way, deep blue and gold.
+
+[Contact sheet](sheets/emblem/habit-hundred-week.jpg) — all candidates.
+
+| Candidate | Score | Rationale | Image |
+|---|---|---|---|
+| `a-112358` | 4.5 | Polished deep-blue field with a crisp compass rose, concentric orbit rings and eight gold milestone markers; strongest contrast and cleanest 96 px silhouette. | [512 px](finalists/habit-hundred-week--a-112358.webp) |
+| `b-161803` | 4 | Aged blue-and-bronze version keeps the compass rose, orbit rings and marker circle; warm patina and slightly softer contrast than A. | [512 px](finalists/habit-hundred-week--b-161803.webp) |
+
+**Recommended:** `a-112358` (score 4.5).
+
+**Notes:** Both read as a compass with an orbit ring, not the prompted spiral, and show eight milestone markers rather than seven. a-173205 is a close polished alternate; b-141421 is the darker aged option.
+
+### Fellowship Founder
+
+`emblem/community-fellowship-founder` · family **community** · rank **1**
+
+**Motif:** A central standing stone carved with a flame, flanked by two smaller standing stones, warm bronze and gold.
+
+[Contact sheet](sheets/emblem/community-fellowship-founder.jpg) — all candidates.
+
+| Candidate | Score | Rationale | Image |
+|---|---|---|---|
+| `a-141421` | 4.5 | Solid blue enamel field sets off the flame-carved central stone and two flankers, with crisp gold outlines and no split-colour flag background. | [512 px](finalists/community-fellowship-founder--a-141421.webp) |
+| `b-271828` | 4 | Full aged-bronze treatment with a ghosted gold flame and chased stone relief; lower contrast than A but the most cohesive aged option. | [512 px](finalists/community-fellowship-founder--b-271828.webp) |
+
+**Recommended:** `a-141421` (score 4.5).
+
+**Notes:** a-112358 and a-161803 rejected for split blue/red fields that read as flags; a-173205 loses the flame against a red field. b-161803 is a close aged alternate with a blue field.
+
+### Good Company
+
+`emblem/community-good-company` · family **community** · rank **2**
+
+**Motif:** Four standing stones around a central campfire flame, warm bronze and gold.
+
+[Contact sheet](sheets/emblem/community-good-company.jpg) — all candidates.
+
+| Candidate | Score | Rationale | Image |
+|---|---|---|---|
+| `a-112358` | 4.5 | Deep blue field makes the red-orange campfire and crossed logs pop, with four standing stones and a thin rim; the strongest 96 px read of the set. | [512 px](finalists/community-good-company--a-112358.webp) |
+| `b-271828` | 4 | Aged bronze field with a warm red-gold flame and chunky logs; richer patina and slightly lower contrast, but artifact-free. | [512 px](finalists/community-good-company--b-271828.webp) |
+
+**Recommended:** `a-112358` (score 4.5).
+
+**Notes:** b-161803 is a close aged alternate; a-141421 has heavier outlines and a less crisp flame; a-271828's red field competes with the fire.
 
 
 ## Family frames (6)
@@ -368,6 +476,6 @@ No compositing has been performed. Nothing was written to `public/img/achievemen
 After sign-off:
 
 1. Record final picks in `selections.md`.
-2. Build the PhotoCraft smart-object template and composite the nine badges (8.6).
+2. Build the PhotoCraft smart-object template and composite the 15 badges (8.6).
 3. Export 512 px main and 200 px thumb WebP files and verify sizes (8.7–8.8).
 4. Normalise each frame's outer bbox to 1016 px and re-cut the inner at 880 px; rank rings are already 880/800.

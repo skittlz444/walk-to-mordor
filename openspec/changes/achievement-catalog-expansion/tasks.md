@@ -26,4 +26,4 @@
 
 - [x] 6.1 Run `openspec validate achievement-catalog-expansion --strict` and resolve any spec-format errors.
 - [x] 6.2 Run the focused Jest test and record the result.
-- [x] 6.3 Confirm the diff touches no files under `openspec/changes/profile-badge-display/` and nothing under `public/img/achievements/`.
+- [x] 6.3 Confirm the diff leaves the five `0145` rows unchanged and adds no book, challenge, field-guide, or campaign definitions.

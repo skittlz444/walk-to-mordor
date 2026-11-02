@@ -206,6 +206,126 @@
       ]
     },
     {
+      "id": "emblem/journey-frodo-sam-glittering-caves",
+      "slug": "journey-frodo-sam-glittering-caves",
+      "name": "The Glittering Caves",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 4,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A cavern of luminous crystal columns rising from still dark pools, carved Dwarf stone-gardens and a single warm lantern glow, silver-blue and gold. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A cavern of pale crystal pillars and carved stone terraces, deep blue shadows, a warm lantern flame. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/habit-weekend-warrior",
+      "slug": "habit-weekend-warrior",
+      "name": "Weekend Warrior",
+      "group": "emblem",
+      "family": "habit",
+      "rank": "thresholds",
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "Two milestone stones flanking a winding path, a sun on one side and a crescent moon on the other, fresh green and gold. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "Two milestone stones flanking a winding path, a sun on one side and a crescent moon on the other, fresh green and gold. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/habit-steady-month",
+      "slug": "habit-steady-month",
+      "name": "Steady Month",
+      "group": "emblem",
+      "family": "habit",
+      "rank": "thresholds",
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A circular ring of twenty small milestone stones around a central walking staff, deep forest green and gold. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A circular ring of twenty small milestone stones around a central walking staff, deep forest green and gold. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/habit-hundred-week",
+      "slug": "habit-hundred-week",
+      "name": "Hundred-K Week",
+      "group": "emblem",
+      "family": "habit",
+      "rank": "thresholds",
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A path spiralling around a central compass rose, seven small milestone stones along the way, deep blue and gold. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A path spiralling around a central compass rose, seven small milestone stones along the way, deep blue and gold. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/community-fellowship-founder",
+      "slug": "community-fellowship-founder",
+      "name": "Fellowship Founder",
+      "group": "emblem",
+      "family": "community",
+      "rank": 1,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A central standing stone carved with a flame, flanked by two smaller standing stones, warm bronze and gold. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A central standing stone carved with a flame, flanked by two smaller standing stones, warm bronze and gold. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
+      "id": "emblem/community-good-company",
+      "slug": "community-good-company",
+      "name": "Good Company",
+      "group": "emblem",
+      "family": "community",
+      "rank": 2,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "Four standing stones around a central campfire flame, warm bronze and gold. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "Four standing stones around a central campfire flame, warm bronze and gold. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
       "id": "frame/journey",
       "slug": "journey",
       "name": "Journey Frame",

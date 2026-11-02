@@ -263,6 +263,7 @@ def asset_section(asset, entry, sheet):
 
 
 def build_markdown(assets, matrix, resolved, sheets, stats, today):
+    emblem_count = sum(1 for asset in assets if asset["group"] == "emblem")
     lines = ["# Badge Artwork — Shortlist Review", "", f"**Date:** {today}", "",
              "**Scope:** OpenSpec tasks 8.1–8.5 (prompts, generation, processing, shortlist, "
              "report, review gate). Final compositing (8.6–8.8) is deferred until sign-off.", "",
@@ -287,13 +288,14 @@ def build_markdown(assets, matrix, resolved, sheets, stats, today):
               "`public/img/achievements/`; no migration, seed, or UI work was touched. The images above "
               "are review copies, not production assets.", "", "After sign-off:", "",
               "1. Record final picks in `selections.md`.",
-              "2. Build the PhotoCraft smart-object template and composite the nine badges (8.6).",
+              f"2. Build the PhotoCraft smart-object template and composite the {emblem_count} badges (8.6).",
               "3. Export 512 px main and 200 px thumb WebP files and verify sizes (8.7–8.8).",
               "4. Normalise each frame's outer bbox to 1016 px and re-cut the inner at 880 px; rank rings are already 880/800.", ""]
     return "\n".join(lines)
 
 
 def build_html(assets, resolved, sheets, today):
+    emblem_count = sum(1 for asset in assets if asset["group"] == "emblem")
     rows, sections = [], []
     for asset in assets:
         entry = resolved[asset["id"]]
@@ -340,7 +342,7 @@ def build_html(assets, resolved, sheets, today):
 <p>No compositing has been performed. Nothing was written to <code>public/img/achievements/</code>;
 no migration, seed, or UI work was touched. These are review copies, not production assets.</p>
 <p>After sign-off: record picks in <code>selections.md</code>, build the PhotoCraft smart-object
-template and composite the nine badges (8.6), then export 512 px main and 200 px thumb WebP files
+template and composite the {emblem_count} badges (8.6), then export 512 px main and 200 px thumb WebP files
 and verify sizes (8.7–8.8). Before compositing, normalise each frame's outer bbox to 1016 px and
 re-cut the inner at 880 px; rank rings are already 880/800.</p>
 <p><a href="shortlist.md">Markdown report</a> · <a href="selections.md">Selection sheet</a></p>
@@ -350,12 +352,14 @@ re-cut the inner at 880 px; rank rings are already 880/800.</p>
 
 def build_selections(assets, resolved, today):
     lines = ["# Badge Artwork — Final Selections", "", f"**Date:** {today}", "",
-             "Replace each `Pending` pick with `a-<seed>` or `b-<seed>` from that asset's two finalists.",
+             "Replace each `Pending` pick with `a-<seed>` or `b-<seed>` from that asset's two finalists. "
+             "Rank rings are reference only — F1 removes them.",
              "", "| Asset | Finalist A | Finalist B | Your pick | Notes |", "|---|---|---|---|---|"]
     for asset in assets:
         first, second = resolved[asset["id"]]["finalists"]
+        selection = "Reference only" if asset["group"] == "rank" else "Pending"
         lines.append(f"| `{asset['id']}` | `{first['candidate']}` | `{second['candidate']}` | "
-                     "Pending |  |")
+                     f"{selection} |  |")
     lines += ["", "Picks are recorded here only; no compositing or production assets exist yet.", ""]
     return "\n".join(lines)
 

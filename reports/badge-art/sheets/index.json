@@ -1,5 +1,175 @@
 {
   "assets": {
+    "emblem/community-fellowship-founder": {
+      "candidates": [
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/a-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/a-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/a-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/a-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/a-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/a-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/b-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/b-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/b-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/b-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/b-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-fellowship-founder/b-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "b"
+        }
+      ],
+      "family": "community",
+      "group": "emblem",
+      "layout": {
+        "cols": 4,
+        "rows": 3,
+        "tile_px": 320
+      },
+      "rank": 1,
+      "sheet": "reports/badge-art/sheets/emblem/community-fellowship-founder.jpg"
+    },
+    "emblem/community-good-company": {
+      "candidates": [
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/a-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/a-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/a-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/a-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/a-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/a-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/b-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/b-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/b-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/b-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/b-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/community-good-company/b-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "b"
+        }
+      ],
+      "family": "community",
+      "group": "emblem",
+      "layout": {
+        "cols": 4,
+        "rows": 3,
+        "tile_px": 320
+      },
+      "rank": 2,
+      "sheet": "reports/badge-art/sheets/emblem/community-good-company.jpg"
+    },
     "emblem/habit-faithful-walker": {
       "candidates": [
         {
@@ -170,6 +340,261 @@
       "rank": 1,
       "sheet": "reports/badge-art/sheets/emblem/habit-first-steps.jpg"
     },
+    "emblem/habit-hundred-week": {
+      "candidates": [
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/a-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/a-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/a-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/a-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/a-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/a-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/b-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/b-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/b-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/b-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/b-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-hundred-week/b-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "b"
+        }
+      ],
+      "family": "habit",
+      "group": "emblem",
+      "layout": {
+        "cols": 4,
+        "rows": 3,
+        "tile_px": 320
+      },
+      "rank": "thresholds",
+      "sheet": "reports/badge-art/sheets/emblem/habit-hundred-week.jpg"
+    },
+    "emblem/habit-steady-month": {
+      "candidates": [
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/a-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/a-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/a-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/a-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/a-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/a-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/b-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/b-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/b-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/b-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/b-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-steady-month/b-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "b"
+        }
+      ],
+      "family": "habit",
+      "group": "emblem",
+      "layout": {
+        "cols": 4,
+        "rows": 3,
+        "tile_px": 320
+      },
+      "rank": "thresholds",
+      "sheet": "reports/badge-art/sheets/emblem/habit-steady-month.jpg"
+    },
+    "emblem/habit-weekend-warrior": {
+      "candidates": [
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/a-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/a-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/a-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/a-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/a-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/a-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/b-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/b-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/b-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/b-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/b-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/habit-weekend-warrior/b-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "b"
+        }
+      ],
+      "family": "habit",
+      "group": "emblem",
+      "layout": {
+        "cols": 4,
+        "rows": 3,
+        "tile_px": 320
+      },
+      "rank": "thresholds",
+      "sheet": "reports/badge-art/sheets/emblem/habit-weekend-warrior.jpg"
+    },
     "emblem/journey-frodo-sam-buckleberry-ferry": {
       "candidates": [
         {
@@ -254,6 +679,91 @@
       },
       "rank": 1,
       "sheet": "reports/badge-art/sheets/emblem/journey-frodo-sam-buckleberry-ferry.jpg"
+    },
+    "emblem/journey-frodo-sam-glittering-caves": {
+      "candidates": [
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/a-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/a-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/a-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/a-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/a-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/a-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "a"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/b-112358.png",
+          "seed": 112358,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/b-271828.png",
+          "seed": 271828,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/b-314159.png",
+          "seed": 314159,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/b-161803.png",
+          "seed": 161803,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/b-141421.png",
+          "seed": 141421,
+          "source": "processed",
+          "variant": "b"
+        },
+        {
+          "file": "raw_assets/badges/processed/emblem/journey-frodo-sam-glittering-caves/b-173205.png",
+          "seed": 173205,
+          "source": "processed",
+          "variant": "b"
+        }
+      ],
+      "family": "journey",
+      "group": "emblem",
+      "layout": {
+        "cols": 4,
+        "rows": 3,
+        "tile_px": 320
+      },
+      "rank": 4,
+      "sheet": "reports/badge-art/sheets/emblem/journey-frodo-sam-glittering-caves.jpg"
     },
     "emblem/journey-frodo-sam-home-at-sunset": {
       "candidates": [

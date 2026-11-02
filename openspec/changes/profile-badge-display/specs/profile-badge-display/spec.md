@@ -87,10 +87,10 @@ The system SHALL resolve rank and collection position from definition metadata: 
 - **THEN** `presentation.rank` is 1
 
 #### Scenario: Collection position is returned
-- **GIVEN** a definition whose metadata declares `collection` with `index: 3` and `size: 7`
+- **GIVEN** a definition whose metadata declares `collection` with `index: 3` and `size: 8`
 - **WHEN** the achievement summary is returned
 - **THEN** `presentation.collection.index` is 3
-- **AND** `presentation.collection.size` is 7
+- **AND** `presentation.collection.size` is 8
 - **AND** `presentation.collection.slug` and `label` match the metadata
 
 #### Scenario: Missing or malformed metadata falls back safely
@@ -116,10 +116,10 @@ The system SHALL render earned badges grouped by collection, showing artwork, na
 - **AND** each card shows the badge image and name
 
 #### Scenario: Collections render as grouped sections
-- **GIVEN** a user who has earned three badges from a seven-badge collection and one standalone badge
+- **GIVEN** a user who has earned three badges from an eight-badge collection and one standalone badge
 - **WHEN** the grid renders
 - **THEN** the three collection badges appear together in collection-index order
-- **AND** the section header shows the collection label and `3/7`
+- **AND** the section header shows the collection label and `3/8`
 - **AND** the standalone badge appears after the collection section
 
 #### Scenario: Repeatable badges show a count overlay
@@ -175,12 +175,18 @@ The system SHALL render a friend's earned badges using the same grid, rank, coll
 
 ### Requirement: Seeded initial badge catalog
 
-The system SHALL seed seven Frodo/Sam journey badges forming one numbered, ranked collection and two global habit badges. Definitions SHALL carry rank, collection, storyline, and threshold metadata and SHALL be idempotently seeded.
+The system SHALL seed eight Frodo/Sam journey badges forming one numbered, ranked collection and two global habit badges. Definitions SHALL carry rank, collection, storyline, and threshold metadata and SHALL be idempotently seeded.
 
 #### Scenario: Journey definitions are seeded
 - **GIVEN** the migration has been applied
-- **THEN** seven `journey-*` definitions exist with `badge_type` of `journey`
-- **AND** each carries `storyline: "frodo-sam"`, a fixed rank, a distance threshold, and a collection position from 1 to 7
+- **THEN** eight `journey-*` definitions exist with `badge_type` of `journey`
+- **AND** each carries `storyline: "frodo-sam"`, a fixed rank, a distance threshold, and a collection position from 1 to 8
+
+#### Scenario: Glittering Caves return badge is seeded
+- **GIVEN** the migration has been applied
+- **THEN** `journey-frodo-sam-glittering-caves` exists with `badge_type` of `journey`
+- **AND** its metadata has `storyline: "frodo-sam"`, `rank: 4`, `threshold_km: 3827.0`, and collection position 7 of 8 in `frodo-sam-journey`
+- **AND** its description references Helm's Deep, the Glittering Caves of Aglarond, and the stone-gardens Gimli spoke of
 
 #### Scenario: Habit definitions are seeded
 - **THEN** `habit-first-steps` exists as a non-repeatable badge with fixed rank 1

@@ -57,7 +57,7 @@ The system SHALL seed two non-repeatable community achievement definitions — `
 
 ### Requirement: Idempotent and order-independent seeding
 
-The migration SHALL insert definitions with `INSERT OR IGNORE`, SHALL NOT reference explicit row IDs, SHALL NOT change the schema, and SHALL be safe to apply more than once and independently of the nine-definition `profile-badge-display` seed.
+The migration SHALL insert definitions with `INSERT OR IGNORE`, SHALL NOT reference explicit row IDs, SHALL NOT change the schema, and SHALL be safe to apply more than once and independently of the ten-definition `profile-badge-display` seed.
 
 #### Scenario: Migration is applied twice
 
@@ -67,12 +67,12 @@ The migration SHALL insert definitions with `INSERT OR IGNORE`, SHALL NOT refere
 - **AND** every slug is unique
 - **AND** no error is raised on the second application
 
-#### Scenario: Migration runs before the nine-badge seed
+#### Scenario: Migration runs before the ten-badge seed
 
 - **GIVEN** only the shared achievement tables exist
 - **WHEN** the catalog expansion migration is applied before the `profile-badge-display` seed
 - **THEN** the five definitions are created
-- **AND** the later nine-badge seed can be applied without a slug collision
+- **AND** the later ten-badge seed can be applied without a slug collision
 
 #### Scenario: Migration changes no schema
 
@@ -81,7 +81,7 @@ The migration SHALL insert definitions with `INSERT OR IGNORE`, SHALL NOT refere
 
 ### Requirement: Catalog-only ownership boundary
 
-This change SHALL add only the five named definitions, SHALL NOT add book, challenge, field-guide, or campaign definitions, SHALL NOT implement award hooks or badge artwork, and SHALL preserve the `profile-badge-display` nine-definition seed unchanged.
+This change SHALL add only the five named definitions, SHALL NOT add book, challenge, field-guide, or campaign definitions, SHALL NOT implement award hooks or badge artwork, and SHALL preserve the `profile-badge-display` ten-definition seed unchanged.
 
 #### Scenario: No foreign-family definitions are added
 

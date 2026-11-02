@@ -4,10 +4,10 @@
 Reads <report-root>/shortlist.json and scripts/badge-art/prompts.json, then
 writes under <report-root> (default: reports/badge-art):
 
-  finalist-review-emblems.jpg   9 emblems, 3 x 3
-  finalist-review-frames.jpg    6 family frames, 3 x 2
-  finalist-review-ranks.jpg     4 rank rings, 2 x 2
-  finalist-review-all.jpg       19 assets, 4 x 5 overview
+  finalist-review-emblems.jpg   emblem finalists, 3 columns
+  finalist-review-frames.jpg    family frames, 3 columns
+  finalist-review-ranks.jpg     rank rings, 2 columns
+  finalist-review-all.jpg       all assets, 5 columns
   finalist-review.html          512 px gallery + selections table
   finalist-review.md            short index + selections table
 
@@ -43,8 +43,7 @@ DEFAULT_OUT_DIR = "reports/badge-art"
 
 REVIEW_PX = 512
 GROUPS = ("emblem", "frame", "rank")
-FULL_COUNTS = {"emblem": 9, "frame": 6, "rank": 4}
-FULL_TOTAL = sum(FULL_COUNTS.values())
+GROUP_NOUNS = {"emblem": "achievement", "frame": "family frame", "rank": "rank ring"}
 
 BG = "#0d1117"
 PANEL = "#14181f"
@@ -62,7 +61,7 @@ CATEGORY_GUTTER = 24
 CATEGORY_ROW_GAP = 22
 CATEGORY_PAD = 22
 
-ALL_COLS = 4
+ALL_COLS = 5
 ALL_IMG = 140
 ALL_CELL_W = 324
 ALL_CELL_H = 246
@@ -118,7 +117,7 @@ class ReviewAsset:
             return f"Emblem \u00b7 {rank_label(self)}"
         if self.group == "frame":
             return f"Family frame \u00b7 {self.family}"
-        return f"Rank ring \u00b7 Tier {self.rank}"
+        return f"Rank ring \u00b7 Tier {self.rank} \u00b7 reference only"
 
 
 def rank_label(asset: ReviewAsset) -> str:
@@ -132,6 +131,10 @@ def rank_label(asset: ReviewAsset) -> str:
     if asset.group == "frame":
         return "Family frame"
     return "Rank ring"
+
+
+def plural(count: int, singular: str) -> str:
+    return f"{count} {singular}{'' if count == 1 else 's'}"
 
 
 def rel(path: Path) -> str:
@@ -216,6 +219,8 @@ def load_review(report_root: Path) -> list[ReviewAsset]:
         prompt_by_id[asset_id] = raw
         slugs.add(raw["slug"])
 
+    expected_counts = Counter(raw["group"] for raw in prompt_assets)
+    expected_total = len(prompt_ids)
     short_ids = set(short_assets)
     missing = sorted(set(prompt_ids) - short_ids)
     extra = sorted(short_ids - set(prompt_ids))
@@ -321,13 +326,16 @@ def load_review(report_root: Path) -> list[ReviewAsset]:
         )
 
     counts = Counter(review.group for review in reviews)
-    if counts != Counter(FULL_COUNTS):
+    if counts != expected_counts:
+        expected = ", ".join(
+            plural(expected_counts[group], GROUP_NOUNS[group]) for group in GROUPS
+        )
+        found = ", ".join(
+            plural(counts[group], GROUP_NOUNS[group]) for group in GROUPS
+        )
         raise ReviewError(
-            f"expected {FULL_TOTAL} assets "
-            f"({FULL_COUNTS['emblem']} emblem, {FULL_COUNTS['frame']} frame, "
-            f"{FULL_COUNTS['rank']} rank), found {len(reviews)} "
-            f"({counts['emblem']} emblem, {counts['frame']} frame, "
-            f"{counts['rank']} rank)"
+            f"expected {expected_total} assets ({expected}), found "
+            f"{len(reviews)} ({found})"
         )
     return reviews
 
@@ -409,7 +417,7 @@ def draw_sheet_footer(draw: ImageDraw.ImageDraw, width: int, height: int,
     draw.text((margin, baseline), note, font=font(12), fill=MUTED, anchor="ls")
     if show_aside:
         draw.text(
-            (width - margin, baseline), "A or B \u00b7 one per asset",
+            (width - margin, baseline), "A or B \u00b7 one per achievement",
             font=font(11, True), fill=GOLD, anchor="rs",
         )
 
@@ -433,10 +441,10 @@ def render_category_sheet(assets: list[ReviewAsset], out_path: Path, group: str,
     canvas = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(canvas)
 
-    noun = {"emblem": "achievement", "frame": "family frame", "rank": "rank ring"}[group]
+    noun = GROUP_NOUNS[group]
     compact = width < 1000
     subtitle = (
-        f"{len(assets)} {noun}{'' if len(assets) == 1 else 's'} \u00b7 "
+        f"{plural(len(assets), noun)} \u00b7 "
         f"two finalists each \u00b7 {CATEGORY_IMG} px"
     )
     if not compact:
@@ -495,10 +503,12 @@ def render_category_sheet(assets: list[ReviewAsset], out_path: Path, group: str,
 
     draw_sheet_footer(
         draw, width, height, CATEGORY_MARGIN,
-        "Reply with A or B per asset." if compact else
-        "Both candidates are finalists. Reply with A or B per asset, "
-        "or edit selections.md.",
-        show_aside=not compact,
+        "Rank rings are reference only \u2014 F1 removes them."
+        if group == "rank" else
+        ("Reply with A or B per achievement." if compact else
+         "Both candidates are finalists. Reply with A or B per achievement, "
+         "or edit selections.md."),
+        show_aside=not compact and group != "rank",
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out_path, "JPEG", quality=94, subsampling=0, optimize=True)
@@ -561,9 +571,9 @@ def render_all_sheet(assets: list[ReviewAsset], out_path: Path) -> tuple[int, in
 
     draw_sheet_footer(
         draw, width, height, ALL_MARGIN,
-        "Reply with A or B per asset." if compact else
+        "Reply with A or B per achievement." if compact else
         "Overview only \u2014 open the category sheets or finalist-review.html "
-        "for 512 px detail. Reply with A or B per asset.",
+        "for 512 px detail. Reply with A or B per achievement.",
         show_aside=not compact,
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -591,6 +601,8 @@ def render_sheets(reviews: list[ReviewAsset], report_root: Path) -> list[dict]:
                 "size": size,
                 "count": len(group_assets),
                 "kind": "sheet",
+                "group": group,
+                "noun": GROUP_NOUNS[group],
             }
         )
 
@@ -603,6 +615,8 @@ def render_sheets(reviews: list[ReviewAsset], report_root: Path) -> list[dict]:
             "size": all_size,
             "count": len(reviews),
             "kind": "all",
+            "group": None,
+            "noun": "asset",
         }
     )
     return outputs
@@ -610,34 +624,55 @@ def render_sheets(reviews: list[ReviewAsset], report_root: Path) -> list[dict]:
 
 def sheet_nav(outputs: list[dict]) -> list[tuple[str, str]]:
     return [
-        (f"{item['label']} \u00b7 {item['count']}", item["path"].name)
+        (f"{item['label']} \u00b7 {plural(item['count'], item['noun'])}",
+         item["path"].name)
         for item in outputs if item["kind"] == "sheet"
-    ] + [("All assets", next(
+    ] + [("All " + plural(
+        next(item["count"] for item in outputs if item["kind"] == "all"),
+        "asset",
+    ), next(
         item["path"].name for item in outputs if item["kind"] == "all"
     ))]
 
 
 def write_markdown(reviews: list[ReviewAsset], outputs: list[dict],
                    report_root: Path, include_html: bool) -> Path:
+    counts = Counter(review.group for review in reviews)
     lines = [
         "# Badge Art \u2014 Finalist Review",
         "",
-        f"{len(reviews)} assets, {len(reviews) * 2} finalists. Every asset has exactly "
-        "two candidates; the gold \u2605 is the shortlist recommendation, not a decision.",
+        f"**{plural(counts['emblem'], GROUP_NOUNS['emblem'])}**, "
+        f"{plural(counts['frame'], GROUP_NOUNS['frame'])} and "
+        f"{plural(counts['rank'], GROUP_NOUNS['rank'])} \u2014 "
+        f"{plural(len(reviews), 'asset')}, {len(reviews) * 2} finalists. "
+        "Each listed asset has two finalists. The rank-ring rows are "
+        "**reference only \u2014 F1 removes the rank ring** in favour of the "
+        "6 o'clock rank boss. The gold \u2605 is the current recommendation, "
+        "not a decision.",
         "",
         "## Review sheets",
         "",
     ]
     for item in outputs:
-        suffix = ""
         if item["kind"] == "all":
             all_cols = min(ALL_COLS, item["count"])
             all_rows = ceil(item["count"] / all_cols)
-            suffix = f" (overview, {all_cols} \u00d7 {all_rows})"
-        lines.append(
-            f"- [{item['label']} \u2014 {item['count']} "
-            f"{'assets' if item['count'] != 1 else 'asset'}]({item['path'].name}){suffix}"
-        )
+            lines.append(
+                f"- [All assets \u2014 {item['count']} rows]"
+                f"({item['path'].name}) (overview, "
+                f"{all_cols} \u00d7 {all_rows})"
+            )
+        elif item["group"] == "rank":
+            lines.append(
+                f"- [Rank Ring \u2014 {plural(item['count'], 'component')}, "
+                f"retired under F1]({item['path'].name})"
+            )
+        else:
+            noun = "achievement" if item["group"] == "emblem" else "component"
+            lines.append(
+                f"- [{item['label']} \u2014 "
+                f"{plural(item['count'], noun)}]({item['path'].name})"
+            )
     if include_html:
         lines.append(
             "- [HTML gallery](finalist-review.html) \u2014 512 px images, scores, "
@@ -647,7 +682,8 @@ def write_markdown(reviews: list[ReviewAsset], outputs: list[dict],
         "",
         "## Selections",
         "",
-        "Reply with **A** or **B** per asset, or edit `selections.md`.",
+        "Reply with **A** or **B** per achievement, or edit `selections.md`. "
+        "Rank rings are reference only under F1.",
         "",
         "| Asset | Finalist A | Finalist B | Recommended | Selection |",
         "|---|---|---|---|---|",
@@ -659,7 +695,7 @@ def write_markdown(reviews: list[ReviewAsset], outputs: list[dict],
             f"| [A \u00b7 {first.candidate}](finalists/{first.image.name}) "
             f"| [B \u00b7 {second.candidate}](finalists/{second.image.name}) "
             f"| **{asset.recommended_letter}** \u00b7 `{asset.recommended}` "
-            f"| Pending |"
+            f"| {'Reference only' if asset.group == 'rank' else 'Pending'} |"
         )
     lines += [
         "",
@@ -821,6 +857,7 @@ def esc(value: object) -> str:
 
 def write_html(reviews: list[ReviewAsset], outputs: list[dict],
                report_root: Path) -> Path:
+    counts = Counter(review.group for review in reviews)
     nav = "".join(
         f'<a class="chip" href="{esc(filename)}">{esc(label)}</a>'
         for label, filename in sheet_nav(outputs)
@@ -896,7 +933,7 @@ def write_html(reviews: list[ReviewAsset], outputs: list[dict],
             f'<td><span class="letter">A</span> <code>{esc(first.candidate)}</code></td>'
             f'<td><span class="letter">B</span> <code>{esc(second.candidate)}</code></td>'
             f'<td><span class="rec-inline">\u2605 {asset.recommended_letter}</span></td>'
-            '<td><span class="pending">Pending</span></td>'
+            f'<td><span class="pending">{"Reference only" if asset.group == "rank" else "Pending"}</span></td>'
             "</tr>"
         )
 
@@ -912,10 +949,15 @@ def write_html(reviews: list[ReviewAsset], outputs: list[dict],
 <body>
 <header class="hero"><div class="wrap">
   <div class="kicker">{esc(KICKER)}</div>
-  <h1>Pick one finalist per asset</h1>
-  <p class="lede">{len(reviews)} assets, {len(reviews) * 2} finalists. Both shortlisted
-  candidates sit side by side at 512 px. Gold marks the shortlist recommendation;
-  nothing is final until you reply with A or B.</p>
+  <h1>Pick one finalist per achievement</h1>
+  <p class="lede">{plural(counts['emblem'], GROUP_NOUNS['emblem'])},
+  {plural(counts['frame'], GROUP_NOUNS['frame'])} and
+  {plural(counts['rank'], GROUP_NOUNS['rank'])} \u2014 {plural(len(reviews), 'asset')},
+  {len(reviews) * 2} finalists. Both shortlisted candidates sit side by side at
+  512 px. Gold marks the shortlist recommendation; nothing is final until you
+  reply with A or B.</p>
+  <p class="hint">Rank rings are reference only \u2014 F1 removes the rank ring
+  in favour of the 6 o'clock rank boss.</p>
   <div class="links">{nav}<a class="chip gold" href="#selections">Selections</a></div>
 </div></header>
 <main class="wrap">
@@ -931,8 +973,8 @@ def write_html(reviews: list[ReviewAsset], outputs: list[dict],
 {"".join(sections)}
 <section class="selections" id="selections">
   <h2>Selections</h2>
-  <p class="note">Reply with <b>A</b> or <b>B</b> per asset, or edit
-  <code>selections.md</code>.</p>
+  <p class="note">Reply with <b>A</b> or <b>B</b> per achievement, or edit
+  <code>selections.md</code>. Rank rings are reference only under F1.</p>
   <div class="tablewrap"><table>
     <thead><tr><th>Asset</th><th>Finalist A</th><th>Finalist B</th>
     <th>Recommended</th><th>Selection</th></tr></thead>
@@ -1009,6 +1051,12 @@ def run(args: argparse.Namespace) -> None:
     else:
         print("  finalist-review.html           skipped (--skip-html)")
     print(f"  {len(selected)} assets / {len(selected) * 2} finalists represented")
+    counts = Counter(review.group for review in selected)
+    print(
+        f"  {plural(counts['emblem'], GROUP_NOUNS['emblem'])}, "
+        f"{plural(counts['frame'], GROUP_NOUNS['frame'])}, "
+        f"{plural(counts['rank'], GROUP_NOUNS['rank'])}"
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

@@ -1,6 +1,6 @@
 ## Context
 
-`shared-achievement-infrastructure` provides `achievement_definitions` (`0142`) and append-only `user_achievement_instances` (`0143`). `profile-badge-display` defines the display metadata contract (`storyline`, `rank`, `rank_thresholds`, `collection`) and seeds nine definitions in `0144`: seven `journey-frodo-sam-*` badges plus `habit-first-steps` and `habit-faithful-walker`. Neither the tables nor the display contract changes here.
+`shared-achievement-infrastructure` provides `achievement_definitions` (`0142`) and append-only `user_achievement_instances` (`0143`). `profile-badge-display` defines the display metadata contract (`storyline`, `rank`, `rank_thresholds`, `collection`) and seeds ten definitions in `0144`: eight `journey-frodo-sam-*` badges plus `habit-first-steps` and `habit-faithful-walker`. Neither the tables nor the display contract changes here.
 
 The catalog is pure data. Definitions can exist before any code awards them, which lets catalog growth, award wiring, and artwork land independently.
 
@@ -19,7 +19,7 @@ The catalog is pure data. Definitions can exist before any code awards them, whi
 - No badge artwork, compositing, or `public/img/achievements/` writes.
 - No schema, API, UI, or admin changes.
 - No book, challenge, field-guide, or campaign definitions — those stay with their owning changes.
-- No edits to `profile-badge-display` or its nine-definition seed.
+- No edits to `profile-badge-display` or its ten-definition seed.
 
 ## Definitions
 
@@ -87,7 +87,7 @@ Community shape:
 ## Migration plan
 
 1. `0145_seed_catalog_expansion.sql` inserts the five rows with `INSERT OR IGNORE` into `achievement_definitions`, naming columns explicitly and using no IDs.
-2. It must run after `0142`/`0143`. It is independent of `0144`: the slug sets are disjoint, so it is safe before or after the nine-badge seed.
+2. It must run after `0142`/`0143`. It is independent of `0144`: the slug sets are disjoint, so it is safe before or after the ten-badge seed.
 3. Re-applying it is a no-op. There is no schema change, backfill, or update path.
 
 ## Test plan
