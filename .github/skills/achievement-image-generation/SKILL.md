@@ -20,8 +20,8 @@ It is not the goal-image pipeline. Goal images are watercolour scenes; badges ar
 
 - ComfyUI at `http://127.0.0.1:8188` with `flux3-image-klein-int8-convrot.safetensors`, `qwen3vl_4b_int8_convrot.safetensors`, and `flux2-vae.safetensors`; its venv at `/run/media/skittlz/LinuxStorageSSD/github/comfyui/venv/bin/python` has Pillow, numpy, and rembg 2.0.76.
 - `photocraft-cli` on `PATH` for the production alpha composite, and `sharp` for the shared WebP resizer `.github/skills/goal-image-generation/resources/resize-webp.js`. The review proofs need neither.
-- An approved family-frame master under `raw_assets/badges/processed/frame/<family>/`. The rank boss is procedural; it needs no master.
-- Read `resources/style-reference.md`, `resources/prompt-patterns.md`, and `resources/checklist.md` first, plus `reports/badge-art/composite-review.md` for the shape and stack decision. Do not reopen that decision per badge.
+- An approved family-frame master under `raw_assets/badges/processed/frame/<family>/` and the selected handcrafted rank-boss master under `raw_assets/badges/bosses/processed/<rank>/`. The picks are recorded in `docs/badge-art-decisions.md`.
+- Read `resources/style-reference.md`, `resources/prompt-patterns.md`, and `resources/checklist.md` first, plus `docs/badge-art-decisions.md` for the shape and stack decision. Do not reopen that decision per badge.
 
 ## Inputs
 
@@ -38,7 +38,7 @@ Collect every row before generating anything.
 | `criteria` | definition metadata | Stable condition label for the owning award hook (e.g. `trailing_7d_km >= 100`). Not evaluated by SQL or the display resolver. |
 | `storyline` | definition metadata | `null`/absent for global, otherwise the storyline slug. Award scope only. |
 | family frame | `raw_assets/badges/processed/frame/<family>/` | Approved, normalised, alpha master. |
-| rank boss | `scripts/badge-art/composite_badges.py` | `BOSS_V2` palette and cut, mounted at 6 o'clock. |
+| rank boss | `raw_assets/badges/bosses/processed/<rank>/` | Selected handcrafted master, mounted at 6 o'clock; picks in `docs/badge-art-decisions.md`. |
 
 If the definition does not exist, the change that owns the feature seeds it. This skill adds the art and the `image_slug` link; it does not invent award hooks.
 
@@ -105,7 +105,7 @@ canvas 1024 × 1024, centre (512, 512)
   margin        4 px
 ```
 
-The stack is emblem → family frame → boss. The rank label on the card is authoritative; the boss is a visual cue, not a second data source. Script source: `BOSS`, `FRAME_SRC`, and `RANK_SRC` in `composite_badges.py`; if the values differ, the script wins.
+The stack is emblem → family frame → boss. The rank label on the card is authoritative; the boss is a visual cue, not a second data source. The proof script's geometry lives in `BOSS`, `FRAME_SRC`, and `RANK_SRC` in `composite_badges.py`; production uses the selected handcrafted boss masters.
 
 **The 800–880 annulus must be opaque.** With the rank ring removed, that annulus is the frame's dark inner well, not a hole. Frame masters cut for the retired stack A are cut at 880 because that stack filled 800–880 with a rank ring. Flattened proofs on `#14181f` hide the resulting transparent moat; a production alpha export will not. Fill it with an opaque near-black well disc at 880 behind the emblem, and keep the 68 px frame band. Never ship the moat.
 
@@ -132,10 +132,10 @@ Rank maps to one boss:
 | 4 | Mithril, cool blue `#7fc9e8` | Four-point star | Dark bezel `#12232e` + cyan halo |
 
 - **Fixed rank:** bake that boss.
-- **`rank_thresholds`:** the rank varies per user, but one `image_slug` serves one file. Bake the **rank-1 bronze** boss so the art never overstates a tier; the card label carries the live rank. The proof sheet used gold for `habit-faithful-walker` only to compare treatments. If the product wants a different fixed cue for repeatables, record that decision in the owning change first.
+- **`rank_thresholds`:** the rank varies per user. Ship four baked variants, `<slug>--bronze.webp` through `<slug>--mithril.webp`, and keep the base `<slug>.webp` as a no-boss fallback. The client selects from `presentation.rank`; the card label stays authoritative.
 - **No rank ring.** Do not generate, composite, or restore one.
 
-The gold boss cut is a **hexagon**. That is a cut on the boss, not a hexagonal badge silhouette; the ban applies to the badge shape only. The four-rank reference is `reports/badge-art/rank-boss-v2.jpg`.
+The gold boss cut is a **hexagon**. That is a cut on the boss, not a hexagonal badge silhouette; the ban applies to the badge shape only. The selected boss per rank is recorded in `docs/badge-art-decisions.md`.
 
 ## Step 3: Research the motif (optional, sub-agent)
 
@@ -215,7 +215,7 @@ python3 scripts/badge-art/make_report.py --render
 
 That writes `reports/badge-art/shortlist.md`, `review.html`, `finalists/`, and (for a new file) `selections.md`.
 
-**Review gate:** present the contact sheet, the two finalists at 512 px, the recommendation, the family, and the proposed rank. Wait for the pick to be recorded in `reports/badge-art/selections.md`. The review is of two finalists, not twelve candidates. Do not composite and do not write `public/` before sign-off.
+**Review gate:** present the contact sheet, the two finalists at 512 px, the recommendation, the family, and the proposed rank. Wait for the pick to be recorded in `docs/badge-art-decisions.md`. The review is of two finalists, not twelve candidates. Do not composite and do not write `public/` before sign-off.
 
 `make_report.py` deliberately leaves an existing `selections.md` untouched. If you add an asset to the matrix, append its row to `selections.md` by hand rather than deleting the file and losing earlier picks.
 
@@ -230,14 +230,16 @@ For a single-badge review proof:
 
 Omit `--only` to rebuild the full set grid and 96 px sheet. With `--only`, those sheets contain only that badge, so they are not a set check. Both write 512 px previews on `#14181f`. They are circle-only and review-only: the preview is flattened onto the dark background. Never ship it as a production asset.
 
-**Production composite:** use the PhotoCraft template `raw_assets/badges/badge-template.pcraft` (task 8.6). If it does not exist, stop and report; task 8.6 owns it and the review proof is not a substitute. The template contract is fixed:
+**Production composite:** use PhotoCraft (MCP automation or the UI). The shared `.pcraft` template was superseded by the per-badge flow. The contract is fixed:
 
-1. 1024 × 1024 transparent canvas with the `base` smart object at 800, centred.
-2. `frame` smart object at 1016 outer / 880 inner, centred.
+1. 1024 × 1024 transparent canvas with the base emblem at 800, centred.
+2. Family frame at 1016 outer / 880 inner, centred.
 3. Opaque dark well disc at 880 behind the emblem, so 800–880 is not transparent.
-4. Rank boss at centre `(511, 979)` with the palette and cut from `BOSS_V2`.
-5. 1 px dark keyline around the emblem edge.
-6. Export WebP with alpha.
+4. Selected handcrafted boss at centre `(511, 979)`, shadow at `(511, 981)`.
+5. Clip the boss and shadow to the badge alpha; 1 px dark keyline around the emblem edge.
+6. Export a 1024 PNG with alpha, then resize to 512 and 200.
+
+For a repeatable badge, repeat step 4–6 for each rank variant (`<slug>--bronze` … `<slug>--mithril`); keep the base image boss-less.
 
 `composite_badges.py` resolves only the `journey` and `habit` families today. For another type, extend the family-to-frame and rank mapping in `resolve_assets()` before running the proof, or composite that family in PhotoCraft. Do not substitute a journey frame for another family.
 
@@ -333,8 +335,9 @@ Do not add an award hook in this skill. If the badge is catalog-only, its owning
 
 Commit only:
 
-- `public/img/achievements/<slug>.webp`, `<slug>-thumb.webp`, `scripts/badge-art/prompts.json`, and any pipeline script change;
-- `reports/badge-art/shortlist.json`, `shortlist.md`, `review.html`, `selections.md`, `sheets/<asset>.jpg`, `finalists/<slug>--<candidate>.webp`;
+- `public/img/achievements/<slug>.webp` and `<slug>-thumb.webp`; for repeatables, all `<slug>--<rank>.webp` variants and thumbs;
+- `scripts/badge-art/prompts.json` and any pipeline script change;
+- `docs/badge-art-decisions.md` when a pick or asset-layout decision changes;
 - the seed migration and catalog test, when the owning change includes them.
 
 `raw_assets/` is gitignored; never force-add it. Report the slug, type, rank, frame, boss cut, both candidate picks, the final dimensions and sizes, and the gate results.

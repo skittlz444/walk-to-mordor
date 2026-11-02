@@ -22,7 +22,7 @@ The codebase uses auto-hydrated islands registered in `client/src/index.tsx` by 
 - No badge detail modal or click-to-expand behaviour.
 - No badge notification toasts (those fire from consuming changes at award time via `isNew`).
 - No admin badge management UI.
-- No runtime compositing of base art, frames, or rank rings — borders are baked at build time.
+- No runtime compositing of base art, frames, or rank bosses — badge chrome is baked at build time.
 - No Pippin (or other storyline) badge set in this change; the model is storyline-aware, the seeded catalog is Frodo/Sam only.
 - No pagination, filtering, or search; the grid renders every earned badge.
 - No mutable counters or schema changes to the achievement tables.
@@ -122,7 +122,7 @@ Rationale: the existing friend-profile surface already returns 404 to avoid leak
 
 ### Badge images use one path, one format
 
-Images are constructed as `/img/achievements/<image_slug>.webp`. There is no PNG→WebP fallback. A null `image_slug`, a load error, or a path that fails the slug pattern falls back to a CSS-drawn hexagon placeholder.
+Images are constructed as `/img/achievements/<image_slug>.webp`. There is no PNG→WebP fallback. A null `image_slug`, a load error, or a path that fails the slug pattern falls back to a CSS-drawn circular placeholder.
 
 Rationale: `public/` has no `images/` directory, content images are WebP-only, and a fallback 404 costs a request to reach the same visual result. Keeping the placeholder in CSS means no extra asset.
 
@@ -131,15 +131,15 @@ Rationale: `public/` has no `images/` directory, content images are WebP-only, a
 Badge chrome has two reusable layers:
 
 1. **Family frame** — one master per `badge_type` (`journey`, `habit`, `challenge`, `book`, `community`, `field-guide`).
-2. **Rank ring** — one master per rank (`bronze`, `silver`, `gold`, `mithril`), designed to a shared circular aperture.
+2. **Rank boss** — one handcrafted master per rank (`bronze`, `silver`, `gold`, `mithril`), mounted at 6 o'clock.
 
-Both are generated once, composited over the base emblem in PhotoCraft, and exported as a single WebP per badge. The client never loads frames or rings.
+Both are generated once, composited over the base emblem in PhotoCraft, and exported as a single WebP per badge. The client never loads frames or bosses. Fixed-rank badges bake their single rank; repeatable habit badges ship four variants (`<slug>--<rank>.webp`) so the boss matches the earned rank.
 
-Rationale: a shared rank ring gives consistent rank semantics across families and costs four masters instead of a 6×4 matrix. Baking the composite avoids runtime layering, extra requests, and alpha-composition bugs in CSS.
+Rationale: a shared boss per rank gives consistent rank semantics across families without a rank ring. Baking the composite avoids runtime layering, extra requests, and alpha-composition bugs in CSS.
 
 ### Generate a broad candidate pool, then narrow to two per asset
 
-Single-seed sampling is noisy and prompt variants diverge sharply for stylised metalwork. Every asset is generated across multiple prompt variants and seeds — twelve candidates per emblem, eight per frame or rank ring — reviewed on a per-asset contact sheet, and narrowed to two finalists. Only those two finalists go to the user for the final pick.
+Single-seed sampling is noisy and prompt variants diverge sharply for stylised metalwork. Every asset is generated across multiple prompt variants and seeds — twelve candidates per emblem, eight per family frame and per rank boss — reviewed on a per-asset contact sheet, and narrowed to two finalists. Only those two finalists go to the user for the final pick.
 
 Rationale: the review stays small and decisive while the selection is informed by enough samples to avoid settling for the best of four. Seeds stay configurable so one weak asset can be expanded without regenerating the whole set. Generation is a batch job; the review gate is the only blocking step.
 
@@ -178,7 +178,7 @@ Skeletons render only after a short delay to avoid flashing on fast responses. A
 
 ### CSS uses design-guide variables only
 
-`public/css/badge-display.css` uses `var(--accent-gold)`, `var(--bg-surface)`, `var(--text-primary)`, and existing spacing variables. No hardcoded hex or rgb values. Hexagon geometry is shared by the skeleton and the fallback placeholder; real badge art supplies its own frame.
+`public/css/badge-display.css` uses `var(--accent-gold)`, `var(--bg-surface)`, `var(--text-primary)`, and existing spacing variables. No hardcoded hex or rgb values. Circular geometry is shared by the skeleton and the fallback placeholder; real badge art supplies its own frame.
 
 ### No migrations beyond the seed
 
@@ -214,7 +214,7 @@ None. Resolved decisions:
 - `{ achievements: [...] }` envelope with a `presentation` block.
 - Non-friend access returns 404.
 - `/img/achievements/<image_slug>.webp`, single format.
-- Family frame + rank ring, baked in PhotoCraft; numbering is text.
+- Family frame + 6 o'clock rank boss, baked in PhotoCraft; numbering is text.
 - Storyline-scoped awarding from displayed distance; global habit badges.
 - Grouped collection sections with per-collection progress.
 - No new migrations beyond the seed.

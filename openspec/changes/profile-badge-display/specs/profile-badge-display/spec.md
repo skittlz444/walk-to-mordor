@@ -133,10 +133,10 @@ The system SHALL render earned badges grouped by collection, showing artwork, na
 - **THEN** the card shows the rank label
 - **AND** the rank is exposed to assistive technology
 
-#### Scenario: Hexagonal placeholders show while loading
+#### Scenario: Circular placeholders show while loading
 - **GIVEN** an authenticated user views their profile page
 - **WHEN** the achievements request is still in flight after a short delay
-- **THEN** hexagonal skeleton shapes are displayed
+- **THEN** circular skeleton shapes are displayed
 - **AND** the shapes are replaced when data arrives
 
 #### Scenario: Profile page shows nothing when user has no badges

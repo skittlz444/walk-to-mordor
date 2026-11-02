@@ -77,7 +77,7 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 
 - [ ] Contact sheet, two finalists at 512 px, recommendation, family, and proposed rank presented.
 - [ ] Reviewer sees only the art and the acceptance criteria, not the prompt reasoning.
-- [ ] User pick recorded in `reports/badge-art/selections.md`.
+- [ ] User pick recorded in `docs/badge-art-decisions.md`.
 - [ ] No compositing and no `public/` write before sign-off.
 - [ ] If the pick is "neither", regenerate or expand seeds; do not promote a third candidate silently.
 
@@ -98,7 +98,7 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
   - [ ] Mithril `#7fc9e8` / star / bezel `#12232e` + `#4f9fbd` halo (4 px, alpha 82).
 - [ ] Production export is RGBA, not the `#14181f` proof.
 - [ ] `composite_badges.py` supports only `journey` and `habit`; another family was mapped or composited in PhotoCraft, not forced into a journey frame.
-- [ ] PhotoCraft template contract checked: 1024 RGBA, `base` 800, `frame` 1016 / 880, opaque well at 880, boss at `(511, 979)`, alpha export.
+- [ ] Per-badge PhotoCraft composite checked: 1024 RGBA, base emblem 800, frame 1016 / 880, opaque well at 880, selected boss at `(511, 979)`, clipped shadow at `(511, 981)`, alpha export.
 
 ## 8. Coherence and legibility
 
@@ -119,9 +119,10 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 
 ## 9. Export and verify
 
-- [ ] 1024 RGBA production master at `raw_assets/badges/final/<slug>.webp`.
+- [ ] 1024 RGBA production master at `raw_assets/badges/final-complete/<slug>.png`.
 - [ ] Main: `public/img/achievements/<slug>.webp`, 512 × 512, `--max 512 --quality 90 --targetKB 0`.
 - [ ] Thumb: `public/img/achievements/<slug>-thumb.webp`, 200 × 200, `--max 200 --quality 80 --targetKB 20`.
+- [ ] Repeatable: all four `<slug>--<rank>.webp` variants and thumbs exist; the base image stays boss-less.
 - [ ] Both are WebP with alpha.
 - [ ] Main is under ~120 KB; thumb is at or under 20 KB.
 - [ ] No text, no rank ring, no transparent 800–880 moat.
@@ -150,9 +151,9 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 
 ## 11. Commit and report
 
-- [ ] `public/img/achievements/<slug>.webp` and `<slug>-thumb.webp` staged.
+- [ ] `public/img/achievements/<slug>.webp` and `<slug>-thumb.webp` staged; repeatable rank variants staged too.
 - [ ] `scripts/badge-art/prompts.json` staged if changed.
-- [ ] `reports/badge-art/shortlist.json`, `shortlist.md`, `review.html`, `selections.md`, `sheets/<asset>.jpg`, `finalists/` staged.
+- [ ] `docs/badge-art-decisions.md` updated when a pick or asset-layout decision changes.
 - [ ] Seed migration and catalog test staged when the owning change includes them.
 - [ ] `raw_assets/` not staged (gitignored; never force-add).
 - [ ] Report includes slug, type, rank, frame, boss cut, both picks, dimensions, sizes, and gate results.
@@ -165,7 +166,8 @@ Stop and report; do not work around these:
 - [ ] More than 10% of a generation batch fails.
 - [ ] BiRefNet cannot load and the fallback is not accepted.
 - [ ] No frame master for the family, and the owning change has not produced one.
-- [ ] The PhotoCraft template `raw_assets/badges/badge-template.pcraft` is missing and the production alpha export requires it.
+- [ ] PhotoCraft is unavailable and the production alpha composite cannot be exported.
+- [ ] No selected boss master exists for the rank, and the owning change has not produced one.
 - [ ] The review gate has no signed pick.
 - [ ] The composite has a transparent moat that cannot be filled opaquely.
 - [ ] The 96 px boss disappears into the family metal.

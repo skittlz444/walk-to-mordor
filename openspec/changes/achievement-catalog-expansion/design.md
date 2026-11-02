@@ -103,7 +103,7 @@ This adds no dependency and no test runner. Node 24 ships `node:sqlite`; CI's No
 
 ## Artwork workflow
 
-Art is produced after this change by the `achievement-image-generation` skill, one emblem per slug. Use the reviewed F1 treatment from `reports/badge-art/composite-review.md`: circle, family frame, 6 o'clock rank boss, no concentric rank ring. Habit badges use the habit family frame; community badges use the community family frame. For repeatable badges the boss is a decorative cue — the card's rank label remains authoritative.
+Art is produced after this change by the `achievement-image-generation` skill, one emblem per slug. Use the reviewed F1 treatment from `docs/badge-art-decisions.md`: circle, family frame, 6 o'clock rank boss, no concentric rank ring. Habit badges use the habit family frame; community badges use the community family frame. For repeatable badges the boss is a decorative cue — the card's rank label remains authoritative.
 
 Outputs are `<slug>.webp` at 512 px and `<slug>-thumb.webp` at 200 px under `public/img/achievements/`, matching the existing path convention. Until art exists, the UI's existing missing-image placeholder covers the badges. No art is generated or committed by this change.
 

@@ -1,8 +1,8 @@
 # Achievement Badge Style Reference
 
-The badge is a **collectible object**, not a picture. One motif, centred, on a flat black field, built as a circular medallion with a reusable family frame and a single rank boss. The reference set is the nine Frodo/Sam journey and habit badges in `reports/badge-art/composites/circle-f1v2/`.
+The badge is a **collectible object**, not a picture. One motif, centred, on a flat black field, built as a circular medallion with a reusable family frame and a single rank boss. The reference set is the committed art in `public/img/achievements/`.
 
-Read this with `reports/badge-art/composite-review.md`. That report is the decision record: circle only, no rank ring, F1 6 o'clock boss, family frames unchanged.
+Read this with `docs/badge-art-decisions.md`. That document is the decision record: circle only, no rank ring, F1 6 o'clock boss, family frames unchanged.
 
 ---
 
@@ -119,7 +119,7 @@ Add a 1 px dark keyline around the emblem edge. It separates the art from the we
 - Every layer is 1024 × 1024 RGBA.
 - The emblem's visible art should reach r 400. A 1 px keyline hides a 1 px seam; it cannot hide a 12 px gap. If the art stops at 388, fix the master or the mask, do not rely on the keyline.
 - The frame's inner edge should be a clean circle at r 440 before the well is added.
-- The boss is procedural; it is never an AI-generated layer.
+- The boss is a selected handcrafted master, normalised to the 70 px tile; it is not generated per badge.
 
 ---
 
@@ -189,7 +189,7 @@ Rules:
 
 Colour alone collapses under small sizes and under colour-vision differences. The cut gives a second, shape-based cue at 200 and 512 px without adding a second data source. It does not replace the rank label; it reinforces it.
 
-Reference sheet: `reports/badge-art/rank-boss-v2.jpg` — 200 px boss crop, 96 px full badge, 48 px full badge for all four ranks.
+Reference: the selected boss per rank in `docs/badge-art-decisions.md`; regenerate comparison sheets with `scripts/badge-art/process_bosses.py`.
 
 ---
 
@@ -219,16 +219,15 @@ The set is one product, not nine unrelated medallions. Score coherence 1–5; th
 | The Breaking of the Fellowship | journey | Gold, hexagon | Yellow gold on gold frame; the bezel is the only separator |
 | Home Again at Sunset | journey | Mithril, star | The only cool-blue metal and the only halo; star reads at 200 |
 | First Steps | habit | Bronze, round | Habit family cue: steel band, copper line, seven notches |
-| Faithful Walker | habit | Gold in the proof | Repeatable badge; production bakes bronze unless the owning change decides otherwise; the label carries the live rank |
+| Faithful Walker | habit | Four rank variants | Repeatable badge; bronze/silver/gold/mithril are baked separately and the label carries the live rank |
 
-The proof sheet used gold on Faithful Walker to show a repeatable badge at a high tier. That is a comparison, not a production rule.
+Repeatable badges ship all four rank variants (`<slug>--<rank>.webp`); the base `<slug>.webp` is the no-boss fallback.
 
 ### Files
 
-- `reports/badge-art/composites/circle-f1v2/<slug>.webp` — 512 px previews on `#14181f`.
-- `reports/badge-art/composites/coherence-circle-f1v2.jpg` — 3 × 3 set grid.
-- `reports/badge-art/composites/legibility-96-circle-f1v2.jpg` — 96 px set sheet.
-- `reports/badge-art/rank-boss-v2.jpg` — four-rank boss comparison.
+Final assets: `public/img/achievements/<slug>.webp` (512), `<slug>-thumb.webp` (200), and `<slug>--<rank>.webp` for repeatables.
+
+Generated review proofs are temporary and not committed; the scripts write them under `reports/badge-art/` when a new review is needed.
 
 ---
 
@@ -306,4 +305,4 @@ These are observed failures from the first nine-badge run. Do not repeat them.
 
 ---
 
-Provenance: `reports/badge-art/plan.md` (prompt matrix, generation config, candidate pool), `reports/badge-art/composite-test-plan.md` (shape and stack test), `reports/badge-art/composite-review.md` (decision record).
+Provenance: `docs/badge-art-decisions.md` (final decision record), `scripts/badge-art/prompts.json` and `boss-prompts.json` (prompt matrices), and the pipeline scripts under `scripts/badge-art/`.

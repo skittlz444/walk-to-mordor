@@ -29,7 +29,7 @@
 ## 6. Badge Display Island
 
 - [ ] 6.1 Create `client/src/islands/BadgeDisplayIsland.tsx`. Detect `/profile` versus `/friends/<id>` from `window.location.pathname`; fetch `/api/achievements` or `/api/achievements?userId=<id>` with `getAuthHeaders` from `client/src/utils/auth.ts`. Manage loading, data, and error states. On 401 render nothing; on 404 or other failure log and render nothing.
-- [ ] 6.2 Render grouped sections: one per collection containing at least one earned badge, ordered by `collection.index` and headed `label · earned/size`; remaining badges in a trailing section in API order. Show a delayed hexagonal skeleton state while loading, and render nothing when the summary is empty.
+- [ ] 6.2 Render grouped sections: one per collection containing at least one earned badge, ordered by `collection.index` and headed `label · earned/size`; remaining badges in a trailing section in API order. Show a delayed circular skeleton state while loading, and render nothing when the summary is empty.
 - [ ] 6.3 Render each card with the composited image, name, rank label, collection position, and a repeat-count chip when `earned_count > 1`. Validate `image_slug` against `^[a-z0-9-]+(/[a-z0-9-]+)*$` before building `/img/achievements/<slug>.webp`; hide the image on load error and show a CSS placeholder when the slug is null or invalid. Provide accessible names for rank, collection position, and repeat count.
 - [ ] 6.4 Register `BadgeDisplayIsland` in `client/src/index.tsx` in both `autoHydratedIslands` and `allIslands`, following alphabetical placement.
 - [ ] 6.5 Add `client/src/islands/BadgeDisplayIsland.test.tsx` with Vitest: profile and friend modes, collection grouping and ordering, `index/size` header text, rank label, repeat count, delayed skeletons, empty summary, error handling, null/invalid slug placeholder, image error fallback, and accessible labels.
@@ -38,7 +38,7 @@
 
 - [ ] 7.1 Add `<div data-island="BadgeDisplayIsland"></div>` to `src/renderProfilePage.ts` inside the `profile-islands` container, after the existing islands, and add `/css/badge-display.css` to its stylesheet list.
 - [ ] 7.2 Add `<div data-island="BadgeDisplayIsland"></div>` to `src/renderFriendProfilePage.ts` below `FriendProfileIsland` and add `/css/badge-display.css` to its stylesheet list.
-- [ ] 7.3 Create `public/css/badge-display.css`: responsive grid (`repeat(auto-fill, minmax(96px, 1fr))`), collection section headers and progress text, card sizing and image containment, rank and repeat chips, hexagon skeleton shimmer, and the CSS placeholder. Use design-guide variables only; no hardcoded colors.
+- [ ] 7.3 Create `public/css/badge-display.css`: responsive grid (`repeat(auto-fill, minmax(96px, 1fr))`), collection section headers and progress text, card sizing and image containment, rank and repeat chips, circular skeleton shimmer, and the CSS placeholder. Use design-guide variables only; no hardcoded colors.
 - [ ] 7.4 Extend the page-renderer tests to assert the island placeholder and stylesheet appear on both pages, and that existing islands are unchanged.
 
 ## 8. Badge Artwork Pipeline
@@ -47,10 +47,10 @@
 - [x] 8.2 Add `scripts/badge-art/generate.py`, adapted from `comfyui/user/flux3-klein-tests/run_matrix.py`. Use FLUX.3 Klein with no LoRA, 1024×1024, 16 steps, cfg 1.0, `er_sde`/`simple`, and write to `comfyui/output/badges/<asset>/<variant>-<seed>.png`. Support `--only`, `--variants`, and `--seeds`.
 - [x] 8.3 Generate a broad candidate pool per asset: twelve candidates per emblem (ten emblems × two prompt variants × six seeds = 120), eight per family frame (six frames × two variants × four seeds = 48), and eight per rank ring (four rings × two variants × four seeds = 32), for 200 candidates total. Keep the seed count configurable so a weak asset can be expanded without rerunning the whole set. Log every run (asset, variant, seed, file, wall time) to `reports/badge-art/candidates.jsonl`, and cut out frame/ring candidates with BiRefNet to transparent PNG.
 - [x] 8.4 Build a per-asset contact sheet under `reports/badge-art/sheets/` showing every candidate labelled with its variant and seed, then narrow each asset to the best two and copy them to `raw_assets/badges/shortlist/`. Record scores and reasoning in `reports/badge-art/shortlist.md`.
-- [ ] 8.5 **Review gate:** present the two shortlisted candidates per asset alongside its contact sheet, and wait for the user's final pick. Record selections in `reports/badge-art/selections.md`. Do not composite before sign-off.
-- [ ] 8.6 Build the PhotoCraft template `raw_assets/badges/badge-template.pcraft`: 1024×1024 transparent canvas, `base` smart object plus `frame` and `rank` smart objects on shared geometry. Drive it headless with `photocraft-cli mcp --automation-read-root … --automation-write-root …`, replacing smart objects per badge and exporting WebP with alpha.
-- [ ] 8.7 Composite the ten selected badges into `raw_assets/badges/final/`, then optimize to `public/img/achievements/<slug>.webp` at 512 px (`--targetKB 0`) and `<slug>-thumb.webp` at 200 px using `resize-webp.js`.
-- [ ] 8.8 Verify each committed asset: 512×512 and 200×200, alpha preserved, main image under ~120 KB, thumb under 20 KB, no text baked into art. Commit only `public/img/achievements/`; `raw_assets/` stays gitignored.
+- [x] 8.5 **Review gate:** present the two shortlisted candidates per asset alongside its contact sheet, and wait for the user's final pick. Record selections in `docs/badge-art-decisions.md`. Do not composite before sign-off.
+- [x] 8.6 Composite the selected badges in PhotoCraft through its MCP automation: open the base, place the frame, emblem, 6 o'clock boss and contact shadow, then export a 1024 px PNG with alpha. The shared `.pcraft` template was superseded.
+- [x] 8.7 Bake the selected rank bosses: fixed-rank badges carry the boss in the final composite; the four repeatable habit badges carry four rank variants. Optimize to `public/img/achievements/<slug>.webp` at 512 px and `<slug>-thumb.webp` at 200 px; repeatable variants use `<slug>--<rank>.webp`.
+- [x] 8.8 Verify each committed asset: 512×512 and 200×200, alpha preserved, main image under ~120 KB, thumb under 20 KB, no text baked into art. Commit only `public/img/achievements/`; `raw_assets/` stays gitignored.
 
 ## 9. Validation and Documentation
 

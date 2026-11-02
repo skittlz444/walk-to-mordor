@@ -151,7 +151,7 @@ Do not ask for a frame with a filled centre, an inner emblem, a gemstone in the 
 
 ## Rank prompt pattern (legacy)
 
-F1 uses a **procedural boss**, not a generated ring. These prompts exist only for the archived rank-ring masters. Do not composite a rank ring into a new badge.
+F1 uses a **selected handcrafted boss master**, not a generated ring. These prompts exist only for the archived rank-ring masters. Do not composite a rank ring into a new badge.
 
 ```
 A thin circular rank band with <3|4|5|6> evenly spaced round studs, <metal>, <finish>, enclosing a completely hollow, empty, flat black centre. <polish or patina treatment>; a thin band only, with nothing inside the opening.

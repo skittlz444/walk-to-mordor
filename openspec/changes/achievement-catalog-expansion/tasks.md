@@ -14,7 +14,7 @@
 
 ## 4. Badge Artwork (follow-up)
 
-- [ ] 4.1 Run the `achievement-image-generation` skill for the five slugs: habit family frame for the three habit badges, community family frame for the two fellowship badges, circle with a 6 o'clock rank boss and no concentric rank ring (F1 in `reports/badge-art/composite-review.md`). Verify five 512 px `<slug>.webp` and five 200 px `<slug>-thumb.webp` files under `public/img/achievements/`, each under the existing size budgets.
+- [x] 4.1 Run the `achievement-image-generation` skill for the five slugs: habit family frame for the three habit badges, community family frame for the two fellowship badges, circle with a 6 o'clock rank boss and no concentric rank ring (F1 in `docs/badge-art-decisions.md`). Verify five 512 px `<slug>.webp` and five 200 px `<slug>-thumb.webp` files under `public/img/achievements/`, each under the existing size budgets.
 - [ ] 4.2 Verify the profile grid still shows the placeholder for any badge without art and that adding the images requires no data or code change.
 
 ## 5. Award Hooks (follow-up, other owners)

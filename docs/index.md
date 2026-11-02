@@ -20,6 +20,7 @@ For documentation guidelines, see [AGENTS.md](AGENTS.md).
 
 - [Frontend Guide](frontend-guide.md) — Island hydration, component patterns, goal-content UI behavior, build tooling, and frontend development rules.
 - [Design Guide](design-guide.md) — Visual design system, CSS theming, UX patterns, and interaction conventions.
+- [Badge Art Decisions](badge-art-decisions.md) — Final family-frame, emblem, and rank-boss picks; badge asset layout and rank-variant rules.
 
 ## Operations Docs
 
