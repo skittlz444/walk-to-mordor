@@ -9,6 +9,7 @@
 - [Rank Ring — 4 components, retired under F1](finalist-review-ranks.jpg)
 - [All assets — 25 rows](finalist-review-all.jpg) (overview, 5 × 5)
 - [HTML gallery](finalist-review.html) — 512 px images, scores, rationales and selections
+- **Size sheets (primary):** [hires 512](review-sizes/emblems-hires-sheet.jpg) · [200 px](review-sizes/emblems-200-sheet.jpg) · [96 px](review-sizes/emblems-96-sheet.jpg) · [index](review-sizes/index.html)
 
 **Independent reviews:** [DeepSeek V4.1 Flash #max](art-review-expansion-deepseek.md) · [GLM-5.3-Flash #max](art-review-expansion-glm.md). Earlier 9-achievement reviews: [DeepSeek](art-review-finalists-deepseek.md) · [GLM](art-review-finalists-glm.md).
 
