@@ -49,6 +49,7 @@ export interface AchievementSummary {
   image_slug: string | null;
   badge_type: string;
   is_repeatable: boolean;
+  metadata: string | null;
   earned_count: number;
   first_earned_at: string;
   last_earned_at: string;
@@ -128,6 +129,7 @@ interface AchievementSummaryRow {
   image_slug: string | null;
   badge_type: string;
   is_repeatable: number;
+  metadata: string | null;
   earned_count: number;
   first_earned_at: string;
   last_earned_at: string;
@@ -177,6 +179,7 @@ function toSummary(row: AchievementSummaryRow): AchievementSummary {
     image_slug: row.image_slug,
     badge_type: row.badge_type,
     is_repeatable: row.is_repeatable === 1,
+    metadata: row.metadata,
     earned_count: row.earned_count,
     first_earned_at: row.first_earned_at,
     last_earned_at: row.last_earned_at,
@@ -292,7 +295,7 @@ export async function getUserAchievementSummary(
   const { results } = await db.read.prepare(
     `SELECT
        ad.id AS achievement_id, ad.slug, ad.name, ad.description, ad.image_slug,
-       ad.badge_type, ad.is_repeatable,
+       ad.badge_type, ad.is_repeatable, ad.metadata,
        COUNT(uai.id) AS earned_count,
        MIN(uai.earned_at) AS first_earned_at,
        MAX(uai.earned_at) AS last_earned_at
@@ -300,7 +303,7 @@ export async function getUserAchievementSummary(
      JOIN achievement_definitions ad ON ad.id = uai.achievement_id
      WHERE uai.user_id = ?
      GROUP BY ad.id
-     ORDER BY MAX(uai.earned_at) DESC`,
+     ORDER BY MAX(uai.earned_at) DESC, ad.id ASC`,
   ).bind(userId).all<AchievementSummaryRow>();
 
   return (results || []).map(toSummary);

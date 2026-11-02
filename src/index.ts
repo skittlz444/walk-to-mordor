@@ -44,6 +44,7 @@ import {
   validateAdminSession
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
+import { handleGetAchievements } from "./achievement-handlers";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyPositions, handlePartyProgress, handlePartyActivity, handleSendPartyMessage, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile, handleFriendPositions } from "./friends-handlers";
 import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite, handleRejectFellowshipInvite } from "./fellowship-invite-handlers";
@@ -325,6 +326,9 @@ app.get('/api/total-distance', authGuard, async (c) => {
     });
   }
 });
+
+app.get('/api/achievements', authGuard, (c) =>
+  handleGetAchievements(c.req.raw, c.get('db'), c.get('userId')!));
 
 // ── Push Notifications ──
 app.post('/api/push/subscribe', authGuard, async (c) =>

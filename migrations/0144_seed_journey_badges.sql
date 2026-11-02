@@ -31,7 +31,7 @@ VALUES
     (
         'habit-faithful-walker',
         'Faithful Walker',
-        'Walk on seven distinct days within a trailing seven-day window.',
+        'Log a walk on every day (Monday through Sunday) of a calendar week.',
         'habit-faithful-walker',
         'habit',
         1,

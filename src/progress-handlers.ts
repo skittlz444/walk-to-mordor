@@ -4,6 +4,7 @@ import {
   isValidDistance, 
 } from "./validators";
 import { validateSession } from "./auth-handlers";
+import { checkAndAwardJourneyBadges } from "./achievement-awards";
 import type { DbClient } from "./db";
 
 /** Row shape returned by active party membership query */
@@ -149,6 +150,13 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
       console.error('Failed to reset reengage_tier_sent:', resetError);
     }
 
+    // Award newly qualifying badges. Derived state: never fail the walk log.
+    try {
+      await checkAndAwardJourneyBadges(db, userId!, start);
+    } catch (awardError: unknown) {
+      console.error('Failed to award achievements after progress create:', awardError);
+    }
+
     return new Response(JSON.stringify({ 
       message: "Created successfully",
       date: start,
@@ -249,7 +257,14 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
 
     // Sync to party_progress_log for all active memberships (graceful degradation)
     await syncPartyProgressLog(db, userId!, start, Number(title), 'update');
-    
+
+    // Award newly qualifying badges. Derived state: never fail the walk log.
+    try {
+      await checkAndAwardJourneyBadges(db, userId!, start);
+    } catch (awardError: unknown) {
+      console.error('Failed to award achievements after progress update:', awardError);
+    }
+
     return new Response(JSON.stringify({ 
       message: "Updated successfully",
       date: start,

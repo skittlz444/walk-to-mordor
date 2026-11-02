@@ -75,6 +75,7 @@ function applyCatalogSeedsTwice(): SeedRun {
     const seeds = [
       readMigration('0144_seed_journey_badges.sql'),
       readMigration('0145_seed_catalog_expansion.sql'),
+      readMigration('0146_update_faithful_walker_description.sql'),
     ];
 
     for (const seed of seeds) {
@@ -101,7 +102,7 @@ function applyCatalogSeedsTwice(): SeedRun {
   }
 }
 
-describe('achievement catalog seed (0144 + 0145)', () => {
+describe('achievement catalog seed (0144 + 0145 + 0146)', () => {
   let run: SeedRun;
   let rows: SeedRow[];
   let bySlug: Map<string, SeedRow>;
@@ -217,6 +218,7 @@ describe('achievement catalog seed (0144 + 0145)', () => {
     expect(firstSteps.threshold_km).toBeUndefined();
 
     expect(bySlug.get('habit-faithful-walker')?.is_repeatable).toBe(1);
+    expect(bySlug.get('habit-faithful-walker')?.description).toContain('calendar week');
     expect(faithfulWalker).toMatchObject({
       storyline: null,
       rank_thresholds: [1, 4, 12, 26],
@@ -225,5 +227,27 @@ describe('achievement catalog seed (0144 + 0145)', () => {
     });
     expect(faithfulWalker.rank).toBeUndefined();
     expect(faithfulWalker.collection).toBeUndefined();
+  });
+
+  it('updates the old Faithful Walker description on existing databases', () => {
+    const db = new DatabaseSync(':memory:');
+    try {
+      db.exec(readMigration('0142_create_achievement_definitions.sql'));
+      db.exec(readMigration('0144_seed_journey_badges.sql'));
+      db.exec(`
+        UPDATE achievement_definitions
+        SET description = 'Walk on seven distinct days within a trailing seven-day window.'
+        WHERE slug = 'habit-faithful-walker'
+      `);
+
+      db.exec(readMigration('0146_update_faithful_walker_description.sql'));
+
+      const row = db
+        .prepare('SELECT description FROM achievement_definitions WHERE slug = ?')
+        .get('habit-faithful-walker') as { description: string };
+      expect(row.description).toContain('calendar week');
+    } finally {
+      db.close();
+    }
   });
 });
