@@ -92,6 +92,7 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 - View-only mode never acknowledges and never fetches pending awards. It preserves any in-memory pending queue and resumes it after closing. Friend-profile badges are always view-only.
 - Artwork: 200 px thumbnail first, then the 1024 px `full/<name>.webp` crossfades in. Repeatables use the **awarding** rank label in acknowledge mode (`<image_slug>--<rank_label>`) and the grid's **current** rank in view-only mode; fixed-rank badges use `<image_slug>`. Apply the badge grid's slug validation and fallback chain; invalid artwork renders text only.
 - Defer the acknowledge modal only while another real modal dialog is open; the map page is not a modal and never blocks it.
+- Mobile-first: base styles are single-column with a full-width dialog and tight padding; `@media (min-width: 641px)` opts into the two-column desktop layout and wider dialog. Keep the overlay `box-sizing: border-box` and `100dvh` so padding can never push it past the viewport.
 - Respect `prefers-reduced-motion` — disable entrance and celebration transitions. Style with design variables only; never hardcode colors.
 - Stylesheet: `public/css/badge-award.css`, loaded globally by `src/renderLayout.ts`.
 

@@ -109,7 +109,7 @@ An edge case the event flow handles explicitly: activating a grid card while the
 - Marker markup reuses the shared section: `modal-overlay` + `modal-dialog` with `role="dialog"`, `aria-modal="true"`, `aria-label="<Badge name>"`; class names live in a new `public/css/badge-award.css`, which uses `var(--bg-modal-overlay)`, `var(--bg-secondary)`, `var(--text-primary)`, `var(--accent-gold)`, and existing spacing variables — no hardcoded hex values (design-guide rule).
 - Escape closes (with dismiss semantics in acknowledge mode); overlay activation closes; focus moves into the dialog on open (primary action first) and is restored to the activating card when mode came from the grid — mirroring `DrawerIsland`'s focus management.
 - `@media (prefers-reduced-motion: reduce)` in `badge-award.css` disables the entrance/pop transitions entirely (`palantir.css` is the in-repo precedent). No animation-library dependency is introduced; small CSS transitions only.
-- Mobile: dialog width caps at ~90% with artwork scaling to fit, content columns stack vertically, and `.modal-overlay` z-index conventions apply so the badge modal sits alongside existing modal layers rather than fighting them.
+- Mobile-first: base styles use a full-width dialog within the overlay padding with the content stacked vertically; `@media (min-width: 641px)` adds the two-column layout and wider dialog. The overlay is `box-sizing: border-box`, sized to `100dvh`, and clips overflow so it can never exceed the viewport. `.modal-overlay` z-index conventions apply so the badge modal sits alongside existing modal layers rather than fighting them.
 
 ### Migration and rollback
 
