@@ -86,11 +86,11 @@
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "^2.0.0",
-    "@preact/signals": "^2.11.3",
+    "@preact/signals": "^2.11.4",
     "dompurify": "^3.4.17",
-    "hono": "^4.13.13",
+    "hono": "^4.13.14",
     "konva": "^10.9.0",
-    "marked": "^18.1.1",
-    "preact": "^11.0.1"
+    "marked": "^18.1.2",
+    "preact": "^11.1.0"
   }
 }
