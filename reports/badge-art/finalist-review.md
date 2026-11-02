@@ -2,6 +2,8 @@
 
 **15 achievements**, 6 family frames and 4 rank rings — 25 assets, 50 finalists. Each listed asset has two finalists. The rank-ring rows are **reference only — F1 removes the rank ring** in favour of the 6 o'clock rank boss. The gold ★ is the current recommendation, not a decision.
 
+**Family frames locked 2026-11-02:** all six recommended frames. Emblems remain pending. See `decisions.md` and `selections.md`.
+
 ## Review sheets
 
 - [Emblem — 15 achievements](finalist-review-emblems.jpg)
