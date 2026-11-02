@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!--
+  Profile VIEW page with the shared AvatarPickerModal OPEN — `profile-view-settings` change.
+  Identical to view.html, plus the modal overlay (reusing the app's
+  .profile-dialog-overlay/.profile-dialog chrome) and proposed picker classes
+  from mockups.css.
+
+  Serve the repo root statically, then open:
+  /openspec/changes/profile-view-settings/mockups/avatar-modal.html
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Walk to Mordor - Profile (avatar picker open)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
+  <link href="/css/main.css" rel="stylesheet" />
+  <link href="/css/drawer.css" rel="stylesheet" />
+  <link href="/css/party.css" rel="stylesheet" />
+  <link href="/css/friends.css" rel="stylesheet" />
+  <link href="/css/profile.css" rel="stylesheet" />
+  <link href="/css/badge-display.css" rel="stylesheet" />
+  <link href="mockups.css" rel="stylesheet" />
+</head>
+<body>
+  <header>
+    <div class="header-controls">
+      <button class="menu-icon" type="button" aria-label="Menu"><i class="fas fa-bars" aria-hidden="true"></i></button>
+    </div>
+    <h1>Profile</h1>
+  </header>
+
+  <main>
+    <div class="party-page">
+      <!-- ProfileViewIsland (dimmed behind the modal) -->
+      <div class="party-card friend-profile-header">
+        <button class="profile-view-avatar-trigger" type="button" aria-label="Change avatar for FrodoBaggins">
+          <span class="avatar" style="width:128px;height:128px;border-radius:50%;overflow:hidden;display:block;">
+            <img src="/img/avatars/frodo.webp" alt="FrodoBaggins" width="128" height="128" style="display:block;width:100%;height:100%;object-fit:cover;" />
+          </span>
+          <span class="profile-view-avatar-edit" aria-hidden="true"><i class="fas fa-camera"></i></span>
+        </button>
+        <h2 class="friend-profile-username">FrodoBaggins</h2>
+
+        <div class="friend-profile-stats">
+          <div class="friend-profile-stat">
+            <span class="friend-profile-stat__value">2412.50 km</span>
+            <span class="friend-profile-stat__label">Total Distance</span>
+          </div>
+          <div class="friend-profile-stat">
+            <span class="friend-profile-stat__value">August 15, 2024</span>
+            <span class="friend-profile-stat__label">Member Since</span>
+          </div>
+        </div>
+
+        <div class="profile-view-heading">
+          <i class="fas fa-map-marker-alt" aria-hidden="true" style="color: var(--accent-gold);"></i>
+          Heading to: <strong>Reach northern edge of Ithilien</strong>
+        </div>
+        <div class="profile-view-chip">
+          <i class="fas fa-route" aria-hidden="true"></i>
+          Journey: Frodo &amp; Sam
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- AvatarPickerModal (open over the view page) -->
+  <div class="profile-dialog-overlay">
+    <div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="avatar-picker-title">
+      <h3 id="avatar-picker-title">
+        Choose Avatar
+        <button class="picker-close" type="button" aria-label="Close avatar picker"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </h3>
+
+      <!-- Current-avatar preview row: lives OUTSIDE the gallery grid and stays
+           visible while GET /api/avatars loads (and on gallery error/Retry) -->
+      <div class="picker-current">
+        <img src="/img/avatars/frodo.webp" alt="" width="56" height="56" />
+        <span class="picker-current__label">
+          <span class="picker-current__title">Current</span>
+          <span class="picker-current__avatar">frodo</span>
+        </span>
+      </div>
+
+      <div class="picker-grid" role="radiogroup" aria-label="Choose avatar">
+        <button class="picker-option" type="button" role="radio" aria-checked="true" aria-label="frodo"><img src="/img/avatars/frodo.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="samwise"><img src="/img/avatars/samwise.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="gandalf-grey"><img src="/img/avatars/gandalf-grey.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="aragorn"><img src="/img/avatars/aragorn.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="legolas"><img src="/img/avatars/legolas.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="gimli"><img src="/img/avatars/gimli.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="galadriel"><img src="/img/avatars/galadriel.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="elrond"><img src="/img/avatars/elrond.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="eowyn"><img src="/img/avatars/eowyn.webp" alt="" width="64" height="64" /></button>
+        <button class="picker-option" type="button" role="radio" aria-checked="false" aria-label="treebeard"><img src="/img/avatars/treebeard.webp" alt="" width="64" height="64" /></button>
+      </div>
+
+      <div class="picker-status" role="status">Saved</div>
+
+      <div class="picker-actions">
+        <button type="button" class="btn btn-secondary">Use initials</button>
+        <button type="button" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

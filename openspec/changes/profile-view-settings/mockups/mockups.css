@@ -1,0 +1,324 @@
+/*
+ * Proposed shared styles for the profile view / settings split
+ * (would become `public/css/profile-view.css` at implementation time).
+ * Mockup-only: high-fidelity design artifact for the `profile-view-settings`
+ * change — not production CSS, not referenced by app code.
+ * Uses only main.css design tokens so the mockups render against real variables.
+ */
+
+/* ── View hero: avatar as a tappable "Change avatar" button ───────────── */
+.profile-view-avatar-trigger {
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  border: 3px solid var(--border-gray);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.profile-view-avatar-trigger:hover,
+.profile-view-avatar-trigger:focus-visible {
+  border-color: var(--accent-gold);
+  transform: scale(1.02);
+}
+
+.profile-view-avatar-trigger:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 3px;
+}
+
+.profile-view-avatar-edit {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  color: #2a1d00;
+  font-size: 0.85rem;
+  border: 2px solid var(--bg-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ── View hero: journey + goal lines ──────────────────────────────────── */
+.profile-view-heading {
+  margin-top: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.profile-view-heading strong {
+  color: var(--text-primary);
+}
+
+.profile-view-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  margin-top: 0.6rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--gold-border-light);
+  background: var(--gold-glow-light);
+  color: var(--accent-gold);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ── View page: Settings CTA ──────────────────────────────────────────── */
+.profile-view-cta,
+.profile-view-cta .party-btn {
+  /* party-btn has horizontal padding; border-box keeps a full-width CTA
+     inside the page wrapper so it can never overflow the viewport. */
+  box-sizing: border-box;
+}
+
+.profile-view-cta {
+  margin: 0 0 1rem;
+}
+
+.profile-view-cta .party-btn i {
+  margin-right: 0.4em;
+}
+
+/* ── View page: loading skeleton for the hero ─────────────────────────── */
+.profile-view-skeleton {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.profile-view-skeleton-avatar {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  margin: 0 auto;
+  background: linear-gradient(100deg, var(--bg-dark-alt) 20%, var(--hover-overlay) 40%, var(--bg-dark-alt) 60%);
+  background-size: 220% 100%;
+  animation: badge-skeleton-shimmer 1.4s linear infinite;
+}
+
+.profile-view-skeleton-text {
+  height: 1rem;
+  border-radius: 4px;
+  background: linear-gradient(100deg, var(--bg-dark-alt) 20%, var(--hover-overlay) 40%, var(--bg-dark-alt) 60%);
+  background-size: 220% 100%;
+  animation: badge-skeleton-shimmer 1.4s linear infinite;
+}
+
+.profile-view-skeleton-stat {
+  height: 2.6rem;
+  border-radius: 6px;
+  background: linear-gradient(100deg, var(--bg-dark-alt) 20%, var(--hover-overlay) 40%, var(--bg-dark-alt) 60%);
+  background-size: 220% 100%;
+  animation: badge-skeleton-shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-view-skeleton-avatar,
+  .profile-view-skeleton-text,
+  .profile-view-skeleton-stat {
+    animation: none;
+  }
+}
+
+/* ── Settings page: back row + avatar modal trigger ───────────────────── */
+.profile-back-row {
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.profile-back-link {
+  color: var(--accent-blue);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  min-height: 44px;
+  padding: 0.25rem 0.25rem;
+}
+
+.profile-back-link:hover {
+  text-decoration: underline;
+}
+
+.profile-view-modal-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  margin: 0 auto;
+  padding: 0.55rem 1.1rem;
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--border-gray);
+  background: var(--bg-dark-alt);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.profile-view-modal-trigger:hover,
+.profile-view-modal-trigger:focus-visible {
+  border-color: var(--accent-gold);
+}
+
+/* ── Shared avatar picker modal (opens from view + settings) ──────────── */
+.picker-current {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: var(--bg-dark-alt);
+}
+
+.picker-current img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent-gold);
+}
+
+.picker-current__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.picker-current__title {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.picker-current__avatar {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.picker-dialog {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.picker-dialog h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--accent-gold);
+  margin: 0 0 0.75rem;
+}
+
+.picker-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.picker-close:hover,
+.picker-close:focus-visible {
+  color: var(--text-primary);
+  background: var(--hover-overlay);
+}
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 64px);
+  justify-content: center;
+  gap: 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.picker-option {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid transparent;
+  background: var(--bg-surface, #2a2a2a);
+  padding: 0;
+  transition: border-color 0.15s ease;
+}
+
+.picker-option:hover,
+.picker-option:focus-visible {
+  border-color: var(--border-medium);
+  outline: none;
+}
+
+.picker-option[aria-checked='true'] {
+  border-color: var(--accent-gold);
+}
+
+.picker-option img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.picker-status {
+  font-size: 0.85em;
+  margin: 0.25rem 0;
+  min-height: 1.2em;
+  color: var(--status-success-light, #51cf66);
+}
+
+.picker-status.saving {
+  color: var(--text-muted);
+}
+
+.picker-status.error {
+  color: var(--status-warning);
+}
+
+.picker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* ── Settings footer stacks at small widths ───────────────────────────── */
+@media (max-width: 480px) {
+  .profile-footer-btns {
+    flex-direction: column;
+  }
+
+  .profile-footer-btns button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
