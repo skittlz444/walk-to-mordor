@@ -93,9 +93,10 @@ def load_matrix(path):
                 raise ValueError(f"{asset_id}: every variant needs an id and a prompt")
 
     seeds = data.get("seeds")
-    if not isinstance(seeds, dict) or any(group not in seeds for group in GROUPS):
-        raise ValueError(f"{path}: seeds must define {', '.join(GROUPS)}")
-    for group in GROUPS:
+    used_groups = {asset["group"] for asset in data["assets"]}
+    if not isinstance(seeds, dict) or any(group not in seeds for group in used_groups):
+        raise ValueError(f"{path}: seeds must define {', '.join(sorted(used_groups))}")
+    for group in used_groups:
         group_seeds = seeds[group]
         if not group_seeds or any(not isinstance(s, int) for s in group_seeds):
             raise ValueError(f"seeds: {group} must be a non-empty list of integers")

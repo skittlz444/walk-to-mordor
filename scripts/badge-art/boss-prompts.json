@@ -1,0 +1,93 @@
+{
+  "style_prefix": "Macro product photograph of a single hand-forged fantasy badge boss, a small medallion designed to be set into a badge frame at 6 o'clock, dark iron bezel, hand-chased metalwork, hammer marks, patina, organic tool marks, central gemstone cabochon, centered, front view, isolated on a flat pure black background, studio lighting, high detail.",
+  "style_suffix": "No text, no letters, no numbers, no runes, no watermark, no signature, no full badge, no ring, no frame, no chain, no extra objects; the boss fills the frame; strong readable silhouette; handcrafted, slightly irregular, not vector art.",
+  "seeds": {
+    "rank": [112358, 271828, 314159, 161803, 141421, 173205]
+  },
+  "assets": [
+    {
+      "id": "rank/boss-bronze",
+      "slug": "boss-bronze",
+      "image_slug": "boss-bronze",
+      "name": "Bronze Rank Boss",
+      "group": "rank",
+      "family": "rank",
+      "rank": 1,
+      "canvas": 1024,
+      "target_outer_px": 880,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A round bronze cabochon boss with a simple hand-hammered dark iron bezel, warm copper-bronze metal, aged patina, a small amber gem, hand-chased concentric tool marks, subtle asymmetry. Lightly polished, handcrafted."
+        },
+        {
+          "id": "b",
+          "prompt": "A round bronze cabochon boss with a heavily worn hand-forged iron bezel, deep copper patina, hammered surface, a small amber gem, hand-cut notch detail; aged and handcrafted."
+        }
+      ]
+    },
+    {
+      "id": "rank/boss-silver",
+      "slug": "boss-silver",
+      "image_slug": "boss-silver",
+      "name": "Silver Rank Boss",
+      "group": "rank",
+      "family": "rank",
+      "rank": 2,
+      "canvas": 1024,
+      "target_outer_px": 880,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "An octagonal silver cabochon boss with a hand-engraved dark iron bezel, neutral polished silver, fine radiating hand-chased rays, a pale grey-white gem, crisp but handmade."
+        },
+        {
+          "id": "b",
+          "prompt": "An octagonal silver cabochon boss with a hammered dark iron bezel, softly aged silver, hand-engraved rays, a smoky grey gem, tool marks and patina."
+        }
+      ]
+    },
+    {
+      "id": "rank/boss-gold",
+      "slug": "boss-gold",
+      "image_slug": "boss-gold",
+      "name": "Gold Rank Boss",
+      "group": "rank",
+      "family": "rank",
+      "rank": 3,
+      "canvas": 1024,
+      "target_outer_px": 880,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A hexagonal gold cabochon boss with an ornate hand-chased dark iron bezel, deep gold filigree and tiny beads, a honey-gold gem, rich but handmade; higher-tier ornament."
+        },
+        {
+          "id": "b",
+          "prompt": "A hexagonal gold cabochon boss with a hand-forged blackened steel bezel, antique gold filigree, granulated beads, a deep amber gem, worn patina, higher-tier ornament."
+        }
+      ]
+    },
+    {
+      "id": "rank/boss-mithril",
+      "slug": "boss-mithril",
+      "image_slug": "boss-mithril",
+      "name": "Mithril Rank Boss",
+      "group": "rank",
+      "family": "rank",
+      "rank": 4,
+      "canvas": 1024,
+      "target_outer_px": 880,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A four-point star mithril cabochon boss with an elegant hand-engraved dark iron bezel, pale blue-white elven metal, fine silver-white engraving, a cool blue gem, a faint blue glow, ornate but restrained; highest tier."
+        },
+        {
+          "id": "b",
+          "prompt": "A four-point star mithril cabochon boss with a hand-forged dark steel bezel, pale blue-silver metal, delicate elven vine engraving, a deep cyan gem, a soft blue halo, aged patina; highest tier."
+        }
+      ]
+    }
+  ]
+}

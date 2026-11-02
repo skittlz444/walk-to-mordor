@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-02",
+  "frames": {
+    "frame/journey": "a-271828",
+    "frame/habit": "a-112358",
+    "frame/challenge": "a-112358",
+    "frame/book": "a-271828",
+    "frame/community": "a-314159",
+    "frame/field-guide": "a-314159"
+  },
+  "emblems": {
+    "emblem/habit-first-steps": "b-141421",
+    "emblem/journey-frodo-sam-buckleberry-ferry": "b-141421",
+    "emblem/journey-frodo-sam-weathertop-survivor": "b-161803",
+    "emblem/journey-frodo-sam-through-khazad-dum": "b-112358",
+    "emblem/journey-frodo-sam-lothlorien-guest": "a-314159",
+    "emblem/journey-frodo-sam-rauros-parting": "b-161803",
+    "emblem/journey-frodo-sam-mordor-threshold": "b-314159",
+    "emblem/journey-frodo-sam-home-at-sunset": "b-161803",
+    "emblem/habit-faithful-walker": "a-173205",
+    "emblem/journey-frodo-sam-glittering-caves": "a-173205",
+    "emblem/habit-weekend-warrior": "b-271828",
+    "emblem/habit-steady-month": "a-271828",
+    "emblem/habit-hundred-week": "b-161803",
+    "emblem/community-fellowship-founder": "b-271828",
+    "emblem/community-good-company": "b-271828"
+  },
+  "bosses": null,
+  "notes": "Emblems selected by the user on 2026-11-02. Frames locked. Rank boss layer pending the handcrafted boss review; final base composites use emblem + locked frame + dark well."
+}
