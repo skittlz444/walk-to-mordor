@@ -2,19 +2,21 @@
 """Export finalist review images at native, production and actual-card sizes.
 
 Groups:
-  emblems - 15 achievements
-  frames  - 6 family borders
-  ranks   - 4 rank rings (reference only under F1)
+  emblems      - 15 achievements
+  frames       - 6 family borders
+  rank bosses  - the four F1 6 o'clock rank badges (bronze/silver/gold/mithril)
 
-Individual sizes:
-  1024 - native processed master (full-emblem / full-frame inspection)
+Individual badge/frame sizes:
+  1024 - native processed master (full-detail inspection)
    200 - production thumbnail minimum
     96 - card-size stress test
 
+Rank bosses are rendered from the F1v2 procedural source at 512/200/96.
+
 Sheets (primary):
-  <group>-hires-sheet.jpg - 512 px per candidate
-  <group>-200-sheet.jpg   - 200 px
-  <group>-96-sheet.jpg    - 96 px
+  emblems-hires-sheet.jpg / emblems-200-sheet.jpg / emblems-96-sheet.jpg
+  frames-hires-sheet.jpg  / frames-200-sheet.jpg  / frames-96-sheet.jpg
+  rank-bosses-hires-sheet.jpg / rank-bosses-200-sheet.jpg / rank-bosses-96-sheet.jpg
 """
 from __future__ import annotations
 
@@ -23,6 +25,15 @@ import json
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
+
+try:
+    from composite_badges import render_rank_boss_v2
+except ImportError as exc:  # numpy is required by the boss renderer
+    raise SystemExit(
+        "Run this with the ComfyUI venv:\n"
+        "  /run/media/skittlz/LinuxStorageSSD/github/comfyui/venv/bin/python "
+        "scripts/badge-art/export_review_sizes.py"
+    ) from exc
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -37,12 +48,14 @@ GOLD2 = "#ffe8a3"
 TEXT = "#e6edf3"
 MUTED = "#8b94a7"
 SIZES = (1024, 200, 96)
+BOSS_SIZES = (512, 200, 96)
 RANK = {1: "Bronze", 2: "Silver", 3: "Gold", 4: "Mithril"}
-GROUPS = {
-    "emblem": ("Emblems", "Achievements"),
-    "frame": ("Family frames", "Borders"),
-    "rank": ("Rank rings", "Components — reference only"),
-}
+BOSS_RANKS = (
+    ("bronze", "Bronze", "round cabochon"),
+    ("silver", "Silver", "octagon cut"),
+    ("gold", "Gold", "hexagon cut"),
+    ("mithril", "Mithril", "star cut + halo"),
+)
 SHORT_NAMES = {
     "First Steps": "First Steps",
     "Across the Buckleberry Ferry": "Buckleberry",
@@ -82,8 +95,6 @@ def rank_text(asset: dict) -> str:
 def kind_label(asset: dict) -> str:
     if asset["group"] == "frame":
         return f"Family frame · {asset['family']}"
-    if asset["group"] == "rank":
-        return f"{RANK.get(asset.get('rank'), '—')} · rank ring"
     return f"{rank_text(asset)} · {asset['family']}"
 
 
@@ -97,6 +108,12 @@ def flatten(path: Path, size: int) -> Image.Image:
     return canvas.convert("RGB")
 
 
+def flatten_tile(image: Image.Image, size: int) -> Image.Image:
+    canvas = Image.new("RGBA", (size, size), BG)
+    canvas.alpha_composite(image)
+    return canvas.convert("RGB")
+
+
 def load_data():
     prompts = json.loads(PROMPTS.read_text())
     shortlist = json.loads(SHORTLIST.read_text())
@@ -104,6 +121,8 @@ def load_data():
     rows = []
     for asset_id, entry in shortlist["assets"].items():
         asset = assets[asset_id]
+        if asset["group"] == "rank":
+            continue  # rank rings are retired under F1; bosses replace them
         finalists = []
         for candidate in entry["finalists"]:
             name = candidate["candidate"]
@@ -126,6 +145,15 @@ def export(rows, out_dir: Path):
                 image = flatten(finalist["path"], size)
                 image.save(out_dir / str(size) / f"{name}.webp", "WEBP",
                            quality=92 if size >= 512 else 88, method=6)
+
+
+def export_bosses(out_dir: Path):
+    for size in BOSS_SIZES:
+        directory = out_dir / "rank-bosses" / str(size)
+        directory.mkdir(parents=True, exist_ok=True)
+        for rank, _, _ in BOSS_RANKS:
+            image = flatten_tile(render_rank_boss_v2(rank, out_size=size), size)
+            image.save(directory / f"{rank}.webp", "WEBP", quality=92, method=6)
 
 
 def build_group_sheet(rows, out_path: Path, group: str, image_px: int, cols: int,
@@ -186,8 +214,7 @@ def build_group_small_sheet(rows, out_path: Path, group: str, cols: int,
         x = gap + col * (cell_w + gap)
         y = 76 + line * (cell_h + 14)
         asset = row["asset"]
-        name = SHORT_NAMES.get(asset["name"], asset["name"])
-        draw.text((x, y), name, font=font(10, True), fill=TEXT)
+        draw.text((x, y), SHORT_NAMES.get(asset["name"], asset["name"]), font=font(10, True), fill=TEXT)
         draw.text((x, y + 13), kind_label(asset), font=font(8), fill=MUTED)
         for j, finalist in enumerate(row["finalists"]):
             image = flatten(finalist["path"], image_px)
@@ -205,7 +232,29 @@ def build_group_small_sheet(rows, out_path: Path, group: str, cols: int,
     return sheet.size
 
 
-def write_index(out_dir: Path, sheets: dict):
+def build_boss_sheet(out_path: Path, image_px: int, title: str, note: str):
+    cols, gap = 4, 24 if image_px >= 512 else 18
+    width = cols * image_px + (cols + 1) * gap
+    height = 86 + image_px + (54 if image_px >= 512 else 38)
+    sheet = Image.new("RGB", (width, height), SHEET_BG)
+    draw = ImageDraw.Draw(sheet)
+    draw.text((gap, 18), title, font=font(26 if image_px >= 512 else 20, True), fill=TEXT)
+    draw.text((gap, 50), note, font=font(13 if image_px >= 512 else 9), fill=MUTED)
+    for index, (rank, label, cut) in enumerate(BOSS_RANKS):
+        x = gap + index * (image_px + gap)
+        y = 86
+        image = flatten_tile(render_rank_boss_v2(rank, out_size=image_px), image_px)
+        sheet.paste(image, (x, y))
+        draw.rectangle([x - 1, y - 1, x + image_px, y + image_px], outline=GOLD, width=2)
+        draw.text((x, y + image_px + 5), label, font=font(14 if image_px >= 512 else 10, True), fill=TEXT)
+        draw.text((x, y + image_px + (23 if image_px >= 512 else 18)), cut,
+                  font=font(11 if image_px >= 512 else 8), fill=MUTED)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(out_path, "JPEG", quality=92, subsample=0, optimize=True)
+    return sheet.size
+
+
+def write_index(out_dir: Path, sheets: dict, boss_sheets: dict):
     def block(group: str, label: str, anchor: str, note: str) -> str:
         data = sheets[group]
         return f"""
@@ -221,6 +270,22 @@ def write_index(out_dir: Path, sheets: dict):
   <h3>96 px card-size stress test</h3>
   <a href="{data['96']['file']}"><img class="shot small" src="{data['96']['file']}" alt="{label} 96 px sheet"></a>
   <p class="dim">{data['96']['size'][0]}×{data['96']['size'][1]} — view at 100%</p>
+</section>"""
+
+    boss_block = f"""
+<section id="bosses">
+  <h2>Rank bosses — F1 6 o'clock</h2>
+  <p>Bronze round · Silver octagon · Gold hexagon · Mithril star + halo. The rank label on the card is authoritative; the boss is the visual cue. Rank rings are retired and not included.</p>
+  <h3>Hires — 512 px boss</h3>
+  <a href="{boss_sheets['hires']['file']}"><img class="shot" src="{boss_sheets['hires']['file']}" alt="Rank bosses hires sheet"></a>
+  <p class="dim">{boss_sheets['hires']['size'][0]}×{boss_sheets['hires']['size'][1]}</p>
+  <h3>200 px thumbnail</h3>
+  <a href="{boss_sheets['200']['file']}"><img class="shot" src="{boss_sheets['200']['file']}" alt="Rank bosses 200 px sheet"></a>
+  <p class="dim">{boss_sheets['200']['size'][0]}×{boss_sheets['200']['size'][1]}</p>
+  <h3>96 px card-size stress test</h3>
+  <a href="{boss_sheets['96']['file']}"><img class="shot small" src="{boss_sheets['96']['file']}" alt="Rank bosses 96 px sheet"></a>
+  <p class="dim">{boss_sheets['96']['size'][0]}×{boss_sheets['96']['size'][1]} — view at 100%</p>
+  <p>In-context comparison: <a href="../rank-boss-v2.jpg">rank-boss-v2.jpg</a>.</p>
 </section>"""
 
     html = f"""<!doctype html>
@@ -243,14 +308,14 @@ def write_index(out_dir: Path, sheets: dict):
   footer{{border-top:1px solid #2b3440;padding:18px 24px 40px;color:#8b94a7;font-size:13px}}
 </style></head><body>
 <header><h1>Badge finalist review — sheets</h1>
-<p>The sheets are the primary review. <b>Hires</b> is 512 px per candidate; <b>200</b> is the minimum thumbnail; <b>96</b> is the card-size stress test. Native 1024 files are in <code>1024/</code> for full-detail inspection.</p>
-<nav><a href="#emblems">Emblems</a><a href="#frames">Family frames</a><a href="#ranks">Rank rings</a><a href="1024/">Native 1024 files</a><a href="200/">200 px files</a><a href="96/">96 px files</a><a href="README.md">README</a></nav></header>
+<p>The sheets are the primary review. <b>Hires</b> is 512 px per candidate / per boss; <b>200</b> is the minimum thumbnail; <b>96</b> is the card-size stress test. Native 1024 badge/frame files are in <code>1024/</code> for full-detail inspection.</p>
+<nav><a href="#emblems">Emblems</a><a href="#frames">Family frames</a><a href="#bosses">Rank bosses</a><a href="1024/">Native 1024 files</a><a href="200/">200 px files</a><a href="96/">96 px files</a><a href="README.md">README</a></nav></header>
 <main>
 {block("emblem", "Emblems — 15 achievements", "emblems", "Two finalist candidates per achievement. 512 px per candidate on the hires sheet; 200 px is the production thumbnail minimum; 96 px is the stress test.")}
 {block("frame", "Family frames — 6 borders", "frames", "The reusable border families. These are not achievements; they are the chrome that sits around the emblem.")}
-{block("rank", "Rank rings — 4 components, reference only", "ranks", "F1 removes the rank ring in favour of the 6 o'clock rank boss. These sheets are kept for comparison only; the current rank treatment is <a href='../rank-boss-v2.jpg'>rank-boss-v2.jpg</a>.")}
+{boss_block}
 </main>
-<footer>50 finalists / 25 assets. All review images are flattened onto #14181f. Production 512 px mains remain in <code>reports/badge-art/finalists/</code>; native 1024 files are for inspection.</footer>
+<footer>42 badge/frame finalists + 4 rank bosses. All review images are flattened onto #14181f. Production 512 px mains remain in <code>reports/badge-art/finalists/</code>; native 1024 files are for inspection.</footer>
 </body></html>"""
     (out_dir / "index.html").write_text(html, encoding="utf-8")
 
@@ -262,6 +327,15 @@ def main():
     out_dir = args.out_dir
     rows = load_data()
     export(rows, out_dir)
+    export_bosses(out_dir)
+
+    # Remove retired rank-ring individual files and old sheets, if present.
+    for size in SIZES:
+        for rank in ("bronze", "silver", "gold", "mithril"):
+            for path in (out_dir / str(size)).glob(f"{rank}--*.webp"):
+                path.unlink()
+    for path in out_dir.glob("ranks-*-sheet.jpg"):
+        path.unlink()
 
     sheets = {
         "emblem": {
@@ -292,22 +366,22 @@ def main():
                                                    "Family frame finalists — 6 borders",
                                                    "True 96 px card size · gold border + ★ = recommended")},
         },
-        "rank": {
-            "hires": {"file": "ranks-hires-sheet.jpg",
-                       "size": build_group_sheet(rows, out_dir / "ranks-hires-sheet.jpg", "rank", 512, 2, 24, 60,
-                                                 "Rank ring finalists — 4 components (reference only)",
-                                                 "F1 removes the rank ring; these are kept for comparison · ★ = recommended")},
-            "200": {"file": "ranks-200-sheet.jpg",
-                    "size": build_group_sheet(rows, out_dir / "ranks-200-sheet.jpg", "rank", 200, 2, 20, 52,
-                                              "Rank ring finalists — 4 components (reference only)",
-                                              "F1 removes the rank ring; reference only · 200 px thumbnail")},
-            "96": {"file": "ranks-96-sheet.jpg",
-                   "size": build_group_small_sheet(rows, out_dir / "ranks-96-sheet.jpg", "rank", 2,
-                                                   "Rank ring finalists — 4 components (reference only)",
-                                                   "F1 removes the rank ring; reference only · 96 px card size")},
-        },
     }
-    write_index(out_dir, sheets)
+    boss_sheets = {
+        "hires": {"file": "rank-bosses-hires-sheet.jpg",
+                  "size": build_boss_sheet(out_dir / "rank-bosses-hires-sheet.jpg", 512,
+                                           "Rank bosses — F1 6 o'clock",
+                                           "Bronze round · Silver octagon · Gold hexagon · Mithril star + halo")},
+        "200": {"file": "rank-bosses-200-sheet.jpg",
+                "size": build_boss_sheet(out_dir / "rank-bosses-200-sheet.jpg", 200,
+                                         "Rank bosses — F1 6 o'clock",
+                                         "Bronze round · Silver octagon · Gold hexagon · Mithril star + halo")},
+        "96": {"file": "rank-bosses-96-sheet.jpg",
+               "size": build_boss_sheet(out_dir / "rank-bosses-96-sheet.jpg", 96,
+                                        "Rank bosses — F1 6 o'clock",
+                                        "Card-size stress · Bronze / Silver / Gold / Mithril")},
+    }
+    write_index(out_dir, sheets, boss_sheets)
     readme = [
         "# Finalist review sizes",
         "",
@@ -315,11 +389,14 @@ def main():
         "",
         "| Folder | Size | Use |",
         "|---|---|---|",
-        "| `1024/` | 1024×1024 | native processed master, for full-detail inspection |",
+        "| `1024/` | 1024×1024 | native emblems/frames, for full-detail inspection |",
         "| `200/` | 200×200 | production thumbnail minimum |",
         "| `96/` | 96×96 | card-size stress test only — very small |",
+        "| `rank-bosses/512/` | 512×512 | high-res F1 rank boss |",
+        "| `rank-bosses/200/` | 200×200 | thumbnail boss |",
+        "| `rank-bosses/96/` | 96×96 | card-size boss |",
         "",
-        "The production 512 px main images remain in `reports/badge-art/finalists/` (and become `public/img/achievements/` later); they are not duplicated here.",
+        "The production 512 px main images remain in `reports/badge-art/finalists/`; they are not duplicated here.",
         "",
         "## Sheets (primary)",
         "",
@@ -333,22 +410,23 @@ def main():
         f"- `frames-200-sheet.jpg` — {sheets['frame']['200']['size'][0]}×{sheets['frame']['200']['size'][1]}, 200 px.",
         f"- `frames-96-sheet.jpg` — {sheets['frame']['96']['size'][0]}×{sheets['frame']['96']['size'][1]}, 96 px.",
         "",
-        "### Rank rings (reference only)",
-        f"- `ranks-hires-sheet.jpg` — {sheets['rank']['hires']['size'][0]}×{sheets['rank']['hires']['size'][1]}, 4 components, 512 px per candidate.",
-        f"- `ranks-200-sheet.jpg` — {sheets['rank']['200']['size'][0]}×{sheets['rank']['200']['size'][1]}, 200 px.",
-        f"- `ranks-96-sheet.jpg` — {sheets['rank']['96']['size'][0]}×{sheets['rank']['96']['size'][1]}, 96 px.",
+        "### Rank bosses — F1",
+        f"- `rank-bosses-hires-sheet.jpg` — {boss_sheets['hires']['size'][0]}×{boss_sheets['hires']['size'][1]}, 4 bosses, 512 px each.",
+        f"- `rank-bosses-200-sheet.jpg` — {boss_sheets['200']['size'][0]}×{boss_sheets['200']['size'][1]}, 200 px.",
+        f"- `rank-bosses-96-sheet.jpg` — {boss_sheets['96']['size'][0]}×{boss_sheets['96']['size'][1]}, 96 px.",
         "",
-        "Rank rings are reference only: F1 removes the ring in favour of the 6 o'clock boss. See `../rank-boss-v2.jpg`.",
+        "Rank rings are retired and are not included. The in-context F1 comparison is `../rank-boss-v2.jpg`.",
         "",
-        "The individual files are `<slug>--<candidate>.webp`; the recommended candidate is marked in the pair sheets.",
+        "The individual files are `<slug>--<candidate>.webp` for emblems/frames and `<rank>.webp` for bosses; the recommended candidate is marked in the pair sheets.",
         "",
         "All images are flattened onto `#14181f` for review. Production exports preserve alpha separately.",
         "",
     ]
     (out_dir / "README.md").write_text("\n".join(readme), encoding="utf-8")
-    print(f"exported {len(rows)} assets / {sum(len(r['finalists']) for r in rows)} finalists")
-    for group in ("emblem", "frame", "rank"):
+    print(f"exported {len(rows)} badge/frame assets / {sum(len(r['finalists']) for r in rows)} finalists + 4 rank bosses")
+    for group in ("emblem", "frame"):
         print(group, {k: v["size"] for k, v in sheets[group].items()})
+    print("bosses", {k: v["size"] for k, v in boss_sheets.items()})
     print(out_dir)
 
 

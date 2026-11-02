@@ -844,11 +844,13 @@ def render_gem_v2(cut, palette, radius_px, ss, size):
     return layer
 
 
-def render_rank_boss_v2(rank):
+def render_rank_boss_v2(rank, out_size=90):
     """Render a v2 rank boss as a centred square RGBA tile.
 
     Same nominal geometry as F1 (70 px bezel / 54 px disc / 25 px gem at
-    1024); the disc and gem take the rank's cut.
+    1024); the disc and gem take the rank's cut. `out_size` defaults to the
+    90 px badge tile; pass 512 for a high-resolution review render (the
+    drawing is 8x supersampled before the final resize).
     """
     require_numpy()
     palette = BOSS_V2[rank]
@@ -1010,7 +1012,7 @@ def render_rank_boss_v2(rank):
     gem = render_gem_v2(cut, palette, gem_r * ss, ss, big)
     boss.alpha_composite(gem)
 
-    return boss.resize((size, size), Image.LANCZOS)
+    return boss.resize((out_size, out_size), Image.LANCZOS)
 
 
 def build_rank_boss_v2(rank):
