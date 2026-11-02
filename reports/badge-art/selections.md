@@ -33,3 +33,12 @@ Family frames are **Locked** (user-approved 2026-11-02). Replace each remaining 
 | `rank/mithril` | `a-314159` | `b-271828` | Reference only |  |
 
 Picks are recorded here only; no compositing or production assets exist yet.
+
+## Rank bosses (selected 2026-11-02)
+
+| Rank | Selected | Note |
+|---|---|---|
+| Bronze | `a-112358` | User accepted recommendation. |
+| Silver | `a-314159` | User accepted recommendation. |
+| Gold | `a-314159` | User accepted recommendation. |
+| Mithril | `b-173205` | User override; shortlist had `b-314159`. |

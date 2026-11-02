@@ -41,31 +41,32 @@ The user selected all 15 emblems on 2026-11-02. The picks are recorded in `final
 
 **Preference rules captured for future emblems:** story beat drives the material; dark/bleak beats use aged or hard metal, deep blues and limited palettes; avoid candy green/blue, oversized sun/moon, too many competing colours, and flat polished gloss. Warm/home beats can use warm enamel; wonder/elder beats can use gold/silver/crystal; habit beats can use limited green/blue. A restrained hard-metal option can beat a cheap bright one.
 
-## Final base composites
+## Final composites
 
-- 15 base composites generated in PhotoCraft: **selected emblem + locked family frame + 880 px dark well**.
-- 1024 px masters: `raw_assets/badges/final/<slug>.png` (gitignored).
-- Production review sizes: `public/img/achievements/<slug>.webp` (512) and `<slug>-thumb.webp` (200).
-- Set sheet: `final/final-set.jpg`.
-- **Rank boss layer is deliberately not baked yet.** The handcrafted bosses are still under user review; after selection, the chosen boss will be added to these 15 composites and the frame + boss sheets will be rebuilt.
+- **11 fixed-rank badges** have the selected boss baked in: 8 journey + 2 community + First Steps. The public 512/200 files are `<slug>.webp` / `<slug>-thumb.webp`.
+- **4 repeatable habit badges** — Faithful Walker, Weekend Warrior, Steady Month, Hundred-K Week — have **four rank variants** each, because the rank changes with earned count:
+  - `<slug>--bronze.webp`, `--silver`, `--gold`, `--mithril`, plus 200 px thumbs.
+  - The base `<slug>.webp` remains a no-boss fallback.
+  - The client must select the variant from `presentation.rank`; if it does not, the fallback shows the emblem/frame without a boss.
+- 1024 masters: `raw_assets/badges/final-complete/` (gitignored).
+- Set sheet: `final/final-set.jpg` (repeatables shown at gold preview).
+- Rank variants sheet: `final/repeatable-ranks.jpg`.
 
-## Pending — rank bosses — top 2 review
+## Locked — rank bosses
 
-The handcrafted boss set is narrowed to the top two per rank. Both finalists are stamped on all six locked frames in PhotoCraft (contact shadow, 6 o'clock).
+The user accepted all shortlist recommendations except **mithril**: `b-173205` over `b-314159`.
 
-| Rank | Finalist A | Finalist B | Recommended |
-|---|---|---|---|
-| Bronze | `a-112358` (4.5) | `a-271828` (4.2) | **`a-112358`** |
-| Silver | `a-314159` (4.7) | `a-271828` (4.4) | **`a-314159`** |
-| Gold | `a-314159` (4.8) | `b-314159` (4.4) | **`a-314159`** |
-| Mithril | `b-314159` (4.7) | `b-173205` (4.5) | **`b-314159`** |
+| Rank | Selected | Notes |
+|---|---|---|
+| Bronze | `a-112358` | Clean hand-forged round cabochon. |
+| Silver | `a-314159` | Densest octagonal ray work. |
+| Gold | `a-314159` | Dimensional filigree and domed cabochon. |
+| Mithril | `b-173205` | User override; the more refined star. |
 
-Review: `boss-review/index.html` — boss finalists, stamped full-frame sheet, and boss-area detail.
-
-- **DeepSeek:** finalists ready; stamping needs a proper seat/shadow fix (book clasp and challenge barbs collide; shadow fringe; boss tangent to the outer rim).
-- **GLM:** finalists and stamping ready; notes the silver stone highlight and the gold small-size fallback.
-- The 12-candidate contact sheets were removed; the top-2 review set, `boss-shortlist.json`, generation logs, prompts, processing script, and raw boss assets are retained.
-- User review is still open. The boss layer is not yet in the final base composites.
+- Top-two finalist and stamped-frame review: `boss-review/index.html`.
+- The shortlist recommendation for mithril was `b-314159`; the user chose `b-173205`. `boss-selections.json` records the final picks.
+- Dual reviews: DeepSeek finalists ready, stamping flagged for a seat/shadow fix; GLM both ready. The shadow is clipped to the badge alpha in the final composites.
+- The 12-candidate contact sheets were removed; the top-two review set, `boss-shortlist.json`, generation logs, prompts, processing script, and raw boss assets are retained.
 
 ## Applied — image-generation skill
 
@@ -100,3 +101,5 @@ The old emblem/frame/rank-ring/shape review galleries, finalist WebPs, contact s
 - **Rank rings:** retired; not part of the final art.
 - **Frames:** locked as listed above.
 - **Rank label:** the card label is authoritative; the boss is the visual cue.
+- **Rank bosses:** bronze `a-112358`, silver `a-314159`, gold `a-314159`, mithril `b-173205`.
+- **Repeatable bosses:** four rank variants are baked; fixed-rank badges have one bossed image.

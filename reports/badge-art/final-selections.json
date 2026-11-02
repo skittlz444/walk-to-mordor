@@ -25,6 +25,11 @@
     "emblem/community-fellowship-founder": "b-271828",
     "emblem/community-good-company": "b-271828"
   },
-  "bosses": null,
-  "notes": "Emblems selected by the user on 2026-11-02. Frames locked. Rank boss layer pending the handcrafted boss review; final base composites use emblem + locked frame + dark well."
+  "bosses": {
+    "bronze": "a-112358",
+    "silver": "a-314159",
+    "gold": "a-314159",
+    "mithril": "b-173205"
+  },
+  "notes": "Emblems selected by the user on 2026-11-02. Frames locked. Rank bosses selected except mithril, where b-173205 overrides the shortlist b-314159. Fixed-rank badges bake the boss; repeatable habit badges use four rank variants."
 }
