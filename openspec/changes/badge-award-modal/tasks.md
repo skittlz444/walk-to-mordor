@@ -5,25 +5,25 @@
 
 ## 2. Acknowledgement Domain Service
 
-- [ ] 2.1 Create `src/achievement-acknowledgements.ts` with `listPendingAchievements(db, userId)` (instances anti-joined against acknowledgements, ordered `earned_at ASC, id ASC`) and `acknowledgeAchievementInstances(db, userId, instanceIds)` returning `{ acknowledged: n }` with per-ID `ON CONFLICT DO NOTHING`.
-- [ ] 2.2 Add Jest coverage: pending excludes acknowledged and foreign instances, ordering is oldest-first, acknowledge is idempotent, foreign IDs are ignored, and instance rows are never mutated.
+- [ ] 2.1 Create `src/achievement-acknowledgements.ts` with `listPendingAchievements(db, userId)` (instances anti-joined against acknowledgements, ordered `earned_at ASC, id ASC`, each row carrying its awarding ordinal within the definition) and `acknowledgeAchievementInstances(db, userId, instanceIds)` returning `{ acknowledged: n }` with per-ID `ON CONFLICT DO NOTHING`.
+- [ ] 2.2 Add Jest coverage: pending excludes acknowledged and foreign instances, ordering is oldest-first, acknowledge is idempotent, foreign IDs are ignored, instance rows are never mutated, and per-instance awarding ordinals cross rank thresholds correctly.
 
 ## 3. Pending and Acknowledge API
 
-- [ ] 3.1 Add `handleGetPendingAchievements(request, db, currentUserId)` and `handleAcknowledgeAchievements(request, db, currentUserId)` to `src/achievement-handlers.ts`. Pending returns `{ pending: [...] }` with each entry mapped through `resolveBadgePresentation` using the definition's current `earned_count`; acknowledge validates `instance_ids` as a non-empty array of positive integers (400 otherwise) and returns `{ acknowledged: n }`.
+- [ ] 3.1 Add `handleGetPendingAchievements(request, db, currentUserId)` and `handleAcknowledgeAchievements(request, db, currentUserId)` to `src/achievement-handlers.ts`. Pending returns `{ pending: [...] }` with each entry mapped through `resolveBadgePresentation` using the instance's awarding ordinal (not the definition's current `earned_count`), and includes the current `earned_count` for repeat context; acknowledge validates `instance_ids` as a non-empty array of positive integers (400 otherwise) and returns `{ acknowledged: n }`.
 - [ ] 3.2 Wire `app.get('/api/achievements/pending', authGuard, …)` and `app.post('/api/achievements/acknowledge', authGuard, …)` beside `/api/achievements` in `src/index.ts`. No method-registry edits; 405s come from `app.routes`.
-- [ ] 3.3 Add `tests/api/achievement-pending-handlers.test.ts`: pending with data, acknowledged filtering, empty list, 401, ordering, today's entry shape, and `presentation` mapping.
+- [ ] 3.3 Add `tests/api/achievement-pending-handlers.test.ts`: pending with data, acknowledged filtering, empty list, 401, ordering, today's entry shape, per-instance awarding rank across thresholds, and `presentation` mapping.
 - [ ] 3.4 Add `tests/api/achievement-acknowledge-handlers.test.ts`: success count, repeat acknowledge, foreign/stale IDs ignored, missing/empty/non-integer `instance_ids` 400, and 401.
 - [ ] 3.5 Add route tests modeled on `tests/api/push-routes.test.ts`: `app.request` dispatches both routes with the guard-provided user id, and unsupported methods on both paths return 405 with an `Allow` header.
 
 ## 4. BadgeAwardModal Island
 
-- [ ] 4.1 Create `client/src/islands/BadgeAwardModal.tsx` and `client/src/stores/badgeAwardModalStore.ts` (signals for visibility, mode, and queue). Acknowledge mode: one badge at a time with "Badge x of n" position, per-badge acknowledge-then-advance, retry control on failed acknowledge, and dismiss/Escape closes without acknowledging. View-only mode: renders the badge payload from the event, no acknowledge control.
+- [ ] 4.1 Create `client/src/islands/BadgeAwardModal.tsx` and `client/src/stores/badgeAwardModalStore.ts` (signals for visibility, mode, and queue). Acknowledge mode: multiple awards may queue, one badge shown at a time with "Badge x of n" position, per-badge acknowledge-then-advance, retry control on failed acknowledge. Dismiss/Escape acknowledges a repeatable award and closes it, but leaves a one-off award pending; a failed repeatable close-acknowledgement holds the badge with retry. View-only mode: renders the badge payload from the event, no acknowledge control, current rank from the grid.
 - [ ] 4.2 Wire the pending fetch: once per page view, using `sessionToken` from `client/src/stores/appStore.ts` and `getAuthHeaders` from `client/src/utils/auth.ts`; no request without a token; 401, failure, and empty list render nothing with no retry in that page view.
 - [ ] 4.3 Wire image presentation: validate `image_slug` against the grid's pattern, build the full source as `/img/achievements/full/<name>.webp` (`<image_slug>--<rank_label>` for repeatables), progressive thumb-first loading with base-image retry, and text-only fallback when the slug is invalid or every image attempt fails.
-- [ ] 4.4 Wire dialog behavior: `role="dialog"`, `aria-modal`, `aria-label` from the badge name, Escape and overlay closing with dismiss semantics in acknowledge mode, focus into the dialog on open, and focus restore to the triggering element when opened by a grid card. Defer the open attempt while any other modal overlay is visible on the page.
+- [ ] 4.4 Wire dialog behavior: `role="dialog"`, `aria-modal`, `aria-label` from the badge name, Escape and overlay closing with repeatability-aware dismiss semantics in acknowledge mode, focus into the dialog on open, and focus restore to the triggering element when opened by a grid card. Defer the open attempt only while another modal dialog is open; the map page is not a modal and never blocks the award modal.
 - [ ] 4.5 Register the island in `client/src/index.tsx` (`autoHydratedIslands` and `allIslands`, alphabetical); add `<div data-island="BadgeAwardModal"></div>` beside the existing global islands in `src/renderLayout.ts` and add `/css/badge-award.css` to the global stylesheet list.
-- [ ] 4.6 Add `client/src/islands/BadgeAwardModal.test.tsx` (Vitest): acknowledge queue advance and position text, last-award close, dismiss leaves queue for next visit, failed acknowledge retry, view-only payload rendering with no acknowledge control, deferred open while another modal overlay is visible, pending/no-token/401/failure/empty branches, full-image name construction for fixed and repeatable badges, malformed-slug fallback, image-error fallback, Escape/overlay close, and focus return.
+- [ ] 4.6 Add `client/src/islands/BadgeAwardModal.test.tsx` (Vitest): acknowledge queue advance and position text, last-award close, one-off dismiss leaves the award pending, repeatable dismiss acknowledges it, failed repeatable close retry, failed acknowledge retry, view-only payload rendering with no acknowledge control and current rank, deferred open while another modal dialog is open, map page not deferred, pending/no-token/401/failure/empty branches, awarding-rank artwork for queued repeatables (same rank vs threshold crossing), malformed-slug fallback, image-error fallback, Escape/overlay close, and focus return.
 
 ## 5. Badge Grid Integration
 
@@ -39,7 +39,7 @@
 
 - [ ] 7.1 Update `docs/api-reference.md` with `GET /api/achievements/pending` and `POST /api/achievements/acknowledge` rows under the Achievements section: auth, request/response shapes, idempotency, and 400/401 behavior.
 - [ ] 7.2 Update `docs/data-models.md` with the `user_achievement_acknowledgements` table, the one-row-per-user-per-instance rule, and the pending-is-instances-minus-acks semantics.
-- [ ] 7.3 Update `docs/design-guide.md` with the award modal pattern (dialog semantics, reduced-motion rule, design-variable usage) without duplicating CSS specifics.
+- [ ] 7.3 Update `docs/design-guide.md` with the award modal pattern (dialog semantics, repeatability-aware close behavior, queue behavior, awarding-rank artwork, reduced-motion rule, design-variable usage) without duplicating CSS specifics.
 
 ## 8. Validation
 

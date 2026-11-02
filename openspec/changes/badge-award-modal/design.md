@@ -14,7 +14,7 @@ Key patterns this change reuses:
 ## Goals / Non-Goals
 
 **Goals:**
-- Greet newly earned — including backfilled — awards with a queued modal the next time the user opens the app on any authenticated page.
+- Greet newly earned — including backfilled — awards with a queued modal the next time the user opens the app on any authenticated page, including the map.
 - Persist acknowledgement per user per instance so multi-device state converges and awards are shown exactly once.
 - Let the user re-open any earned badge from the profile or friend badge grid using the same modal, view-only.
 - Show the 1024 px full badge artwork with the grid's display rules (slug validation, rank variants, fallbacks).
@@ -57,7 +57,7 @@ The table is a projection, not a log: acknowledgements may be inserted (idempote
 
 ### Pending and acknowledge as the only two API additions
 
-- `GET /api/achievements/pending` — `authGuard`, handler in `src/achievement-handlers.ts`, wrapping a new query in `src/achievement-acknowledgements.ts`: `user_achievement_instances` joined to `achievement_definitions`, anti-joined against `user_achievement_acknowledgements` on `(user_id, instance_id)`, ordered `earned_at ASC, id ASC`. Envelope `{ pending: [...] }` matches the `{ achievements: [...] }` convention. Each entry carries `instance_id`, `earned_at`, the definition display fields, and `presentation` resolved through `resolveBadgePresentation` with the definition's *current* `earned_count` — so the artwork name (including repeatable rank variants) is computed the same way the grid computes it, and the modal and grid always agree on the artwork for a badge.
+- `GET /api/achievements/pending` — `authGuard`, handler in `src/achievement-handlers.ts`, wrapping a new query in `src/achievement-acknowledgements.ts`: `user_achievement_instances` joined to `achievement_definitions`, anti-joined against `user_achievement_acknowledgements` on `(user_id, instance_id)`, ordered `earned_at ASC, id ASC`. Envelope `{ pending: [...] }` matches the `{ achievements: [...] }` convention. Each entry carries `instance_id`, `earned_at`, `earned_count`, the definition display fields, and `presentation` resolved through `resolveBadgePresentation` with the instance's *awarding ordinal* — a correlated `COUNT(*)` of earlier instances for the same user and definition, ordered by instance id. For a repeatable with thresholds `[1,4,12,26]`, ordinals 1–3 resolve to bronze, 4–11 to silver, and so on, so two queued instances that cross a threshold show different boss artwork. Fixed-rank definitions ignore the ordinal and use their fixed rank. The grid summary continues to use the current `earned_count`; only pending entries use the awarding ordinal.
 - `POST /api/achievements/acknowledge` — body `{ instance_ids: number[] }`, validated as a non-empty array of positive integers (400 otherwise). Acknowledge is `INSERT ... ON CONFLICT DO NOTHING` per ID; only rows that belong to `user_achievement_instances` of the caller are affected, so foreign or stale IDs are silently ignored, and the success response `{ acknowledged: n }` counts rows the user already holds. This makes replay safe: clients may re-ack after a retry-success race without duplicating state.
 
 Auth cases follow the existing conventions: missing/invalid token → 401 (`authGuard`); non-friend scoping is not needed because both routes are self-scoped and never accept a `userId` parameter — friend badges are only ever viewed from the summary the grid already holds.
@@ -70,20 +70,27 @@ Auth cases follow the existing conventions: missing/invalid token → 401 (`auth
 
 The pending list is chronological (oldest earned first) even though the summary endpoint is newest-first. The modal narrates an award ceremony: crossing into Khazad-dûm before the Golden Wood reads coherently, and a backfill batch replays the user's history in order. The acknowledge API takes IDs, so ordering is a presentation choice that costs nothing server-side.
 
-### Acknowledge-on-Advance, close-leaves-pending
+### Acknowledge-on-advance; close semantics depend on repeatability
 
-The modal acknowledges each award when the user actively advances ("Continue" / "Collect badge"), not when it merely displays, and not on Escape or overlay dismissal. Consequences:
+The modal acknowledges each award when the user actively advances ("Continue" / "Collect badge"). Closing, pressing Escape, or activating the overlay follows the award's repeatability:
 
+- **Non-repeatable:** close without acknowledging, so the award remains pending and is required on a later visit.
+- **Repeatable:** acknowledge the shown instance on close, so it does not re-trigger on the next page open. A failed close-acknowledgement holds the same badge with a retry control instead of closing silently. Any remaining queued awards stay pending.
+
+Consequences:
+
+- A one-off award can never be skipped by dismissal; only "Continue" clears it.
+- A repeatable award does not nag forever after the user has seen it; close is an explicit acknowledgement.
 - Force-closing the tab mid-queue leaves the remaining awards pending — they re-open next visit; nothing is silently swallowed.
-- A failed acknowledge (`network error`, 500, 401 mid-session) holds the same badge with a retry control; advancement is blocked until acknowledgement succeeds, so the queue cannot skip an unacknowledged award.
-- Repeat-acknowledgements are idempotent, so a retry that lands twice is harmless.
+- A failed acknowledge (network, 500, 401 mid-session) holds the same badge with retry; advancement and repeatable close are blocked until it succeeds.
+- Repeat acknowledgements are idempotent, so a retry that lands twice is harmless.
 - Multi-device: device B's stale pending list may still show an award that device A acknowledged. The fetch acknowledges-once model makes both devices converge: the next fetch on B returns the shorter list. No push continuity is attempted.
 
 ### One globally mounted island with two modes
 
 `BadgeAwardModal` is registered in `client/src/index.tsx` and mounted once in `src/renderLayout.ts` next to `PwaInstallBanner`, with `/css/badge-award.css` added beside `/css/drawer.css` in the global stylesheet list. One island, one mount, two modes:
 
-- **Acknowledge mode** — driven by the island's own pending fetch after hydration. One badge at a time, "Badge x of n" position text, primary action acknowledges and advances, dismiss/Escape just closes. Because recognition should not interrupt an in-progress session unexpectedly, the open attempt waits while any other modal overlay is visible on the page (`document.querySelector('.modal-overlay')`-style check, matching `MapWalkIsland`'s congrats flow), re-checking a few times before giving up for that page view.
+- **Acknowledge mode** — driven by the island's own pending fetch after hydration. Multiple pending awards may sit in the queue; one badge at a time, "Badge x of n" position text, primary action acknowledges and advances. Dismiss/Escape acknowledges repeatable awards and leaves non-repeatable awards pending. Because recognition should not interrupt an in-progress session unexpectedly, the open attempt waits only while another modal dialog is open (an actual `[role="dialog"][aria-modal="true"]` or `.modal-overlay` root, not the map), re-checking until it closes or the page is left. The map is a normal authenticated page and never blocks the award modal.
 - **View-only mode** — driven by a `wtm:open-badge-modal` `CustomEvent` on `document`, with the full badge payload in `detail` (the summary entry plus `presentation` the grid already holds). Details: no acknowledge/continue control; no new fetch. Chosen over a shared signals store so `BadgeDisplayIsland` never imports the modal and the modal never imports the grid — either island failing must not break the other, and pages without the grid still get the pending queue.
 
 The island respects the existing bootstrap order: islands hydrate after `initializeAppStore()` resolves (`client/src/index.tsx` awaits `initializeAppStore()` before hydrating, so the global `sessionToken` signal from `client/src/stores/appStore.ts` is already populated when the modal fetches). The pending fetch runs once per page view; with no `sessionToken` it performs no request, and 401/5xx/network failure renders nothing and does not retry on that page view, matching `BadgeDisplayIsland`'s error posture and `BadgeDisplayIsland`'s 401 behavior.
@@ -92,10 +99,10 @@ An edge case the event flow handles explicitly: activating a grid card while the
 
 ### Full artwork with existing fallback rules and progressive loading
 
-- Artwork name follows the grid contract exactly: validate `image_slug` against the same `^[a-z0-9-]+(/[a-z0-9-]+)*$` pattern; `<name>` = `<image_slug>--<rank_label>` for repeatables (from `presentation.rank_label`) else `<image_slug>`; full source `/img/achievements/full/<name>.webp`.
+- Artwork name follows the grid contract exactly: validate `image_slug` against the same `^[a-z0-9-]+(/[a-z0-9-]+)*$` pattern; `<name>` = `<image_slug>--<rank_label>` for repeatables else `<image_slug>`; full source `/img/achievements/full/<name>.webp`. In acknowledge mode `presentation.rank_label` is the pending instance's awarding rank; in view-only mode it is the grid's current rank.
 - Loading mirrors `GoalModal`'s progressive pattern: the 200 px `<name>-thumb.webp` shows immediately; the 1024 full image overlays and crossfades in on load, so a slow or missing 1024 asset never blocks or flashes the modal.
 - Fallback chain: repeatable rank-variant full image fails → retry base `full/<image_slug>.webp`; both fail → hide the image and keep name, rank label, earned date, and description. Null or malformed slug → never request, show the text without an image. (No PNG/other-format fallback exists in the artwork contract, and the modal follows that.)
-- Repeat context comes from the pending entry's definition (`earned_count`) or, in view-only mode, from the badge payload (`earned_count`, earned date for the queued instance).
+- Repeat context comes from the pending entry's `earned_count` and `earned_at` or, in view-only mode, from the grid badge payload (`earned_count`, earned date).
 
 ### Dialog behavior, accessibility, and CSS
 
@@ -112,17 +119,18 @@ Rollback: drop the table and remove the island mount, handlers, and routes. Earn
 
 ## Risks / Trade-offs
 
-- [Backfills produce a long first queue] → A user crossing many thresholds receives all of them as pending; the queue shows them in chronological order. The queue is capped only by the user's history, and the acknowledge-on-advance loop lets them dismiss-and-return any time (close without acknowledging is always available). If this proves naggy in practice, a per-queue "collect all" control is a small follow-up off the same endpoint shape.
+- [Backfills produce a long first queue] → A user crossing many thresholds receives all of them as pending; the queue shows them in chronological order. The queue is capped only by the user's history, and the acknowledge-on-advance loop lets them dismiss-and-return any time for one-off awards; repeatable awards are acknowledged on close. If this proves naggy in practice, a per-queue "collect all" control is a small follow-up off the same endpoint shape.
 - [Pending fetch on every page adds a request] → One indexed anti-join per page load; empty for nearly all users once acknowledged. Same cost profile as `BadgeDisplayIsland`'s grid fetch, and it is skipped entirely without a session token.
 - [CustomEvent coupling is stringly typed] → Event name and `detail` shape documented in `docs/frontend-guide.md` rules notes and asserted in Vitest for both islands, so a rename fails tests rather than silently no-op'ing.
-- [Presentation for a pending repeatable uses current earned_count] → Rank artwork is always consistent with the grid, at the cost of showing the newest rank on each pending instance of the same repeatable. Accepted: identical artwork per definition in one view is clearer than per-instance archaeology, and the modal still labels earned dates.
-- [Deferred-open while other modals are visible can delay the badge forever on one page] → The deferral re-checks a bounded number of times per page view and then gives up; awards stay pending and re-open on the next page. Not losing the event is more important than forcing it at a bad time.
+- [Pending rank is derived from the instance ordinal] → Historical rank is computed at read time from the definition's current thresholds. If a definition's thresholds are edited later, historical ranks change. Accepted because definitions are effectively immutable after release; a future hardening could snapshot `rank_label` in the instance's `context_metadata` at award time.
+- [Repeatable close acknowledges on dismissal] → A user who wants to re-read a repeatable award later can still open it from the grid; the close action is intentionally one-way so it does not nag. One-off awards keep the explicit acknowledge requirement.
+- [Deferred-open while another modal dialog is open can delay the badge on one page] → The deferral re-checks while a dialog remains open, then gives up for that page view; awards stay pending and re-open on the next page. The map is not treated as a modal, so map users see the queue immediately.
 
 ## Migration Plan
 
 1. Add `migrations/0147_create_user_achievement_acknowledgements.sql` and its Jest migration test.
-2. Add `src/achievement-acknowledgements.ts` (`listPendingAchievements`, `acknowledgeAchievementInstances`) with Jest coverage.
-3. Add `handleGetPendingAchievements` and `handleAcknowledgeAchievements` to `src/achievement-handlers.ts`; wire the two `authGuard` routes in `src/index.ts`; add handler and route tests (modeled on `tests/api/push-routes.test.ts`).
+2. Add `src/achievement-acknowledgements.ts` (`listPendingAchievements`, `acknowledgeAchievementInstances`) with Jest coverage. The pending query computes each instance's awarding ordinal and exposes it for `resolveBadgePresentation`.
+3. Add `handleGetPendingAchievements` and `handleAcknowledgeAchievements` to `src/achievement-handlers.ts`; map pending presentation with the awarding ordinal, wire the two `authGuard` routes in `src/index.ts`; add handler and route tests (modeled on `tests/api/push-routes.test.ts`).
 4. Create `BadgeAwardModal` + `badgeAwardModalStore`, register in `client/src/index.tsx`, mount in `src/renderLayout.ts`, create `public/css/badge-award.css` and wire it globally.
 5. Extend `BadgeDisplayIsland` cards to fire the open event in own and friend modes with button semantics and Vitest coverage.
 6. Update `docs/api-reference.md`, `docs/data-models.md`, and `docs/design-guide.md`.
@@ -138,5 +146,7 @@ None. Resolved decisions:
 - `GET /api/achievements/pending` returns `{ pending: [...] }` oldest-first; `POST /api/achievements/acknowledge` takes `{ instance_ids: [...] }`, is idempotent, ignores foreign IDs, 400s malformed bodies, 401s unauthenticated calls; both routes are self-scoped (no `userId` parameter).
 - `isNew` is unused by this change; pending is derived from instances minus acknowledgements so backfills are covered.
 - One global island (`renderLayout` mount), custom-event open from the badge grids, two modes: acknowledge (own pending queue) and view-only (always for friend badges).
+- Pending presentation uses the instance's awarding ordinal; view-only uses the grid's current rank.
+- One-off awards require explicit acknowledgement; repeatable awards are acknowledged by close/Escape so they do not re-trigger.
+- Mount on every authenticated page including the map; defer only while another modal dialog is open; multiple awards may queue at once.
 - Artwork uses the 1024 px `full/<name>.webp` with thumbnail-first progressive loading and the grid's slug/fallback rules.
-- Close without acknowledging leaves awards pending; they re-open on the next page open.
