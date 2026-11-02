@@ -1,0 +1,68 @@
+{
+  "ranks": {
+    "bronze": {
+      "finalists": [
+        {
+          "candidate": "a-112358",
+          "score": 4.5,
+          "rationale": "Warm hand-hammered copper dome with a centered amber cabochon and an irregularly planished iron bezel; clean, simple and legible down to 96 px."
+        },
+        {
+          "candidate": "a-271828",
+          "score": 4.2,
+          "rationale": "The most obvious hand-tool character of the rank, with fan-shaped chasing strokes across the dome, though the chasing is a little heavy for the lowest tier."
+        }
+      ],
+      "recommended": "a-112358",
+      "notes": "Rejected: a-314159 (computer-regular concentric rings), a-161803 (large bezel chip), b-112358 and b-173205 (displaced/missing cabochon plus extra amber chip; b-173205 also has a keyhole notch), b-271828 and b-161803 (rim crack / large missing chunk), b-141421 (keyhole notch), b-314159 (thin stuck-on star overlay)."
+    },
+    "silver": {
+      "finalists": [
+        {
+          "candidate": "a-314159",
+          "score": 4.7,
+          "rationale": "Octagonal field of hand-cut radiating rays around an ornate lobed bezel and pale cabochon; the richest engraved read in the rank while still sitting clearly below gold."
+        },
+        {
+          "candidate": "a-271828",
+          "score": 4.4,
+          "rationale": "Fine needle engraving and a leaf-wreath bezel read as genuine hand-chasing, but a hairline crack in the top bezel edge and pitting on the lower-left rim cost it a little."
+        }
+      ],
+      "recommended": "a-314159",
+      "notes": "a-112358 confirmed hexagonal, not octagonal. Rejected: a-173205 (flat, very regular sunburst), b-161803 (faceted stone, not a cabochon), b-314159 (raised spikes read as applied rather than engraved), b-271828 (chipped rim and streaked stone), a-161803 (plain, flat rays)."
+    },
+    "gold": {
+      "finalists": [
+        {
+          "candidate": "a-314159",
+          "score": 4.8,
+          "rationale": "Hexagonal iron plate carrying a fully dimensional gold filigree cartouche, hand-set beads and a proper honey-amber cabochon; the clearest step up in ornament that still reads handmade."
+        },
+        {
+          "candidate": "b-314159",
+          "score": 4.4,
+          "rationale": "Broad gold ring with irregularly hand-set beads around a large domed amber cabochon; flatter background than A, but very clean and the strongest at small size."
+        }
+      ],
+      "recommended": "a-314159",
+      "notes": "b-112358 rejected despite strong art: its outer silhouette measures octagonal (four repeated edge directions), duplicating the silver shape. a-161803, a-141421, a-173205, b-161803 and b-173205 rejected as faceted tablets or a flat polished plate; a-271828's centre is a plain scratched gold dome rather than a gem; b-141421 is correct-shape but its flat gold field reads cheaper."
+    },
+    "mithril": {
+      "finalists": [
+        {
+          "candidate": "b-314159",
+          "score": 4.7,
+          "rationale": "Clean four-point star with fine laurel-sprig engraving in every quadrant, a properly domed blue cabochon and restrained patina; the most refined and premium read in the rank."
+        },
+        {
+          "candidate": "b-173205",
+          "score": 4.5,
+          "rationale": "Vine engraving follows the bevelled arms around a well-formed blue cabochon and the star stays crisp, with only light surface scratching keeping it off top."
+        }
+      ],
+      "recommended": "b-314159",
+      "notes": "Rejected: a-112358 (thin, sparse star and faceted stone), a-314159 and b-161803 (faceted planes rather than a cabochon), a-271828 (arms too plain/washed out), a-173205 (rougher pitted metal), a-141421 and b-141421 (notched or stepped arm edges muddy the star silhouette), b-112358 and b-271828 (plainer arms, weaker centre)."
+    }
+  }
+}

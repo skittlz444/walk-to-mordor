@@ -49,16 +49,23 @@ The user selected all 15 emblems on 2026-11-02. The picks are recorded in `final
 - Set sheet: `final/final-set.jpg`.
 - **Rank boss layer is deliberately not baked yet.** The handcrafted bosses are still under user review; after selection, the chosen boss will be added to these 15 composites and the frame + boss sheets will be rebuilt.
 
-## Pending — rank bosses
+## Pending — rank bosses — top 2 review
 
-The new handcrafted boss candidates are generated with ComfyUI (4 ranks × 12 candidates). Contact sheets:
+The handcrafted boss set is narrowed to the top two per rank. Both finalists are stamped on all six locked frames in PhotoCraft (contact shadow, 6 o'clock).
 
-- `sheets/rank-bosses/bronze.jpg`
-- `sheets/rank-bosses/silver.jpg`
-- `sheets/rank-bosses/gold.jpg`
-- `sheets/rank-bosses/mithril.jpg`
+| Rank | Finalist A | Finalist B | Recommended |
+|---|---|---|---|
+| Bronze | `a-112358` (4.5) | `a-271828` (4.2) | **`a-112358`** |
+| Silver | `a-314159` (4.7) | `a-271828` (4.4) | **`a-314159`** |
+| Gold | `a-314159` (4.8) | `b-314159` (4.4) | **`a-314159`** |
+| Mithril | `b-314159` (4.7) | `b-173205` (4.5) | **`b-314159`** |
 
-The earlier procedural F1v2 bosses and the old frame + boss sheets are superseded as review artifacts. The new handcrafted boss review is still open.
+Review: `boss-review/index.html` — boss finalists, stamped full-frame sheet, and boss-area detail.
+
+- **DeepSeek:** finalists ready; stamping needs a proper seat/shadow fix (book clasp and challenge barbs collide; shadow fringe; boss tangent to the outer rim).
+- **GLM:** finalists and stamping ready; notes the silver stone highlight and the gold small-size fallback.
+- The 12-candidate contact sheets were removed; the top-2 review set, `boss-shortlist.json`, generation logs, prompts, processing script, and raw boss assets are retained.
+- User review is still open. The boss layer is not yet in the final base composites.
 
 ## Applied — image-generation skill
 
@@ -81,8 +88,8 @@ The handcrafted-boss pipeline remains a follow-up after boss selection:
 
 The old emblem/frame/rank-ring/shape review galleries, finalist WebPs, contact sheets, and superseded procedural-boss sheets have been removed. The boss review set is retained:
 
-- `sheets/rank-bosses/` — four contact sheets;
-- `boss-candidates.jsonl`, `bosses.jsonl`;
+- `boss-review/` — top-2 finalist sheet, stamped full/detail sheets, individual files;
+- `boss-shortlist.json`, `boss-candidates.jsonl`, `bosses.jsonl`;
 - `scripts/badge-art/boss-prompts.json`, `process_bosses.py`;
 - `raw_assets/badges/bosses/` (gitignored).
 
