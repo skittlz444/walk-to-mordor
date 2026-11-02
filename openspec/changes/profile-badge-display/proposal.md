@@ -13,12 +13,14 @@ The `shared-achievement-infrastructure` change provides domain services to award
 - Seed the initial catalog: eight Frodo/Sam journey badges (one numbered, ranked collection, including The Glittering Caves return badge at Helm's Deep) and two global habit badges (one fixed rank, one ranked by repeat count).
 - Award journey and habit badges from `POST`/`PUT` progress writes, scoped to the active storyline, idempotent, and isolated from walk-log failures.
 - Add the badge artwork pipeline: FLUX.3 Klein emblems, reusable family frames, handcrafted rank bosses, composited in PhotoCraft and optimized to WebP.
+- Define the durable artwork contract: 512 px card images, 200 px thumbs, 1024 px inspection images, four rank variants for repeatables, and retained reusable frame/boss source layers.
 - Extend the shared achievement summary so it includes the definition's `metadata`; rank, collection, and storyline resolution then needs no extra queries.
 
 ## Capabilities
 
 ### New Capabilities
 - `profile-badge-display`: Achievement summary endpoint (own and friend-scoped), ranked and numbered badge presentation, grouped badge grid on profile and friend-profile surfaces, seeded first catalog, and storyline-aware awarding from walk logging.
+- `achievement-badge-artwork`: Durable card, thumbnail and full-size badge assets; locked circular frame/well/boss composition; reusable family-frame and rank-boss source layers; and the rules future badge additions follow.
 
 ### Modified Capabilities
 - `shared-achievement-infrastructure`: Aggregated achievement summaries now include the definition's `metadata` so display concerns (rank, collection, storyline) can be resolved from the summary itself.
@@ -29,6 +31,6 @@ The `shared-achievement-infrastructure` change provides domain services to award
 - Award hook: new `src/achievement-awards.ts`, called from `POST` and `PUT` progress writes in `src/progress-handlers.ts`.
 - D1: `migrations/0144_seed_journey_badges.sql` inserts ten definitions. No schema change.
 - Frontend: new `BadgeDisplayIsland` registered in `client/src/index.tsx`; new `data-island` placeholders in `renderProfilePage.ts` and `renderFriendProfilePage.ts`.
-- Assets: composited badge images in `public/img/achievements/` (fixed-rank badges plus four rank variants for repeatable habits); generation masters under gitignored `raw_assets/badges/`; generator scripts and prompts under `scripts/badge-art/`.
-- Documentation: `docs/api-reference.md` (endpoint), `docs/data-models.md` (metadata conventions), `docs/design-guide.md` (badge ranks and collection chrome).
+- Assets: 512 px cards and 200 px thumbs in `public/img/achievements/`, 1024 px inspection images in `public/img/achievements/full/`, fixed-rank badges plus four rank variants for repeatable habits, and tracked reusable frame/boss layers in `assets/badge-art/`; generation masters under gitignored `raw_assets/badges/`; pipeline scripts and prompts under `scripts/badge-art/`.
+- Documentation: `docs/api-reference.md` (endpoint), `docs/data-models.md` (metadata conventions), `docs/design-guide.md` (badge ranks and collection chrome), `docs/asset-workflow.md` (art generation, compositing, sizes, and retained layers).
 - Tests: Jest for the shared summary change, presentation resolution, endpoint behavior, seed migration, and award hook; Vitest for the island and grouping.

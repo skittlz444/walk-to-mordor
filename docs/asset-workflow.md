@@ -5,7 +5,7 @@ description: Goal image optimization pipeline, image_id conventions, admin image
 
 # Asset Workflow
 
-> Last updated: 2026-03-17
+> Last updated: 2026-11-02
 
 ## Architecture Decision: Static Assets over R2
 
@@ -24,6 +24,9 @@ Goal images are repository-backed static files served from `public/img/` via the
 | `public/img/highres/` | Optimized full-size WebP images |
 | `public/img/thumbs/` | Thumbnail WebP images (`-thumb` suffix) |
 | `public/img/avatars/` | Avatar images (separate pipeline — `scripts/optimize-avatars.js`, 64×64 thumbs) |
+| `public/img/achievements/` | Badge cards (512 px) and thumbs (200 px, `-thumb` suffix) |
+| `public/img/achievements/full/` | Badge inspection images (1024 px) |
+| `assets/badge-art/` | Tracked reusable badge frames and rank bosses |
 | `public/img/image-manifest.json` | Build-time generated list of all available image slugs |
 
 ## image_id Convention & Naming Rules
@@ -75,6 +78,49 @@ Distance is stored in **kilometers** — multiply miles by `1.60934`.
 5. Commit the optimized WebP files in `public/img/` (not the raw sources)
 6. Deploy — assign `image_id` to goal via admin UI or migration
 
+## Achievement Badge Artwork
+
+Badge artwork is a separate pipeline from goal images. All outputs are WebP with alpha.
+
+| Output | Path | Size | Budget |
+|---|---|---|---|
+| Card | `public/img/achievements/<name>.webp` | 512 px | ≤ 120 KiB |
+| Thumbnail | `public/img/achievements/<name>-thumb.webp` | 200 px | ≤ 20 KiB |
+| Full / inspection | `public/img/achievements/full/<name>.webp` | 1024 px | ≤ 500 KiB |
+
+`<name>` is `<slug>` for fixed-rank badges and the no-boss fallback, and `<slug>--<rank>` for repeatable rank variants.
+
+### Generation
+
+- ComfyUI runs FLUX.3 Klein from `scripts/badge-art/prompts.json` (emblems and family frames) and `scripts/badge-art/boss-prompts.json` (rank bosses).
+- Candidates are generated at 1024, cut out with BiRefNet, trimmed, and normalised to transparent RGBA.
+- Candidate renders and logs are working data; keep them out of git.
+
+### Compositing
+
+- PhotoCraft MCP is used for one-off or preview composites.
+- `scripts/badge-art/rebuild_finals.py` is the deterministic production path: emblem 800 → opaque well 880 → family frame 1016/880 → rank boss tile at `(466, 934)` and shadow at `(466, 936)`, clipped to the badge alpha.
+- The rebuild script writes the 512 card, 200 thumb, and 1024 full image, and refreshes `assets/badge-art/` by default.
+- Repeatable badges get four rank variants plus a no-boss base image.
+
+### Retained layers
+
+- `assets/badge-art/frames/<family>.png` — six locked 1024 RGBA frames, 1016 outer / 880 inner.
+- `assets/badge-art/bosses/<rank>.png` — 800 px master; `<rank>-tile.png` and `<rank>-shadow.png` are the ready-to-place 90 × 90 layers.
+- These are tracked source layers. Do not delete them; `raw_assets/` is disposable.
+- Picks: `scripts/badge-art/final-selections.json`. Decisions: `docs/badge-art-decisions.md`.
+
+### Adding a badge
+
+1. Choose the family frame from `badge_type` and the rank boss from the badge rank.
+2. Generate and normalise the emblem.
+3. Add the emblem candidate and frame family to `final-selections.json`.
+4. Run `rebuild_finals.py`.
+5. Verify alpha, size budgets, and legibility at 96/200 px.
+6. Commit the public assets and any changed `assets/badge-art/` layers.
+
+Badge artwork is not processed by `scripts/optimize-images.js` and is not part of the goal image manifest.
+
 ## Image Manifest
 
 `public/img/image-manifest.json` — build-time inventory of all available image slugs.
@@ -108,6 +154,8 @@ Both require admin bearer token (401/403 on failure). Saving a goal with a non-e
 
 - Only optimized WebP files in `public/img/` are committed to git
 - `raw_assets/` is gitignored — never commit source images
+- Durable badge source layers live in `assets/badge-art/`, not `raw_assets/`
+- Badge images use the 512/200/1024 paths above and are not run through `scripts/optimize-images.js`
 - Avatar images use a **separate** pipeline (`scripts/optimize-avatars.js`) with different sizes
 - After optimizing, always rebuild the manifest so the admin UI stays in sync
 - Script config constants are at the top of `scripts/optimize-images.js` — tune there if size targets change
@@ -116,6 +164,7 @@ Both require admin bearer token (401/403 on failure). Saving a goal with a non-e
 
 - [api-reference.md](./api-reference.md) — API reference (includes admin endpoints)
 - [architecture.md](./architecture.md) — Assets binding and route topology
+- [badge-art-decisions.md](./badge-art-decisions.md) — final badge frames, emblems, bosses, sizes, and retained layers
 
 ## Asset Count CI Check
 

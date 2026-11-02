@@ -30,7 +30,7 @@
 
 - [ ] 6.1 Create `client/src/islands/BadgeDisplayIsland.tsx`. Detect `/profile` versus `/friends/<id>` from `window.location.pathname`; fetch `/api/achievements` or `/api/achievements?userId=<id>` with `getAuthHeaders` from `client/src/utils/auth.ts`. Manage loading, data, and error states. On 401 render nothing; on 404 or other failure log and render nothing.
 - [ ] 6.2 Render grouped sections: one per collection containing at least one earned badge, ordered by `collection.index` and headed `label · earned/size`; remaining badges in a trailing section in API order. Show a delayed circular skeleton state while loading, and render nothing when the summary is empty.
-- [ ] 6.3 Render each card with the composited image, name, rank label, collection position, and a repeat-count chip when `earned_count > 1`. Validate `image_slug` against `^[a-z0-9-]+(/[a-z0-9-]+)*$` before building `/img/achievements/<slug>.webp`; hide the image on load error and show a CSS placeholder when the slug is null or invalid. Provide accessible names for rank, collection position, and repeat count.
+- [ ] 6.3 Render each card with the composited image, name, rank label, collection position, and a repeat-count chip when `earned_count > 1`. Validate `image_slug` against `^[a-z0-9-]+(/[a-z0-9-]+)*$`, then build `<name>` as `<image_slug>--<rank>` for repeatables and `<image_slug>` otherwise. Use `/img/achievements/<name>.webp` for the card, retry `/img/achievements/<image_slug>.webp` if the rank variant fails, and expose `/img/achievements/full/<name>.webp` for inspection. Hide the image when the card and fallback fail; show a CSS placeholder when the slug is null or invalid. Provide accessible names for rank, collection position, and repeat count.
 - [ ] 6.4 Register `BadgeDisplayIsland` in `client/src/index.tsx` in both `autoHydratedIslands` and `allIslands`, following alphabetical placement.
 - [ ] 6.5 Add `client/src/islands/BadgeDisplayIsland.test.tsx` with Vitest: profile and friend modes, collection grouping and ordering, `index/size` header text, rank label, repeat count, delayed skeletons, empty summary, error handling, null/invalid slug placeholder, image error fallback, and accessible labels.
 
@@ -51,6 +51,7 @@
 - [x] 8.6 Composite the selected badges in PhotoCraft through its MCP automation: open the base, place the frame, emblem, 6 o'clock boss and contact shadow, then export a 1024 px PNG with alpha. The shared `.pcraft` template was superseded.
 - [x] 8.7 Bake the selected rank bosses: fixed-rank badges carry the boss in the final composite; the four repeatable habit badges carry four rank variants. Write `public/img/achievements/<slug>.webp` at 512 px, `<slug>-thumb.webp` at 200 px, and `full/<slug>.webp` at 1024 px; repeatable variants use `<slug>--<rank>`.
 - [x] 8.8 Verify each committed asset: 512×512, 200×200 and 1024×1024, alpha preserved, card under ~120 KB, thumb under 20 KB, full under ~500 KB, no text baked into art. Commit `public/img/achievements/` and the reusable `assets/badge-art/` layers; `raw_assets/` stays gitignored.
+- [x] 8.9 Retain the six family-frame masters and the four rank-boss masters, tiles, and shadows under `assets/badge-art/`; record the machine-readable picks in `scripts/badge-art/final-selections.json`.
 
 ## 9. Validation and Documentation
 
@@ -61,3 +62,4 @@
 - [ ] 9.5 Update `docs/data-models.md` with the `metadata` conventions (`storyline`, `rank`, `rank_thresholds`, `collection`) and the rule that display metadata is optional and defensively parsed.
 - [ ] 9.6 Update `docs/design-guide.md` with the badge card anatomy, rank palette, collection header pattern, and the rule that rank/collection numbers are text, not artwork.
 - [ ] 9.7 Run `openspec validate profile-badge-display` and resolve any spec-format errors.
+- [x] 9.8 Document the badge art pipeline in `docs/asset-workflow.md`: ComfyUI generation, PhotoCraft MCP and `rebuild_finals.py` compositing, 512/200/1024 outputs, and the retained `assets/badge-art/` layers.

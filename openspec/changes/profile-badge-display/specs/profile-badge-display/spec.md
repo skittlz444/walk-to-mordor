@@ -1,3 +1,7 @@
+## Purpose
+
+Defines the achievement summary API, ranked badge presentation, profile and friend-profile badge grids, the seeded first catalog, and artwork resolution for those grids.
+
 ## ADDED Requirements
 
 ### Requirement: Authenticated achievement summary endpoint
@@ -243,12 +247,28 @@ After a successful progress create or update, the system SHALL award badges whos
 
 ### Requirement: Badge artwork resolution
 
-The system SHALL resolve badge artwork from `/img/achievements/<image_slug>.webp`. When the slug is null, malformed, or the image fails to load, the card SHALL render a CSS placeholder without breaking layout.
+The system SHALL resolve card artwork from `/img/achievements/<name>.webp`, thumbnails from `/img/achievements/<name>-thumb.webp`, and full artwork from `/img/achievements/full/<name>.webp`. `<name>` SHALL be `<image_slug>--<rank>` for repeatable badges and `<image_slug>` otherwise. When the slug is null, malformed, or an image fails to load, the card SHALL render a CSS placeholder without breaking layout.
 
-#### Scenario: Valid image renders
+#### Scenario: Fixed-rank image renders at all sizes
 - **GIVEN** a badge with `image_slug` `journey-frodo-sam-buckleberry-ferry`
+- **WHEN** the card, thumbnail, and full image are requested
+- **THEN** the sources are `/img/achievements/journey-frodo-sam-buckleberry-ferry.webp`, `/img/achievements/journey-frodo-sam-buckleberry-ferry-thumb.webp`, and `/img/achievements/full/journey-frodo-sam-buckleberry-ferry.webp`
+
+#### Scenario: Repeatable badge selects its rank variant
+- **GIVEN** a repeatable badge with `image_slug` `habit-faithful-walker` and `presentation.rank` 3
 - **WHEN** the card renders
-- **THEN** the image source is `/img/achievements/journey-frodo-sam-buckleberry-ferry.webp`
+- **THEN** the image source is `/img/achievements/habit-faithful-walker--gold.webp`
+- **AND** the full image source is `/img/achievements/full/habit-faithful-walker--gold.webp`
+
+#### Scenario: Missing rank variant falls back to the base image
+- **GIVEN** a repeatable badge whose rank-variant image is missing
+- **WHEN** the card image fails to load
+- **THEN** the image source is retried with `/img/achievements/<image_slug>.webp`
+
+#### Scenario: Thumbnail is available for compact previews
+- **GIVEN** a badge with a valid artwork name
+- **WHEN** a compact preview requests the thumbnail
+- **THEN** the source is `/img/achievements/<name>-thumb.webp`
 
 #### Scenario: Null image slug uses the placeholder
 - **GIVEN** a badge with a null `image_slug`
@@ -257,7 +277,7 @@ The system SHALL resolve badge artwork from `/img/achievements/<image_slug>.webp
 - **AND** a CSS placeholder is displayed
 
 #### Scenario: Image load failure falls back without breaking layout
-- **GIVEN** a badge whose image file is missing
+- **GIVEN** a badge whose card image and any applicable base fallback are missing
 - **WHEN** the image fails to load
 - **THEN** the broken image is hidden
 - **AND** the card keeps its size and shows the name

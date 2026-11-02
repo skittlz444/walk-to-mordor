@@ -16,7 +16,7 @@ The codebase uses auto-hydrated islands registered in `client/src/index.tsx` by 
 - Add a `BadgeDisplayIsland` that renders badges grouped by collection, with rank chrome, repeat counts, loading skeletons, and graceful image fallback.
 - Add the island to the profile and friend-profile SSR shells with a dedicated stylesheet.
 - Seed ten badge definitions and award them from progress writes, scoped to the user's active storyline.
-- Produce and commit composited badge artwork from a reproducible ComfyUI + PhotoCraft pipeline.
+- Produce and commit card, thumbnail, and 1024 inspection artwork from a reproducible ComfyUI + PhotoCraft pipeline, with retained reusable frame and boss layers.
 
 **Non-Goals:**
 - No badge detail modal or click-to-expand behaviour.
@@ -137,6 +137,17 @@ Both are generated once, composited over the base emblem in PhotoCraft, and expo
 
 Rationale: a shared boss per rank gives consistent rank semantics across families without a rank ring. Baking the composite avoids runtime layering, extra requests, and alpha-composition bugs in CSS.
 
+### Artwork pipeline and future additions
+
+Generation and compositing are separate batch steps:
+
+- **Generation:** ComfyUI runs FLUX.3 Klein from `scripts/badge-art/prompts.json` (emblems and frames) and `boss-prompts.json` (rank bosses). Candidates are cut out with BiRefNet, trimmed, and normalised to 1024 RGBA: emblems 800, frames 1016/880, and bosses as an 800 px review master plus a 70 px placement tile and contact shadow.
+- **Compositing:** PhotoCraft MCP handles one-off or preview compositing; `scripts/badge-art/rebuild_finals.py` is the deterministic production path. It builds emblem 800 → opaque well 880 → frame 1016/880 → boss tile at `(466, 934)` and shadow at `(466, 936)`, clips both to the badge alpha, and writes the 512 card, 200 thumb, and 1024 full WebP.
+- **Sources:** `assets/badge-art/` holds the locked reusable frame and boss layers; `raw_assets/badges/` is disposable working space; picks are in `scripts/badge-art/final-selections.json` and `docs/badge-art-decisions.md`.
+- **Future badge:** choose the family frame from `badge_type` and the rank boss from rank, generate and normalise the emblem, add it to the selection file, run the rebuild, verify alpha and size budgets, and update the decision record. Repeatables ship four rank variants plus the no-boss base.
+
+Tool names and commands belong here and in `docs/asset-workflow.md`; the capability specs state the observable output and composition contract only.
+
 ### Generate a broad candidate pool, then narrow to two per asset
 
 Single-seed sampling is noisy and prompt variants diverge sharply for stylised metalwork. Every asset is generated across multiple prompt variants and seeds — twelve candidates per emblem, eight per family frame and per rank boss — reviewed on a per-asset contact sheet, and narrowed to two finalists. Only those two finalists go to the user for the final pick.
@@ -190,7 +201,7 @@ Skeletons render only after a short delay to avoid flashing on fast responses. A
 - [Friend profile adds a second API call] → Badge data is small and indexed; the page already makes one profile call. If latency matters later, the friend profile response can embed achievements without changing the island contract.
 - [Rank thresholds drift from seed data] → Thresholds live in `metadata` and are read by both the hook and the presentation resolver; a single seed migration is the source of truth. Tests assert the seeded values.
 - [Award hook adds work to every walk write] → The hook loads only journey/habit definitions and exits early for non-matching storylines; most writes cross no threshold. It runs after the write, and failures are swallowed.
-- [Baked borders require a rerun when a family changes] → Accepted: art changes are batch work, and the PhotoCraft template makes a rerun deterministic.
+- [Baked borders require a rerun when a family changes] → Accepted: art changes are batch work, and the retained layers plus `rebuild_finals.py` make a rerun deterministic.
 - [Metadata is free-form and can be malformed] → Parsing is defensive: invalid JSON or out-of-range values fall back to rank 1, no collection, and the active storyline.
 
 ## Migration Plan
@@ -202,8 +213,8 @@ Skeletons render only after a short delay to avoid flashing on fast responses. A
 5. Add `src/achievement-awards.ts` and call it from `handleProgressPost` and `handleProgressPut`.
 6. Create `BadgeDisplayIsland`, register it, and add the SSR placeholders.
 7. Create `public/css/badge-display.css` and reference it from both renderers.
-8. Generate the broad candidate pool, narrow each asset to two finalists, collect the user's final picks, then composite and optimise into `public/img/achievements/`.
-9. Update `docs/api-reference.md`, `docs/data-models.md`, and `docs/design-guide.md`.
+8. Generate the broad candidate pool, narrow each asset to two finalists, collect the user's final picks, then composite and optimise the 512 cards, 200 thumbs, and 1024 full images. Retain the locked frames and bosses in `assets/badge-art/`.
+9. Update `docs/api-reference.md`, `docs/data-models.md`, `docs/design-guide.md`, and `docs/asset-workflow.md`.
 
 Rollback strategy: remove the island placeholders, route, island registration, handler, award hook call, and stylesheet; drop migration 0144. Earned instances remain append-only and harmless if the display is rolled back.
 
@@ -213,8 +224,8 @@ None. Resolved decisions:
 - Hono route with `authGuard`; handler receives `userId`.
 - `{ achievements: [...] }` envelope with a `presentation` block.
 - Non-friend access returns 404.
-- `/img/achievements/<image_slug>.webp`, single format.
-- Family frame + 6 o'clock rank boss, baked in PhotoCraft; numbering is text.
+- `/img/achievements/<name>.webp` at 512, `<name>-thumb.webp` at 200, and `full/<name>.webp` at 1024; `<name>` is `<image_slug>--<rank>` for repeatables.
+- Family frame + 6 o'clock rank boss, baked in PhotoCraft; reusable layers retained in `assets/badge-art/`; numbering is text.
 - Storyline-scoped awarding from displayed distance; global habit badges.
 - Grouped collection sections with per-collection progress.
 - No new migrations beyond the seed.
