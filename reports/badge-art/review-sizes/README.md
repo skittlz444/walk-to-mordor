@@ -30,7 +30,7 @@ The production 512 px main images remain in `reports/badge-art/finalists/`; they
 - `rank-bosses-200-sheet.jpg` — 890×324, 200 px.
 - `rank-bosses-96-sheet.jpg` — 474×220, 96 px.
 
-Rank rings are retired and are not included. The in-context F1 comparison is `../rank-boss-v2.jpg`.
+Rank rings are retired and are not included. Boss-on-frame sheets: `rank-bosses-on-frames/index.html`. In-context F1 comparison: `../rank-boss-v2.jpg`.
 
 The individual files are `<slug>--<candidate>.webp` for emblems/frames and `<rank>.webp` for bosses; the recommended candidate is marked in the pair sheets.
 

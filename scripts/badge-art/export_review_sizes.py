@@ -285,7 +285,7 @@ def write_index(out_dir: Path, sheets: dict, boss_sheets: dict):
   <h3>96 px card-size stress test</h3>
   <a href="{boss_sheets['96']['file']}"><img class="shot small" src="{boss_sheets['96']['file']}" alt="Rank bosses 96 px sheet"></a>
   <p class="dim">{boss_sheets['96']['size'][0]}×{boss_sheets['96']['size'][1]} — view at 100%</p>
-  <p>In-context comparison: <a href="../rank-boss-v2.jpg">rank-boss-v2.jpg</a>.</p>
+  <p>Boss-on-frame matrix: <a href="rank-bosses-on-frames/index.html">open the six-frame × four-rank sheets</a>. In-context comparison: <a href="../rank-boss-v2.jpg">rank-boss-v2.jpg</a>.</p>
 </section>"""
 
     html = f"""<!doctype html>
@@ -415,7 +415,7 @@ def main():
         f"- `rank-bosses-200-sheet.jpg` — {boss_sheets['200']['size'][0]}×{boss_sheets['200']['size'][1]}, 200 px.",
         f"- `rank-bosses-96-sheet.jpg` — {boss_sheets['96']['size'][0]}×{boss_sheets['96']['size'][1]}, 96 px.",
         "",
-        "Rank rings are retired and are not included. The in-context F1 comparison is `../rank-boss-v2.jpg`.",
+        "Rank rings are retired and are not included. Boss-on-frame sheets: `rank-bosses-on-frames/index.html`. In-context F1 comparison: `../rank-boss-v2.jpg`.",
         "",
         "The individual files are `<slug>--<candidate>.webp` for emblems/frames and `<rank>.webp` for bosses; the recommended candidate is marked in the pair sheets.",
         "",
