@@ -204,7 +204,7 @@ The system SHALL seed eight Frodo/Sam journey badges forming one numbered, ranke
 
 ### Requirement: Storyline-aware award from walk logging
 
-After a successful progress create or update, the system SHALL award badges whose conditions are met against the user's displayed distance for the active storyline, skipping badges scoped to another storyline, and SHALL never fail the walk log when an award fails.
+After a successful progress create or update, the system SHALL award badges whose conditions are met against the user's displayed distance for the active storyline, skipping badges scoped to another storyline, and SHALL never fail the walk log when an award fails. The faithful-walker habit SHALL be awarded only when the logged date is a Sunday and all seven dates of that Monday–Sunday week have progress rows, keyed to that Sunday's date.
 
 #### Scenario: Threshold crossing awards a journey badge
 - **GIVEN** a Frodo/Sam user whose displayed distance is below a badge threshold
@@ -223,11 +223,19 @@ After a successful progress create or update, the system SHALL award badges whos
 - **WHEN** the user logs their first walk
 - **THEN** the first-steps habit badge is awarded
 
-#### Scenario: Repeatable habit badge awards once per window
-- **GIVEN** a user with walks on seven distinct dates within the trailing seven-day window
-- **WHEN** the seventh qualifying walk is logged
+#### Scenario: Repeatable habit badge awards once per calendar week
+- **GIVEN** a user with walks on all seven dates (Monday through Sunday) of a calendar week
+- **WHEN** the Sunday walk is logged or updated
 - **THEN** the faithful-walker badge is awarded
-- **AND** logging another walk in the same window does not award it again
+- **AND** the award is keyed to that Sunday's date
+- **AND** logging or updating another walk in the same week does not award it again
+- **AND** a week missing any of its seven dates is not awarded
+
+#### Scenario: Repeatable habit badge waits for Sunday
+- **GIVEN** a user with walks on Monday through Saturday of a calendar week
+- **WHEN** the Saturday walk is logged or updated
+- **THEN** the faithful-walker badge is not awarded
+- **AND** it is awarded when the Sunday walk is logged or updated
 
 #### Scenario: Duplicate awards are no-ops
 - **GIVEN** a user who already earned a non-repeatable badge
@@ -247,7 +255,7 @@ After a successful progress create or update, the system SHALL award badges whos
 
 ### Requirement: Badge artwork resolution
 
-The system SHALL resolve card artwork from `/img/achievements/<name>.webp`, thumbnails from `/img/achievements/<name>-thumb.webp`, and full artwork from `/img/achievements/full/<name>.webp`. `<name>` SHALL be `<image_slug>--<rank>` for repeatable badges and `<image_slug>` otherwise. When the slug is null, malformed, or an image fails to load, the card SHALL render a CSS placeholder without breaking layout.
+The system SHALL resolve card artwork from `/img/achievements/<name>.webp`, thumbnails from `/img/achievements/<name>-thumb.webp`, and full artwork from `/img/achievements/full/<name>.webp`. `<name>` SHALL be `<image_slug>--<rank_label>` for repeatable badges and `<image_slug>` otherwise. This change SHALL commit the full artwork as an asset but SHALL NOT add a UI reference or click target for it.
 
 #### Scenario: Fixed-rank image renders at all sizes
 - **GIVEN** a badge with `image_slug` `journey-frodo-sam-buckleberry-ferry`
@@ -255,20 +263,24 @@ The system SHALL resolve card artwork from `/img/achievements/<name>.webp`, thum
 - **THEN** the sources are `/img/achievements/journey-frodo-sam-buckleberry-ferry.webp`, `/img/achievements/journey-frodo-sam-buckleberry-ferry-thumb.webp`, and `/img/achievements/full/journey-frodo-sam-buckleberry-ferry.webp`
 
 #### Scenario: Repeatable badge selects its rank variant
-- **GIVEN** a repeatable badge with `image_slug` `habit-faithful-walker` and `presentation.rank` 3
+- **GIVEN** a repeatable badge with `image_slug` `habit-faithful-walker`, `presentation.rank` 3, and `presentation.rank_label` `gold`
 - **WHEN** the card renders
 - **THEN** the image source is `/img/achievements/habit-faithful-walker--gold.webp`
-- **AND** the full image source is `/img/achievements/full/habit-faithful-walker--gold.webp`
-
-#### Scenario: Missing rank variant falls back to the base image
-- **GIVEN** a repeatable badge whose rank-variant image is missing
-- **WHEN** the card image fails to load
-- **THEN** the image source is retried with `/img/achievements/<image_slug>.webp`
+- **AND** the full image asset is `/img/achievements/full/habit-faithful-walker--gold.webp`
 
 #### Scenario: Thumbnail is available for compact previews
 - **GIVEN** a badge with a valid artwork name
 - **WHEN** a compact preview requests the thumbnail
 - **THEN** the source is `/img/achievements/<name>-thumb.webp`
+
+### Requirement: Badge artwork fallback
+
+When the image slug is null, malformed, or an image fails to load, the card SHALL render a CSS placeholder without breaking layout. A repeatable badge whose rank variant fails SHALL retry the base image before falling back.
+
+#### Scenario: Missing rank variant falls back to the base image
+- **GIVEN** a repeatable badge whose rank-variant image is missing
+- **WHEN** the card image fails to load
+- **THEN** the image source is retried with `/img/achievements/<image_slug>.webp`
 
 #### Scenario: Null image slug uses the placeholder
 - **GIVEN** a badge with a null `image_slug`

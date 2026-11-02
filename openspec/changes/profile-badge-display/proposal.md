@@ -29,7 +29,7 @@ The `shared-achievement-infrastructure` change provides domain services to award
 
 - Worker APIs: `GET /api/achievements` wired through `src/index.ts` under the existing `authGuard`; new `src/achievement-handlers.ts` and `src/badge-presentation.ts`; `src/achievement-utils.ts` summary query gains `metadata`.
 - Award hook: new `src/achievement-awards.ts`, called from `POST` and `PUT` progress writes in `src/progress-handlers.ts`.
-- D1: `migrations/0144_seed_journey_badges.sql` inserts ten definitions. No schema change.
+- D1: `migrations/0144_seed_journey_badges.sql` inserts ten definitions; `migrations/0146_update_faithful_walker_description.sql` corrects the seeded Faithful Walker display text. No schema change.
 - Frontend: new `BadgeDisplayIsland` registered in `client/src/index.tsx`; new `data-island` placeholders in `renderProfilePage.ts` and `renderFriendProfilePage.ts`.
 - Assets: 512 px cards and 200 px thumbs in `public/img/achievements/`, 1024 px inspection images in `public/img/achievements/full/`, fixed-rank badges plus four rank variants for repeatable habits, and tracked reusable frame/boss layers in `assets/badge-art/`; generation masters under gitignored `raw_assets/badges/`; pipeline scripts and prompts under `scripts/badge-art/`.
 - Documentation: `docs/api-reference.md` (endpoint), `docs/data-models.md` (metadata conventions), `docs/design-guide.md` (badge ranks and collection chrome), `docs/asset-workflow.md` (art generation, compositing, sizes, and retained layers).

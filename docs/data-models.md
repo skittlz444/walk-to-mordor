@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-07-24 · Migrations: 0001–0143 · Full DDL: `migrations/`
+> Last updated: 2026-11-02 · Migrations: 0001–0146 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -100,8 +100,24 @@ These are rules the schema enforces or that the application layer must uphold �
 - `slug` is unique (indexed) and human-readable (e.g. `nazgul-outrun`, `book-fellowship-1-complete`). Consuming features reference definitions by slug when calling `awardAchievement`. Recommended slug prefix convention per feature (`book-*`, `challenge-*`, `field-guide-*`) to avoid collisions.
 - `badge_type` is a free-form string defined by consuming features (no enum/CHECK constraint at the schema layer).
 - `is_repeatable` (`0`/`1`) is enforced by the domain service, not just documentation: `awardAchievement` blocks a second award of a non-repeatable badge regardless of idempotency key.
-- `metadata` is a nullable TEXT column for feature-specific JSON metadata about the definition itself (not the earned instance).
-- Catalog expansion (`0145`) adds `criteria` (a stable condition label such as `trailing_7d_km >= 100`, consumed by award hooks but never evaluated by SQL) and `unit` (the display plural for repeatable progress, e.g. `weeks`). These are descriptive labels, not a query language.
+- `metadata` is a nullable TEXT column for JSON about the definition itself (not the earned instance). Every key is optional and display/award-facing only:
+
+  | Key | Type | Meaning |
+  |---|---|---|
+  | `storyline` | string or `null` | Storyline slug the badge is scoped to; absent or `null` means global |
+  | `rank` | 1–4 | Fixed rank for non-repeatable definitions |
+  | `rank_thresholds` | `[number, number, number, number]` | Four strictly ascending `earned_count` values mapping to ranks 1–4 |
+  | `collection` | `{ slug, label, index, size }` | Numbered position in an ordered set; absent for standalone badges |
+  | `threshold_km` | number | Displayed storyline distance that awards a `journey` badge |
+  | `criteria` | string | Descriptive condition label for authors, e.g. `first_walk`, `seven_day_streak`, or `trailing_7d_km >= 100`; not evaluated by SQL and not dispatched by a generic hook |
+  | `unit` | string | Display plural for repeatable progress, e.g. `weeks` |
+
+- Display metadata is optional and parsed defensively by `src/badge-presentation.ts`. Null metadata, invalid JSON, wrong types, and out-of-range values are all treated as absent: the API falls back to rank 1, no collection, and a null storyline. A bad definition can never break the achievements endpoint.
+- Rank labels: 1 = `bronze`, 2 = `silver`, 3 = `gold`, 4 = `mithril`.
+- Rank resolution: a fixed `rank` always wins. `rank_thresholds` select the rank for repeatable badges only when `rank` is absent — `earned_count >= rank_thresholds[i]` selects rank `i + 1`, so exact boundaries count; below the first threshold stays rank 1 and above the last stays rank 4.
+- `getUserAchievementSummary` selects `ad.metadata` and returns it on each `AchievementSummary` so the API layer can resolve `presentation`. The raw string is never serialized to clients.
+- Catalog expansion (`0145`) adds three global habit definitions and a two-badge community fellowship collection using the same `criteria` and `unit` conventions. These are descriptive labels, not a query language; awarding is keyed on `badge_type` plus the consuming feature's slug/criteria logic.
+- Migration `0146` only corrects the seeded Faithful Walker description to the calendar-week rule; it makes no schema change.
 - This change is data-layer-only: no admin UI manages these rows. Each consuming feature manages its own definitions (via migration seed data or its own admin surface).
 
 ### user_achievement_instances

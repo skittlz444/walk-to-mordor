@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-07-17
+Last updated: 2026-11-02
 
 ## Conventions
 
@@ -27,6 +27,7 @@ Last updated: 2026-07-17
 | Party (Fellowship) | `src/party-handlers.ts` |
 | Fellowship Invites | `src/fellowship-invite-handlers.ts` |
 | Friends | `src/friends-handlers.ts` |
+| Achievements | `src/achievement-handlers.ts`, `src/badge-presentation.ts`, `src/achievement-utils.ts`, `src/achievement-awards.ts` |
 | Admin | `src/admin-handlers.ts` |
 | Route wiring | `src/index.ts` |
 
@@ -189,6 +190,48 @@ Goal content is authenticated and uses the same unlock semantics as goal viewing
 - **IDOR prevention**: all friendship operations validate current user is a party to the record.
 - `friendship_status` in search: `null` (none), `"pending"`, or `"accepted"`.
 - Friend profile `fellowships[].is_shared` indicates mutual party membership.
+
+## Achievement Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/achievements` | Yes | Earned badges, newest-earned first. Optional `userId` query returns an accepted friend's summary; self-queries skip the friendship check. Invalid `userId` → `400`; non-friend or unknown user → `404` (existence is not leaked). |
+
+- Response envelope is `{ achievements: [...] }`; a user with no earned instances gets `200` with an empty array.
+- Each entry carries `achievement_id`, `slug`, `name`, `description`, `image_slug`, `badge_type`, `is_repeatable`, `earned_count`, `first_earned_at`, `last_earned_at`, and a server-resolved `presentation` block.
+- `presentation` fields: `rank` (1–4), `rank_label` (`bronze` | `silver` | `gold` | `mithril`), `storyline` (string or `null`; `null` means global), and `collection` (`{ slug, label, index, size }` or `null`).
+- The raw definition `metadata` string is never returned — only the resolved `presentation` block. Missing or malformed metadata falls back to rank 1, no collection, and a null storyline.
+- Repeatable badges select their artwork variant with `presentation.rank_label`: `/img/achievements/<image_slug>--<rank_label>.webp` (e.g. `habit-faithful-walker--gold.webp`). Non-repeatable badges use `/img/achievements/<image_slug>.webp`.
+
+```json
+{
+  "achievements": [
+    {
+      "achievement_id": 1,
+      "slug": "journey-frodo-sam-buckleberry-ferry",
+      "name": "Across the Buckleberry Ferry",
+      "description": "Cross the Buckleberry Ferry and leave the Shire behind.",
+      "image_slug": "journey-frodo-sam-buckleberry-ferry",
+      "badge_type": "journey",
+      "is_repeatable": false,
+      "earned_count": 1,
+      "first_earned_at": "2026-11-02T00:00:00.000Z",
+      "last_earned_at": "2026-11-02T00:00:00.000Z",
+      "presentation": {
+        "rank": 1,
+        "rank_label": "bronze",
+        "storyline": "frodo-sam",
+        "collection": {
+          "slug": "frodo-sam-journey",
+          "label": "The Road to Mordor",
+          "index": 1,
+          "size": 8
+        }
+      }
+    }
+  ]
+}
+```
 
 ## Admin Endpoints
 

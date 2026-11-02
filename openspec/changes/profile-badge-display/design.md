@@ -122,7 +122,7 @@ Rationale: the existing friend-profile surface already returns 404 to avoid leak
 
 ### Badge images are WebP, with a 1024 inspection path
 
-Cards are constructed as `/img/achievements/<image_slug>.webp` at 512 px; inspection uses `/img/achievements/full/<name>.webp` at 1024 px. Repeatable badges use `<image_slug>--<rank>.webp`, selected from `presentation.rank`, with the base image as the no-boss fallback. There is no PNG→WebP fallback. A null `image_slug`, a load error, or a path that fails the slug pattern falls back to a CSS-drawn circular placeholder.
+Cards are constructed as `/img/achievements/<image_slug>.webp` at 512 px; inspection uses `/img/achievements/full/<name>.webp` at 1024 px. Repeatable badges use `<image_slug>--<rank_label>.webp`, selected from `presentation.rank_label`, with the base image as the no-boss fallback. There is no PNG→WebP fallback. A null `image_slug`, a load error, or a path that fails the slug pattern falls back to a CSS-drawn circular placeholder. The full image is committed as an asset but is not referenced by the card in this change; the follow-up award-modal change will use it.
 
 Rationale: `public/` has no `images/` directory, content images are WebP-only, and a fallback 404 costs a request to reach the same visual result. Keeping the placeholder in CSS means no extra asset.
 
@@ -133,7 +133,7 @@ Badge chrome has two reusable layers:
 1. **Family frame** — one master per `badge_type` (`journey`, `habit`, `challenge`, `book`, `community`, `field-guide`).
 2. **Rank boss** — one handcrafted master per rank (`bronze`, `silver`, `gold`, `mithril`), mounted at 6 o'clock.
 
-Both are generated once, composited over the base emblem in PhotoCraft, and exported as a single WebP per badge. The client never loads frames or bosses. Fixed-rank badges bake their single rank; repeatable habit badges ship four variants (`<slug>--<rank>.webp`) so the boss matches the earned rank.
+Both are generated once, composited over the base emblem in PhotoCraft, and exported as a single WebP per badge. The client never loads frames or bosses. Fixed-rank badges bake their single rank; repeatable habit badges ship four variants (`<slug>--<rank_label>.webp`) so the boss matches the earned rank.
 
 Rationale: a shared boss per rank gives consistent rank semantics across families without a rank ring. Baking the composite avoids runtime layering, extra requests, and alpha-composition bugs in CSS.
 
@@ -168,16 +168,16 @@ Rationale: a numbered set is only legible when its members sit together and the 
 
 ### Award from progress writes against the displayed storyline distance
 
-`src/achievement-awards.ts` exposes `checkAndAwardJourneyBadges(db, userId)`:
+`src/achievement-awards.ts` exposes `checkAndAwardJourneyBadges(db, userId, loggedDate)`:
 
 1. Resolve the active storyline and displayed distance once (`resolveUserStoryline`, `calculateTotalDistance`, `applyStorylineOffset`).
 2. Load journey/habit definitions and parse their metadata.
 3. Skip definitions whose `storyline` is set and does not match the active storyline.
 4. Award each badge whose condition is met via `awardAchievement`, using a deterministic idempotency key.
 
-`first-steps` qualifies on any progress row; journey badges on `threshold_km`; `faithful-walker` on seven distinct walk dates within the trailing seven-day window, keyed by window end date.
+`first-steps` qualifies on any progress row; journey badges on `threshold_km`; `faithful-walker` only when `loggedDate` is a Sunday and all seven dates of that Monday–Sunday week have progress rows, keyed to the Sunday date.
 
-Rationale: badge thresholds are expressed in storyline distance, so awarding from raw distance would let a Pippin user earn Frodo/Sam badges. Awarding from the displayed distance and filtering on the definition's storyline keeps the catalog honest. Global habit badges use `storyline: null` and apply to every path.
+Rationale: badge thresholds are expressed in storyline distance, so awarding from raw distance would let a Pippin user earn Frodo/Sam badges. Awarding from the displayed distance and filtering on the definition's storyline keeps the catalog honest. Global habit badges use `storyline: null` and apply to every path. The calendar-week cadence prevents a daily walker from earning the weekly habit every day after their first seven-day streak.
 
 ### Award failures never fail a walk log
 
@@ -191,9 +191,9 @@ Skeletons render only after a short delay to avoid flashing on fast responses. A
 
 `public/css/badge-display.css` uses `var(--accent-gold)`, `var(--bg-surface)`, `var(--text-primary)`, and existing spacing variables. No hardcoded hex or rgb values. Circular geometry is shared by the skeleton and the fallback placeholder; real badge art supplies its own frame.
 
-### No migrations beyond the seed
+### No schema migrations beyond the seed
 
-`migrations/0144_seed_journey_badges.sql` inserts definitions with `INSERT OR IGNORE`. No table, index, or column changes.
+`migrations/0144_seed_journey_badges.sql` inserts definitions. `migrations/0146_update_faithful_walker_description.sql` corrects the seeded Faithful Walker display text for databases where the row already exists. No table, index, or column changes.
 
 ## Risks / Trade-offs
 
@@ -209,14 +209,14 @@ Skeletons render only after a short delay to avoid flashing on fast responses. A
 1. Extend `AchievementSummary` and its query with `metadata`; update the shared-infra spec delta.
 2. Add `src/badge-presentation.ts` and its tests.
 3. Add `src/achievement-handlers.ts`, wire `app.get('/api/achievements', authGuard, …)`, and add handler and route tests.
-4. Add `migrations/0144_seed_journey_badges.sql` with the ten seeded definitions.
-5. Add `src/achievement-awards.ts` and call it from `handleProgressPost` and `handleProgressPut`.
+4. Add `migrations/0144_seed_journey_badges.sql` with the ten seeded definitions, plus `migrations/0146_update_faithful_walker_description.sql` for the display-text correction.
+5. Add `src/achievement-awards.ts` and call it from `handleProgressPost` and `handleProgressPut` with the logged date.
 6. Create `BadgeDisplayIsland`, register it, and add the SSR placeholders.
 7. Create `public/css/badge-display.css` and reference it from both renderers.
 8. Generate the broad candidate pool, narrow each asset to two finalists, collect the user's final picks, then composite and optimise the 512 cards, 200 thumbs, and 1024 full images. Retain the locked frames and bosses in `assets/badge-art/`.
 9. Update `docs/api-reference.md`, `docs/data-models.md`, `docs/design-guide.md`, and `docs/asset-workflow.md`.
 
-Rollback strategy: remove the island placeholders, route, island registration, handler, award hook call, and stylesheet; drop migration 0144. Earned instances remain append-only and harmless if the display is rolled back.
+Rollback strategy: remove the island placeholders, route, island registration, handler, award hook call, and stylesheet; drop migrations 0144 and 0146. Earned instances remain append-only and harmless if the display is rolled back.
 
 ## Open Questions
 
@@ -224,8 +224,9 @@ None. Resolved decisions:
 - Hono route with `authGuard`; handler receives `userId`.
 - `{ achievements: [...] }` envelope with a `presentation` block.
 - Non-friend access returns 404.
-- `/img/achievements/<name>.webp` at 512, `<name>-thumb.webp` at 200, and `full/<name>.webp` at 1024; `<name>` is `<image_slug>--<rank>` for repeatables.
+- `/img/achievements/<name>.webp` at 512, `<name>-thumb.webp` at 200, and `full/<name>.webp` at 1024; `<name>` is `<image_slug>--<rank_label>` for repeatables.
 - Family frame + 6 o'clock rank boss, baked in PhotoCraft; reusable layers retained in `assets/badge-art/`; numbering is text.
-- Storyline-scoped awarding from displayed distance; global habit badges.
+- Storyline-scoped awarding from displayed distance; global habit badges; the weekly habit uses Monday–Sunday and awards on Sunday.
 - Grouped collection sections with per-collection progress.
-- No new migrations beyond the seed.
+- No schema migrations beyond the seed; `0146` only corrects the Faithful Walker display text.
+- No award modal in this change; a follow-up change will use the 1024 image for award and re-open modals.

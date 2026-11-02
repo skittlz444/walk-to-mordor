@@ -15,7 +15,7 @@ family frames, boss masters, boss tiles, and boss shadows. Use
 `--no-retain-layers` to skip that copy.
 
 `<name>` is `<slug>` for fixed-rank badges and the no-boss fallback, and
-`<slug>--<rank>` for repeatable rank variants.
+`<slug>--<rank_label>` for repeatable rank variants.
 
 The composite is the locked F1 stack: an opaque dark well at 880, the emblem
 at 800, the family frame at 1016/880, and the selected handcrafted rank boss

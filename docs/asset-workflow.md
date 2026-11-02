@@ -88,7 +88,7 @@ Badge artwork is a separate pipeline from goal images. All outputs are WebP with
 | Thumbnail | `public/img/achievements/<name>-thumb.webp` | 200 px | ≤ 20 KiB |
 | Full / inspection | `public/img/achievements/full/<name>.webp` | 1024 px | ≤ 500 KiB |
 
-`<name>` is `<slug>` for fixed-rank badges and the no-boss fallback, and `<slug>--<rank>` for repeatable rank variants.
+`<name>` is `<slug>` for fixed-rank badges and the no-boss fallback, and `<slug>--<rank_label>` for repeatable rank variants.
 
 ### Generation
 

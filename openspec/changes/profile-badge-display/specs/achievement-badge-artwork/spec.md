@@ -16,7 +16,7 @@ Every achievement badge SHALL ship three transparency-preserving WebP images: a 
 
 #### Scenario: Repeatable badge exposes rank variants at all sizes
 - **WHEN** a repeatable badge is published
-- **THEN** each rank has `<slug>--<rank>.webp`, `<slug>--<rank>-thumb.webp`, and `full/<slug>--<rank>.webp`
+- **THEN** each rank has `<slug>--<rank_label>.webp`, `<slug>--<rank_label>-thumb.webp`, and `full/<slug>--<rank_label>.webp`
 - **AND** the base `<slug>` images remain a no-boss fallback
 
 #### Scenario: Artwork budgets are met
@@ -58,7 +58,7 @@ A new badge SHALL use the locked family frame for its `badge_type` and the locke
 #### Scenario: Repeatable badge ships four boss variants
 - **WHEN** a repeatable badge is added
 - **THEN** its artwork includes bronze, silver, gold, and mithril variants
-- **AND** the client selects the variant from `presentation.rank`
+- **AND** the client selects the variant from `presentation.rank_label`
 
 ### Requirement: Reusable frame and boss source layers are retained
 

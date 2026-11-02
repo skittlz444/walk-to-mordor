@@ -5,7 +5,7 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 
 # Design Guide
 
-*Last updated: 2026-03-17*
+*Last updated: 2026-11-02*
 
 ## Design Philosophy
 
@@ -40,6 +40,7 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 | `public/css/auth.css` | Authentication pages (light theme) |
 | `public/css/party.css` | Fellowship/party pages |
 | `public/css/friends.css` | Friends feature |
+| `public/css/badge-display.css` | Earned badge grid (profile and friend profile) |
 
 - Each domain stylesheet owns its component styles. Do not put calendar styles in `main.css`.
 - `main.css` imports all domain stylesheets and defines variables + base layout only.
@@ -69,6 +70,17 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 - Friend code landing (`/friends/add/:friendCode`) must redirect unauthenticated users to login, then return them to the add-friend page.
 - Pending requests always appear at top of friends list. Badge on nav link reflects pending count.
 - Friend profiles show total distance and current goal for accepted friends only.
+
+### Badge Grid (Profile & Friend Profile)
+- Card anatomy, top to bottom: circular artwork → badge name → meta pills (rank label, collection position `index/size`, repeat count `×N` when `earned_count > 1`).
+- Artwork is a circular image (`aspect-ratio: 1 / 1`, `object-fit: contain`). A null, malformed, or failed `image_slug` falls back to a dashed circular CSS placeholder — never an extra asset.
+- Grid is `repeat(auto-fill, minmax(96px, 1fr))` with a 0.75rem gap; cards fill their column and keep a square art well.
+- Collections render one section per collection, ordered by `collection.index`; the header is `label · earned/size`, with the label in `--accent-gold` and progress in `--text-secondary` over a `--border-gray` rule. Standalone badges trail in an "Other" section, newest-earned first.
+- Rank palette maps label → artwork boss material: 1 bronze, 2 silver, 3 gold, 4 mithril. The rank pill uses the gold accent tokens (`--accent-gold`, `--gold-border-light`, `--gold-glow-light`) at every rank — rank distinction lives in the baked boss artwork, not in CSS color.
+- **Rank and collection numbers are text, never baked into artwork.** Text stays crisp at every size, is localizable, and is readable by assistive technology.
+- Loading: eight circular `--bg-dark-alt` shimmer skeletons render only after a ~175 ms delay so fast responses never flash; disable the shimmer under `prefers-reduced-motion`.
+- Artwork tiers: 512 px cards, 200 px thumbs (`-thumb` suffix), 1024 px inspection assets under `full/`. Repeatable badges ship one variant per rank (`<image_slug>--<rank_label>`); fixed-rank badges use `<image_slug>`.
+- Stylesheet: `public/css/badge-display.css`. It is loaded on both `/profile` and `/friends/:userId`.
 
 ### Toast
 - Never auto-dismiss error toasts — user must acknowledge errors.

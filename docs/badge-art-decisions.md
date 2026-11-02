@@ -63,7 +63,7 @@ All badges are circular. The F1 stack is emblem 800 → opaque dark well 880 →
 | Thumbnail | `public/img/achievements/<name>-thumb.webp` | 200 × 200 |
 | Inspection | `public/img/achievements/full/<name>.webp` | 1024 × 1024 |
 
-`<name>` is `<slug>` for fixed-rank badges and the no-boss fallback, and `<slug>--<rank>` for repeatable rank variants.
+`<name>` is `<slug>` for fixed-rank badges and the no-boss fallback, and `<slug>--<rank_label>` for repeatable rank variants.
 
 **Fixed-rank badges** — 11 badges have the selected boss baked in: First Steps (bronze), the 8 journey badges at their fixed ranks, Fellowship Founder (bronze), Good Company (silver).
 
