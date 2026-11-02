@@ -59,6 +59,30 @@
   text-align: center;
 }
 
+/* The card content is a native button so it is keyboard activatable; reset the
+ * button chrome so the card box above keeps owning the visual surface. */
+.badge-card__button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 0.4rem;
+}
+
+.badge-card__button:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
 .badge-card__art {
   display: grid;
   place-items: center;
