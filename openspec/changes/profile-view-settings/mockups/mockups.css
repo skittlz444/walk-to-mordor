@@ -311,14 +311,60 @@
   margin-top: 0.75rem;
 }
 
-/* ── Settings footer stacks at small widths ───────────────────────────── */
-@media (max-width: 480px) {
-  .profile-footer-btns {
-    flex-direction: column;
-  }
+/* ── Settings: fixed Save bar + separate Account card ─────────────────── */
+.profile-settings-page {
+  /* The fixed action bar overlays the bottom of the viewport; reserve room
+     so the Account card and focused fields can always scroll clear of it. */
+  padding-bottom: 6rem;
+}
 
-  .profile-footer-btns button {
-    width: 100%;
-    min-height: 44px;
-  }
+.profile-settings-actionbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(100%, 600px);
+  transform: translateX(-50%);
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-medium);
+  box-sizing: border-box;
+}
+
+.profile-settings-actionbar .btn-primary {
+  flex: 1 1 auto;
+  min-height: 44px;
+  background: var(--accent-gold);
+  border-color: var(--accent-gold);
+  color: var(--text-black);
+  font-weight: 600;
+}
+
+.profile-settings-actionbar .btn-primary:hover,
+.profile-settings-actionbar .btn-primary:focus-visible {
+  background: var(--accent-gold);
+  border-color: var(--accent-gold);
+  color: var(--text-black);
+}
+
+.profile-settings-actionbar .btn-secondary {
+  flex: 0 0 auto;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.profile-account-card {
+  margin-top: 1rem;
+}
+
+.profile-account-card h2 {
+  margin: 0 0 0.25rem;
+}
+
+.profile-account-card .btn-danger {
+  margin-top: 0.75rem;
+  min-height: 44px;
 }

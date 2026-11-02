@@ -29,7 +29,7 @@
   </header>
 
   <main>
-    <div class="profile-page">
+    <div class="profile-page profile-settings-page">
       <!-- Back navigation: the loop back to the view page -->
       <nav class="profile-back-row" aria-label="Breadcrumb">
         <a class="profile-back-link" href="/profile">
@@ -95,14 +95,6 @@
               <option value="2">Pippin</option>
             </select>
             <small class="field-hint">Follow the current Walk to Mordor route from Bag End to Mount Doom, the Grey Havens, and Sam's return home.</small>
-          </div>
-        </div>
-
-        <div class="profile-card-footer">
-          <div class="profile-footer-btns">
-            <button type="button" class="btn btn-primary">Save Changes</button>
-            <button type="button" class="btn btn-danger">Logout</button>
-            <button type="button" class="btn btn-secondary">Back to profile</button>
           </div>
         </div>
       </div>
@@ -187,6 +179,21 @@
           </p>
         </div>
       </section>
+
+      <!-- Account actions stay separate from the primary Save bar -->
+      <section class="profile-card profile-account-card">
+        <div class="profile-card-body">
+          <h2>Account</h2>
+          <p class="push-permission-muted">Sign out of this device. Your walk history stays safe.</p>
+          <button type="button" class="btn btn-danger">Log out</button>
+        </div>
+      </section>
+
+      <!-- Sticky Save bar: always reachable, never between form sections -->
+      <div class="profile-settings-actionbar" role="region" aria-label="Settings actions">
+        <button type="button" class="btn btn-primary">Save Changes</button>
+        <a class="btn btn-secondary" href="/profile">Back</a>
+      </div>
     </div>
   </main>
 </body>

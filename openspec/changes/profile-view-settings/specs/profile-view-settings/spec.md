@@ -193,7 +193,7 @@ The system SHALL open a shared avatar picker modal from the view page avatar and
 
 ### Requirement: Settings page
 
-The system SHALL give `/profile/settings` every editing capability the current `GET /profile` page has, preserving behaviour and endpoints, with at least one visible control returning to `/profile`.
+The system SHALL give `/profile/settings` every editing capability the current `GET /profile` page has, preserving behaviour and endpoints, with a viewport-fixed bottom action bar containing Save Changes and a Back control, and a separate Account card for logout. The Save control SHALL NOT sit between the profile form and the push settings card.
 
 #### Scenario: Settings preserves the profile form
 
@@ -206,9 +206,25 @@ The system SHALL give `/profile/settings` every editing capability the current `
 #### Scenario: Save profile updates username and email
 
 - **GIVEN** the settings page with empty username and email fields
-- **WHEN** the user activates Save Changes
+- **WHEN** the user activates Save Changes in the fixed action bar
 - **THEN** the error "Please provide at least one field to update" is shown
 - **AND** after entering a new username and activating Save Changes, a `PUT /api/profile` request carries it and the success message appears
+
+#### Scenario: Save action stays reachable
+
+- **GIVEN** an authenticated user on `/profile/settings`
+- **WHEN** the user scrolls through the profile form and the push settings card
+- **THEN** the Save Changes action remains visible in a viewport-fixed bottom action bar
+- **AND** the bar is not rendered between the profile card and the push settings card
+- **AND** the page reserves bottom space so the Account card and focused fields can scroll clear of the bar
+- **AND** the bar does not cover the form field that currently has focus
+
+#### Scenario: Logout is separate from Save
+
+- **GIVEN** the settings page
+- **WHEN** the user reaches the Account section at the bottom
+- **THEN** Logout appears in its own Account card above the fixed action bar
+- **AND** the fixed bar contains Save Changes and Back, not Logout
 
 #### Scenario: Journey switch confirm dialog preserved
 
@@ -255,7 +271,8 @@ The system SHALL give `/profile/settings` every editing capability the current `
 
 - **GIVEN** the settings page is loaded
 - **WHEN** the page is rendered
-- **THEN** a visible "Back to profile" control links to `/profile` (not history-back)
+- **THEN** a visible "Back to profile" control in the top breadcrumb links to `/profile`
+- **AND** the fixed action bar also offers a Back control to `/profile` (not history-back)
 
 ### Requirement: Navigation loop and unauthenticated access
 
@@ -338,4 +355,4 @@ The profile pages SHALL follow the app's accessibility conventions for labels, d
 
 - **GIVEN** a 360 px wide viewport
 - **WHEN** the view and settings pages are laid out
-- **THEN** the avatar button, Settings button, back links, toggle rows, and footer action buttons (stacked full-width at ≤480 px) are at least 44 px tall
+- **THEN** the avatar button, Settings button, back links, toggle rows, fixed Save/Back actions, and Account logout button are at least 44 px tall
