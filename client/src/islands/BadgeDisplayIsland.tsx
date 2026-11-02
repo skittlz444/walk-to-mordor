@@ -6,6 +6,7 @@ const RANK_LABEL_PATTERN = /^[a-z0-9-]+$/;
 const SKELETON_DELAY_MS = 175;
 const SKELETON_COUNT = 8;
 const OTHER_SECTION_LABEL = 'Other';
+const BADGE_AWARD_EVENT = 'wtm:open-badge-modal';
 
 export interface BadgeCollection {
   slug: string;
@@ -131,6 +132,30 @@ function imageNameFor(entry: BadgeAchievement): string | null {
   return slug;
 }
 
+/** Accessible name for the activatable card; includes rank, position and repeats. */
+function badgeAccessibleName(entry: BadgeAchievement): string {
+  const parts = [entry.name];
+  const rankLabel = entry.presentation?.rank_label;
+  if (rankLabel) parts.push(`Rank: ${rankLabel}`);
+
+  const collection = entry.presentation?.collection;
+  if (isCollection(collection)) {
+    parts.push(`Collection position ${collection.index} of ${collection.size}`);
+  }
+
+  if (entry.earned_count > 1) {
+    parts.push(`Earned ${entry.earned_count} times`);
+  }
+
+  return parts.join('. ');
+}
+
+function openBadgeModal(entry: BadgeAchievement): void {
+  document.dispatchEvent(new CustomEvent(BADGE_AWARD_EVENT, {
+    detail: { ...entry, presentation: entry.presentation ?? null },
+  }));
+}
+
 function BadgeCard({ entry }: { entry: BadgeAchievement }) {
   const [imageState, setImageState] = useState<'primary' | 'base' | 'failed'>('primary');
 
@@ -156,47 +181,64 @@ function BadgeCard({ entry }: { entry: BadgeAchievement }) {
     }
   };
 
+  // Native buttons activate on Enter/Space in browsers; handling keydown here
+  // keeps that contract in the test DOM and preventDefault suppresses the
+  // native click so the event fires once per activation.
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    openBadgeModal(entry);
+  };
+
   return (
     <li className="badge-card">
-      <div className="badge-card__art">
-        {imageSrc ? (
-          <img
-            className="badge-card__image"
-            src={imageSrc}
-            alt=""
-            width={512}
-            height={512}
-            loading="lazy"
-            onError={handleImageError}
-          />
-        ) : (
-          <span className="badge-card__placeholder" aria-hidden="true"></span>
-        )}
-      </div>
+      <button
+        type="button"
+        className="badge-card__button"
+        aria-label={badgeAccessibleName(entry)}
+        onClick={() => openBadgeModal(entry)}
+        onKeyDown={handleKeyDown}
+      >
+        <span className="badge-card__art">
+          {imageSrc ? (
+            <img
+              className="badge-card__image"
+              src={imageSrc}
+              alt=""
+              width={512}
+              height={512}
+              loading="lazy"
+              onError={handleImageError}
+            />
+          ) : (
+            <span className="badge-card__placeholder" aria-hidden="true"></span>
+          )}
+        </span>
 
-      <span className="badge-card__name">{entry.name}</span>
+        <span className="badge-card__name">{entry.name}</span>
 
-      <div className="badge-card__meta">
-        {rankLabel && (
-          <span className="badge-rank" role="img" aria-label={`Rank: ${rankLabel}`}>
-            {rankLabel}
-          </span>
-        )}
-        {hasCollection && (
-          <span
-            className="badge-position"
-            role="img"
-            aria-label={`Collection position ${collection.index} of ${collection.size}`}
-          >
-            {collection.index}/{collection.size}
-          </span>
-        )}
-        {entry.earned_count > 1 && (
-          <span className="badge-repeat" role="img" aria-label={`Earned ${entry.earned_count} times`}>
-            ×{entry.earned_count}
-          </span>
-        )}
-      </div>
+        <span className="badge-card__meta">
+          {rankLabel && (
+            <span className="badge-rank" role="img" aria-label={`Rank: ${rankLabel}`}>
+              {rankLabel}
+            </span>
+          )}
+          {hasCollection && (
+            <span
+              className="badge-position"
+              role="img"
+              aria-label={`Collection position ${collection.index} of ${collection.size}`}
+            >
+              {collection.index}/{collection.size}
+            </span>
+          )}
+          {entry.earned_count > 1 && (
+            <span className="badge-repeat" role="img" aria-label={`Earned ${entry.earned_count} times`}>
+              ×{entry.earned_count}
+            </span>
+          )}
+        </span>
+      </button>
     </li>
   );
 }

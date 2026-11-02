@@ -41,6 +41,7 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 | `public/css/party.css` | Fellowship/party pages |
 | `public/css/friends.css` | Friends feature |
 | `public/css/badge-display.css` | Earned badge grid (profile and friend profile) |
+| `public/css/badge-award.css` | Badge award modal (global) |
 
 - Each domain stylesheet owns its component styles. Do not put calendar styles in `main.css`.
 - `main.css` imports all domain stylesheets and defines variables + base layout only.
@@ -80,7 +81,20 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 - **Rank and collection numbers are text, never baked into artwork.** Text stays crisp at every size, is localizable, and is readable by assistive technology.
 - Loading: eight circular `--bg-dark-alt` shimmer skeletons render only after a ~175 ms delay so fast responses never flash; disable the shimmer under `prefers-reduced-motion`.
 - Artwork tiers: 512 px cards, 200 px thumbs (`-thumb` suffix), 1024 px inspection assets under `full/`. Repeatable badges ship one variant per rank (`<image_slug>--<rank_label>`); fixed-rank badges use `<image_slug>`.
+- Card activation: each earned card is a native button (`.badge-card__button`) whose accessible name includes rank, collection position, and repeat count; activating it dispatches `wtm:open-badge-modal` and opens the award modal view-only. The button reset and focus ring live in `badge-display.css`; the modal owns the rest.
 - Stylesheet: `public/css/badge-display.css`. It is loaded on both `/profile` and `/friends/:userId`.
+
+### Badge Award Modal
+- One globally mounted `BadgeAwardModal` island serves two modes: **acknowledge** (pending awards fetched on page open, including the map) and **view-only** (opened by activating any earned badge card through the `wtm:open-badge-modal` document event). Never import the grid from the modal or the modal from the grid.
+- Dialog semantics: overlay + dialog with `role="dialog"`, `aria-modal="true"`, and the badge name as `aria-label`. Focus moves into the dialog on open (primary action first in acknowledge mode) and returns to the activating card on close. Trap focus while open; Escape and overlay activation close.
+- Queue behavior: one award at a time, oldest first, with "Badge x of n" exposed to assistive technology. The primary action acknowledges the shown instance and advances; the last award closes the modal and the queue does not reopen in that page view.
+- Repeatability-aware dismiss: closing a repeatable award acknowledges it so it does not nag; closing a one-off award does **not** acknowledge, so it stays pending for a later visit. A failed acknowledgement keeps the same badge with a retry control and blocks advancement/close.
+- View-only mode never acknowledges and never fetches pending awards. It preserves any in-memory pending queue and resumes it after closing. Friend-profile badges are always view-only.
+- Artwork: 200 px thumbnail first, then the 1024 px `full/<name>.webp` crossfades in. Repeatables use the **awarding** rank label in acknowledge mode (`<image_slug>--<rank_label>`) and the grid's **current** rank in view-only mode; fixed-rank badges use `<image_slug>`. Apply the badge grid's slug validation and fallback chain; invalid artwork renders text only.
+- Defer the acknowledge modal only while another real modal dialog is open; the map page is not a modal and never blocks it.
+- Mobile-first: base styles are single-column with a full-width dialog and tight padding; `@media (min-width: 641px)` opts into the two-column desktop layout and wider dialog. Keep the overlay `box-sizing: border-box` and `100dvh` so padding can never push it past the viewport.
+- Respect `prefers-reduced-motion` — disable entrance and celebration transitions. Style with design variables only; never hardcode colors.
+- Stylesheet: `public/css/badge-award.css`, loaded globally by `src/renderLayout.ts`.
 
 ### Toast
 - Never auto-dismiss error toasts — user must acknowledge errors.

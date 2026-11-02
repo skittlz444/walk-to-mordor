@@ -196,12 +196,51 @@ Goal content is authenticated and uses the same unlock semantics as goal viewing
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | GET | `/api/achievements` | Yes | Earned badges, newest-earned first. Optional `userId` query returns an accepted friend's summary; self-queries skip the friendship check. Invalid `userId` → `400`; non-friend or unknown user → `404` (existence is not leaked). |
+| GET | `/api/achievements/pending` | Yes | Caller's earned-but-unacknowledged awards, oldest-earned first. Self-scoped; no `userId` parameter. |
+| POST | `/api/achievements/acknowledge` | Yes | Body `{ instance_ids: number[] }`. Idempotent; foreign or stale IDs are ignored. Malformed body → `400`. |
 
 - Response envelope is `{ achievements: [...] }`; a user with no earned instances gets `200` with an empty array.
 - Each entry carries `achievement_id`, `slug`, `name`, `description`, `image_slug`, `badge_type`, `is_repeatable`, `earned_count`, `first_earned_at`, `last_earned_at`, and a server-resolved `presentation` block.
 - `presentation` fields: `rank` (1–4), `rank_label` (`bronze` | `silver` | `gold` | `mithril`), `storyline` (string or `null`; `null` means global), and `collection` (`{ slug, label, index, size }` or `null`).
 - The raw definition `metadata` string is never returned — only the resolved `presentation` block. Missing or malformed metadata falls back to rank 1, no collection, and a null storyline.
 - Repeatable badges select their artwork variant with `presentation.rank_label`: `/img/achievements/<image_slug>--<rank_label>.webp` (e.g. `habit-faithful-walker--gold.webp`). Non-repeatable badges use `/img/achievements/<image_slug>.webp`.
+
+### Pending awards
+
+`GET /api/achievements/pending` returns `{ pending: [...] }` — the caller's earned instances with no acknowledgement row, ordered `earned_at ASC, id ASC`. A user with nothing outstanding gets `200` with an empty array.
+
+- Each entry carries `instance_id`, `earned_at`, `earned_count`, `slug`, `name`, `description`, `image_slug`, `badge_type`, `is_repeatable`, and `presentation`.
+- `earned_count` is the definition's current total for the user (repeat context). `presentation` is resolved with the **instance's awarding ordinal** — its 1-based position among the user's instances of that definition ordered by `(earned_at, id)` — not with `earned_count`. Queued instances that crossed a rank threshold therefore show the rank they earned (e.g. thresholds `[1,4,12,26]`: ordinals 1–3 resolve bronze, ordinal 4 silver).
+- Pending is derived from earned instances minus acknowledgements, so backfilled awards are included. The raw definition `metadata` string is never returned.
+- Without a valid session → `401`. A query failure → `500`.
+
+```json
+{
+  "pending": [
+    {
+      "instance_id": 12,
+      "earned_at": "2026-11-02T00:00:00.000Z",
+      "earned_count": 4,
+      "slug": "habit-faithful-walker",
+      "name": "Faithful Walker",
+      "description": "Walk every day for a full week.",
+      "image_slug": "habit-faithful-walker",
+      "badge_type": "habit",
+      "is_repeatable": true,
+      "presentation": { "rank": 2, "rank_label": "silver", "storyline": null, "collection": null }
+    }
+  ]
+}
+```
+
+### Acknowledge awards
+
+`POST /api/achievements/acknowledge` takes `{ "instance_ids": [12, 13] }` and returns `200` with `{ "acknowledged": n }`.
+
+- `n` counts only rows newly inserted for the caller. Re-acknowledging, duplicate IDs in one request, IDs owned by another user, and nonexistent IDs all contribute `0` instead of erroring — the call is safe to replay.
+- A request accepts at most 100 IDs; the per-ID inserts run as one atomic batch, so a failure cannot leave a partially acknowledged body.
+- Acknowledgement never creates, updates, or deletes `user_achievement_instances` rows; it only writes to `user_achievement_acknowledgements`.
+- Missing/non-array/empty/over-100 `instance_ids`, non-number, non-integer, non-safe-integer, zero, or negative entries, and malformed JSON → `400`. Without a valid session → `401`.
 
 ```json
 {

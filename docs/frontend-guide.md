@@ -181,6 +181,7 @@ Legacy vanilla JS lives in `public/js/`. Key modules: `main.js` (bootstrap), `ca
 - `window.partyStore` — fellowship state (`client/src/stores/partyStore.ts`)
 - `window._personalDistance` and `window._activeStoryline` — legacy journey display state from `/api/total-distance`
 - `storylineChanged` CustomEvent — emitted by `ProfileIsland` after user storyline switches; `appStore` consumes it to update signals
+- `wtm:open-badge-modal` CustomEvent — dispatched by `BadgeDisplayIsland` when an earned badge card is activated; `BadgeAwardModal` consumes it. `detail` is the badge summary entry plus its `presentation` block. The two islands stay independent and never import each other.
 
 Never remove these without migrating all dependent legacy code. Prefer signals and stores over adding new bridge globals.
 

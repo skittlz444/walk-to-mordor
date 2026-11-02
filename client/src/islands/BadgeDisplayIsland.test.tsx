@@ -4,6 +4,9 @@ import { BadgeDisplayIsland } from './BadgeDisplayIsland';
 import type { BadgeAchievement, BadgeCollection } from './BadgeDisplayIsland';
 
 const mockFetch = vi.fn();
+let awardEventSpy: ReturnType<typeof vi.fn>;
+
+const OPEN_EVENT = 'wtm:open-badge-modal';
 
 function setPath(pathname: string) {
   Object.defineProperty(window, 'location', {
@@ -61,6 +64,9 @@ describe('BadgeDisplayIsland', () => {
     mockFetch.mockReset();
     vi.stubGlobal('fetch', mockFetch);
 
+    awardEventSpy = vi.fn();
+    document.addEventListener(OPEN_EVENT, awardEventSpy as EventListener);
+
     const store: Record<string, string> = { sessionToken: 'test-token' };
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => store[key] ?? null,
@@ -72,6 +78,7 @@ describe('BadgeDisplayIsland', () => {
   });
 
   afterEach(() => {
+    document.removeEventListener(OPEN_EVENT, awardEventSpy as EventListener);
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -186,7 +193,7 @@ describe('BadgeDisplayIsland', () => {
       expect(container.querySelector('.badge-card__name')?.textContent).toBe('The Glittering Caves');
       expect(container.querySelector('.badge-rank')?.textContent).toBe('mithril');
       expect(container.querySelector('.badge-position')?.textContent).toBe('7/8');
-      expect(container.querySelector('a, button')).toBeNull();
+      expect(container.querySelector('button.badge-card__button')).toBeTruthy();
     });
 
     it('shows a repeat-count chip only when earned_count is greater than one', async () => {
@@ -338,6 +345,121 @@ describe('BadgeDisplayIsland', () => {
 
       expect(container.querySelector('img')).toBeNull();
       expect(container.querySelector('.badge-card__placeholder')).toBeTruthy();
+    });
+  });
+
+  describe('activation', () => {
+    it('dispatches the open event with the badge payload from the profile grid', async () => {
+      const entry = makeEntry({
+        slug: 'habit-faithful-walker',
+        name: 'Faithful Walker',
+        image_slug: 'habit-faithful-walker',
+        is_repeatable: true,
+        earned_count: 4,
+        last_earned_at: '2026-10-01T12:00:00.000Z',
+        presentation: {
+          rank: 2,
+          rank_label: 'silver',
+          collection: makeCollection({ index: 3, size: 8 }),
+        },
+      });
+      mockFetch.mockResolvedValue(achievementsResponse([entry]));
+
+      const { findByRole } = render(<BadgeDisplayIsland />);
+      const button = await findByRole('button', { name: /Faithful Walker/ });
+
+      fireEvent.click(button);
+
+      expect(awardEventSpy).toHaveBeenCalledTimes(1);
+      const event = awardEventSpy.mock.calls[0][0] as CustomEvent;
+      expect(event.detail).toMatchObject({
+        slug: 'habit-faithful-walker',
+        name: 'Faithful Walker',
+        image_slug: 'habit-faithful-walker',
+        is_repeatable: true,
+        earned_count: 4,
+        last_earned_at: '2026-10-01T12:00:00.000Z',
+        presentation: entry.presentation,
+      });
+    });
+
+    it('dispatches the same event from the friend profile grid', async () => {
+      setPath('/friends/42');
+      const entry = makeEntry({
+        slug: 'friend-badge',
+        name: "Friend's Badge",
+        image_slug: 'friend-badge',
+        presentation: { rank: 4, rank_label: 'mithril', collection: null },
+      });
+      mockFetch.mockResolvedValue(achievementsResponse([entry]));
+
+      const { findByRole } = render(<BadgeDisplayIsland />);
+      const button = await findByRole('button', { name: /Friend's Badge/ });
+
+      fireEvent.click(button);
+
+      expect(awardEventSpy).toHaveBeenCalledTimes(1);
+      const event = awardEventSpy.mock.calls[0][0] as CustomEvent;
+      expect(event.detail).toMatchObject({
+        slug: 'friend-badge',
+        name: "Friend's Badge",
+        presentation: { rank: 4, rank_label: 'mithril', collection: null },
+      });
+      expect(mockFetch.mock.calls).toHaveLength(1);
+      expect(mockFetch.mock.calls[0][0]).toBe('/api/achievements?userId=42');
+    });
+
+    it('opens from Enter key activation', async () => {
+      mockFetch.mockResolvedValue(achievementsResponse([makeEntry()]));
+
+      const { findByRole } = render(<BadgeDisplayIsland />);
+      const button = await findByRole('button', { name: /Across the Buckleberry Ferry/ });
+
+      fireEvent.keyDown(button, { key: 'Enter' });
+
+      expect(awardEventSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens from Space key activation', async () => {
+      mockFetch.mockResolvedValue(achievementsResponse([makeEntry()]));
+
+      const { findByRole } = render(<BadgeDisplayIsland />);
+      const button = await findByRole('button', { name: /Across the Buckleberry Ferry/ });
+
+      fireEvent.keyDown(button, { key: ' ' });
+
+      expect(awardEventSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('exposes the badge name, rank, collection position and repeat count to assistive technology', async () => {
+      mockFetch.mockResolvedValue(achievementsResponse([
+        makeEntry({
+          slug: 'habit-faithful-walker',
+          name: 'Faithful Walker',
+          is_repeatable: true,
+          earned_count: 12,
+          presentation: {
+            rank: 3,
+            rank_label: 'gold',
+            collection: makeCollection({ index: 4, size: 8 }),
+          },
+        }),
+      ]));
+
+      const { findByRole } = render(<BadgeDisplayIsland />);
+      await findByRole('button', {
+        name: 'Faithful Walker. Rank: gold. Collection position 4 of 8. Earned 12 times',
+      });
+    });
+
+    it('issues no acknowledge request when a card is activated', async () => {
+      mockFetch.mockResolvedValue(achievementsResponse([makeEntry()]));
+
+      const { findByRole } = render(<BadgeDisplayIsland />);
+      fireEvent.click(await findByRole('button', { name: /Across the Buckleberry Ferry/ }));
+
+      expect(mockFetch.mock.calls).toHaveLength(1);
+      expect(mockFetch.mock.calls[0][0]).toBe('/api/achievements');
     });
   });
 
