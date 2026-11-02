@@ -75,7 +75,7 @@ The system SHALL expose `GET /api/achievements/pending` to an authenticated call
 
 ### Requirement: Acknowledge endpoint
 
-The system SHALL expose `POST /api/achievements/acknowledge` to an authenticated caller with a body of `{ instance_ids: number[] }`, acknowledging each submitted instance owned by the caller. The call SHALL be idempotent, SHALL ignore instance IDs the caller does not own, and SHALL return `{ acknowledged: <count> }`. Malformed bodies SHALL be rejected with 400.
+The system SHALL expose `POST /api/achievements/acknowledge` to an authenticated caller with a body of `{ instance_ids: number[] }`, acknowledging each submitted instance owned by the caller. The call SHALL be idempotent, SHALL ignore instance IDs the caller does not own, and SHALL return `{ acknowledged: <count> }`. A request SHALL accept at most 100 IDs. Malformed bodies SHALL be rejected with 400.
 
 #### Scenario: Pending award is acknowledged
 - **GIVEN** a user with a pending instance
@@ -95,9 +95,10 @@ The system SHALL expose `POST /api/achievements/acknowledge` to an authenticated
 - **AND** `acknowledged` counts only the caller's own newly acknowledged instances
 
 #### Scenario: Malformed body is rejected
-- **GIVEN** a body that is missing `instance_ids`, is not an array, is empty, or contains non-integer values
+- **GIVEN** a body that is missing `instance_ids`, is not an array, is empty, contains non-integer values, or contains more than 100 IDs
 - **WHEN** `POST /api/achievements/acknowledge` is called
 - **THEN** the system returns a 400 error
+- **AND** no acknowledgement rows are written
 
 #### Scenario: Unauthenticated request is rejected
 - **GIVEN** a request without a valid session token
