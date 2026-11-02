@@ -1,29 +1,34 @@
 ## Why
 
-The `shared-achievement-infrastructure` change provides domain services to award, store, and aggregate achievement badges, but no user-facing surface to display them. Users who earn badges through personal challenges, storyline books, or the Field Guide have no way to see their earned badges. This change builds the display layer — a badge grid on profile and friend profile pages — so earned badges are visible the moment any consuming feature awards them.
+The `shared-achievement-infrastructure` change provides domain services to award, store, and aggregate achievement badges, but no user-facing surface to display them and no badges to display. Users who earn badges through personal challenges, storyline books, or the Field Guide have no way to see them. This change builds the display layer, seeds the first badge catalog — the Frodo/Sam journey set plus two habit badges — and awards those badges from existing walk logging so the grid is live on day one.
 
 ## What Changes
 
-- Add a `GET /api/achievements` endpoint that returns the authenticated user's achievement summary via the shared `getUserAchievementSummary` domain service.
-- Add a `GET /api/achievements?userId=<id>` query parameter variant for viewing a friend's achievement summary.
-- Add a `BadgeDisplayIsland` Preact island that fetches achievement data and renders a badge grid with images, names, and repeat counts.
-- Add the `BadgeDisplayIsland` to the profile page SSR shell (below existing profile controls) and the friend profile page SSR shell.
-- Add focused CSS for the badge grid layout with no contamination of unrelated existing selector blocks.
-- Gracefully render nothing when a user has no earned badges (empty state).
+- Add a `GET /api/achievements` endpoint that returns the authenticated user's achievement summary, ordered newest-earned first.
+- Add a `GET /api/achievements?userId=<id>` variant for viewing an accepted friend's summary.
+- Add server-resolved `presentation` data per badge: rank (1–4 plus label), storyline scope, and collection position (`index`/`size`). Rank and collection live in the definition's `metadata`.
+- Add a `BadgeDisplayIsland` Preact island that renders earned badges grouped by collection, with rank chrome, repeat counts, and accessible labels.
+- Add the island to the profile page and friend-profile page SSR shells.
+- Add focused `badge-display.css` styles using design-guide variables only.
+- Seed the initial catalog: seven Frodo/Sam journey badges (one numbered, ranked collection) and two global habit badges (one fixed rank, one ranked by repeat count).
+- Award journey and habit badges from `POST`/`PUT` progress writes, scoped to the active storyline, idempotent, and isolated from walk-log failures.
+- Add the badge artwork pipeline: FLUX.3 Klein emblems, reusable family frames and rank rings, composited in PhotoCraft and optimized to WebP.
+- Extend the shared achievement summary so it includes the definition's `metadata`; rank, collection, and storyline resolution then needs no extra queries.
 
 ## Capabilities
 
 ### New Capabilities
-- `profile-badge-display`: Authenticated and friend-scoped achievement summary endpoint plus Preact badge grid island for profile and friend profile surfaces.
+- `profile-badge-display`: Achievement summary endpoint (own and friend-scoped), ranked and numbered badge presentation, grouped badge grid on profile and friend-profile surfaces, seeded first catalog, and storyline-aware awarding from walk logging.
 
 ### Modified Capabilities
-- None.
+- `shared-achievement-infrastructure`: Aggregated achievement summaries now include the definition's `metadata` so display concerns (rank, collection, storyline) can be resolved from the summary itself.
 
 ## Impact
 
-- Worker APIs: new `GET /api/achievements` route with optional `userId` query parameter, wired through `src/index.ts` with allowed-method metadata.
-- Frontend: new `BadgeDisplayIsland` Preact island registered in `client/src/index.tsx`; new `data-island="BadgeDisplayIsland"` elements added to `renderProfilePage.ts` and `renderFriendProfilePage.ts` SSR shells.
-- CSS: new `badge-display.css` stylesheet or additions to existing `profile.css` for badge grid layout.
-- Depends on `shared-achievement-infrastructure` for `getUserAchievementSummary()`, `AchievementSummary` interface, and the underlying `achievement_definitions` / `user_achievement_instances` tables.
-- Tests: Jest coverage for the achievements endpoint (auth, empty results, friend-scoped results); Vitest coverage for the badge island (rendering, repeat counts, empty state).
-- Documentation: update `docs/api-reference.md` with the new endpoint.
+- Worker APIs: `GET /api/achievements` wired through `src/index.ts` under the existing `authGuard`; new `src/achievement-handlers.ts` and `src/badge-presentation.ts`; `src/achievement-utils.ts` summary query gains `metadata`.
+- Award hook: new `src/achievement-awards.ts`, called from `POST` and `PUT` progress writes in `src/progress-handlers.ts`.
+- D1: `migrations/0144_seed_journey_badges.sql` inserts nine definitions. No schema change.
+- Frontend: new `BadgeDisplayIsland` registered in `client/src/index.tsx`; new `data-island` placeholders in `renderProfilePage.ts` and `renderFriendProfilePage.ts`.
+- Assets: nine composited badge images in `public/img/achievements/`; generation masters, frames, and rings under gitignored `raw_assets/badges/`; generator scripts and prompts under `scripts/badge-art/`.
+- Documentation: `docs/api-reference.md` (endpoint), `docs/data-models.md` (metadata conventions), `docs/design-guide.md` (badge ranks and collection chrome).
+- Tests: Jest for the shared summary change, presentation resolution, endpoint behavior, seed migration, and award hook; Vitest for the island and grouping.
