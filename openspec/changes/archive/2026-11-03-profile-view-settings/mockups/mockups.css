@@ -82,6 +82,11 @@
   box-sizing: border-box;
 }
 
+.profile-view-cta .party-btn {
+  /* Accessibility: the CTA is a touch target, so it must be at least 44px. */
+  min-height: 44px;
+}
+
 .profile-view-cta {
   margin: 0 0 1rem;
 }
