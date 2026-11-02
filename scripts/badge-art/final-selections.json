@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-02",
+  "frames": {
+    "journey": "a-271828",
+    "habit": "a-112358",
+    "challenge": "a-112358",
+    "book": "a-271828",
+    "community": "a-314159",
+    "field-guide": "a-314159"
+  },
+  "emblems": {
+    "habit-first-steps": "b-141421",
+    "journey-frodo-sam-buckleberry-ferry": "b-141421",
+    "journey-frodo-sam-weathertop-survivor": "b-161803",
+    "journey-frodo-sam-through-khazad-dum": "b-112358",
+    "journey-frodo-sam-lothlorien-guest": "a-314159",
+    "journey-frodo-sam-rauros-parting": "b-161803",
+    "journey-frodo-sam-mordor-threshold": "b-314159",
+    "journey-frodo-sam-home-at-sunset": "b-161803",
+    "journey-frodo-sam-glittering-caves": "a-173205",
+    "habit-faithful-walker": "a-173205",
+    "habit-weekend-warrior": "b-271828",
+    "habit-steady-month": "a-271828",
+    "habit-hundred-week": "b-161803",
+    "community-fellowship-founder": "b-271828",
+    "community-good-company": "b-271828"
+  },
+  "bosses": {
+    "bronze": "a-112358",
+    "silver": "a-314159",
+    "gold": "a-314159",
+    "mithril": "b-173205"
+  },
+  "fixed_ranks": {
+    "habit-first-steps": "bronze",
+    "journey-frodo-sam-buckleberry-ferry": "bronze",
+    "journey-frodo-sam-weathertop-survivor": "bronze",
+    "journey-frodo-sam-through-khazad-dum": "silver",
+    "journey-frodo-sam-lothlorien-guest": "silver",
+    "journey-frodo-sam-rauros-parting": "gold",
+    "journey-frodo-sam-mordor-threshold": "gold",
+    "journey-frodo-sam-home-at-sunset": "mithril",
+    "journey-frodo-sam-glittering-caves": "mithril",
+    "community-fellowship-founder": "bronze",
+    "community-good-company": "silver"
+  },
+  "repeatable": [
+    "habit-faithful-walker",
+    "habit-weekend-warrior",
+    "habit-steady-month",
+    "habit-hundred-week"
+  ],
+  "ranks": [
+    "bronze",
+    "silver",
+    "gold",
+    "mithril"
+  ]
+}

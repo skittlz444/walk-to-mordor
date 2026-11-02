@@ -5,7 +5,7 @@ description: Master index of all project documentation with brief descriptions.
 
 # Walk to Mordor Documentation
 
-Last updated: 2026-07-17
+Last updated: 2026-11-02
 
 For documentation guidelines, see [AGENTS.md](AGENTS.md).
 
@@ -20,7 +20,7 @@ For documentation guidelines, see [AGENTS.md](AGENTS.md).
 
 - [Frontend Guide](frontend-guide.md) — Island hydration, component patterns, goal-content UI behavior, build tooling, and frontend development rules.
 - [Design Guide](design-guide.md) — Visual design system, CSS theming, UX patterns, and interaction conventions.
-- [Badge Art Decisions](badge-art-decisions.md) — Final family-frame, emblem, and rank-boss picks; badge asset layout and rank-variant rules.
+- [Badge Art Decisions](badge-art-decisions.md) — Final frame, emblem, and rank-boss picks; 512/200/1024 asset layout, rank variants, and retained source layers.
 
 ## Operations Docs
 

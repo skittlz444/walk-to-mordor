@@ -89,16 +89,12 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 - [ ] Emblem centred at `(512, 512)`, visible art reaches about r 400.
 - [ ] Frame outer 1016, inner 880, centred; band about 68 px.
 - [ ] The 800–880 annulus is opaque (dark well disc at 880). No transparent moat.
-- [ ] 1 px dark keyline around the emblem edge.
-- [ ] Boss centre `(511, 979)`; bezel 70, disc 54, gem 25.
-- [ ] Boss palette and cut match the rank:
-  - [ ] Bronze `#b87333` / round / bezel `#24160d`.
-  - [ ] Silver `#c9ced6` / octagon / bezel `#1b2026`.
-  - [ ] Gold `#e0b23a` / hexagon / bezel `#2b2008`.
-  - [ ] Mithril `#7fc9e8` / star / bezel `#12232e` + `#4f9fbd` halo (4 px, alpha 82).
+- [ ] Boss tile centre `(511, 979)`; shadow centre `(511, 981)`.
+- [ ] Boss cut matches the rank: bronze round, silver octagon, gold hexagon, mithril four-point star.
 - [ ] Production export is RGBA, not the `#14181f` proof.
 - [ ] `composite_badges.py` supports only `journey` and `habit`; another family was mapped or composited in PhotoCraft, not forced into a journey frame.
-- [ ] Per-badge PhotoCraft composite checked: 1024 RGBA, base emblem 800, frame 1016 / 880, opaque well at 880, selected boss at `(511, 979)`, clipped shadow at `(511, 981)`, alpha export.
+- [ ] Per-badge composite checked: 1024 RGBA, base emblem 800, frame 1016 / 880, opaque well at 880, selected boss and clipped shadow, alpha export.
+- [ ] `assets/badge-art/` refreshed from the selected frame and boss layers (the rebuild script does this by default).
 
 ## 8. Coherence and legibility
 
@@ -119,14 +115,15 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 
 ## 9. Export and verify
 
-- [ ] 1024 RGBA production master at `raw_assets/badges/final-complete/<slug>.png`.
-- [ ] Main: `public/img/achievements/<slug>.webp`, 512 × 512, `--max 512 --quality 90 --targetKB 0`.
-- [ ] Thumb: `public/img/achievements/<slug>-thumb.webp`, 200 × 200, `--max 200 --quality 80 --targetKB 20`.
-- [ ] Repeatable: all four `<slug>--<rank>.webp` variants and thumbs exist; the base image stays boss-less.
-- [ ] Both are WebP with alpha.
-- [ ] Main is under ~120 KB; thumb is at or under 20 KB.
+- [ ] 1024 RGBA production master at `raw_assets/badges/final-complete/<name>.png`.
+- [ ] Card: `public/img/achievements/<name>.webp`, 512 × 512.
+- [ ] Thumb: `public/img/achievements/<name>-thumb.webp`, 200 × 200.
+- [ ] Full: `public/img/achievements/full/<name>.webp`, 1024 × 1024.
+- [ ] Repeatable: all four `<slug>--<rank>` variants, thumbs, and full images exist; the base image stays boss-less.
+- [ ] All three sizes are WebP with alpha.
+- [ ] Card is under ~120 KB; thumb is at or under 20 KB; full is under ~500 KB.
 - [ ] No text, no rank ring, no transparent 800–880 moat.
-- [ ] 512 opened on a light background as well as a dark one.
+- [ ] 512 and 1024 opened on a light background as well as a dark one.
 - [ ] 96 px grid check repeated on the exported file, not the proof.
 - [ ] Filenames match `image_slug` exactly; no numeric-only names.
 
@@ -151,8 +148,9 @@ Copy this into the task or work through it in order. Every checkbox is a gate, n
 
 ## 11. Commit and report
 
-- [ ] `public/img/achievements/<slug>.webp` and `<slug>-thumb.webp` staged; repeatable rank variants staged too.
-- [ ] `scripts/badge-art/prompts.json` staged if changed.
+- [ ] `public/img/achievements/<slug>.webp`, `<slug>-thumb.webp`, and `full/<slug>.webp` staged; repeatable rank variants staged too.
+- [ ] `assets/badge-art/` staged when a frame or boss layer changes.
+- [ ] `scripts/badge-art/prompts.json` and `scripts/badge-art/final-selections.json` staged if changed.
 - [ ] `docs/badge-art-decisions.md` updated when a pick or asset-layout decision changes.
 - [ ] Seed migration and catalog test staged when the owning change includes them.
 - [ ] `raw_assets/` not staged (gitignored; never force-add).

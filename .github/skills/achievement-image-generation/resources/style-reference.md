@@ -225,7 +225,7 @@ Repeatable badges ship all four rank variants (`<slug>--<rank>.webp`); the base 
 
 ### Files
 
-Final assets: `public/img/achievements/<slug>.webp` (512), `<slug>-thumb.webp` (200), and `<slug>--<rank>.webp` for repeatables.
+Final assets: `public/img/achievements/<slug>.webp` (512), `<slug>-thumb.webp` (200), `full/<slug>.webp` (1024), and `<slug>--<rank>` variants for repeatables. Reusable frame and boss layers are tracked under `assets/badge-art/`.
 
 Generated review proofs are temporary and not committed; the scripts write them under `reports/badge-art/` when a new review is needed.
 

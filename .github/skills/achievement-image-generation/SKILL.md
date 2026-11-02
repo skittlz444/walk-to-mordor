@@ -20,7 +20,7 @@ It is not the goal-image pipeline. Goal images are watercolour scenes; badges ar
 
 - ComfyUI at `http://127.0.0.1:8188` with `flux3-image-klein-int8-convrot.safetensors`, `qwen3vl_4b_int8_convrot.safetensors`, and `flux2-vae.safetensors`; its venv at `/run/media/skittlz/LinuxStorageSSD/github/comfyui/venv/bin/python` has Pillow, numpy, and rembg 2.0.76.
 - `photocraft-cli` on `PATH` for the production alpha composite, and `sharp` for the shared WebP resizer `.github/skills/goal-image-generation/resources/resize-webp.js`. The review proofs need neither.
-- An approved family-frame master under `raw_assets/badges/processed/frame/<family>/` and the selected handcrafted rank-boss master under `raw_assets/badges/bosses/processed/<rank>/`. The picks are recorded in `docs/badge-art-decisions.md`.
+- The locked family frames and handcrafted rank-boss layers under `assets/badge-art/`. The picks are recorded in `docs/badge-art-decisions.md`; the working copies under `raw_assets/badges/` are gitignored and disposable.
 - Read `resources/style-reference.md`, `resources/prompt-patterns.md`, and `resources/checklist.md` first, plus `docs/badge-art-decisions.md` for the shape and stack decision. Do not reopen that decision per badge.
 
 ## Inputs
@@ -37,8 +37,8 @@ Collect every row before generating anything.
 | `collection` | definition metadata | `{slug, label, index, size}`. Grouping only; not baked. |
 | `criteria` | definition metadata | Stable condition label for the owning award hook (e.g. `trailing_7d_km >= 100`). Not evaluated by SQL or the display resolver. |
 | `storyline` | definition metadata | `null`/absent for global, otherwise the storyline slug. Award scope only. |
-| family frame | `raw_assets/badges/processed/frame/<family>/` | Approved, normalised, alpha master. |
-| rank boss | `raw_assets/badges/bosses/processed/<rank>/` | Selected handcrafted master, mounted at 6 o'clock; picks in `docs/badge-art-decisions.md`. |
+| family frame | `assets/badge-art/frames/<family>.png` | Locked, normalised 1024 alpha master; 1016 outer / 880 inner. |
+| rank boss | `assets/badge-art/bosses/<rank>-tile.png` | Selected handcrafted 90 px tile plus `<rank>-shadow.png`, placed at 6 o'clock; master is `<rank>.png`. |
 
 If the definition does not exist, the change that owns the feature seeds it. This skill adds the art and the `image_slug` link; it does not invent award hooks.
 
@@ -230,16 +230,16 @@ For a single-badge review proof:
 
 Omit `--only` to rebuild the full set grid and 96 px sheet. With `--only`, those sheets contain only that badge, so they are not a set check. Both write 512 px previews on `#14181f`. They are circle-only and review-only: the preview is flattened onto the dark background. Never ship it as a production asset.
 
-**Production composite:** use PhotoCraft (MCP automation or the UI). The shared `.pcraft` template was superseded by the per-badge flow. The contract is fixed:
+**Production composite:** use PhotoCraft (MCP automation or the UI) or `scripts/badge-art/rebuild_finals.py`. The shared `.pcraft` template was superseded by the per-badge flow. The contract is fixed:
 
 1. 1024 × 1024 transparent canvas with the base emblem at 800, centred.
 2. Family frame at 1016 outer / 880 inner, centred.
 3. Opaque dark well disc at 880 behind the emblem, so 800–880 is not transparent.
-4. Selected handcrafted boss at centre `(511, 979)`, shadow at `(511, 981)`.
-5. Clip the boss and shadow to the badge alpha; 1 px dark keyline around the emblem edge.
-6. Export a 1024 PNG with alpha, then resize to 512 and 200.
+4. Selected handcrafted boss tile at centre `(511, 979)`, shadow at `(511, 981)`.
+5. Clip the boss and shadow to the badge alpha.
+6. Export a 1024 PNG master, then write the 512 card, 200 thumb, and 1024 `full/` WebP.
 
-For a repeatable badge, repeat step 4–6 for each rank variant (`<slug>--bronze` … `<slug>--mithril`); keep the base image boss-less.
+For a repeatable badge, repeat step 4–6 for each rank variant (`<slug>--bronze` … `<slug>--mithril`); keep the base image boss-less. The rebuild script refreshes `assets/badge-art/` from the working layers by default.
 
 `composite_badges.py` resolves only the `journey` and `habit` families today. For another type, extend the family-to-frame and rank mapping in `resolve_assets()` before running the proof, or composite that family in PhotoCraft. Do not substitute a journey frame for another family.
 
@@ -335,12 +335,13 @@ Do not add an award hook in this skill. If the badge is catalog-only, its owning
 
 Commit only:
 
-- `public/img/achievements/<slug>.webp` and `<slug>-thumb.webp`; for repeatables, all `<slug>--<rank>.webp` variants and thumbs;
-- `scripts/badge-art/prompts.json` and any pipeline script change;
+- `public/img/achievements/<slug>.webp`, `<slug>-thumb.webp`, and `full/<slug>.webp`; for repeatables, all `<slug>--<rank>` variants, thumbs, and full images;
+- `assets/badge-art/` when a frame or boss layer changes;
+- `scripts/badge-art/prompts.json`, `scripts/badge-art/final-selections.json`, and any pipeline script change;
 - `docs/badge-art-decisions.md` when a pick or asset-layout decision changes;
 - the seed migration and catalog test, when the owning change includes them.
 
-`raw_assets/` is gitignored; never force-add it. Report the slug, type, rank, frame, boss cut, both candidate picks, the final dimensions and sizes, and the gate results.
+`raw_assets/` is gitignored; never force-add it. `assets/badge-art/` is tracked and is the durable source for future achievements. Report the slug, type, rank, frame, boss cut, both candidate picks, the final dimensions and sizes, and the gate results.
 
 ## Sub-agent guidance
 

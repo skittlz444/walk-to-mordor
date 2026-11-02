@@ -407,7 +407,7 @@ def main(argv=None):
         pending = pending[:args.limit]
 
     if pending:
-        _, remove = require_rembg()
+        new_session, remove = require_rembg()
         used_session = DEFAULT_SESSION
         fallback = False
         try:

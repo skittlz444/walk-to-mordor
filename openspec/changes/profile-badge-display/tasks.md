@@ -49,8 +49,8 @@
 - [x] 8.4 Build a per-asset contact sheet under `reports/badge-art/sheets/` showing every candidate labelled with its variant and seed, then narrow each asset to the best two and copy them to `raw_assets/badges/shortlist/`. Record scores and reasoning in `reports/badge-art/shortlist.md`.
 - [x] 8.5 **Review gate:** present the two shortlisted candidates per asset alongside its contact sheet, and wait for the user's final pick. Record selections in `docs/badge-art-decisions.md`. Do not composite before sign-off.
 - [x] 8.6 Composite the selected badges in PhotoCraft through its MCP automation: open the base, place the frame, emblem, 6 o'clock boss and contact shadow, then export a 1024 px PNG with alpha. The shared `.pcraft` template was superseded.
-- [x] 8.7 Bake the selected rank bosses: fixed-rank badges carry the boss in the final composite; the four repeatable habit badges carry four rank variants. Optimize to `public/img/achievements/<slug>.webp` at 512 px and `<slug>-thumb.webp` at 200 px; repeatable variants use `<slug>--<rank>.webp`.
-- [x] 8.8 Verify each committed asset: 512×512 and 200×200, alpha preserved, main image under ~120 KB, thumb under 20 KB, no text baked into art. Commit only `public/img/achievements/`; `raw_assets/` stays gitignored.
+- [x] 8.7 Bake the selected rank bosses: fixed-rank badges carry the boss in the final composite; the four repeatable habit badges carry four rank variants. Write `public/img/achievements/<slug>.webp` at 512 px, `<slug>-thumb.webp` at 200 px, and `full/<slug>.webp` at 1024 px; repeatable variants use `<slug>--<rank>`.
+- [x] 8.8 Verify each committed asset: 512×512, 200×200 and 1024×1024, alpha preserved, card under ~120 KB, thumb under 20 KB, full under ~500 KB, no text baked into art. Commit `public/img/achievements/` and the reusable `assets/badge-art/` layers; `raw_assets/` stays gitignored.
 
 ## 9. Validation and Documentation
 

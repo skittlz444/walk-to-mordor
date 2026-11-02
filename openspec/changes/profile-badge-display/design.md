@@ -120,9 +120,9 @@ The friend-scoped branch verifies an accepted `friendships` row in either direct
 
 Rationale: the existing friend-profile surface already returns 404 to avoid leaking whether a user exists, and the client already treats 404 as "not a friend". Introducing 403 for the same condition would split the contract.
 
-### Badge images use one path, one format
+### Badge images are WebP, with a 1024 inspection path
 
-Images are constructed as `/img/achievements/<image_slug>.webp`. There is no PNG→WebP fallback. A null `image_slug`, a load error, or a path that fails the slug pattern falls back to a CSS-drawn circular placeholder.
+Cards are constructed as `/img/achievements/<image_slug>.webp` at 512 px; inspection uses `/img/achievements/full/<name>.webp` at 1024 px. Repeatable badges use `<image_slug>--<rank>.webp`, selected from `presentation.rank`, with the base image as the no-boss fallback. There is no PNG→WebP fallback. A null `image_slug`, a load error, or a path that fails the slug pattern falls back to a CSS-drawn circular placeholder.
 
 Rationale: `public/` has no `images/` directory, content images are WebP-only, and a fallback 404 costs a request to reach the same visual result. Keeping the placeholder in CSS means no extra asset.
 
