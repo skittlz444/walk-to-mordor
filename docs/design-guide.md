@@ -5,7 +5,7 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 
 # Design Guide
 
-*Last updated: 2026-03-17*
+*Last updated: 2026-11-03*
 
 ## Design Philosophy
 
@@ -36,10 +36,13 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 | `public/css/calendar.css` | Calendar component |
 | `public/css/progress.css` | Progress tracking and modals |
 | `public/css/goals.css` | Goals display and interactions |
-| `public/css/profile.css` | Profile page |
+| `public/css/profile.css` | Profile settings page (form, Back button, auto-save status, Account card) |
+| `public/css/profile-view.css` | Profile view chrome (hero affordances, skeleton) + shared avatar picker modal |
 | `public/css/auth.css` | Authentication pages (light theme) |
 | `public/css/party.css` | Fellowship/party pages |
 | `public/css/friends.css` | Friends feature |
+| `public/css/badge-display.css` | Earned badge grid (profile and friend profile) |
+| `public/css/badge-award.css` | Badge award modal (global) |
 
 - Each domain stylesheet owns its component styles. Do not put calendar styles in `main.css`.
 - `main.css` imports all domain stylesheets and defines variables + base layout only.
@@ -63,12 +66,57 @@ description: Visual design system, CSS theming, UX patterns, and interaction con
 ### Avatar Selection
 - Predefined LOTR-themed avatars only — no user uploads (avoids moderation).
 - Current selection highlighted with gold border.
+- Picker is the shared `AvatarPickerModal` component (styled by `profile-view.css`): radiogroup gallery, arrow-key cycling, "Use initials" resets to `null`, save-on-select via `PUT /api/user/preferences { avatarId }`, and a status line. The current avatar preview sits outside the gallery so it stays visible while the gallery loads.
 - Thumbnails: 64×64 WebP (`public/img/avatars/thumbs/`); display size 128×128.
+
+### Profile View (Self)
+- `/profile` is read-only and reuses the friend-profile hero classes (`party-card friend-profile-header`, `friend-profile-stats`) inside the renderer-owned `.party-page`, so the hero, Settings CTA, Fellowships card, and badge grid share one width.
+- The avatar is a button (`.profile-view-avatar-trigger`) wrapping `Avatar` at 128 px, labelled "Change avatar for <username>", with a gold ring and edit badge. Activating it opens the shared picker modal.
+- Stats are Total Distance (storyline-adjusted, two decimals) and Member Since (formatted from the API's ISO date). "Heading to" renders only when `currentGoalTitle` is non-null; the active journey title is read-only.
+- The Settings CTA is the only edit path; it is full-width on mobile with `box-sizing: border-box`.
+- Fellowships render only when non-empty; earned badges follow via `BadgeDisplayIsland`.
+- Loading uses `.profile-view-skeleton` shimmer blocks (same keyframe as the badge grid; reduced-motion already covered). Errors render a card with Retry instead of fabricated stats; a 401 redirects to `/login`.
+
+### Profile Settings
+- The SSR shell owns `.profile-page` and renders `.profile-back-button` (icon + "Back to profile", href `/profile`) plus the "Changes save automatically as you go." note before hydration. Back is the only page-level navigation/commit control: ≥44 px tall, bordered, with a visible focus ring; never `history.back()`.
+- No Save button and no bottom action bar. Username/email auto-save on blur (trimmed, validated with the server's predicates) and report through a per-field `.profile-field-status` with `role="status"` + `aria-live="polite"`: starts empty, clears on input, then `Saving…` → `Saved` or an inline error. Server 409 conflicts stay inline.
+- Every other control keeps save-on-change semantics: avatar picker, preference toggles, journey select + carry/reset dialog, push toggles.
+- Logout sits last in the `ProfileAccountIsland` Account card; the view page exposes no editing or logout controls.
+- A session-fetch 401 redirects to `/login` instead of rendering a blank form.
+
+### Profile Stylesheet Ownership
+- `profile-view.css` owns view chrome (avatar button, Settings CTA, stat skeleton) and the entire shared avatar picker modal. Both profile renderers load it so the modal renders identically on the view and settings pages.
+- `profile.css` owns the settings page: form/card/toggle/push rules plus the Back button, per-field auto-save status, "Change avatar" trigger, and Account/Logout card. It no longer carries footer/action-bar styles.
+- Do not put settings-only rules in `profile-view.css` or view/modal rules in `profile.css`.
 
 ### Friends & Social
 - Friend code landing (`/friends/add/:friendCode`) must redirect unauthenticated users to login, then return them to the add-friend page.
 - Pending requests always appear at top of friends list. Badge on nav link reflects pending count.
 - Friend profiles show total distance and current goal for accepted friends only.
+
+### Badge Grid (Profile & Friend Profile)
+- Card anatomy, top to bottom: circular artwork → badge name → meta pills (rank label, collection position `index/size`, repeat count `×N` when `earned_count > 1`).
+- Artwork is a circular image (`aspect-ratio: 1 / 1`, `object-fit: contain`). A null, malformed, or failed `image_slug` falls back to a dashed circular CSS placeholder — never an extra asset.
+- Grid is `repeat(auto-fill, minmax(96px, 1fr))` with a 0.75rem gap; cards fill their column and keep a square art well.
+- Collections render one section per collection, ordered by `collection.index`; the header is `label · earned/size`, with the label in `--accent-gold` and progress in `--text-secondary` over a `--border-gray` rule. Standalone badges trail in an "Other" section, newest-earned first.
+- Rank palette maps label → artwork boss material: 1 bronze, 2 silver, 3 gold, 4 mithril. The rank pill uses the gold accent tokens (`--accent-gold`, `--gold-border-light`, `--gold-glow-light`) at every rank — rank distinction lives in the baked boss artwork, not in CSS color.
+- **Rank and collection numbers are text, never baked into artwork.** Text stays crisp at every size, is localizable, and is readable by assistive technology.
+- Loading: eight circular `--bg-dark-alt` shimmer skeletons render only after a ~175 ms delay so fast responses never flash; disable the shimmer under `prefers-reduced-motion`.
+- Artwork tiers: 512 px cards, 200 px thumbs (`-thumb` suffix), 1024 px inspection assets under `full/`. Repeatable badges ship one variant per rank (`<image_slug>--<rank_label>`); fixed-rank badges use `<image_slug>`.
+- Card activation: each earned card is a native button (`.badge-card__button`) whose accessible name includes rank, collection position, and repeat count; activating it dispatches `wtm:open-badge-modal` and opens the award modal view-only. The button reset and focus ring live in `badge-display.css`; the modal owns the rest.
+- Stylesheet: `public/css/badge-display.css`. It is loaded on both `/profile` and `/friends/:userId`.
+
+### Badge Award Modal
+- One globally mounted `BadgeAwardModal` island serves two modes: **acknowledge** (pending awards fetched on page open, including the map) and **view-only** (opened by activating any earned badge card through the `wtm:open-badge-modal` document event). Never import the grid from the modal or the modal from the grid.
+- Dialog semantics: overlay + dialog with `role="dialog"`, `aria-modal="true"`, and the badge name as `aria-label`. Focus moves into the dialog on open (primary action first in acknowledge mode) and returns to the activating card on close. Trap focus while open; Escape and overlay activation close.
+- Queue behavior: one award at a time, oldest first, with "Badge x of n" exposed to assistive technology. The primary action acknowledges the shown instance and advances; the last award closes the modal and the queue does not reopen in that page view.
+- Repeatability-aware dismiss: closing a repeatable award acknowledges it so it does not nag; closing a one-off award does **not** acknowledge, so it stays pending for a later visit. A failed acknowledgement keeps the same badge with a retry control and blocks advancement/close.
+- View-only mode never acknowledges and never fetches pending awards. It preserves any in-memory pending queue and resumes it after closing. Friend-profile badges are always view-only.
+- Artwork: 200 px thumbnail first, then the 1024 px `full/<name>.webp` crossfades in. Repeatables use the **awarding** rank label in acknowledge mode (`<image_slug>--<rank_label>`) and the grid's **current** rank in view-only mode; fixed-rank badges use `<image_slug>`. Apply the badge grid's slug validation and fallback chain; invalid artwork renders text only.
+- Defer the acknowledge modal only while another real modal dialog is open; the map page is not a modal and never blocks it.
+- Mobile-first: base styles are single-column with a full-width dialog and tight padding; `@media (min-width: 641px)` opts into the two-column desktop layout and wider dialog. Keep the overlay `box-sizing: border-box` and `100dvh` so padding can never push it past the viewport.
+- Respect `prefers-reduced-motion` — disable entrance and celebration transitions. Style with design variables only; never hardcode colors.
+- Stylesheet: `public/css/badge-award.css`, loaded globally by `src/renderLayout.ts`.
 
 ### Toast
 - Never auto-dismiss error toasts — user must acknowledge errors.

@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-07-24 · Migrations: 0001–0143 · Full DDL: `migrations/`
+> Last updated: 2026-11-02 · Migrations: 0001–0147 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -33,6 +33,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `milestone_journals` | Plain-text journal entries (one per user per canonical goal), shared across storylines | 0139 |
 | `achievement_definitions` | Shared reusable badge metadata (slug, name, image, type, repeatability) registered by any feature | 0142 |
 | `user_achievement_instances` | Append-only earned-badge records with idempotency keys, shared across features | 0143 |
+| `user_achievement_acknowledgements` | Per-user acknowledgement projection over earned instances (pending = instances minus acks) | 0147 |
 
 ## Key Constraints & Invariants
 
@@ -100,7 +101,24 @@ These are rules the schema enforces or that the application layer must uphold �
 - `slug` is unique (indexed) and human-readable (e.g. `nazgul-outrun`, `book-fellowship-1-complete`). Consuming features reference definitions by slug when calling `awardAchievement`. Recommended slug prefix convention per feature (`book-*`, `challenge-*`, `field-guide-*`) to avoid collisions.
 - `badge_type` is a free-form string defined by consuming features (no enum/CHECK constraint at the schema layer).
 - `is_repeatable` (`0`/`1`) is enforced by the domain service, not just documentation: `awardAchievement` blocks a second award of a non-repeatable badge regardless of idempotency key.
-- `metadata` is a nullable TEXT column for feature-specific JSON metadata about the definition itself (not the earned instance).
+- `metadata` is a nullable TEXT column for JSON about the definition itself (not the earned instance). Every key is optional and display/award-facing only:
+
+  | Key | Type | Meaning |
+  |---|---|---|
+  | `storyline` | string or `null` | Storyline slug the badge is scoped to; absent or `null` means global |
+  | `rank` | 1–4 | Fixed rank for non-repeatable definitions |
+  | `rank_thresholds` | `[number, number, number, number]` | Four strictly ascending `earned_count` values mapping to ranks 1–4 |
+  | `collection` | `{ slug, label, index, size }` | Numbered position in an ordered set; absent for standalone badges |
+  | `threshold_km` | number | Displayed storyline distance that awards a `journey` badge |
+  | `criteria` | string | Descriptive condition label for authors, e.g. `first_walk`, `seven_day_streak`, or `trailing_7d_km >= 100`; not evaluated by SQL and not dispatched by a generic hook |
+  | `unit` | string | Display plural for repeatable progress, e.g. `weeks` |
+
+- Display metadata is optional and parsed defensively by `src/badge-presentation.ts`. Null metadata, invalid JSON, wrong types, and out-of-range values are all treated as absent: the API falls back to rank 1, no collection, and a null storyline. A bad definition can never break the achievements endpoint.
+- Rank labels: 1 = `bronze`, 2 = `silver`, 3 = `gold`, 4 = `mithril`.
+- Rank resolution: a fixed `rank` always wins. `rank_thresholds` select the rank for repeatable badges only when `rank` is absent — `earned_count >= rank_thresholds[i]` selects rank `i + 1`, so exact boundaries count; below the first threshold stays rank 1 and above the last stays rank 4.
+- `getUserAchievementSummary` selects `ad.metadata` and returns it on each `AchievementSummary` so the API layer can resolve `presentation`. The raw string is never serialized to clients.
+- Catalog expansion (`0145`) adds three global habit definitions and a two-badge community fellowship collection using the same `criteria` and `unit` conventions. These are descriptive labels, not a query language; awarding is keyed on `badge_type` plus the consuming feature's slug/criteria logic.
+- Migration `0146` only corrects the seeded Faithful Walker description to the calendar-week rule; it makes no schema change.
 - This change is data-layer-only: no admin UI manages these rows. Each consuming feature manages its own definitions (via migration seed data or its own admin surface).
 
 ### user_achievement_instances
@@ -110,7 +128,16 @@ These are rules the schema enforces or that the application layer must uphold �
 - Repeat counts (`earned_count` in `AchievementSummary`) are always derived via `COUNT(*) GROUP BY achievement_id` in `getUserAchievementSummary` — there is no mutable counter column, so counts can never drift from the underlying rows.
 - `context_metadata` is a nullable TEXT column for per-occurrence JSON context (e.g. storyline name, book title, distance at award time). It is read-only display/audit data; only `user_id`, `achievement_id`, and `earned_at` are indexed for querying.
 - `achievement_id` has no `ON DELETE CASCADE` — removing a definition (not currently supported by any UI) would orphan instances. Definitions should be soft-deleted or archived rather than hard-deleted if this becomes necessary later.
-- No standalone API routes or UI are part of this change. `src/achievement-utils.ts` exposes `awardAchievement`, `getUserAchievements`, and `getUserAchievementSummary` as a plain TypeScript module (following the `-utils.ts` convention of `auth-utils.ts`, `storyline-utils.ts`); consuming features call these directly, and endpoint/UI wiring belongs to those consuming changes.
+- The table is shared infrastructure; API routes and UI live in the consuming features. `src/achievement-utils.ts` exposes `awardAchievement`, `getUserAchievements`, and `getUserAchievementSummary` as a plain TypeScript module (following the `-utils.ts` convention of `auth-utils.ts`, `storyline-utils.ts`); consuming features call these directly.
+
+### user_achievement_acknowledgements
+- Added in migration `0147`. A projection, not a log: one row per user per earned instance, enforced by `PRIMARY KEY (user_id, instance_id)`.
+- Pending awards = the caller's `user_achievement_instances` rows anti-joined against this table. No row means pending, so every earned-but-never-seen instance (including history predating the table) is pending with no backfill needed.
+- Inserts are per-ID `INSERT ... SELECT ... ON CONFLICT DO NOTHING` scoped to instances the caller owns, capped at 100 IDs per request and executed as one atomic D1 batch. Re-acknowledging, duplicate IDs in one request, foreign IDs, and stale IDs are silent no-ops; only newly inserted rows count toward `{ acknowledged: n }`.
+- Acknowledgement never creates, updates, or deletes `user_achievement_instances` rows — the append-only guarantee is untouched. Earned instances remain the single source of truth for counts.
+- `acknowledged_at` records when the acknowledgement was written. It is not a cursor and is not used for pending ordering (that is `earned_at ASC, id ASC`).
+- The composite primary key's `user_id` prefix serves the pending anti-join, so no secondary index is created.
+- Both foreign keys cascade: acknowledgements are meaningless without their user or earned instance.
 
 ### parties
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.
@@ -144,6 +171,7 @@ These are rules the schema enforces or that the application layer must uphold �
 | `admin_audit_log.admin_user_id` | **No cascade** | Audit records must survive user deletion |
 | `user_achievement_instances.user_id` | CASCADE | Standard cleanup on user deletion |
 | `user_achievement_instances.achievement_id` | **No cascade** | Definitions are not expected to be deleted; earned instances must never be silently orphaned by app-level cleanup |
+| `user_achievement_acknowledgements.user_id` / `.instance_id` | CASCADE | Acknowledgements are meaningless without the user or the earned instance they acknowledge |
 | All other user FKs | CASCADE | Standard cleanup |
 
 `content_discovery_events` intentionally has no foreign keys because those rows are best-effort analytics.
@@ -175,6 +203,8 @@ erDiagram
     users ||--o{ one_more_mile_sent : "receives"
     users ||--o{ user_achievement_instances : "earns"
     achievement_definitions ||--o{ user_achievement_instances : "defines"
+    users ||--o{ user_achievement_acknowledgements : "acknowledges"
+    user_achievement_instances ||--o{ user_achievement_acknowledgements : "acknowledged by"
     goals ||--o{ one_more_mile_sent : "targets"
     goals ||--o{ goal_content : "has lore"
     storylines ||--o{ storyline_goals : "orders"

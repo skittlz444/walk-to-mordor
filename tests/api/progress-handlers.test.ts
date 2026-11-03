@@ -6,11 +6,15 @@ import {
   handleProgressGet 
 } from '../../src/progress-handlers';
 import { validateSession } from '../../src/auth-handlers';
+import { checkAndAwardJourneyBadges } from '../../src/achievement-awards';
 import * as validators from '../../src/validators';
 import { DbClient } from '../../src/db';
 
 // Mock dependencies
 jest.mock('../../src/auth-handlers');
+jest.mock('../../src/achievement-awards', () => ({
+  checkAndAwardJourneyBadges: jest.fn(),
+}));
 jest.mock('../../src/validators', () => ({
   ...jest.requireActual('../../src/validators'),
   isValidDateFormat: jest.fn(),
@@ -29,6 +33,7 @@ describe('Progress Handlers', () => {
     (validateSession as jest.Mock).mockResolvedValue({ valid: true, userId: 1 });
     (validators.isValidDateFormat as jest.Mock).mockReturnValue(true);
     (validators.isValidDistance as jest.Mock).mockReturnValue(true);
+    (checkAndAwardJourneyBadges as jest.Mock).mockResolvedValue(undefined);
 
     // Mock DB
     mockDB = {
@@ -99,6 +104,25 @@ describe('Progress Handlers', () => {
       expect(mockDB.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO progress'));
     });
 
+    it('invokes the award hook with the logged date after a successful create', async () => {
+      const response = await handleProgressPost(mockRequest, mockDb, { start: '2024-01-01', title: '5.5' });
+
+      expect(response.status).toBe(201);
+      expect(checkAndAwardJourneyBadges).toHaveBeenCalledWith(mockDb, 1, '2024-01-01');
+    });
+
+    it('still returns 201 when the award hook rejects', async () => {
+      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+      (checkAndAwardJourneyBadges as jest.Mock).mockRejectedValue(new Error('award boom'));
+
+      const response = await handleProgressPost(mockRequest, mockDb, { start: '2024-01-01', title: '5.5' });
+
+      expect(response.status).toBe(201);
+      expect((await response.json()).message).toBe('Created successfully');
+      expect(consoleError).toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
+
     it('should return 400 if missing required fields', async () => {
       const response = await handleProgressPost(mockRequest, mockDb, {});
       expect(response.status).toBe(400);
@@ -142,6 +166,25 @@ describe('Progress Handlers', () => {
       expect(mockDB.prepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE progress'));
     });
 
+    it('invokes the award hook with the logged date after a successful update', async () => {
+      const response = await handleProgressPut(mockRequest, mockDb, { start: '2024-01-01', title: '6.0' });
+
+      expect(response.status).toBe(200);
+      expect(checkAndAwardJourneyBadges).toHaveBeenCalledWith(mockDb, 1, '2024-01-01');
+    });
+
+    it('still returns 200 when the award hook rejects', async () => {
+      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+      (checkAndAwardJourneyBadges as jest.Mock).mockRejectedValue(new Error('award boom'));
+
+      const response = await handleProgressPut(mockRequest, mockDb, { start: '2024-01-01', title: '6.0' });
+
+      expect(response.status).toBe(200);
+      expect((await response.json()).message).toBe('Updated successfully');
+      expect(consoleError).toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
+
     it('should return 404 if entry not found', async () => {
       const mockPrepare = mockDB.prepare;
       const mockBind = jest.fn();
@@ -166,6 +209,13 @@ describe('Progress Handlers', () => {
       expect(response.status).toBe(200);
       expect(data.message).toBe('Deleted successfully');
       expect(mockDB.prepare).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM progress'));
+    });
+
+    it('does not run the award hook on delete', async () => {
+      const response = await handleProgressDelete(mockRequest, mockDb, { start: '2024-01-01' });
+
+      expect(response.status).toBe(200);
+      expect(checkAndAwardJourneyBadges).not.toHaveBeenCalled();
     });
 
     it('should return 404 if entry not found', async () => {

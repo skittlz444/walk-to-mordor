@@ -4,9 +4,9 @@ const { test, expect, setupTest, waitForAuthenticated } = require('./helpers/com
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
 async function navigateToProfile(page) {
-  await page.goto(BASE_URL + '/profile');
+  await page.goto(BASE_URL + '/profile/settings');
   await waitForAuthenticated(page);
-  await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+  await page.waitForSelector('[data-island="ProfileSettingsIsland"][data-hydrated="true"]', { timeout: 10000 });
   // Wait for loading state to complete (toggle switches render after API data loads)
   await page.waitForSelector('.profile-page', { timeout: 10000 });
 }
@@ -100,10 +100,10 @@ test.describe('User Goal Visibility Preference', () => {
       await page.locator('.toggle-group:has(#preview-milestones-toggle) .toggle-slider').click();
       await responsePromise;
 
-      // Reload profile page
+      // Reload profile settings page
       await page.reload();
       await waitForAuthenticated(page);
-      await page.waitForSelector('[data-island="ProfileIsland"][data-hydrated="true"]', { timeout: 10000 });
+      await page.waitForSelector('[data-island="ProfileSettingsIsland"][data-hydrated="true"]', { timeout: 10000 });
 
       // Toggle should still be unchecked
       const toggleAfterReload = page.locator('#preview-milestones-toggle');

@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "note": "Bespoke hexagon shape test: the badge face itself is a pointy-top hexagon, not a circular motif masked into a hexagon. Two assets x two material variants x two seeds = eight candidates. Not a shortlist change.",
+  "style_prefix": "Collectible fantasy profile badge, high-end hard enamel pin and engraved metal, pointy-top regular hexagonal badge face filling the frame, crisp vector-like shapes, strong readable silhouette, centred, rich saturated colour with gold and steel accents, flat pure black background.",
+  "style_suffix": "Single centred motif, no circular rim, no round border, no separate outer frame, no scene, no landscape, no characters, no faces, no hands, no text, no letters, no numbers, no runes, no watermark, clean silhouette on black.",
+  "seeds": {
+    "emblem": [
+      112358,
+      271828
+    ],
+    "frame": [
+      112358,
+      271828
+    ],
+    "rank": [
+      112358,
+      271828
+    ]
+  },
+  "assets": [
+    {
+      "id": "emblem/hex-test-buckleberry-ferry",
+      "slug": "hex-test-buckleberry-ferry",
+      "name": "Across the Buckleberry Ferry (hex test)",
+      "group": "emblem",
+      "family": "journey",
+      "rank": 1,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A small wooden ferry carrying one glowing lantern on stylised dark water, beside a weathered mooring post, the scene filling the hexagonal badge face. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge worked into the hexagonal silhouette, and no circular rim or separate outer frame."
+        },
+        {
+          "id": "b",
+          "prompt": "A small wooden ferry carrying one glowing lantern on stylised dark water, beside a weathered mooring post, the scene filling the hexagonal badge face. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, a chiselled metal edge worked into the hexagonal silhouette, and no circular rim or separate outer frame."
+        }
+      ]
+    },
+    {
+      "id": "emblem/hex-test-first-steps",
+      "slug": "hex-test-first-steps",
+      "name": "First Steps (hex test)",
+      "group": "emblem",
+      "family": "habit",
+      "rank": 1,
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A round green hobbit door with a brass knob and a stone step, warm lamplight in the crack, the scene filling the hexagonal badge face. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge worked into the hexagonal silhouette, and no circular rim or separate outer frame."
+        },
+        {
+          "id": "b",
+          "prompt": "A round green hobbit door with a brass knob and a stone step, warm lamplight in the crack, the scene filling the hexagonal badge face. Aged engraved metal with hand-chased relief, patinated bronze, worn polished highlights, deep recessed colour, a chiselled metal edge worked into the hexagonal silhouette, and no circular rim or separate outer frame."
+        }
+      ]
+    }
+  ]
+}

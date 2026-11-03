@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<!--
+  Profile SETTINGS page mockup — `profile-view-settings` change.
+  High-fidelity artifact rendered with the repo's real CSS (main.css imports
+  profile.css and provides .btn/.toggle via progress.css) plus party.css for
+  card look and mockups.css for proposed additions.
+
+  Serve the repo root statically, then open:
+  /openspec/changes/profile-view-settings/mockups/settings.html
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Walk to Mordor - Profile Settings (mockup)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
+  <link href="/css/main.css" rel="stylesheet" />
+  <link href="/css/drawer.css" rel="stylesheet" />
+  <link href="/css/party.css" rel="stylesheet" />
+  <link href="/css/profile.css" rel="stylesheet" />
+  <link href="mockups.css" rel="stylesheet" />
+</head>
+<body>
+  <header>
+    <div class="header-controls">
+      <button class="menu-icon" type="button" aria-label="Menu"><i class="fas fa-bars" aria-hidden="true"></i></button>
+    </div>
+    <h1>Profile Settings</h1>
+  </header>
+
+  <main>
+    <div class="profile-page">
+      <!-- Back navigation (rendered by the SSR shell in the real page,
+           present before the islands hydrate): the loop back to the view page -->
+      <div class="profile-back-row">
+        <a class="profile-back-button" href="/profile">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          <span>Back to profile</span>
+        </a>
+      </div>
+      <p class="profile-settings-note">Changes save automatically as you go.</p>
+
+      <!-- ProfileSettingsIsland -->
+      <div class="profile-card">
+        <div class="profile-card-body">
+          <div class="form-group">
+            <label for="profile-username">Username:</label>
+            <input type="text" id="profile-username" value="FrodoBaggins" placeholder="Enter username" />
+            <div class="profile-field-meta">
+              <small class="field-hint">3-30 characters, letters, numbers, and underscores only</small>
+              <span class="profile-field-status saved" role="status" aria-live="polite">Saved</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="profile-email">Email:</label>
+            <input type="email" id="profile-email" value="frodo@bag-end.example" placeholder="Enter email" />
+            <div class="profile-field-meta">
+              <small class="field-hint">Valid email address</small>
+              <!-- Default state: NO status on load; shows Saving…/Saved/error only after a save starts -->
+              <span class="profile-field-status" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+
+          <div class="form-group avatar-section" style="text-align:center;">
+            <label>Avatar</label>
+            <div class="avatar-preview">
+              <span class="avatar" style="width:128px;height:128px;border-radius:50%;overflow:hidden;display:block;">
+                <img src="/img/avatars/frodo.webp" alt="FrodoBaggins" width="128" height="128" style="display:block;width:100%;height:100%;object-fit:cover;" />
+              </span>
+            </div>
+            <button type="button" class="profile-view-modal-trigger">
+              <i class="fas fa-camera" aria-hidden="true"></i> Change avatar
+            </button>
+          </div>
+
+          <div class="form-group toggle-group">
+            <label for="preview-milestones-toggle" class="toggle-label">
+              Preview all milestones
+              <small class="field-hint">Reveal future destinations on your journey</small>
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="preview-milestones-toggle" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group toggle-group">
+            <label for="default-view-toggle" class="toggle-label">
+              Default to map view
+              <small class="field-hint">Open the map instead of the journey page on launch</small>
+            </label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="default-view-toggle" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div id="preference-status" class="preference-status"></div>
+
+          <div class="form-group storyline-section">
+            <label for="profile-storyline">Journey</label>
+            <select id="profile-storyline">
+              <option value="1" selected>Frodo &amp; Sam</option>
+              <option value="2">Pippin</option>
+            </select>
+            <small class="field-hint">Follow the current Walk to Mordor route from Bag End to Mount Doom, the Grey Havens, and Sam's return home.</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- PushPermissionIsland (moved here unchanged) -->
+      <section class="profile-card push-permission-card">
+        <div class="profile-card-body push-permission-body">
+          <div class="push-permission-header">
+            <div>
+              <h2>Push Notifications</h2>
+              <p class="push-permission-muted">
+                Manage the server-side reminder toggle for your account and the browser subscription for this device.
+              </p>
+            </div>
+            <span class="push-permission-pill active">Enabled on this device</span>
+          </div>
+
+          <div class="push-permission-grid">
+            <div class="push-permission-metric">
+              <span class="push-permission-metric-label">Browser permission</span>
+              <strong>Allowed</strong>
+            </div>
+            <div class="push-permission-metric">
+              <span class="push-permission-metric-label">Registered devices</span>
+              <strong>2</strong>
+            </div>
+          </div>
+
+          <div class="form-group push-setting-group">
+            <div class="toggle-group">
+              <div class="toggle-label">
+                <label for="push-global-toggle">Allow notifications for my account</label>
+                <small class="field-hint">
+                  This global toggle affects server-side delivery for all devices, but it does not change browser permissions.
+                </small>
+              </div>
+              <label class="toggle-switch">
+                <input id="push-global-toggle" type="checkbox" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="push-notification-types">
+            <h3 class="push-notification-types-heading">Notification Types</h3>
+            <div class="form-group push-setting-group">
+              <div class="toggle-group">
+                <div class="toggle-label">
+                  <label for="push-one-more-mile-toggle">One More Mile</label>
+                  <small class="field-hint">
+                    Get a nudge when you're close to your next milestone and haven't walked in a few days.
+                  </small>
+                </div>
+                <label class="toggle-switch">
+                  <input id="push-one-more-mile-toggle" type="checkbox" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="form-group push-setting-group">
+              <div class="toggle-group">
+                <div class="toggle-label">
+                  <label for="push-inactivity-nudge-toggle">Inactivity Notifications</label>
+                  <small class="field-hint">
+                    Receive themed reminders if you haven't walked in a while.
+                  </small>
+                </div>
+                <label class="toggle-switch">
+                  <input id="push-inactivity-nudge-toggle" type="checkbox" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="push-permission-actions">
+            <button type="button" class="push-action-button secondary">Disable on this device</button>
+          </div>
+
+          <p class="push-permission-muted">
+            Each browser or device keeps its own subscription. If you use multiple devices, enable push separately on each one.
+          </p>
+        </div>
+      </section>
+
+      <!-- ProfileAccountIsland (mounted after the push island; owns the existing
+           logout flow and confirmation) -->
+      <div data-island-note="ProfileAccountIsland">
+        <section class="profile-card profile-account-card">
+          <div class="profile-card-body">
+            <h2>Account</h2>
+            <p class="push-permission-muted">Sign out of this device. Your walk history stays safe.</p>
+            <button type="button" class="btn btn-danger">Logout</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

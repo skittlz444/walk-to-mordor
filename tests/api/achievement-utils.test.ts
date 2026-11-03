@@ -372,6 +372,7 @@ describe('Achievement Utils', () => {
           image_slug: 'nazgul-outrun-badge',
           badge_type: 'encounter',
           is_repeatable: 1,
+          metadata: '{"storyline":"frodo-sam","rank":2,"rank_thresholds":[1,4,12,26]}',
           earned_count: 3,
           first_earned_at: '2026-01-01T00:00:00Z',
           last_earned_at: '2026-01-03T00:00:00Z',
@@ -389,11 +390,61 @@ describe('Achievement Utils', () => {
           image_slug: 'nazgul-outrun-badge',
           badge_type: 'encounter',
           is_repeatable: true,
+          metadata: '{"storyline":"frodo-sam","rank":2,"rank_thresholds":[1,4,12,26]}',
           earned_count: 3,
           first_earned_at: '2026-01-01T00:00:00Z',
           last_earned_at: '2026-01-03T00:00:00Z',
         },
       ]);
+    });
+
+    it('returns raw definition metadata verbatim', async () => {
+      const { db, mockDB } = mockDbClient();
+      const metadata = '{"rank":4,"storyline":"frodo-sam","collection":{"slug":"frodo-sam-journey","label":"The Road to Mordor","index":7,"size":8}}';
+      mockAll(mockDB, [
+        {
+          achievement_id: 12,
+          slug: 'journey-frodo-sam-glittering-caves',
+          name: 'The Glittering Caves',
+          description: 'Helm\'s Deep.',
+          image_slug: 'journey-frodo-sam-glittering-caves',
+          badge_type: 'journey',
+          is_repeatable: 0,
+          metadata,
+          earned_count: 1,
+          first_earned_at: '2026-02-01T00:00:00Z',
+          last_earned_at: '2026-02-01T00:00:00Z',
+        },
+      ]);
+
+      const result = await getUserAchievementSummary(db, 5);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].metadata).toBe(metadata);
+    });
+
+    it('keeps metadata null when the definition has none', async () => {
+      const { db, mockDB } = mockDbClient();
+      mockAll(mockDB, [
+        {
+          achievement_id: 13,
+          slug: 'habit-first-steps',
+          name: 'First Steps',
+          description: null,
+          image_slug: 'habit-first-steps',
+          badge_type: 'habit',
+          is_repeatable: 0,
+          metadata: null,
+          earned_count: 1,
+          first_earned_at: '2026-02-01T00:00:00Z',
+          last_earned_at: '2026-02-01T00:00:00Z',
+        },
+      ]);
+
+      const result = await getUserAchievementSummary(db, 5);
+
+      expect(result[0].metadata).toBeNull();
+      expect(result[0].earned_count).toBe(1);
     });
 
     it('includes one-time badges with earned_count: 1', async () => {
@@ -407,6 +458,7 @@ describe('Achievement Utils', () => {
           image_slug: null,
           badge_type: 'book',
           is_repeatable: 0,
+          metadata: null,
           earned_count: 1,
           first_earned_at: '2026-01-01T00:00:00Z',
           last_earned_at: '2026-01-01T00:00:00Z',
@@ -416,7 +468,7 @@ describe('Achievement Utils', () => {
       const result = await getUserAchievementSummary(db, 5);
 
       expect(result).toEqual([
-        expect.objectContaining({ achievement_id: 11, earned_count: 1, is_repeatable: false }),
+        expect.objectContaining({ achievement_id: 11, earned_count: 1, is_repeatable: false, metadata: null }),
       ]);
     });
 
@@ -431,6 +483,7 @@ describe('Achievement Utils', () => {
           image_slug: null,
           badge_type: 'encounter',
           is_repeatable: 1,
+          metadata: null,
           earned_count: 1,
           first_earned_at: '2026-01-01T00:00:00Z',
           last_earned_at: '2026-01-01T00:00:00Z',
@@ -443,6 +496,7 @@ describe('Achievement Utils', () => {
           image_slug: null,
           badge_type: 'book',
           is_repeatable: 0,
+          metadata: '{"rank":1}',
           earned_count: 1,
           first_earned_at: '2026-01-02T00:00:00Z',
           last_earned_at: '2026-01-02T00:00:00Z',

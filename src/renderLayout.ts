@@ -69,6 +69,7 @@ ${config.inlineStyles}
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
         <link href="/css/main.css" rel="stylesheet" />
         <link href="/css/drawer.css" rel="stylesheet" />
+        <link href="/css/badge-award.css" rel="stylesheet" />
 ${extraStylesheets}
         ${inlineStyleBlock}
         <!-- Service Worker Registration -->
@@ -104,6 +105,8 @@ ${extraStylesheets}
       <!-- Scripts -->
 ${extraScripts}
 ${config.publicPage ? '' : '      <script src="/js/main.js"></script>'}
+      <!-- Badge award modal (global, handled by Preact island) -->
+      <div data-island="BadgeAwardModal"></div>
       <!-- PWA Install Banner (mobile only, handled by Preact island) -->
       <div data-island="PwaInstallBanner"></div>
       <!-- Push Notification Nudge (installed PWA only, handled by Preact island) -->

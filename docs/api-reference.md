@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-07-17
+Last updated: 2026-11-03
 
 ## Conventions
 
@@ -18,6 +18,7 @@ Last updated: 2026-07-17
 | Domain | File |
 |---|---|
 | Auth & Profile | `src/auth-handlers.ts` |
+| Profile Overview | `src/profile-handlers.ts` |
 | Push | `src/push-handlers.ts` |
 | Progress | `src/progress-handlers.ts` |
 | Goals | `src/goals-handlers.ts` |
@@ -27,6 +28,7 @@ Last updated: 2026-07-17
 | Party (Fellowship) | `src/party-handlers.ts` |
 | Fellowship Invites | `src/fellowship-invite-handlers.ts` |
 | Friends | `src/friends-handlers.ts` |
+| Achievements | `src/achievement-handlers.ts`, `src/badge-presentation.ts`, `src/achievement-utils.ts`, `src/achievement-awards.ts` |
 | Admin | `src/admin-handlers.ts` |
 | Route wiring | `src/index.ts` |
 
@@ -38,6 +40,7 @@ Last updated: 2026-07-17
 | POST | `/api/login` | No | Returns session token |
 | POST | `/api/logout` | Yes | Body requires `sessionId`; missing → `400` |
 | GET | `/api/session` | Yes | camelCase fields: `userId`, `username`, `email`, `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId`, `activeStoryline`, `expiresAt` |
+| GET | `/api/profile/overview` | Yes | Read-only profile-view payload: `{ username, avatarId, totalDistance, memberSince, currentGoalTitle, activeStoryline, fellowships }` |
 | PUT | `/api/profile` | Yes | Updates username/email/password |
 | PUT | `/api/user/preferences` | Yes | Body: any of `showFutureGoalsUnlocked`, `defaultViewMap`, `avatarId` (at least one) |
 | GET | `/api/avatars` | Yes | Valid slugs from `src/avatar-slugs.ts` |
@@ -48,6 +51,17 @@ Last updated: 2026-07-17
 
 - `avatarId` in preferences must be a valid slug or `null`. Invalid → `400 "Invalid avatar_id"`.
 - Session response uses **camelCase** — differs from other endpoints that use snake_case.
+- `GET /api/profile/overview` backs the read-only `/profile` view: `totalDistance` is the storyline-adjusted distance (same as `/api/total-distance`); `memberSince` is ISO 8601 UTC (e.g. `2024-08-15T18:30:00.000Z`, converted server-side — the raw SQLite `YYYY-MM-DD HH:MM:SS` is never returned); `currentGoalTitle` is the next unreached goal in the active storyline, the last goal's title once all are reached, and `null` when the storyline has no goals; `activeStoryline` uses the `/api/session` shape; `fellowships` lists active, non-dissolved memberships as `{ id, name }` with no sharing flag. Missing/invalid session → `401`.
+
+## Page Routes
+
+Page routes return SSR HTML. They are not auth-guarded: `public/js/main.js` redirects unauthenticated boots to `/login`, and islands handle their own `401` responses.
+
+| Method | Path | Renderer | Islands (in order) |
+|---|---|---|---|
+| GET | `/profile` | `src/renderProfileViewPage.ts` | `ProfileViewIsland`, `BadgeDisplayIsland` inside `.party-page` |
+| GET | `/profile/settings` | `src/renderProfileSettingsPage.ts` | SSR back row, then `ProfileSettingsIsland`, `PushPermissionIsland`, `ProfileAccountIsland` inside `.profile-page` |
+| GET | `/friends/:id` | `src/renderFriendProfilePage.ts` | `FriendProfileIsland`, `BadgeDisplayIsland` (unchanged) |
 
 ## Push Endpoints
 
@@ -189,6 +203,87 @@ Goal content is authenticated and uses the same unlock semantics as goal viewing
 - **IDOR prevention**: all friendship operations validate current user is a party to the record.
 - `friendship_status` in search: `null` (none), `"pending"`, or `"accepted"`.
 - Friend profile `fellowships[].is_shared` indicates mutual party membership.
+
+## Achievement Endpoints
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/achievements` | Yes | Earned badges, newest-earned first. Optional `userId` query returns an accepted friend's summary; self-queries skip the friendship check. Invalid `userId` → `400`; non-friend or unknown user → `404` (existence is not leaked). |
+| GET | `/api/achievements/pending` | Yes | Caller's earned-but-unacknowledged awards, oldest-earned first. Self-scoped; no `userId` parameter. |
+| POST | `/api/achievements/acknowledge` | Yes | Body `{ instance_ids: number[] }`. Idempotent; foreign or stale IDs are ignored. Malformed body → `400`. |
+
+- Response envelope is `{ achievements: [...] }`; a user with no earned instances gets `200` with an empty array.
+- Each entry carries `achievement_id`, `slug`, `name`, `description`, `image_slug`, `badge_type`, `is_repeatable`, `earned_count`, `first_earned_at`, `last_earned_at`, and a server-resolved `presentation` block.
+- `presentation` fields: `rank` (1–4), `rank_label` (`bronze` | `silver` | `gold` | `mithril`), `storyline` (string or `null`; `null` means global), and `collection` (`{ slug, label, index, size }` or `null`).
+- The raw definition `metadata` string is never returned — only the resolved `presentation` block. Missing or malformed metadata falls back to rank 1, no collection, and a null storyline.
+- Repeatable badges select their artwork variant with `presentation.rank_label`: `/img/achievements/<image_slug>--<rank_label>.webp` (e.g. `habit-faithful-walker--gold.webp`). Non-repeatable badges use `/img/achievements/<image_slug>.webp`.
+
+### Pending awards
+
+`GET /api/achievements/pending` returns `{ pending: [...] }` — the caller's earned instances with no acknowledgement row, ordered `earned_at ASC, id ASC`. A user with nothing outstanding gets `200` with an empty array.
+
+- Each entry carries `instance_id`, `earned_at`, `earned_count`, `slug`, `name`, `description`, `image_slug`, `badge_type`, `is_repeatable`, and `presentation`.
+- `earned_count` is the definition's current total for the user (repeat context). `presentation` is resolved with the **instance's awarding ordinal** — its 1-based position among the user's instances of that definition ordered by `(earned_at, id)` — not with `earned_count`. Queued instances that crossed a rank threshold therefore show the rank they earned (e.g. thresholds `[1,4,12,26]`: ordinals 1–3 resolve bronze, ordinal 4 silver).
+- Pending is derived from earned instances minus acknowledgements, so backfilled awards are included. The raw definition `metadata` string is never returned.
+- Without a valid session → `401`. A query failure → `500`.
+
+```json
+{
+  "pending": [
+    {
+      "instance_id": 12,
+      "earned_at": "2026-11-02T00:00:00.000Z",
+      "earned_count": 4,
+      "slug": "habit-faithful-walker",
+      "name": "Faithful Walker",
+      "description": "Walk every day for a full week.",
+      "image_slug": "habit-faithful-walker",
+      "badge_type": "habit",
+      "is_repeatable": true,
+      "presentation": { "rank": 2, "rank_label": "silver", "storyline": null, "collection": null }
+    }
+  ]
+}
+```
+
+### Acknowledge awards
+
+`POST /api/achievements/acknowledge` takes `{ "instance_ids": [12, 13] }` and returns `200` with `{ "acknowledged": n }`.
+
+- `n` counts only rows newly inserted for the caller. Re-acknowledging, duplicate IDs in one request, IDs owned by another user, and nonexistent IDs all contribute `0` instead of erroring — the call is safe to replay.
+- A request accepts at most 100 IDs; the per-ID inserts run as one atomic batch, so a failure cannot leave a partially acknowledged body.
+- Acknowledgement never creates, updates, or deletes `user_achievement_instances` rows; it only writes to `user_achievement_acknowledgements`.
+- Missing/non-array/empty/over-100 `instance_ids`, non-number, non-integer, non-safe-integer, zero, or negative entries, and malformed JSON → `400`. Without a valid session → `401`.
+
+```json
+{
+  "achievements": [
+    {
+      "achievement_id": 1,
+      "slug": "journey-frodo-sam-buckleberry-ferry",
+      "name": "Across the Buckleberry Ferry",
+      "description": "Cross the Buckleberry Ferry and leave the Shire behind.",
+      "image_slug": "journey-frodo-sam-buckleberry-ferry",
+      "badge_type": "journey",
+      "is_repeatable": false,
+      "earned_count": 1,
+      "first_earned_at": "2026-11-02T00:00:00.000Z",
+      "last_earned_at": "2026-11-02T00:00:00.000Z",
+      "presentation": {
+        "rank": 1,
+        "rank_label": "bronze",
+        "storyline": "frodo-sam",
+        "collection": {
+          "slug": "frodo-sam-journey",
+          "label": "The Road to Mordor",
+          "index": 1,
+          "size": 8
+        }
+      }
+    }
+  ]
+}
+```
 
 ## Admin Endpoints
 

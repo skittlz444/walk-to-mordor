@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+  Profile VIEW page mockup — `profile-view-settings` change.
+  High-fidelity artifact rendered with the repo's real CSS (main.css imports
+  profile.css; drawer.css, party.css, friends.css, badge-display.css) and real
+  badge/avatar assets. Proposed-view styles live in mockups.css and would
+  become public/css/profile-view.css.
+
+  Serve the repo root statically, then open:
+  /openspec/changes/profile-view-settings/mockups/view.html
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Walk to Mordor - Profile (view mockup)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
+  <link href="/css/main.css" rel="stylesheet" />
+  <link href="/css/drawer.css" rel="stylesheet" />
+  <link href="/css/party.css" rel="stylesheet" />
+  <link href="/css/friends.css" rel="stylesheet" />
+  <link href="/css/badge-display.css" rel="stylesheet" />
+  <link href="mockups.css" rel="stylesheet" />
+</head>
+<body>
+  <header>
+    <div class="header-controls">
+      <button class="menu-icon" type="button" aria-label="Menu"><i class="fas fa-bars" aria-hidden="true"></i></button>
+    </div>
+    <h1>Profile</h1>
+  </header>
+
+  <main>
+    <div class="party-page">
+      <!-- ProfileViewIsland -->
+      <div class="party-card friend-profile-header">
+        <button class="profile-view-avatar-trigger" type="button" aria-label="Change avatar for FrodoBaggins">
+          <span class="avatar" style="width:128px;height:128px;border-radius:50%;overflow:hidden;display:block;">
+            <img src="/img/avatars/frodo.webp" alt="FrodoBaggins" width="128" height="128" style="display:block;width:100%;height:100%;object-fit:cover;" />
+          </span>
+          <span class="profile-view-avatar-edit" aria-hidden="true"><i class="fas fa-camera"></i></span>
+        </button>
+        <h2 class="friend-profile-username">FrodoBaggins</h2>
+
+        <div class="friend-profile-stats">
+          <div class="friend-profile-stat">
+            <span class="friend-profile-stat__value">2412.50 km</span>
+            <span class="friend-profile-stat__label">Total Distance</span>
+          </div>
+          <div class="friend-profile-stat">
+            <span class="friend-profile-stat__value">August 15, 2024</span>
+            <span class="friend-profile-stat__label">Member Since</span>
+          </div>
+        </div>
+
+        <div class="profile-view-heading">
+          <i class="fas fa-map-marker-alt" aria-hidden="true" style="color: var(--accent-gold);"></i>
+          Heading to: <strong>Reach northern edge of Ithilien</strong>
+        </div>
+        <div class="profile-view-chip">
+          <i class="fas fa-route" aria-hidden="true"></i>
+          Journey: Frodo &amp; Sam
+        </div>
+      </div>
+
+      <!-- Settings CTA: the clear button from view → settings -->
+      <div class="profile-view-cta">
+        <a class="party-btn party-btn--gold party-btn--full" href="/profile/settings" style="text-decoration:none;">
+          <i class="fas fa-gear" aria-hidden="true"></i> Edit Profile &amp; Settings
+        </a>
+      </div>
+
+      <!-- Fellowships card — present only when the user has fellowships;
+           the overview API returns { id, name }, no shared flag on the self surface.
+           The view island renders hero + CTA + Fellowships BEFORE the badge island. -->
+      <div class="party-card">
+        <h3>Fellowships</h3>
+        <div class="friend-fellowship-item">
+          <span class="friend-fellowship-item__name">Fellowship of the Ring</span>
+        </div>
+      </div>
+
+      <!-- BadgeDisplayIsland (unchanged island; renders after the fellowships card,
+           renders nothing when the summary is empty) -->
+      <div class="badge-display">
+        <section class="badge-collection">
+          <h3 class="badge-collection__header">
+            <span class="badge-collection__label">The Road to Mordor</span>
+            <span class="badge-collection__progress"> · 5/8</span>
+          </h3>
+          <ul class="badge-grid">
+            <li class="badge-card">
+              <div class="badge-card__art"><img class="badge-card__image" src="/img/achievements/journey-frodo-sam-buckleberry-ferry.webp" alt="" width="512" height="512" /></div>
+              <span class="badge-card__name">Across the Buckleberry Ferry</span>
+              <div class="badge-card__meta">
+                <span class="badge-rank" role="img" aria-label="Rank: bronze">bronze</span>
+                <span class="badge-position" role="img" aria-label="Collection position 1 of 8">1/8</span>
+              </div>
+            </li>
+            <li class="badge-card">
+              <div class="badge-card__art"><img class="badge-card__image" src="/img/achievements/journey-frodo-sam-weathertop-survivor.webp" alt="" width="512" height="512" /></div>
+              <span class="badge-card__name">Survivor of Weathertop</span>
+              <div class="badge-card__meta">
+                <span class="badge-rank" role="img" aria-label="Rank: bronze">bronze</span>
+                <span class="badge-position" role="img" aria-label="Collection position 2 of 8">2/8</span>
+              </div>
+            </li>
+            <li class="badge-card">
+              <div class="badge-card__art"><img class="badge-card__image" src="/img/achievements/journey-frodo-sam-through-khazad-dum.webp" alt="" width="512" height="512" /></div>
+              <span class="badge-card__name">Through Khazad-dûm</span>
+              <div class="badge-card__meta">
+                <span class="badge-rank" role="img" aria-label="Rank: silver">silver</span>
+                <span class="badge-position" role="img" aria-label="Collection position 3 of 8">3/8</span>
+              </div>
+            </li>
+            <li class="badge-card">
+              <div class="badge-card__art"><img class="badge-card__image" src="/img/achievements/journey-frodo-sam-lothlorien-guest.webp" alt="" width="512" height="512" /></div>
+              <span class="badge-card__name">Guest of the Golden Wood</span>
+              <div class="badge-card__meta">
+                <span class="badge-rank" role="img" aria-label="Rank: silver">silver</span>
+                <span class="badge-position" role="img" aria-label="Collection position 4 of 8">4/8</span>
+              </div>
+            </li>
+            <li class="badge-card">
+              <div class="badge-card__art"><img class="badge-card__image" src="/img/achievements/journey-frodo-sam-rauros-parting.webp" alt="" width="512" height="512" /></div>
+              <span class="badge-card__name">The Breaking of the Fellowship</span>
+              <div class="badge-card__meta">
+                <span class="badge-rank" role="img" aria-label="Rank: gold">gold</span>
+                <span class="badge-position" role="img" aria-label="Collection position 5 of 8">5/8</span>
+              </div>
+            </li>
+          </ul>
+        </section>
+        <section class="badge-collection">
+          <h3 class="badge-collection__header">
+            <span class="badge-collection__label">Other</span>
+          </h3>
+          <ul class="badge-grid">
+            <li class="badge-card">
+              <div class="badge-card__art"><img class="badge-card__image" src="/img/achievements/habit-faithful-walker--silver.webp" alt="" width="512" height="512" /></div>
+              <span class="badge-card__name">Faithful Walker</span>
+              <div class="badge-card__meta">
+                <span class="badge-rank" role="img" aria-label="Rank: silver">silver</span>
+                <span class="badge-repeat" role="img" aria-label="Earned 4 times">×4</span>
+              </div>
+            </li>
+            <li class="badge-card">
+              <div class="badge-card__art"><img class="badge-card__image" src="/img/achievements/habit-first-steps.webp" alt="" width="512" height="512" /></div>
+              <span class="badge-card__name">First Steps</span>
+              <div class="badge-card__meta"><span class="badge-rank" role="img" aria-label="Rank: bronze">bronze</span></div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

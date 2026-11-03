@@ -56,18 +56,10 @@ export function generateSessionId(): string {
   return Array.from(buffer, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * Validate email format
- */
-export function isValidEmail(email: string): boolean {
-  if (!email || typeof email !== 'string') {
-    return false;
-  }
-  
-  // Basic email validation regex
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
+// Username/email predicates live in ./validators so the client bundle can
+// import the exact same rules. Re-exported here so worker call sites are
+// unchanged.
+export { isValidEmail, isValidUsername } from './validators';
 
 /**
  * Validate password requirements:
@@ -101,19 +93,6 @@ export function isValidPassword(password: string): { valid: boolean; errors: str
   }
   
   return { valid: errors.length === 0, errors };
-}
-
-/**
- * Validate username
- */
-export function isValidUsername(username: string): boolean {
-  if (!username || typeof username !== 'string') {
-    return false;
-  }
-  
-  // Username must be 3-30 characters, alphanumeric and underscores only
-  const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
-  return usernameRegex.test(username);
 }
 
 /**

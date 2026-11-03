@@ -44,6 +44,36 @@ export function isValidDistance(value: unknown): boolean {
   return !isNaN(num) && isFinite(num) && num >= 0 && num <= VALIDATION_CONSTANTS.MAX_DISTANCE_VALUE;
 }
 
+/**
+ * Validate email format.
+ *
+ * Dependency-free so both the Worker and the client bundle can import it.
+ */
+export function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') {
+    return false;
+  }
+
+  // Basic email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+/**
+ * Validate username.
+ *
+ * Dependency-free so both the Worker and the client bundle can import it.
+ */
+export function isValidUsername(username: string): boolean {
+  if (!username || typeof username !== 'string') {
+    return false;
+  }
+
+  // Username must be 3-30 characters, alphanumeric and underscores only
+  const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
+  return usernameRegex.test(username);
+}
+
 // Helper function to create error response
 export function createErrorResponse(error: string, status: number = 400) {
   return new Response(JSON.stringify({ error }), {
