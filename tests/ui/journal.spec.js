@@ -5,6 +5,7 @@ const {
   setupTest,
   waitForGoalsLoaded,
   closeVisibleModal,
+  dismissBadgeAwardModal,
 } = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
@@ -44,22 +45,6 @@ async function goToJourney(page) {
   await page.waitForSelector('body.authenticated', { timeout: 10000 });
   await waitForGoalsLoaded(page);
   await closeVisibleModal(page);
-}
-
-/**
- * Walk logging awards badges; the global award modal can open just after the
- * journey reload and intercept the goal-card click. Journal specs are not
- * about badges, so close it before opening a goal.
- */
-async function dismissBadgeAwardModal(page) {
-  const overlay = page.locator('.badge-award-overlay');
-  try {
-    await overlay.waitFor({ state: 'visible', timeout: 2000 });
-  } catch {
-    return;
-  }
-  await page.getByRole('button', { name: 'Close award' }).click();
-  await overlay.waitFor({ state: 'detached', timeout: 5000 });
 }
 
 async function dismissPalantir(page) {
