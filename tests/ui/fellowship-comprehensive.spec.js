@@ -4,6 +4,7 @@ const { test: base, expect } = require('@playwright/test');
 const BASE_URL = 'http://127.0.0.1:8787';
 
 const { cleanupAllTestData } = require('./helpers/cleanup');
+const { createFellowship, dismissBadgeAwardModal } = require('./helpers/common');
 
 function uniqueId() {
   return Math.random().toString(36).substring(2, 8);
@@ -45,35 +46,6 @@ async function loginAs(page, token, url = '/journey') {
   if (!url.includes('/party/join/')) {
     await page.waitForSelector('body.authenticated', { timeout: 15000 });
   }
-}
-
-/**
- * Fellowship specs are not about badges. Walk logging awards badges and the
- * global award modal can open on this page load, intercepting later clicks.
- */
-async function dismissBadgeAwardModal(page) {
-  const overlay = page.locator('.badge-award-overlay');
-  try {
-    await overlay.waitFor({ state: 'visible', timeout: 2000 });
-  } catch {
-    return;
-  }
-  await page.getByRole('button', { name: 'Close award' }).click();
-  await overlay.waitFor({ state: 'detached', timeout: 5000 });
-}
-
-async function createFellowship(request, token, name, mode = 'cumulative', leaveBehavior = 'keep') {
-  let res;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    res = await request.post(`${BASE_URL}/api/party`, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      data: { name, distance_mode: mode, leave_distance_behavior: leaveBehavior },
-    });
-    if (res.ok()) break;
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  expect(res.ok(), `createFellowship "${name}" failed: ${await res.text()}`).toBeTruthy();
-  return await res.json();
 }
 
 async function joinFellowship(request, token, inviteCode) {

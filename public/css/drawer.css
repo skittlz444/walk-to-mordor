@@ -2,6 +2,25 @@ body.drawer-open {
   overflow: hidden;
 }
 
+/*
+ * Navigation layer scale (keep new overlays inside these bands):
+ *   1-200     page content and page-level overlays (map loading 10, party
+ *             legend 12, map social panels 15, waypoint popup 30, journey
+ *             calendar 100, calendar modal and map calendar sheet 200)
+ *   900       open navigation drawer and its backdrop (raised header context)
+ *   1000      app-level modal dialogs (party, profile, palantir, admin)
+ *   9999      PWA install banner
+ *   11000     progress modal
+ */
+
+/* The drawer mounts inside <header>, which is a stacking context at z-index 2
+   (main.css), so its children can never paint above page overlays. Raise that
+   context while the drawer is open: 900 sits above page overlays (max 200) and
+   below app-level modals (1000). */
+body.drawer-open header {
+  z-index: 900;
+}
+
 .drawer-backdrop {
   position: fixed;
   inset: 0;

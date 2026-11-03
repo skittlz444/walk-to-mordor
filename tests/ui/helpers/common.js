@@ -147,6 +147,37 @@ async function waitForJourneyReady(page) {
   await dismissPwaInstallBanner(page);
 }
 
+/**
+ * Walk logging (and opening the map with a new fellowship) can award a badge,
+ * and the global award modal can open on the page load and intercept later
+ * clicks. Specs that are not about badges should close it before interacting
+ * with the page.
+ */
+async function dismissBadgeAwardModal(page) {
+  const overlay = page.locator('.badge-award-overlay');
+  try {
+    await overlay.waitFor({ state: 'visible', timeout: 2000 });
+  } catch {
+    return;
+  }
+  await page.getByRole('button', { name: 'Close award' }).click();
+  await overlay.waitFor({ state: 'detached', timeout: 5000 });
+}
+
+async function createFellowship(request, token, name, mode = 'cumulative', leaveBehavior = 'keep') {
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await request.post(`${BASE_URL}/api/party`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      data: { name, distance_mode: mode, leave_distance_behavior: leaveBehavior },
+    });
+    if (res.ok()) break;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  expect(res.ok(), `createFellowship "${name}" failed: ${await res.text()}`).toBeTruthy();
+  return await res.json();
+}
+
 async function setupTest({ page, authToken }) {
     // Ensure clean state for this user
     await cleanupAllTestData(BASE_URL, authToken);
@@ -296,6 +327,8 @@ module.exports = {
   waitForJourneyReady,
   dismissPwaInstallBanner,
   closeVisibleModal,
+  dismissBadgeAwardModal,
+  createFellowship,
     generateRealisticTestDistance,
     generateLargeTestDistance,
     generateRandomTestDate,
