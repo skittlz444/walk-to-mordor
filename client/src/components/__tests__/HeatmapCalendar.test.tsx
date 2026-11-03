@@ -22,6 +22,28 @@ function dayOffset(offset: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Monday-first weekday labels, as the heatmap must render them left to right. */
+const MONDAY_FIRST_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/** Zero-based Monday-first column index for a UTC date string (Mon=0 … Sun=6). */
+function mondayColumn(dateStr: string): number {
+  return (new Date(`${dateStr}T00:00:00Z`).getUTCDay() + 6) % 7;
+}
+
+/** A recent UTC date (7–13 days ago) whose weekday is `dow` (0=Sun … 6=Sat). */
+function recentDateWithDow(dow: number): string {
+  const base = new Date();
+  base.setUTCHours(0, 0, 0, 0);
+  for (let offset = 7; offset < 14; offset++) {
+    const candidate = new Date(base);
+    candidate.setUTCDate(candidate.getUTCDate() - offset);
+    if (candidate.getUTCDay() === dow) {
+      return candidate.toISOString().slice(0, 10);
+    }
+  }
+  throw new Error(`No UTC date with day-of-week ${dow} found in the last two weeks`);
+}
+
 const EMPTY_DATA = { days: [], currentStreak: 0, longestStreak: 0, startDate: dayOffset(364) };
 
 const SAMPLE_DATA = {
@@ -257,6 +279,106 @@ describe('HeatmapCalendar', () => {
       await waitFor(() => {
         expect(container.querySelector('.heatmap-tooltip')).toBeNull();
       });
+    });
+  });
+
+  describe('monday-first week layout', () => {
+    it('labels weekday columns Monday through Sunday', async () => {
+      mockFetch(EMPTY_DATA);
+
+      const { container } = render(<HeatmapCalendar />);
+
+      await waitFor(() => {
+        expect(container.querySelector('.heatmap-grid')).not.toBeNull();
+      });
+
+      const labels = Array.from(
+        container.querySelectorAll('.heatmap-day-header .heatmap-day-label'),
+      ).map((el) => el.textContent);
+
+      expect(labels).toEqual(MONDAY_FIRST_LABELS);
+    });
+
+    it('aligns every date with its Monday-first column and weekday header', async () => {
+      mockFetch(EMPTY_DATA);
+
+      const { container } = render(<HeatmapCalendar />);
+
+      await waitFor(() => {
+        expect(container.querySelector('.heatmap-grid')).not.toBeNull();
+      });
+
+      const headerLabels = Array.from(
+        container.querySelectorAll('.heatmap-day-header .heatmap-day-label'),
+      );
+      expect(headerLabels).toHaveLength(7);
+
+      const cells = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('.heatmap-grid button[data-date]'),
+      );
+      expect(cells).toHaveLength(365);
+
+      for (const cell of cells) {
+        const dateStr = cell.dataset.date;
+        expect(dateStr).toBeTruthy();
+
+        const row = cell.closest('.heatmap-row');
+        expect(row).not.toBeNull();
+
+        const dayCells = Array.from(row!.children).slice(1);
+        expect(dayCells).toHaveLength(7);
+
+        const column = dayCells.indexOf(cell);
+        const expectedColumn = mondayColumn(dateStr!);
+        expect(column).toBe(expectedColumn);
+        // Header in the same column names the weekday the date actually falls on.
+        expect(headerLabels[column]?.textContent).toBe(MONDAY_FIRST_LABELS[expectedColumn]);
+      }
+
+      // Sanity-check the explicit case the spec calls out: today under its own weekday.
+      const todayCell = container.querySelector<HTMLButtonElement>(
+        `.heatmap-grid button[data-date="${today()}"]`,
+      );
+      expect(todayCell).not.toBeNull();
+      const todayRow = todayCell!.closest('.heatmap-row')!;
+      expect(Array.from(todayRow.children).slice(1).indexOf(todayCell!)).toBe(mondayColumn(today()));
+    });
+
+    it('pads the earliest week at the front when the start date is not a Monday', async () => {
+      const startDate = recentDateWithDow(3); // a Wednesday
+      expect(mondayColumn(startDate)).toBe(2);
+
+      mockFetch({ ...EMPTY_DATA, startDate });
+
+      const { container } = render(<HeatmapCalendar />);
+
+      await waitFor(() => {
+        expect(container.querySelector('.heatmap-grid')).not.toBeNull();
+      });
+
+      const rows = container.querySelectorAll('.heatmap-grid .heatmap-row');
+      expect(rows.length).toBeGreaterThan(0);
+
+      // Rows are reversed: the earliest (chronological) week is the last row.
+      const earliestRow = rows[rows.length - 1];
+      const children = Array.from(earliestRow.children);
+      expect(children[0].classList.contains('heatmap-month-col')).toBe(true);
+
+      const dayCells = children.slice(1);
+      expect(dayCells).toHaveLength(7);
+
+      const firstRealIndex = dayCells.findIndex((el) => el.matches('button[data-date]'));
+      expect(firstRealIndex).toBe(2);
+      expect(
+        dayCells.slice(0, firstRealIndex).every((el) => el.classList.contains('heatmap-cell-empty')),
+      ).toBe(true);
+
+      // The first real cell of the row is the start date, sitting in the Wednesday column.
+      const firstReal = dayCells[firstRealIndex] as HTMLButtonElement;
+      expect(firstReal.dataset.date).toBe(startDate);
+
+      // Padding only ever leads: no empty cells once real days start.
+      expect(dayCells.slice(firstRealIndex).every((el) => el.matches('button[data-date]'))).toBe(true);
     });
   });
 

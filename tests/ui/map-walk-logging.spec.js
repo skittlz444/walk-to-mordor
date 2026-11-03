@@ -4,7 +4,13 @@
  * Tests for Story 2.8 - Map Walk Logging
  * Verifies the walk logging FAB, calendar sheet, and distance modal integration on the map page.
  */
-const { test, expect } = require('./helpers/common');
+const {
+  test,
+  expect,
+  WEEKDAY_LABELS,
+  expectWeekdayAlignedCells,
+  expectOutOfMonthCellsMarked,
+} = require('./helpers/common');
 
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
@@ -147,6 +153,55 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
       // Calendar sheet should be closeable
       await closeButton.click();
       await expect(page.locator('#map-calendar-sheet')).toBeHidden();
+    });
+
+    test('calendar sheet weeks are Monday-first in week and month view', async ({ page }) => {
+      await page.goto(`${BASE_URL}/map`);
+      await waitForMapReady(page);
+
+      await page.locator('.map-walk-button').click();
+      const sheet = page.locator('#map-calendar-sheet');
+      await expect(sheet).toBeVisible();
+
+      // Week view headers run Monday through Sunday and every date sits in its weekday column
+      const weekHeaders = sheet.locator('.week-view .day-header');
+      await expect(weekHeaders).toHaveCount(7);
+      expect(await weekHeaders.allTextContents()).toEqual(WEEKDAY_LABELS);
+
+      const weekCells = sheet.locator('.week-view .week-row .calendar-cell[data-date]');
+      await expect(weekCells).toHaveCount(7);
+      await expectWeekdayAlignedCells(weekCells);
+
+      // Sheet week navigation also advances exactly seven days
+      const firstSheetCell = weekCells.first();
+      const dateBefore = await firstSheetCell.getAttribute('data-date');
+      expect(dateBefore).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      await page.locator('#sheet-next-btn').click();
+      await expect(firstSheetCell).not.toHaveAttribute('data-date', dateBefore);
+      const dateAfter = await firstSheetCell.getAttribute('data-date');
+      expect((Date.parse(dateAfter) - Date.parse(dateBefore)) / 86400000).toBe(7);
+      await expectWeekdayAlignedCells(weekCells);
+
+      // Going back one week restores the original Monday
+      await page.locator('#sheet-prev-btn').click();
+      await expect(firstSheetCell).toHaveAttribute('data-date', dateBefore);
+      await expectWeekdayAlignedCells(weekCells);
+
+      // Month view uses the same headers, alignment, and neighbouring-month styling
+      await page.locator('label[for="sheet-month-view"]').click();
+      await expect(sheet.locator('.month-view')).toBeVisible();
+
+      const monthHeaders = sheet.locator('.month-view .day-header');
+      await expect(monthHeaders).toHaveCount(7);
+      expect(await monthHeaders.allTextContents()).toEqual(WEEKDAY_LABELS);
+
+      const monthCells = sheet.locator('.month-view .calendar-cell[data-date]');
+      await expectWeekdayAlignedCells(monthCells);
+
+      const monthLayout = await expectOutOfMonthCellsMarked(monthCells);
+      if ((await monthCells.count()) > 28) {
+        expect(monthLayout.outOfMonth).toBeGreaterThan(0);
+      }
     });
   });
 

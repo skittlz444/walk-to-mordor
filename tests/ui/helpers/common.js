@@ -258,6 +258,49 @@ async function selectCalendarDate(page, dateInfo) {
     }
 }
 
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * Assert every calendar cell sits in the column matching its own weekday.
+ * Runs in the browser so date parsing matches the rendered local dates.
+ */
+async function expectWeekdayAlignedCells(cellLocator) {
+  const misaligned = await cellLocator.evaluateAll((cells) =>
+    cells
+      .map((cell) => {
+        const dateStr = cell.getAttribute('data-date');
+        const date = new Date(`${dateStr}T00:00:00`);
+        const column = Array.from(cell.parentElement.children).indexOf(cell);
+        return column === (date.getDay() + 6) % 7 ? null : dateStr;
+      })
+      .filter(Boolean),
+  );
+  expect(misaligned).toEqual([]);
+}
+
+/**
+ * Assert out-of-month dates carry `other-month` and in-month dates do not.
+ * Returns `{ displayedMonth, outOfMonth, violations }` for extra assertions.
+ */
+async function expectOutOfMonthCellsMarked(cellLocator) {
+  const result = await cellLocator.evaluateAll((cells) => {
+    const inMonth = cells.filter((cell) => !cell.classList.contains('other-month'));
+    if (inMonth.length === 0) {
+      return { displayedMonth: null, outOfMonth: 0, violations: ['no in-month cells'] };
+    }
+    const displayedMonth = inMonth[0].getAttribute('data-date').slice(0, 7);
+    const violations = cells
+      .filter((cell) => {
+        const dateMonth = cell.getAttribute('data-date').slice(0, 7);
+        return cell.classList.contains('other-month') !== (dateMonth !== displayedMonth);
+      })
+      .map((cell) => cell.getAttribute('data-date'));
+    return { displayedMonth, outOfMonth: cells.length - inMonth.length, violations };
+  });
+  expect(result.violations).toEqual([]);
+  return result;
+}
+
 async function createTestEvent(page, distance, dateInfo) {
     const testDistance = distance || generateRealisticTestDistance();
     const testDateInfo = dateInfo || generateRandomTestDate();
@@ -321,6 +364,9 @@ module.exports = {
     test,
     expect,
     setupTest,
+    WEEKDAY_LABELS,
+    expectWeekdayAlignedCells,
+    expectOutOfMonthCellsMarked,
   navigateAuthenticated,
     waitForAuthenticated,
   waitForGoalsLoaded,
