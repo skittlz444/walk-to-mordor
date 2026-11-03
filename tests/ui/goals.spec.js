@@ -14,7 +14,12 @@ const {
 
 // Helper to properly close popup with Firefox compatibility
 async function closePopupRobust(page, closeButton) {
-  const popup = page.locator('.modal-overlay').last();
+  // A badge earned by the same save opens its own modal in place, and it also
+  // carries `.modal-overlay`. Clear it so selectors and clicks target the goal
+  // dialog, and scope every lookup to non-badge overlays.
+  await dismissBadgeAwardModal(page);
+
+  const popup = page.locator('.modal-overlay:not(.badge-award-overlay)').last();
   try {
     await closeButton.click({ timeout: 2000 });
   } catch (e) {
@@ -25,8 +30,9 @@ async function closePopupRobust(page, closeButton) {
   // Wait for popup to actually close - Firefox sometimes has timing issues
   try {
     await page.waitForFunction(() => {
-      const overlays = document.querySelectorAll('.modal-overlay');
-      return overlays.length === 0 || Array.from(overlays).every(overlay =>
+      const overlays = Array.from(document.querySelectorAll('.modal-overlay'))
+        .filter((overlay) => !overlay.classList.contains('badge-award-overlay'));
+      return overlays.length === 0 || overlays.every(overlay =>
         window.getComputedStyle(overlay).display === 'none' || 
         overlay.style.display === 'none' || !overlay.offsetParent
       );
@@ -44,7 +50,9 @@ async function closePopupRobust(page, closeButton) {
       }
     } catch (err) {}
   }
-  
+
+  // An award deferred behind the goal popup can open once it closes.
+  await dismissBadgeAwardModal(page);
   await expect(popup).toBeHidden({ timeout: 15000 });
 }
 
@@ -321,13 +329,16 @@ test.describe('Goals Functionality', () => {
       await addButton.click();
       await page.waitForLoadState('domcontentloaded');
     }
+
+    // The save may award a badge and open its modal in place.
+    await dismissBadgeAwardModal(page);
     
     // Wait for goals to load
     await expect(page.locator('#goals-list')).toBeVisible();
     
     // If there's a congratulations popup from adding distance, close it first
     try {
-      const congratsPopup = page.locator('.modal-overlay');
+      const congratsPopup = page.locator('.modal-overlay:not(.badge-award-overlay)').first();
       if (await congratsPopup.isVisible({ timeout: 2000 })) {
         const congratsText = await congratsPopup.textContent();
         if (congratsText && congratsText.includes('Congratulations')) {
@@ -358,7 +369,7 @@ test.describe('Goals Functionality', () => {
     
     // Double-check no popups are blocking the click
     try {
-      const blockingPopup = page.locator('.modal-overlay');
+      const blockingPopup = page.locator('.modal-overlay:not(.badge-award-overlay)');
       if (await blockingPopup.isVisible({ timeout: 1000 })) {
         await page.keyboard.press('Escape');
         await expect(blockingPopup).toBeHidden({ timeout: 3000 });
@@ -372,7 +383,7 @@ test.describe('Goals Functionality', () => {
     await goalToClick.click({ force: true });
     
     // Check that goal popup is visible
-    await expect(page.locator('.modal-overlay')).toBeVisible();
+    await expect(page.locator('.modal-overlay:not(.badge-award-overlay)')).toBeVisible();
     
     // Check that Close button exists and has correct text
     const closeButton = page.locator('#close-goal-btn').last();
@@ -380,7 +391,7 @@ test.describe('Goals Functionality', () => {
     await expect(closeButton).toHaveText('Close');
     
     // Check that distance is displayed but no "km to go" for completed goals
-    const popupContent = page.locator('.modal-overlay');
+    const popupContent = page.locator('.modal-overlay:not(.badge-award-overlay)');
     await expect(popupContent).toContainText('km');
     await expect(popupContent).not.toContainText('km to go');
     
