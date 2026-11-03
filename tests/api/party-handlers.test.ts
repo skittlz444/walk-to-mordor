@@ -1211,5 +1211,32 @@ describe('Party Handlers', () => {
         consoleErrorSpy.mockRestore();
       }
     });
+
+    it('still joins the fellowship when the active-member query throws', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        // A fresh join that would make this the fourth active member, but the
+        // active-member read fails before any award can run.
+        const mockFirst = jest.fn()
+          .mockResolvedValueOnce({ id: 1, name: 'Party', dissolved_at: null }) // party lookup
+          .mockResolvedValueOnce(null); // no existing membership
+        const mockRun = jest.fn().mockResolvedValue({ meta: { changes: 1 } });
+        const bind = jest.fn().mockReturnValue({
+          first: mockFirst,
+          run: mockRun,
+          all: jest.fn().mockRejectedValue(new Error('DB error')),
+        });
+        mockDB.prepare.mockReturnValue({ bind });
+
+        const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
+
+        expect(response.status).toBe(200);
+        expect(mockRun).toHaveBeenCalled();
+        expect(awardMock).not.toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalled();
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    });
   });
 });

@@ -1,7 +1,7 @@
 // @ts-check
 const { test: base, expect } = require('@playwright/test');
 
-const BASE_URL = 'http://127.0.0.1:8787';
+const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 
 const { cleanupAllTestData } = require('./helpers/cleanup');
 
@@ -298,6 +298,7 @@ test.describe('Story 3-7: Fellowships List Page (/party)', () => {
   test('Clicking a fellowship navigates to detail page', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, `Comp Click Nav ${Date.now()}`);
     await loginAs(page, leader1Token, '/party');
+    await dismissBadgeAwardModal(page);
 
     // Click the specific party link by href
     const partyLink = page.locator(`a[href="/party/${party.id}"]`).first();
@@ -493,6 +494,7 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
   test('Update fellowship name succeeds', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Rename Before Party');
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
+    await dismissBadgeAwardModal(page);
 
     const nameInput = page.locator('input[type="text"]').first();
     await nameInput.clear();
@@ -528,6 +530,7 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
     await joinFellowship(request, member1Token, party.invite_code);
 
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
+    await dismissBadgeAwardModal(page);
 
     // Click kick on first member
     const kickBtn = page.locator('.party-kick-row button:has-text("Kick")').first();
@@ -574,6 +577,7 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
   test('Regenerate invite code button with confirmation', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Regen Code Party');
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
+    await dismissBadgeAwardModal(page);
 
     const regenBtn = page.locator('button:has-text("Regenerate")');
     await expect(regenBtn).toBeVisible({ timeout: 10000 });
@@ -609,6 +613,7 @@ test.describe('Story 3-7: Fellowship Management (/party/:id/manage)', () => {
     }
     expect(party).toBeTruthy();
     await loginAs(page, leader1Token, `/party/${party.id}/manage`);
+    await dismissBadgeAwardModal(page);
 
     // Breadcrumb should have party name linking back
     const backLink = page.locator('.party-breadcrumb a').first();
@@ -1088,6 +1093,7 @@ test.describe('Cross-Story: Navigation & Accessibility', () => {
   test('Breadcrumb from detail navigates to list', async ({ page, request, leader1Token }) => {
     const party = await createFellowship(request, leader1Token, 'Comp Nav Breadcrumb Party');
     await loginAs(page, leader1Token, `/party/${party.id}`);
+    await dismissBadgeAwardModal(page);
 
     const backLink = page.locator('a:has-text("← Fellowships")');
     await expect(backLink).toBeVisible({ timeout: 10000 });

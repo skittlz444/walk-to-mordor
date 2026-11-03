@@ -520,6 +520,25 @@ describe('checkAndAwardJourneyBadges', () => {
     expect(instanceCount(userId, 'habit-steady-month')).toBe(1);
   });
 
+  it('keeps Steady Month windows apart at the December year boundary', async () => {
+    for (let day = 1; day <= 20; day++) {
+      logProgress(userId, `2026-12-${String(day).padStart(2, '0')}`, 1);
+    }
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-12-20');
+
+    expect(idempotencyKeys(userId, 'habit-steady-month')).toEqual([
+      'habit-steady-month:2026-12',
+    ]);
+
+    logProgress(userId, '2027-01-03', 1);
+    await checkAndAwardJourneyBadges(db, userId, '2027-01-03');
+
+    expect(idempotencyKeys(userId, 'habit-steady-month')).toEqual([
+      'habit-steady-month:2026-12',
+    ]);
+  });
+
   it('awards Hundred-K Week on the Sunday log when the raw week totals 100 km', async () => {
     logProgress(userId, '2026-01-05', 60); // Monday
     logProgress(userId, '2026-01-11', 60); // Sunday
@@ -600,5 +619,22 @@ describe('checkAndAwardJourneyBadges', () => {
       ]),
     );
     expect(earnedSlugs(userId)).not.toContain('habit-unknown-criteria');
+  });
+
+  it('treats a missing or unparseable logged date as a no-op for habit windows', async () => {
+    logProgress(userId, '2026-01-10', 5); // Saturday
+    logProgress(userId, '2026-01-11', 5); // Sunday of the same weekend
+
+    await expect(
+      checkAndAwardJourneyBadges(db, userId, ''),
+    ).resolves.toBeUndefined();
+    await expect(
+      checkAndAwardJourneyBadges(db, userId, 'not-a-date'),
+    ).resolves.toBeUndefined();
+
+    expect(instanceCount(userId, 'habit-weekend-warrior')).toBe(0);
+    expect(instanceCount(userId, 'habit-faithful-walker')).toBe(0);
+    expect(instanceCount(userId, 'habit-steady-month')).toBe(0);
+    expect(instanceCount(userId, 'habit-hundred-week')).toBe(0);
   });
 });
