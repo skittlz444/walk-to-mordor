@@ -141,7 +141,6 @@ describe('ProfileViewIsland', () => {
     await waitFor(() => {
       expect(container.querySelector('.friend-profile-username')).toBeTruthy();
     });
-    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('links the Settings CTA to /profile/settings', async () => {

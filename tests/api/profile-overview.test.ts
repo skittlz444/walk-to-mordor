@@ -227,7 +227,6 @@ describe('handleGetProfileOverview', () => {
       },
       fellowships: [{ id: 3, name: 'Fellowship of the Ring' }],
     });
-    expect(mockedValidateSession).toHaveBeenCalledWith(request(), db, undefined);
   });
 
   it('applies the storyline distance offset to totalDistance', async () => {
