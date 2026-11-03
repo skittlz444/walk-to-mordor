@@ -243,8 +243,18 @@ test('profile achievements flow covers award queue, badge grid, settings split a
             );
             await reopened.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' });
             await waitForAuthenticated(reopened);
-            const pending = await pendingResponse;
-            const pendingBody = await pending.json();
+            // Wait for the app's pending fetch to complete. Do not read the
+            // browser response body here: Firefox invalidates it after a
+            // navigation and throws NS_ERROR_INVALID_CONTENT_ENCODING.
+            await pendingResponse;
+            const pendingApi = await request.get(`${BASE_URL}/api/achievements/pending`, {
+                headers,
+            });
+            expect(
+                pendingApi.ok(),
+                `GET /api/achievements/pending failed after reopening ${path}`,
+            ).toBeTruthy();
+            const pendingBody = await pendingApi.json();
             expect(
                 pendingBody.pending,
                 `Cleared queue must return no pending awards on ${path} after an app re-open`,

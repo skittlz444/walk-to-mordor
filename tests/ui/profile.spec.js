@@ -130,9 +130,13 @@ test.describe('User Profile Settings Page', () => {
         const profileLink = page.locator(profileDrawerSelector);
         await expect(profileLink).toBeVisible();
         await profileLink.click();
-        // The drawer opens the read-only view; the editable form is on settings.
+        // The drawer opens the read-only view; use its Settings CTA rather than
+        // starting a second navigation while the drawer navigation is settling
+        // (Firefox aborts that with NS_BINDING_ABORTED).
         await page.waitForURL('**/profile');
-        await page.goto(BASE_URL + '/profile/settings', { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('[data-island="ProfileViewIsland"][data-hydrated="true"]', { timeout: 10000 });
+        await page.getByRole('link', { name: /Edit Profile & Settings/i }).click();
+        await page.waitForURL('**/profile/settings');
         await waitForAuthenticated(page);
         await page.waitForSelector('[data-island="ProfileSettingsIsland"][data-hydrated="true"]', { timeout: 10000 });
         await dismissPwaInstallBanner(page);
