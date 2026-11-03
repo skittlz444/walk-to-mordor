@@ -243,10 +243,12 @@ test('profile achievements flow covers award queue, badge grid, settings split a
             );
             await reopened.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' });
             await waitForAuthenticated(reopened);
-            await pendingResponse;
-            // The pending fetch only runs after BadgeAwardModal mounts; give
-            // its state update a beat, then assert the queue stays closed.
-            await reopened.waitForTimeout(750);
+            const pending = await pendingResponse;
+            const pendingBody = await pending.json();
+            expect(
+                pendingBody.pending,
+                `Cleared queue must return no pending awards on ${path} after an app re-open`,
+            ).toEqual([]);
             await expect(
                 reopened.locator('.badge-award__content'),
                 `Cleared queue must not reopen on ${path} after an app re-open`,
