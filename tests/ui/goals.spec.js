@@ -8,7 +8,8 @@ const {
   generateLargeTestDistance, 
   generateRandomTestDate, 
   selectCalendarDate, 
-  createTestEvent 
+  createTestEvent,
+  dismissBadgeAwardModal
 } = require('./helpers/common');
 
 // Helper to properly close popup with Firefox compatibility
@@ -199,6 +200,10 @@ test.describe('Goals Functionality', () => {
 
     // Wait for the distance input popup to close
     await expect(page.locator('#distance-input')).toBeHidden({ timeout: 10000 });
+
+    // A badge earned by this save opens its own modal in place; close it so
+    // the goal congratulations popup is the only dialog.
+    await dismissBadgeAwardModal(page);
 
     // Wait for the congratulations popup to appear
     await expect(page.locator('.modal-overlay')).toBeVisible({ timeout: 10000 });
@@ -642,6 +647,10 @@ test.describe('Goals Functionality', () => {
 
     // Wait for the distance input popup to close
     await expect(page.locator('#distance-input')).toBeHidden({ timeout: 10000 });
+
+    // A badge earned by this save opens its own modal in place; close it so
+    // the goal congratulations popup is the only dialog.
+    await dismissBadgeAwardModal(page);
 
     // Wait for the congratulations popup to appear
     const goalPopup = page.locator('.modal-overlay');

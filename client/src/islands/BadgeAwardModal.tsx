@@ -11,6 +11,7 @@ import {
   claimPendingFetch,
   clearPendingQueue,
   currentAwardIndex,
+  mergePendingAwards,
   openAcknowledgeMode,
   openViewOnlyMode,
   pendingAwards,
@@ -31,6 +32,7 @@ const RANK_LABEL_PATTERN = /^[a-z0-9-]+$/;
 const PENDING_ENDPOINT = '/api/achievements/pending';
 const ACKNOWLEDGE_ENDPOINT = '/api/achievements/acknowledge';
 const OPEN_EVENT = 'wtm:open-badge-modal';
+const WALK_SAVED_EVENT = 'wtm:walk-saved';
 
 const OPEN_MODAL_SELECTOR = '[role="dialog"][aria-modal="true"], .modal-overlay';
 const FOCUSABLE_SELECTOR = [
@@ -175,6 +177,8 @@ export function BadgeAwardModal() {
   const wasVisibleRef = useRef(false);
   const retryActionRef = useRef<'advance' | 'dismiss'>('advance');
   const dismissRef = useRef<() => void>(() => {});
+  const refreshInFlightRef = useRef(false);
+  const refreshQueuedRef = useRef(false);
 
   const visible = awardModalVisible.value;
   const mode = awardModalMode.value;
@@ -214,53 +218,90 @@ export function BadgeAwardModal() {
     });
   }
 
+  /**
+   * Fetch the pending queue once. Returns null when the request failed or the
+   * component unmounted; never throws, never sets the acknowledge error, and
+   * never retries on its own.
+   */
+  async function requestPendingAwards(): Promise<PendingAward[] | null> {
+    try {
+      const response = await fetch(PENDING_ENDPOINT, { headers: getAuthHeaders() });
+      if (!mountedRef.current) return null;
+
+      if (!response.ok) {
+        if (response.status !== 401) {
+          console.error(`BadgeAwardModal: failed to load pending awards (${response.status})`);
+        }
+        return null;
+      }
+
+      const data = await response.json() as { pending?: unknown };
+      if (!mountedRef.current) return null;
+
+      return Array.isArray(data.pending) ? data.pending as PendingAward[] : [];
+    } catch (error) {
+      if (mountedRef.current) {
+        console.error('BadgeAwardModal: failed to load pending awards', error);
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Run one pending check.
+   *
+   * Hydration replaces the queue; a save-triggered check merges into it so an
+   * open modal keeps its position. At most one request is in flight, with at
+   * most one queued re-run, so a save during a check is never lost and two
+   * checks never overlap.
+   */
+  async function runPendingCheck(mode: 'hydrate' | 'merge'): Promise<void> {
+    let nextMode = mode;
+
+    while (true) {
+      if (refreshInFlightRef.current) {
+        if (nextMode === 'merge') refreshQueuedRef.current = true;
+        return;
+      }
+
+      refreshInFlightRef.current = true;
+      try {
+        const awards = await requestPendingAwards();
+        if (awards && awards.length > 0) {
+          if (nextMode === 'hydrate') {
+            setPendingAwards(awards);
+          } else {
+            mergePendingAwards(awards);
+          }
+          openWhenNoModalIsOpen();
+        }
+      } finally {
+        refreshInFlightRef.current = false;
+      }
+
+      if (!refreshQueuedRef.current) return;
+      refreshQueuedRef.current = false;
+      nextMode = 'merge';
+    }
+  }
+
   // Pending fetch: strictly once per page view. No token, 401, failure, and an
   // empty list all render nothing and never retry in this page view.
   useEffect(() => {
     mountedRef.current = true;
 
-    if (!sessionToken.value || !claimPendingFetch()) {
-      return () => {
-        mountedRef.current = false;
-        observerRef.current?.disconnect();
-        observerRef.current = null;
-      };
-    }
-
-    const load = async () => {
-      try {
-        const response = await fetch(PENDING_ENDPOINT, { headers: getAuthHeaders() });
-        if (!mountedRef.current) return;
-
-        if (!response.ok) {
-          if (response.status !== 401) {
-            console.error(`BadgeAwardModal: failed to load pending awards (${response.status})`);
-          }
-          return;
-        }
-
-        const data = await response.json() as { pending?: unknown };
-        if (!mountedRef.current) return;
-
-        const awards = Array.isArray(data.pending) ? data.pending as PendingAward[] : [];
-        if (awards.length === 0) return;
-
-        setPendingAwards(awards);
-        openWhenNoModalIsOpen();
-      } catch (error) {
-        if (mountedRef.current) {
-          console.error('BadgeAwardModal: failed to load pending awards', error);
-        }
-      }
-    };
-
-    void load();
-
-    return () => {
+    const cleanup = () => {
       mountedRef.current = false;
       observerRef.current?.disconnect();
       observerRef.current = null;
     };
+
+    if (!sessionToken.value || !claimPendingFetch()) {
+      return cleanup;
+    }
+
+    void runPendingCheck('hydrate');
+    return cleanup;
   }, []);
 
   // Badge grid activation opens the same modal without acknowledging anything.
@@ -276,6 +317,20 @@ export function BadgeAwardModal() {
 
     document.addEventListener(OPEN_EVENT, handleOpenEvent);
     return () => document.removeEventListener(OPEN_EVENT, handleOpenEvent);
+  }, []);
+
+  // A successful walk save may have awarded badges server-side. Check the queue
+  // in place so the celebration appears without a reload. Deletes never award.
+  useEffect(() => {
+    function handleWalkSaved(event: Event) {
+      const action = (event as CustomEvent<{ action?: string }>).detail?.action;
+      if (action === 'delete') return;
+      if (!sessionToken.value) return;
+      void runPendingCheck('merge');
+    }
+
+    document.addEventListener(WALK_SAVED_EVENT, handleWalkSaved);
+    return () => document.removeEventListener(WALK_SAVED_EVENT, handleWalkSaved);
   }, []);
 
   async function acknowledge(action: 'advance' | 'dismiss'): Promise<void> {

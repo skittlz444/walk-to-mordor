@@ -292,6 +292,73 @@ test.describe('Map Walk Logging (Story 2.8)', () => {
       await expect(page.locator('.modal-overlay')).toBeHidden();
     });
 
+    test('saving a walk opens the badge award modal in place', async ({ page }) => {
+      await page.goto(`${BASE_URL}/map`);
+      await waitForMapReady(page);
+
+      // Open the calendar sheet and a date without an entry.
+      await page.locator('.map-walk-button').click();
+      await page.locator('#map-calendar-sheet .calendar-cell:not(.empty)').first().click();
+      await expect(page.locator('#distance-input')).toBeVisible();
+
+      // Mark the page view so a reload would be detectable afterwards.
+      await page.evaluate(() => {
+        window.__wtmAwardProbe = 'same-page-view';
+      });
+
+      await page.locator('#distance-input').fill('1');
+      await page.locator('#save-btn').click();
+
+      // The badge earned by this save is celebrated on the map itself.
+      const awardContent = page.locator('.badge-award__content');
+      await expect(awardContent).toBeVisible({ timeout: 15000 });
+      expect(await page.evaluate(() => window.__wtmAwardProbe)).toBe('same-page-view');
+      expect(new URL(page.url()).pathname).toBe('/map');
+
+      // Dismiss it so it cannot block later interactions.
+      await page.getByRole('button', { name: 'Close award' }).click();
+      await expect(awardContent).toBeHidden({ timeout: 5000 });
+    });
+
+    test('a rejected save (duplicate date) does not open the award modal', async ({ page, authToken }) => {
+      let pendingChecks = 0;
+      page.on('request', (request) => {
+        if (request.url().includes('/api/achievements/pending')) pendingChecks += 1;
+      });
+
+      await page.goto(`${BASE_URL}/map`);
+      await waitForMapReady(page);
+
+      await page.locator('.map-walk-button').click();
+      const cell = page.locator('#map-calendar-sheet .calendar-cell:not(.empty)').first();
+      const date = await cell.getAttribute('data-date');
+      expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+      // Create the entry behind the page's back so the UI's POST is a duplicate.
+      const seeded = await page.request.post(`${BASE_URL}/api/calendar-progress`, {
+        headers: { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+        data: { start: date, title: '3' },
+      });
+      expect(seeded.ok(), `seed failed: ${await seeded.text()}`).toBeTruthy();
+
+      await cell.click();
+      await page.locator('#distance-input').fill('1');
+
+      pendingChecks = 0;
+      const rejection = page.waitForResponse(
+        (response) => response.url().includes('/api/calendar-progress')
+          && response.request().method() === 'POST',
+        { timeout: 10000 },
+      );
+      await page.locator('#save-btn').click();
+      expect((await rejection).status()).toBe(409);
+
+      // A rejected write must not dispatch `wtm:walk-saved`, so no check runs.
+      await page.waitForTimeout(800);
+      expect(pendingChecks).toBe(0);
+      await expect(page.locator('.badge-award__content')).toHaveCount(0);
+    });
+
     test('quick entry buttons update distance', async ({ page }) => {
       await page.goto(`${BASE_URL}/map`);
       await waitForMapReady(page);
