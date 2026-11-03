@@ -46,13 +46,13 @@ function buildGrid(days: HeatmapDay[], startDate: string | null): { date: string
     });
   }
 
-  // Group into week rows (each row = 7 cols, Sun=0 … Sat=6)
+  // Group into week rows (each row = 7 cols, Mon=0 … Sun=6)
   const weeks: { date: string; distance: number }[][] = [];
   let currentWeek: { date: string; distance: number }[] = [];
 
-  // Pad leading empty cells for the first partial week
-  const firstDow = cells[0].dayOfWeek;
-  for (let pad = 0; pad < firstDow; pad++) {
+  // Pad leading empty cells for the first partial week so each date keeps its Monday-first column
+  const firstColumn = (cells[0].dayOfWeek + 6) % 7;
+  for (let pad = 0; pad < firstColumn; pad++) {
     currentWeek.push({ date: '', distance: -1 });
   }
 
@@ -74,7 +74,7 @@ function buildGrid(days: HeatmapDay[], startDate: string | null): { date: string
   return weeks.reverse();
 }
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatTooltipDate(dateStr: string): string {

@@ -6,6 +6,24 @@ let currentDate = new Date();
 let currentView = 'week'; // 'week' or 'month'
 
 // Calendar utility functions
+
+// Weekday labels in display order: Monday first.
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// Monday of the week containing `date` (time of day preserved).
+function getWeekStart(date) {
+  const monday = new Date(date);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return monday;
+}
+
+// Monday on or before the first day of the month.
+function getMonthGridStart(firstOfMonthDate) {
+  const start = new Date(firstOfMonthDate);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return start;
+}
+
 function formatDate(date) {
   // If already a YYYY-MM-DD string, return as-is to avoid timezone shift
   // (new Date("YYYY-MM-DD") parses as UTC, but getDate() returns local time)
@@ -119,10 +137,8 @@ function renderCalendar() {
 }
 
 function renderWeekView(grid, title) {
-  // Get start of current week (Sunday)
-  const startOfWeek = new Date(currentDate);
-  const dayOfWeek = startOfWeek.getDay();
-  startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+  // Get start of current week (Monday)
+  const startOfWeek = getWeekStart(currentDate);
 
   // Set title
   const formatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
@@ -132,9 +148,8 @@ function renderWeekView(grid, title) {
   let html = '<div class="week-view">';
   
   // Day headers
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   html += '<div class="day-headers">';
-  dayNames.forEach(day => {
+  WEEKDAY_LABELS.forEach(day => {
     html += `<div class="day-header">${day}</div>`;
   });
   html += '</div>';
@@ -170,9 +185,8 @@ function renderMonthView(grid, title) {
   const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
   
-  // Get first day of calendar (might be from previous month)
-  const startDate = new Date(firstDay);
-  startDate.setDate(startDate.getDate() - firstDay.getDay());
+  // Get first day of calendar (the Monday on or before the 1st)
+  const startDate = getMonthGridStart(firstDay);
 
   // Set title
   const formatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
@@ -182,9 +196,8 @@ function renderMonthView(grid, title) {
   let html = '<div class="month-view">';
   
   // Day headers
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   html += '<div class="day-headers">';
-  dayNames.forEach(day => {
+  WEEKDAY_LABELS.forEach(day => {
     html += `<div class="day-header">${day}</div>`;
   });
   html += '</div>';
@@ -435,17 +448,14 @@ function showCalendarSheetWithData() {
 }
 
 function renderSheetWeekView(grid, title, closeSheetFn) {
-  const startOfWeek = new Date(currentDate);
-  const dayOfWeek = startOfWeek.getDay();
-  startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+  const startOfWeek = getWeekStart(currentDate);
 
   const formatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
   title.textContent = formatter.format(startOfWeek);
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   let html = '<div class="week-view">';
   html += '<div class="day-headers">';
-  dayNames.forEach(day => {
+  WEEKDAY_LABELS.forEach(day => {
     html += `<div class="day-header">${day}</div>`;
   });
   html += '</div>';
@@ -491,14 +501,12 @@ function renderSheetMonthView(grid, title, closeSheetFn) {
   const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
   title.textContent = formatter.format(firstDay);
 
-  // Start from the Sunday on or before the first day of the month
-  const startDate = new Date(firstDay);
-  startDate.setDate(startDate.getDate() - firstDay.getDay());
+  // Start from the Monday on or before the first day of the month
+  const startDate = getMonthGridStart(firstDay);
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   let html = '<div class="month-view">';
   html += '<div class="day-headers">';
-  dayNames.forEach(day => {
+  WEEKDAY_LABELS.forEach(day => {
     html += `<div class="day-header">${day}</div>`;
   });
   html += '</div>';
