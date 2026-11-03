@@ -5,6 +5,8 @@ import * as path from 'path';
 import { checkAndAwardJourneyBadges } from '../../src/achievement-awards';
 import {
   AchievementDefinitionNotFoundError,
+  awardAchievement,
+  getUserAchievementSummary,
   type AwardAchievementResult,
 } from '../../src/achievement-utils';
 import * as achievementUtils from '../../src/achievement-utils';
@@ -251,6 +253,41 @@ describe('checkAndAwardJourneyBadges', () => {
 
     expect(instanceCount(userId, 'habit-first-steps')).toBe(1);
     expect(instanceCount(userId, 'journey-frodo-sam-buckleberry-ferry')).toBe(1);
+  });
+
+  it('does not duplicate a badge that the 0148 backfill already stored under a legacy key', async () => {
+    const backfilledSlugs = ['habit-first-steps', 'journey-frodo-sam-buckleberry-ferry'];
+
+    logProgress(userId, '2026-01-05', 200);
+    sqlite.exec(readMigration('0148_backfill_existing_achievements.sql'));
+
+    // The backfill wrote per-definition keys, not the runtime's non-repeatable sentinel.
+    expect(earnedSlugs(userId)).toEqual(backfilledSlugs);
+    expect(idempotencyKeys(userId, 'habit-first-steps')).toEqual(['habit-first-steps']);
+    expect(idempotencyKeys(userId, 'journey-frodo-sam-buckleberry-ferry')).toEqual([
+      'journey:journey-frodo-sam-buckleberry-ferry',
+    ]);
+    const backfilledId = (sqlite
+      .prepare(
+        `SELECT i.id FROM user_achievement_instances i
+         JOIN achievement_definitions d ON d.id = i.achievement_id
+         WHERE i.user_id = ? AND d.slug = 'habit-first-steps'`,
+      )
+      .get(userId) as { id: number }).id;
+
+    // Both entry points that award after a walk must find the backfilled row, whatever key it has.
+    const directAward = await awardAchievement(db, userId, 'habit-first-steps', 'log:2026-01-05');
+    expect(directAward).toEqual({ instanceId: backfilledId, isNew: false });
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-05');
+
+    for (const slug of backfilledSlugs) {
+      expect(instanceCount(userId, slug)).toBe(1);
+    }
+    const summary = await getUserAchievementSummary(db, userId);
+    expect(
+      summary.filter((entry) => backfilledSlugs.includes(entry.slug)).map((entry) => entry.earned_count),
+    ).toEqual([1, 1]);
   });
 
   it('skips journey badges scoped to another storyline', async () => {
