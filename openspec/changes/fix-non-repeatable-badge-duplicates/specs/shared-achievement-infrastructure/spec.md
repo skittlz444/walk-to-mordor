@@ -63,9 +63,9 @@ The system SHALL store achievement records as append-only instances, SHALL enfor
 - **WHEN** a consuming feature calls the award service with that slug
 - **THEN** the service throws an `AchievementDefinitionNotFoundError`
 
-#### Scenario: Progress operations never delete or mutate earned instances
+#### Scenario: Earned instances are never deleted or mutated
 
 - **GIVEN** a user has earned an achievement
-- **WHEN** a later walk edit, walk delete, or progress reconciliation occurs
+- **WHEN** any subsequent operation occurs (walk edit, walk delete, progress reconciliation)
 - **THEN** no existing `user_achievement_instances` row is deleted
 - **AND** no existing row's columns are modified
