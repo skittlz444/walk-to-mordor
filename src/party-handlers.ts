@@ -1,6 +1,7 @@
 // Party (Fellowship) API handlers
 import { validateSession } from "./auth-handlers";
 import { generateAlphanumericCode } from "./auth-utils";
+import { awardAchievement } from "./achievement-utils";
 import { isValidAvatarSlug } from "./avatar-slugs";
 import { calculateTotalDistance } from "./goals-handlers";
 import {
@@ -53,6 +54,52 @@ interface PartyMemberRow {
  */
 export function generateInviteCode(): string {
   return generateAlphanumericCode();
+}
+
+const FELLOWSHIP_FOUNDER_SLUG = 'community-fellowship-founder';
+const GOOD_COMPANY_SLUG = 'community-good-company';
+const GOOD_COMPANY_MIN_ACTIVE_MEMBERS = 4;
+
+/**
+ * Award one fellowship badge, logging and swallowing failures so the party
+ * write that triggered it still succeeds. These definitions are
+ * non-repeatable, so `awardAchievement` replaces the key with its sentinel and
+ * per-user idempotency is enforced by the database.
+ */
+async function awardPartyBadgeSafely(
+  db: DbClient,
+  userId: number,
+  slug: string,
+): Promise<void> {
+  try {
+    await awardAchievement(db, userId, slug, slug);
+  } catch (error: unknown) {
+    console.error(`Failed to award achievement "${slug}" for user ${userId}:`, error);
+  }
+}
+
+/**
+ * Award `community-good-company` to every active member once a fellowship has
+ * at least four active members. Called from each membership-activation path so
+ * the threshold-crossing member, the founding leader, and later joiners to an
+ * already-qualifying fellowship all receive it. Per-user deduplication comes
+ * from the non-repeatable sentinel, so repeated activations are no-ops.
+ */
+export async function awardGoodCompanyBadge(db: DbClient, partyId: number): Promise<void> {
+  try {
+    const { results } = await db.read.prepare(
+      'SELECT user_id FROM party_members WHERE party_id = ? AND status = ?'
+    ).bind(partyId, 'active').all<{ user_id: number }>();
+
+    const members = results || [];
+    if (members.length < GOOD_COMPANY_MIN_ACTIVE_MEMBERS) return;
+
+    for (const member of members) {
+      await awardPartyBadgeSafely(db, member.user_id, GOOD_COMPANY_SLUG);
+    }
+  } catch (error: unknown) {
+    console.error(`Failed to award "${GOOD_COMPANY_SLUG}" for party ${partyId}:`, error);
+  }
 }
 
 /**
@@ -161,6 +208,8 @@ export async function handleCreateParty(request: Request, db: DbClient, body: Re
         if (!party) {
           return createErrorResponse('Failed to retrieve created party', 500);
         }
+
+        await awardPartyBadgeSafely(db, userId, FELLOWSHIP_FOUNDER_SLUG);
 
         return createSuccessResponse({
           id: party.id,
@@ -304,6 +353,8 @@ export async function handleJoinParty(request: Request, db: DbClient, inviteCode
          WHERE id = ?`
       ).bind(totalDistance, existingMember.id).run();
 
+      await awardGoodCompanyBadge(db, party.id);
+
       return createSuccessResponse({
         party_id: party.id,
         party_name: party.name,
@@ -324,6 +375,8 @@ export async function handleJoinParty(request: Request, db: DbClient, inviteCode
       }
       throw insertError;
     }
+
+    await awardGoodCompanyBadge(db, party.id);
 
     return createSuccessResponse({
       party_id: party.id,

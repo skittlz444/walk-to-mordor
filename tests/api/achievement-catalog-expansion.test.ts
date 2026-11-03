@@ -4,6 +4,8 @@ import * as path from 'path';
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
+const HUNDRED_WEEK_DESCRIPTION = 'Log at least 100 km within a Monday–Sunday calendar week.';
+
 const SEEDED_SLUGS = [
   'community-fellowship-founder',
   'community-good-company',
@@ -60,6 +62,24 @@ function applyCatalogSeedTwice(): SeedRow[] {
   } finally {
     db.close();
   }
+}
+
+interface DescriptionRow {
+  slug: string;
+  description: string | null;
+  metadata: string | null;
+  updated_at: string;
+}
+
+function descriptionRows(sqlite: DatabaseSync): Map<string, DescriptionRow> {
+  const rows = sqlite
+    .prepare(
+      `SELECT slug, description, metadata, updated_at
+       FROM achievement_definitions
+       ORDER BY slug`,
+    )
+    .all() as unknown as DescriptionRow[];
+  return new Map(rows.map((row) => [row.slug, row]));
 }
 
 describe('achievement catalog expansion seed (0145)', () => {
@@ -166,5 +186,62 @@ describe('achievement catalog expansion seed (0145)', () => {
       expect(metadataFor(slug).rank_thresholds).toBeUndefined();
       expect(metadataFor(slug).unit).toBeUndefined();
     }
+  });
+});
+
+describe('hundred-week description correction (0149)', () => {
+  let sqlite: DatabaseSync;
+
+  beforeEach(() => {
+    sqlite = new DatabaseSync(':memory:');
+    sqlite.exec(readMigration('0142_create_achievement_definitions.sql'));
+    sqlite.exec(readMigration('0145_seed_catalog_expansion.sql'));
+  });
+
+  afterEach(() => {
+    sqlite.close();
+  });
+
+  it('rewrites only the seeded trailing-window description and keeps metadata', () => {
+    const before = descriptionRows(sqlite);
+
+    sqlite.exec(readMigration('0149_update_hundred_week_description.sql'));
+
+    const after = descriptionRows(sqlite);
+    expect(after.size).toBe(before.size);
+    expect(after.get('habit-hundred-week')?.description).toBe(HUNDRED_WEEK_DESCRIPTION);
+    expect(after.get('habit-hundred-week')?.metadata).toBe(
+      before.get('habit-hundred-week')?.metadata,
+    );
+
+    for (const slug of SEEDED_SLUGS) {
+      if (slug === 'habit-hundred-week') continue;
+      expect(after.get(slug)).toEqual(before.get(slug));
+    }
+  });
+
+  it('is a no-op when applied a second time', () => {
+    const migration = readMigration('0149_update_hundred_week_description.sql');
+    sqlite.exec(migration);
+    const once = descriptionRows(sqlite).get('habit-hundred-week');
+
+    expect(() => sqlite.exec(migration)).not.toThrow();
+    expect(descriptionRows(sqlite).get('habit-hundred-week')).toEqual(once);
+  });
+
+  it('leaves a description that no longer matches the old text untouched', () => {
+    sqlite
+      .prepare(
+        `UPDATE achievement_definitions
+         SET description = 'Custom local wording.'
+         WHERE slug = 'habit-hundred-week'`,
+      )
+      .run();
+
+    sqlite.exec(readMigration('0149_update_hundred_week_description.sql'));
+
+    expect(descriptionRows(sqlite).get('habit-hundred-week')?.description).toBe(
+      'Custom local wording.',
+    );
   });
 });

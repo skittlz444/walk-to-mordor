@@ -1,11 +1,15 @@
 import { handleCreateParty, generateInviteCode, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties } from '../../src/party-handlers';
 import { validateSession } from '../../src/auth-handlers';
 import { calculateTotalDistance } from '../../src/goals-handlers';
+import * as achievementUtils from '../../src/achievement-utils';
 import { DbClient } from '../../src/db';
 
 // Mock dependencies
 jest.mock('../../src/auth-handlers');
 jest.mock('../../src/goals-handlers');
+jest.mock('../../src/achievement-utils', () => ({
+  awardAchievement: jest.fn(),
+}));
 
 describe('Party Handlers', () => {
   let mockDB: any;
@@ -18,6 +22,10 @@ describe('Party Handlers', () => {
     // Setup default mock implementations
     (validateSession as jest.Mock).mockResolvedValue({ valid: true, userId: 1 });
     (calculateTotalDistance as jest.Mock).mockResolvedValue(42.5);
+    (achievementUtils.awardAchievement as jest.Mock).mockResolvedValue({
+      instanceId: 1,
+      isNew: true,
+    });
 
     // Mock DB with chainable methods
     const mockFirst = jest.fn().mockResolvedValue(null);
@@ -1020,6 +1028,185 @@ describe('Party Handlers', () => {
         const requestWithUrl = { ...mockRequest, url: 'https://example.com/api/user/parties' };
         const response = await handleGetUserParties(requestWithUrl, mockDb);
         expect(response.status).toBe(500);
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    });
+  });
+
+  describe('fellowship badge awards', () => {
+    const awardMock = achievementUtils.awardAchievement as jest.Mock;
+
+    function mockPartyCreation(): void {
+      const party = {
+        id: 1,
+        name: 'The Fellowship',
+        leader_id: 1,
+        created_at: '2026-01-01T00:00:00Z',
+        invite_code: 'AbCd1234',
+        distance_mode: 'incremental',
+        leave_distance_behavior: 'keep',
+        active_storyline_id: null,
+      };
+      const mockFirst = jest.fn()
+        .mockResolvedValueOnce(null) // invite code check
+        .mockResolvedValueOnce(party); // fetch created party
+      const mockBind = jest.fn().mockReturnValue({
+        run: jest.fn().mockResolvedValue({ meta: { changes: 1 } }),
+        all: jest.fn().mockResolvedValue({ results: [] }),
+        first: mockFirst,
+      });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
+    }
+
+    function mockJoinFlow(
+      members: Array<{ user_id: number }>,
+      existingStatus: string | null = null,
+    ): { bind: jest.Mock } {
+      const mockFirst = jest.fn()
+        .mockResolvedValueOnce({ id: 1, name: 'Party', dissolved_at: null }) // party lookup
+        .mockResolvedValueOnce(existingStatus ? { id: 10, status: existingStatus } : null);
+      const bind = jest.fn().mockReturnValue({
+        first: mockFirst,
+        run: jest.fn().mockResolvedValue({ meta: { changes: 1 } }),
+        all: jest.fn().mockResolvedValue({ results: members }),
+      });
+      mockDB.prepare.mockReturnValue({ bind });
+      return { bind };
+    }
+
+    it('awards Fellowship Founder to the creator', async () => {
+      mockPartyCreation();
+
+      const response = await handleCreateParty(mockRequest, mockDb, { name: 'The Fellowship' });
+
+      expect(response.status).toBe(201);
+      expect(awardMock).toHaveBeenCalledWith(
+        mockDb,
+        1,
+        'community-fellowship-founder',
+        expect.any(String),
+      );
+    });
+
+    it('does not create a second Fellowship Founder instance for a second fellowship', async () => {
+      // Mirrors awardAchievement's non-repeatable contract: one instance per user
+      // and definition regardless of how many parties the user creates.
+      const awarded = new Set<string>();
+      awardMock.mockImplementation(async (_db: DbClient, userId: number, slug: string) => {
+        const identity = `${userId}:${slug}`;
+        const isNew = !awarded.has(identity);
+        awarded.add(identity);
+        return { instanceId: 1, isNew };
+      });
+
+      mockPartyCreation();
+      await handleCreateParty(mockRequest, mockDb, { name: 'First Fellowship' });
+      mockPartyCreation();
+      await handleCreateParty(mockRequest, mockDb, { name: 'Second Fellowship' });
+
+      expect(awardMock).toHaveBeenCalledTimes(2);
+      expect(awarded).toEqual(new Set(['1:community-fellowship-founder']));
+    });
+
+    it('awards Good Company to all four active members when the fourth joins', async () => {
+      mockJoinFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }]);
+
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
+
+      expect(response.status).toBe(200);
+      expect(awardMock).toHaveBeenCalledTimes(4);
+      expect(awardMock.mock.calls.map((call) => call[2])).toEqual([
+        'community-good-company',
+        'community-good-company',
+        'community-good-company',
+        'community-good-company',
+      ]);
+      expect(awardMock.mock.calls.map((call) => call[1])).toEqual(
+        expect.arrayContaining([1, 2, 3, 4]),
+      );
+    });
+
+    it('awards Good Company when a member reactivates and crosses the threshold', async () => {
+      mockJoinFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }], 'left');
+
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
+
+      expect(response.status).toBe(200);
+      expect(awardMock).toHaveBeenCalledTimes(4);
+    });
+
+    it('awards a late joiner without duplicating existing members', async () => {
+      const awarded = new Set<number>();
+      awardMock.mockImplementation(async (_db: DbClient, userId: number) => {
+        const isNew = !awarded.has(userId);
+        awarded.add(userId);
+        return { instanceId: userId, isNew };
+      });
+
+      mockJoinFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }]);
+      await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
+
+      mockJoinFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }, { user_id: 5 }]);
+      await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
+
+      expect(awarded).toEqual(new Set([1, 2, 3, 4, 5]));
+    });
+
+    it('does not award Good Company when the party is dissolved', async () => {
+      const mockBind = jest.fn().mockReturnValue({
+        first: jest.fn().mockResolvedValue({
+          id: 1,
+          name: 'Old Party',
+          dissolved_at: '2026-01-01T00:00:00Z',
+        }),
+      });
+      mockDB.prepare.mockReturnValue({ bind: mockBind });
+
+      const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
+
+      expect(response.status).toBe(400);
+      expect(awardMock).not.toHaveBeenCalled();
+    });
+
+    it('counts only active members when awarding Good Company', async () => {
+      const { bind } = mockJoinFlow([
+        { user_id: 1 },
+        { user_id: 2 },
+        { user_id: 3 },
+        { user_id: 4 },
+      ]);
+
+      await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
+
+      expect(bind).toHaveBeenCalledWith(1, 'active');
+    });
+
+    it('still creates the fellowship when the founder award throws', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        awardMock.mockRejectedValue(new Error('award failed'));
+        mockPartyCreation();
+
+        const response = await handleCreateParty(mockRequest, mockDb, { name: 'The Fellowship' });
+
+        expect(response.status).toBe(201);
+        expect(consoleErrorSpy).toHaveBeenCalled();
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    });
+
+    it('still joins the fellowship when Good Company awarding throws', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        awardMock.mockRejectedValue(new Error('award failed'));
+        mockJoinFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }]);
+
+        const response = await handleJoinParty(mockRequest, mockDb, 'AbCd1234');
+
+        expect(response.status).toBe(200);
+        expect(consoleErrorSpy).toHaveBeenCalled();
       } finally {
         consoleErrorSpy.mockRestore();
       }

@@ -127,13 +127,13 @@ describe('checkAndAwardJourneyBadges', () => {
       .run(distance, user, date);
   }
 
-  function insertDefinition(slug: string, badgeType: string, metadata: string | null): void {
+  function insertDefinition(slug: string, badgeType: string, metadata: string | null, isRepeatable = 0): void {
     sqlite
       .prepare(
         `INSERT INTO achievement_definitions (slug, name, badge_type, is_repeatable, metadata)
-         VALUES (?, ?, ?, 0, ?)`,
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(slug, slug, badgeType, metadata);
+      .run(slug, slug, badgeType, isRepeatable, metadata);
   }
 
   function earnedSlugs(user: number, slugPrefix?: string): string[] {
@@ -171,6 +171,18 @@ describe('checkAndAwardJourneyBadges', () => {
       )
       .all(user, slug) as Array<{ idempotency_key: string }>;
     return rows.map((row) => row.idempotency_key);
+  }
+
+  function contextMetadata(user: number, slug: string): Array<Record<string, unknown>> {
+    const rows = sqlite
+      .prepare(
+        `SELECT uai.context_metadata FROM user_achievement_instances uai
+         JOIN achievement_definitions ad ON ad.id = uai.achievement_id
+         WHERE uai.user_id = ? AND ad.slug = ?
+         ORDER BY uai.id ASC`,
+      )
+      .all(user, slug) as Array<{ context_metadata: string | null }>;
+    return rows.map((row) => JSON.parse(row.context_metadata ?? '{}') as Record<string, unknown>);
   }
 
   beforeEach(() => {
@@ -422,13 +434,171 @@ describe('checkAndAwardJourneyBadges', () => {
     expect(earnedSlugs(userId)).not.toContain('journey-string-threshold');
   });
 
-  it('skips habit definitions whose criteria are out of scope for this hook', async () => {
-    logProgress(userId, '2026-01-05', 500);
+  it('awards Weekend Warrior when both weekend days are logged', async () => {
+    logProgress(userId, '2026-01-10', 5); // Saturday
+    logProgress(userId, '2026-01-11', 5); // Sunday
 
-    await checkAndAwardJourneyBadges(db, userId, '2026-01-05');
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-11');
+
+    expect(idempotencyKeys(userId, 'habit-weekend-warrior')).toEqual([
+      'habit-weekend-warrior:2026-01-10',
+    ]);
+    expect(contextMetadata(userId, 'habit-weekend-warrior')).toEqual([
+      { weekend: '2026-01-10' },
+    ]);
+  });
+
+  it('awards Weekend Warrior from a Saturday log when the Sunday walk already exists', async () => {
+    logProgress(userId, '2026-01-11', 5); // Sunday
+    logProgress(userId, '2026-01-10', 5); // Saturday
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-10');
+
+    expect(instanceCount(userId, 'habit-weekend-warrior')).toBe(1);
+  });
+
+  it('does not award Weekend Warrior when one weekend day is missing', async () => {
+    logProgress(userId, '2026-01-10', 5); // Saturday
+    logProgress(userId, '2026-01-12', 5); // Monday
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-12');
 
     expect(earnedSlugs(userId)).not.toContain('habit-weekend-warrior');
+  });
+
+  it('awards Weekend Warrior once per weekend', async () => {
+    logProgress(userId, '2026-01-10', 5);
+    logProgress(userId, '2026-01-11', 5);
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-11');
+    updateProgress(userId, '2026-01-11', 6);
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-11');
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-10');
+
+    expect(instanceCount(userId, 'habit-weekend-warrior')).toBe(1);
+  });
+
+  it('awards Steady Month on the twentieth distinct date', async () => {
+    for (let day = 1; day <= 19; day++) {
+      logProgress(userId, `2026-03-${String(day).padStart(2, '0')}`, 1);
+    }
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-03-19');
+
     expect(earnedSlugs(userId)).not.toContain('habit-steady-month');
+
+    logProgress(userId, '2026-03-20', 1);
+    await checkAndAwardJourneyBadges(db, userId, '2026-03-20');
+
+    expect(idempotencyKeys(userId, 'habit-steady-month')).toEqual([
+      'habit-steady-month:2026-03',
+    ]);
+    expect(contextMetadata(userId, 'habit-steady-month')).toEqual([{ month: '2026-03' }]);
+  });
+
+  it('does not award Steady Month when the twentieth log repeats an existing date', async () => {
+    for (let day = 1; day <= 19; day++) {
+      logProgress(userId, `2026-03-${String(day).padStart(2, '0')}`, 1);
+    }
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-03-19');
+    updateProgress(userId, '2026-03-19', 2);
+    await checkAndAwardJourneyBadges(db, userId, '2026-03-19');
+
+    expect(earnedSlugs(userId)).not.toContain('habit-steady-month');
+  });
+
+  it('awards Steady Month once per month', async () => {
+    for (let day = 1; day <= 20; day++) {
+      logProgress(userId, `2026-03-${String(day).padStart(2, '0')}`, 1);
+    }
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-03-20');
+    logProgress(userId, '2026-03-21', 1);
+    await checkAndAwardJourneyBadges(db, userId, '2026-03-21');
+
+    expect(instanceCount(userId, 'habit-steady-month')).toBe(1);
+  });
+
+  it('awards Hundred-K Week on the Sunday log when the raw week totals 100 km', async () => {
+    logProgress(userId, '2026-01-05', 60); // Monday
+    logProgress(userId, '2026-01-11', 60); // Sunday
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-11');
+
+    expect(idempotencyKeys(userId, 'habit-hundred-week')).toEqual([
+      'habit-hundred-week:2026-01-11',
+    ]);
+    expect(contextMetadata(userId, 'habit-hundred-week')).toEqual([
+      { week_ending: '2026-01-11', km: 120 },
+    ]);
+  });
+
+  it('does not award Hundred-K Week on a Monday-to-Saturday log', async () => {
+    for (let day = 5; day <= 10; day++) {
+      logProgress(userId, `2026-01-${String(day).padStart(2, '0')}`, 20);
+    }
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-10');
+
     expect(earnedSlugs(userId)).not.toContain('habit-hundred-week');
+  });
+
+  it('does not award Hundred-K Week when the raw week is below 100 km', async () => {
+    logProgress(userId, '2026-01-05', 50); // Monday
+    logProgress(userId, '2026-01-11', 49.9); // Sunday
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-11');
+
+    expect(earnedSlugs(userId)).not.toContain('habit-hundred-week');
+  });
+
+  it('does not award Hundred-K Week from displayed distance alone', async () => {
+    const offsetUserId = insertUser(FRODO_SAM, 3000);
+    logProgress(offsetUserId, '2026-01-05', 50); // Monday
+    logProgress(offsetUserId, '2026-01-11', 40); // Sunday, 90 km raw
+
+    await checkAndAwardJourneyBadges(db, offsetUserId, '2026-01-11');
+
+    expect(earnedSlugs(offsetUserId)).not.toContain('habit-hundred-week');
+  });
+
+  it('awards Hundred-K Week in each qualifying week, advancing rank', async () => {
+    logProgress(userId, '2026-01-05', 100); // Monday
+    logProgress(userId, '2026-01-11', 1); // Sunday
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-11');
+
+    logProgress(userId, '2026-01-12', 100); // Monday
+    logProgress(userId, '2026-01-18', 1); // Sunday
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-18');
+
+    expect(idempotencyKeys(userId, 'habit-hundred-week')).toEqual([
+      'habit-hundred-week:2026-01-11',
+      'habit-hundred-week:2026-01-18',
+    ]);
+  });
+
+  it('awards the in-scope habit criteria and skips unknown criteria', async () => {
+    insertDefinition(
+      'habit-unknown-criteria',
+      'habit',
+      '{"storyline":null,"criteria":"mystery_rule","unit":"things"}',
+      1,
+    );
+
+    for (let day = 5; day <= 25; day++) {
+      logProgress(userId, `2026-01-${String(day).padStart(2, '0')}`, day <= 11 ? 20 : 1);
+    }
+
+    await checkAndAwardJourneyBadges(db, userId, '2026-01-11');
+
+    expect(earnedSlugs(userId)).toEqual(
+      expect.arrayContaining([
+        'habit-weekend-warrior',
+        'habit-steady-month',
+        'habit-hundred-week',
+      ]),
+    );
+    expect(earnedSlugs(userId)).not.toContain('habit-unknown-criteria');
   });
 });

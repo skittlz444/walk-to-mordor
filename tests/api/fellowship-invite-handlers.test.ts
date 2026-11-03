@@ -6,10 +6,14 @@ import {
 } from '../../src/fellowship-invite-handlers';
 import { validateSession } from '../../src/auth-handlers';
 import { calculateTotalDistance } from '../../src/goals-handlers';
+import * as achievementUtils from '../../src/achievement-utils';
 import { DbClient } from '../../src/db';
 
 jest.mock('../../src/auth-handlers');
 jest.mock('../../src/goals-handlers');
+jest.mock('../../src/achievement-utils', () => ({
+  awardAchievement: jest.fn(),
+}));
 
 describe('Fellowship Invite Handlers', () => {
   let mockDB: any;
@@ -26,6 +30,10 @@ describe('Fellowship Invite Handlers', () => {
     // Default: authenticated as user 1
     (validateSession as jest.Mock).mockResolvedValue({ valid: true, userId: 1 });
     (calculateTotalDistance as jest.Mock).mockResolvedValue(42.5);
+    (achievementUtils.awardAchievement as jest.Mock).mockResolvedValue({
+      instanceId: 1,
+      isNew: true,
+    });
 
     mockFirst = jest.fn().mockResolvedValue(null);
     mockRun = jest.fn().mockResolvedValue({ meta: { last_row_id: 1, changes: 1 } });
@@ -659,6 +667,109 @@ describe('Fellowship Invite Handlers', () => {
 
         const response = await handleRejectFellowshipInvite(mockRequest, mockDb, 1);
         expect(response.status).toBe(500);
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    });
+  });
+
+  // ===== fellowship badge awards =====
+  describe('fellowship badge awards', () => {
+    const awardMock = achievementUtils.awardAchievement as jest.Mock;
+
+    function mockAcceptFlow(
+      members: Array<{ user_id: number }>,
+      existingStatus: string | null = null,
+    ): void {
+      mockFirst
+        .mockResolvedValueOnce({ id: 1, party_id: 10, inviter_id: 3, invitee_id: 1, status: 'pending' }) // invite
+        .mockResolvedValueOnce({ id: 10, name: 'The Fellowship', dissolved_at: null }) // party
+        .mockResolvedValueOnce(existingStatus ? { id: 50, status: existingStatus } : null);
+      mockAll.mockResolvedValue({ results: members });
+    }
+
+    it('awards Good Company to all four active members when the fourth accepts', async () => {
+      mockAcceptFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }]);
+
+      const response = await handleAcceptFellowshipInvite(mockRequest, mockDb, 1);
+
+      expect(response.status).toBe(200);
+      expect(awardMock).toHaveBeenCalledTimes(4);
+      expect(awardMock.mock.calls.map((call) => call[2])).toEqual([
+        'community-good-company',
+        'community-good-company',
+        'community-good-company',
+        'community-good-company',
+      ]);
+      expect(awardMock.mock.calls.map((call) => call[1])).toEqual(
+        expect.arrayContaining([1, 2, 3, 4]),
+      );
+    });
+
+    it('awards Good Company when a reactivated member crosses the threshold', async () => {
+      mockAcceptFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }], 'left');
+
+      const response = await handleAcceptFellowshipInvite(mockRequest, mockDb, 1);
+
+      expect(response.status).toBe(200);
+      expect(awardMock).toHaveBeenCalledTimes(4);
+    });
+
+    it('awards a late joiner without duplicating existing members', async () => {
+      const awarded = new Set<number>();
+      awardMock.mockImplementation(async (_db: DbClient, userId: number) => {
+        const isNew = !awarded.has(userId);
+        awarded.add(userId);
+        return { instanceId: userId, isNew };
+      });
+
+      mockAcceptFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }]);
+      await handleAcceptFellowshipInvite(mockRequest, mockDb, 1);
+
+      mockAcceptFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }, { user_id: 5 }]);
+      await handleAcceptFellowshipInvite(mockRequest, mockDb, 1);
+
+      expect(awarded).toEqual(new Set([1, 2, 3, 4, 5]));
+    });
+
+    it('does not award Good Company below four active members', async () => {
+      mockAcceptFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }]);
+
+      const response = await handleAcceptFellowshipInvite(mockRequest, mockDb, 1);
+
+      expect(response.status).toBe(200);
+      expect(awardMock).not.toHaveBeenCalled();
+    });
+
+    it('does not award Good Company when the party is dissolved', async () => {
+      mockFirst
+        .mockResolvedValueOnce({ id: 1, party_id: 10, inviter_id: 3, invitee_id: 1, status: 'pending' })
+        .mockResolvedValueOnce({ id: 10, name: 'Old Party', dissolved_at: '2026-01-01T00:00:00Z' });
+
+      const response = await handleAcceptFellowshipInvite(mockRequest, mockDb, 1);
+
+      expect(response.status).toBe(400);
+      expect(awardMock).not.toHaveBeenCalled();
+    });
+
+    it('counts only active members when awarding Good Company', async () => {
+      mockAcceptFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }]);
+
+      await handleAcceptFellowshipInvite(mockRequest, mockDb, 1);
+
+      expect(mockBind).toHaveBeenCalledWith(10, 'active');
+    });
+
+    it('still accepts the invite when Good Company awarding throws', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        awardMock.mockRejectedValue(new Error('award failed'));
+        mockAcceptFlow([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }, { user_id: 4 }]);
+
+        const response = await handleAcceptFellowshipInvite(mockRequest, mockDb, 1);
+
+        expect(response.status).toBe(200);
+        expect(consoleErrorSpy).toHaveBeenCalled();
       } finally {
         consoleErrorSpy.mockRestore();
       }
