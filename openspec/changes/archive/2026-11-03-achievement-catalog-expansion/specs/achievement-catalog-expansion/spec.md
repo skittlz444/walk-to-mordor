@@ -1,3 +1,9 @@
+# Spec Delta
+
+## Purpose
+
+Seeds the second achievement-catalog slice — three global repeatable habit badges and a two-badge fellowship collection — and makes all five earnable from walk logging and party lifecycle events.
+
 ## ADDED Requirements
 
 ### Requirement: Habit catalog expansion
@@ -6,23 +12,23 @@ The system SHALL seed three global, repeatable habit achievement definitions —
 
 #### Scenario: Weekend Warrior is catalogued
 
-- **WHEN** the catalog expansion migration is applied
+- **WHEN** the catalog migrations are applied
 - **THEN** `habit-weekend-warrior` exists as a repeatable habit badge named "Weekend Warrior"
 - **AND** its description states that a walk is logged on both Saturday and Sunday of the same week
 - **AND** its metadata has `storyline: null`, `rank_thresholds: [1, 4, 12, 26]`, `criteria: "weekend_both_days"`, and `unit: "weekends"`
 
 #### Scenario: Steady Month is catalogued
 
-- **WHEN** the catalog expansion migration is applied
+- **WHEN** the catalog migrations are applied
 - **THEN** `habit-steady-month` exists as a repeatable habit badge named "Steady Month"
 - **AND** its description states that at least 20 distinct days are logged in a calendar month
 - **AND** its metadata has `storyline: null`, `rank_thresholds: [1, 3, 6, 12]`, `criteria: "distinct_days_month >= 20"`, and `unit: "months"`
 
 #### Scenario: Hundred-K Week is catalogued
 
-- **WHEN** the catalog expansion migration is applied
+- **WHEN** the catalog migrations are applied
 - **THEN** `habit-hundred-week` exists as a repeatable habit badge named "Hundred-K Week"
-- **AND** its description states that at least 100 km are logged within a trailing seven-day window
+- **AND** its description states that at least 100 km are logged within a Monday–Sunday calendar week
 - **AND** its metadata has `storyline: null`, `rank_thresholds: [1, 4, 12, 26]`, `criteria: "trailing_7d_km >= 100"`, and `unit: "weeks"`
 
 #### Scenario: Habit definitions resolve a rank from repeat count
@@ -38,13 +44,13 @@ The system SHALL seed two non-repeatable community achievement definitions — `
 
 #### Scenario: Fellowship Founder is catalogued
 
-- **WHEN** the catalog expansion migration is applied
+- **WHEN** the catalog migrations are applied
 - **THEN** `community-fellowship-founder` exists as a non-repeatable community badge named "Fellowship Founder"
 - **AND** its metadata has `rank: 1`, `criteria: "party_created"`, and collection position 1 of 2 in `community-fellowship`
 
 #### Scenario: Good Company is catalogued
 
-- **WHEN** the catalog expansion migration is applied
+- **WHEN** the catalog migrations are applied
 - **THEN** `community-good-company` exists as a non-repeatable community badge named "Good Company"
 - **AND** its description states that the user belongs to a fellowship with at least four active members
 - **AND** its metadata has `rank: 2`, `criteria: "party_active_members >= 4"`, and collection position 2 of 2 in `community-fellowship`
@@ -79,9 +85,9 @@ The migration SHALL insert definitions with `INSERT OR IGNORE`, SHALL NOT refere
 - **WHEN** the catalog expansion migration is applied
 - **THEN** no table, column, or index is created, altered, or dropped
 
-### Requirement: Catalog-only ownership boundary
+### Requirement: Catalog scope and ownership boundary
 
-This change SHALL add only the five named definitions, SHALL NOT add book, challenge, field-guide, or campaign definitions, SHALL NOT implement award hooks or badge artwork, and SHALL preserve the `profile-badge-display` ten-definition seed unchanged.
+This change SHALL add only the five named definitions and their award integration, SHALL NOT add book, challenge, field-guide, or campaign definitions, SHALL preserve the `profile-badge-display` ten-definition seed unchanged, and SHALL NOT change the schema or add admin UI.
 
 #### Scenario: No foreign-family definitions are added
 
@@ -89,14 +95,62 @@ This change SHALL add only the five named definitions, SHALL NOT add book, chall
 - **THEN** no definition slug begins with `journey-`, `book-`, `challenge-`, `field-guide-`, or `campaign-`
 - **AND** the five new slugs do not include `habit-first-steps` or `habit-faithful-walker`
 
-#### Scenario: New definitions are inert until a consuming feature awards them
+#### Scenario: The five definitions become earnable through this change
 
-- **GIVEN** the catalog expansion migration has been applied
-- **WHEN** no award hook for these criteria has shipped
-- **THEN** creating a fellowship or logging a qualifying habit week does not create an earned instance for any of the five definitions
+- **GIVEN** the catalog migrations have been applied
+- **WHEN** a user logs a qualifying habit window or creates a qualifying fellowship
+- **THEN** the matching definition earns an instance without any further feature opt-in
 
-#### Scenario: Artwork is not part of this change
+#### Scenario: Artwork ships for the five slugs
 
 - **WHEN** this change is applied
 - **THEN** every definition references an `image_slug` equal to its slug
-- **AND** no files are added under `public/img/achievements/`
+- **AND** a 512 px card and a 200 px thumbnail exist under `public/img/achievements/` for each slug
+- **AND** a definition without art still renders the profile placeholder
+
+### Requirement: Fellowship badge award integration
+
+The system SHALL award `community-fellowship-founder` to the user who creates a fellowship and `community-good-company` to every active member of a fellowship that has at least four active members, covering both direct-join and invite-accept activation, awarding each badge at most once per user and never failing the party operation when an award fails.
+
+#### Scenario: Founder is awarded on fellowship creation
+
+- **GIVEN** an authenticated user with no fellowship badges
+- **WHEN** the user creates a fellowship
+- **THEN** `community-fellowship-founder` is awarded once
+- **AND** creating another fellowship does not create a second instance
+
+#### Scenario: Good Company is awarded at the fourth active member
+
+- **GIVEN** a fellowship with three active members
+- **WHEN** a fourth member joins directly
+- **THEN** `community-good-company` is awarded to all four active members
+- **AND** the founding leader receives it too
+
+#### Scenario: Invite acceptance counts toward Good Company
+
+- **GIVEN** a fellowship with three active members
+- **WHEN** an invited user accepts and becomes active
+- **THEN** `community-good-company` is awarded to all active members
+- **AND** the invite-accept path awards without requiring a separate join
+
+#### Scenario: Late joiners to a qualifying fellowship are awarded
+
+- **GIVEN** a fellowship that already has four active members
+- **WHEN** another user joins or accepts an invite
+- **THEN** the new member is awarded `community-good-company` on activation
+- **AND** the other active members do not receive a second instance
+
+#### Scenario: Award failure does not fail the party operation
+
+- **GIVEN** an award step that throws
+- **WHEN** a user creates or joins a fellowship
+- **THEN** the party write still succeeds
+- **AND** the error is logged
+
+#### Scenario: Existing fellowships are backfilled once
+
+- **GIVEN** fellowships created before this change
+- **WHEN** the fellowship backfill migration is applied
+- **THEN** `community-fellowship-founder` is awarded to each non-dissolved fellowship's current leader
+- **AND** `community-good-company` is awarded to active members of non-dissolved fellowships with at least four active members
+- **AND** re-applying the migration creates no duplicates

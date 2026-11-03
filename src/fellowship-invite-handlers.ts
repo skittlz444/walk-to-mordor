@@ -2,6 +2,7 @@
 import { validateSession } from './auth-handlers';
 import type { DbClient } from './db';
 import { calculateTotalDistance } from './goals-handlers';
+import { awardGoodCompanyBadge } from './party-handlers';
 import { createErrorResponse, createSuccessResponse } from './validators';
 
 /** D1 result row for fellowship_invites table */
@@ -310,6 +311,8 @@ export async function handleAcceptFellowshipInvite(
         return createErrorResponse('Invite is no longer pending', 409);
       }
 
+      await awardGoodCompanyBadge(db, party.id);
+
       return createSuccessResponse({
         party_id: party.id,
         party_name: party.name,
@@ -338,6 +341,8 @@ export async function handleAcceptFellowshipInvite(
       }
       throw insertError;
     }
+
+    await awardGoodCompanyBadge(db, party.id);
 
     return createSuccessResponse({
       party_id: party.id,
