@@ -250,10 +250,17 @@ After a successful progress create or update, the system SHALL award badges whos
 - **THEN** the progress write still succeeds
 - **AND** the error is logged
 
-#### Scenario: Qualifying badges are backfilled on the next log
+#### Scenario: Qualifying badges are backfilled for existing progress
 - **GIVEN** a user whose distance already exceeds several thresholds before this change ships
-- **WHEN** the user logs their next walk
-- **THEN** all qualifying badges for the active storyline are awarded
+- **WHEN** migration `0148_backfill_existing_achievements.sql` is applied
+- **THEN** first-steps and every qualifying non-repeatable journey badge for the active storyline is awarded
+- **AND** the user's next log remains idempotent
+
+#### Scenario: Repeatable habits are not backfilled retroactively
+- **GIVEN** an existing user with historical Monday-through-Sunday walking weeks
+- **WHEN** the backfill migration runs
+- **THEN** no faithful-walker instances are created for those historical weeks
+- **AND** future Sunday logs continue to award the repeatable habit through the normal log path
 
 ### Requirement: Badge artwork resolution
 
