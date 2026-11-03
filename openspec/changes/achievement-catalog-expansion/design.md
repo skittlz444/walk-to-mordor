@@ -1,123 +1,100 @@
+# Design
+
 ## Context
 
-`shared-achievement-infrastructure` provides `achievement_definitions` (`0142`) and append-only `user_achievement_instances` (`0143`). `profile-badge-display` defines the display metadata contract (`storyline`, `rank`, `rank_thresholds`, `collection`) and seeds ten definitions in `0144`: eight `journey-frodo-sam-*` badges plus `habit-first-steps` and `habit-faithful-walker`. Neither the tables nor the display contract changes here.
+`shared-achievement-infrastructure` provides `achievement_definitions` (`0142`), append-only `user_achievement_instances` (`0143`), and `awardAchievement()` in `src/achievement-utils.ts`, which stores the sentinel key `__non_repeatable__` for non-repeatable definitions so runtime awards stay idempotent.
 
-The catalog is pure data. Definitions can exist before any code awards them, which lets catalog growth, award wiring, and artwork land independently.
+`profile-badge-display` seeds ten definitions (`0144`) and owns the log-time hook `checkAndAwardJourneyBadges` in `src/achievement-awards.ts`, called after progress creates (`src/progress-handlers.ts:155`) and updates (`:263`). Ranks for repeatable badges are derived from `earned_count` in `src/badge-presentation.ts`; no rank storage is needed.
+
+Two precedents shape this change. `0146` corrected a seeded display text with a targeted `UPDATE` because `0144` uses `INSERT OR IGNORE`, and `0148` backfilled every qualifying non-repeatable badge in pure SQL while deliberately leaving repeatable habits on the log-time path (`migrations/0148_backfill_existing_achievements.sql:9-10`).
+
+Fellowships use `parties` and `party_members` from `0119`: membership becomes active in two places, `handleJoinParty` (`src/party-handlers.ts:292-318`) and `handleAcceptFellowshipInvite` (`src/fellowship-invite-handlers.ts:289-323`). `parties` stores `leader_id` but no creator column.
+
+Badge artwork for the five slugs is already committed under `public/img/achievements/`; the profile grid resolves the 512 px card by slug and falls back to `<slug>--<rank>.webp` for repeatables (`client/src/islands/BadgeDisplayIsland.tsx:121-164`), while thumbnails are used only by the award modal.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Seed five new definitions: three repeatable global habit badges and two non-repeatable community badges forming one collection.
-- Keep the seed idempotent, ID-free, and order-independent from `0144`.
-- Prove the SQL with a focused Jest test using the real migration files.
-- Document the two new metadata keys (`criteria`, `unit`).
+- Make all five seeded definitions earnable from their owning feature write paths, with no schema change.
+- Pin the habit window anchors, idempotency keys, and raw-distance rule.
+- Backfill the two non-repeatable fellowship badges for existing fellowships.
+- Keep award failures from failing walk logs, fellowship creation, joins, or invite acceptance.
 
 **Non-Goals:**
 
-- No award hooks, criteria evaluation, or progress/fellowship integration.
-- No badge artwork, compositing, or `public/img/achievements/` writes.
-- No schema, API, UI, or admin changes.
-- No book, challenge, field-guide, or campaign definitions — those stay with their owning changes.
-- No edits to `profile-badge-display` or its ten-definition seed.
+- No table, column, index, API route, client UI, or admin UI change.
+- No book, challenge, field-guide, or campaign definitions or award logic; those stay with their owning changes.
+- No retroactive backfill of repeatable habit windows.
+- No edits to applied migrations `0144`–`0148`; corrections ship as new migrations.
 
-## Definitions
+## Decisions
 
-| Slug | Name | `badge_type` | Repeatable | Rank data | `criteria` | `unit` |
-|---|---|---|---|---|---|---|
-| `habit-weekend-warrior` | Weekend Warrior | `habit` | 1 | `rank_thresholds` `[1,4,12,26]` | `weekend_both_days` | `weekends` |
-| `habit-steady-month` | Steady Month | `habit` | 1 | `rank_thresholds` `[1,3,6,12]` | `distinct_days_month >= 20` | `months` |
-| `habit-hundred-week` | Hundred-K Week | `habit` | 1 | `rank_thresholds` `[1,4,12,26]` | `trailing_7d_km >= 100` | `weeks` |
-| `community-fellowship-founder` | Fellowship Founder | `community` | 0 | `rank` 1 | `party_created` | — |
-| `community-good-company` | Good Company | `community` | 0 | `rank` 2 | `party_active_members >= 4` | — |
+### Habit criteria live in the existing log-time hook
 
-Descriptions are the user-facing strings in the migration. Every row sets `image_slug` equal to its slug so artwork can be added without a data change.
+`checkAndAwardJourneyBadges` already runs after every successful progress create or update, receives the walked date, and isolates award failures through `awardSafely`. The loader gains the definition's `criteria` field and routes only the three known strings; unknown criteria remain skipped so other families stay owned by their features.
 
-## Metadata and criteria
+Habit conditions use raw `progress.distance` sums. `displayedDistance` remains a journey-only concept because the storyline offset is a display device, not walked distance.
 
-Habit shape:
+Alternatives rejected: a generic SQL/expression evaluator (criteria are stable labels, not a query language) and a separate hook per criterion (more call sites, no isolation benefit).
 
-```json
-{
-  "storyline": null,
-  "rank_thresholds": [1, 4, 12, 26],
-  "criteria": "weekend_both_days",
-  "unit": "weekends"
-}
-```
+### One stable key per window
 
-Community shape:
+| Criteria | Gate | Condition | Key | Context |
+|---|---|---|---|---|
+| `weekend_both_days` | logged date is Saturday or Sunday | both dates of that weekend have progress rows | `habit-weekend-warrior:<saturday-iso>` | `{"weekend":"<saturday-iso>"}` |
+| `distinct_days_month >= 20` | any progress write | `COUNT(DISTINCT date)` in the logged month is at least 20 | `habit-steady-month:<YYYY-MM>` | `{"month":"<YYYY-MM>"}` |
+| `trailing_7d_km >= 100` | logged date is Sunday | `SUM(distance)` for that Monday–Sunday week is at least 100 | `habit-hundred-week:<sunday-iso>` | `{"week_ending":"<sunday-iso>","km":<sum>}` |
 
-```json
-{
-  "storyline": null,
-  "rank": 1,
-  "collection": {
-    "slug": "community-fellowship",
-    "label": "The Fellowship",
-    "index": 1,
-    "size": 2
-  },
-  "criteria": "party_created"
-}
-```
+Keys must not overlap. Keying a literal rolling seven-day window to each log date would create a new instance every day for a 20 km/day walker and reach mithril in 26 days. The Sunday gate mirrors the existing faithful-walker rule and keeps `unit: "weeks"` honest. Accepted trade-off: a week with no Sunday log is never awarded, exactly like faithful-walker.
 
-`criteria` is a stable condition label, not SQL and not an expression language. No code evaluates it in this change. A future award hook maps each exact string to its own query, which keeps the definition readable by the display layer while keeping execution in the owning feature. The test asserts the exact strings so a hook cannot silently diverge from the catalog.
+### Fellowship awards fire at both activation edges
 
-`unit` is the display plural used for repeatable progress ("12 weekends"). `storyline: null` marks the badge global, matching the existing convention.
+- `handleCreateParty` awards `community-fellowship-founder` to the creator after the existing atomic batch, so the party and leader membership already exist.
+- Every successful activation — fresh join, reactivated membership, and invite acceptance — counts active members and, at four or more, awards `community-good-company` to **every** active member, including the member whose activation crossed the threshold and later joiners to an already-qualifying fellowship.
+- Award-to-all matches the definition text ("belongs to a fellowship with at least four active members"); awarding only the threshold-crossing member would leave the founding leader without the badge.
+- Each award is wrapped so a failure is logged and the party write still succeeds. Per-user idempotency comes from the non-repeatable sentinel, not a caller-supplied key.
 
-## Rank and collection
+Alternative rejected: a scheduled sweep over fellowships (delayed awarding, new cron surface for no benefit at this scale).
 
-- Habit badges are repeatable and derive rank from `earned_count` against four ascending `rank_thresholds`; they have no fixed `rank` and no collection.
-- Community badges are non-repeatable, fixed rank 1 and 2, and share collection `community-fellowship` ("The Fellowship") at positions 1/2 of 2. The collection is deliberately small and complete so the profile grid can render `1/2`, `2/2`.
+### Backfill only the non-repeatable fellowship badges
 
-## Ownership
+`0150` is pure SQL with `INSERT OR IGNORE` and the `__non_repeatable__` key — the same sentinel `awardAchievement()` stores — so a later runtime award is a no-op rather than a duplicate instance.
 
-| Definition scope | Owner |
-|---|---|
-| `journey-frodo-sam-*`, `habit-first-steps`, `habit-faithful-walker` | `profile-badge-display` (`0144`) |
-| The five slugs in this change | `achievement-catalog-expansion` (`0145`) |
-| `book-*` | `storyline-books-core` |
-| `challenge-*` | `personal-challenges` |
-| `field-guide-*` | `field-guide-collectible-discovery-core` |
-| `campaign-*` (also `badge_type='community'`) | `community-campaigns` |
+- Founder goes to the current leader of every non-dissolved fellowship. `parties` has no creator column, so the current leader is the only persisted proxy; a founder who transferred leadership is not retroactively identified.
+- Good Company goes to active members of non-dissolved fellowships that already have at least four active members.
+- Repeatable habit windows stay unbackfilled, matching `0148` and the main spec.
 
-`badge_type='community'` is a display family, not an ownership boundary. `community-campaigns` owns campaign-completion badges under `campaign-*`; the fellowship collection owns `community-fellowship-*`. No slug or collection is shared.
+### Display text is corrected by a new migration
 
-## Migration plan
+`0149` mirrors `0146`: `0145`'s `INSERT OR IGNORE` cannot update an existing row, so a targeted `UPDATE` matching the old description aligns Hundred-K Week with the calendar-week rule.
 
-1. `0145_seed_catalog_expansion.sql` inserts the five rows with `INSERT OR IGNORE` into `achievement_definitions`, naming columns explicitly and using no IDs.
-2. It must run after `0142`/`0143`. It is independent of `0144`: the slug sets are disjoint, so it is safe before or after the ten-badge seed.
-3. Re-applying it is a no-op. There is no schema change, backfill, or update path.
+### Artwork needs no runtime work
+
+The five cards, thumbnails, and inspection copies already exist and sit within the documented budgets (`docs/badge-art-decisions.md:76`). `image_slug` equals each slug, so no data or code change was required. The image manifest is unaffected because it only scans `public/img/highres/`.
 
 ## Test plan
 
-No migration harness exists under `tests/api/`; the established Jest tests mock D1. For a seed migration the SQL itself is the deliverable, so the test executes the real files in an in-memory SQLite database via Node's built-in `node:sqlite`:
-
-1. Apply `0142_create_achievement_definitions.sql`.
-2. Apply `0145` twice.
-3. Assert exactly five rows, five distinct slugs, valid JSON metadata, three `habit` plus two `community`, repeatable flags, `image_slug = slug`, habit thresholds/`criteria`/`unit`, and community rank/collection `index`/`size`/`criteria`.
-4. Assert the slugs are disjoint from the `journey-*`, `book-*`, `challenge-*`, `field-guide-*`, and `campaign-*` namespaces and from the two `profile-badge-display` habit slugs.
-
-This adds no dependency and no test runner. Node 24 ships `node:sqlite`; CI's Node requirement is already `>=22` and this project runs Node 24 locally.
-
-## Artwork workflow
-
-Art is produced after this change by the `achievement-image-generation` skill, one emblem per slug. Use the reviewed F1 treatment from `docs/badge-art-decisions.md`: circle, family frame, 6 o'clock rank boss, no concentric rank ring. Habit badges use the habit family frame; community badges use the community family frame. For repeatable badges the boss is a decorative cue — the card's rank label remains authoritative.
-
-Outputs are `<slug>.webp` at 512 px and `<slug>-thumb.webp` at 200 px under `public/img/achievements/`, matching the existing path convention. Until art exists, the UI's existing missing-image placeholder covers the badges. No art is generated or committed by this change.
-
-## Rollback
-
-The change adds no runtime behavior, so rollback is data-only. Before any earned instances exist, a follow-up migration can `DELETE FROM achievement_definitions WHERE slug IN (...)` by slug. Once instances exist, do not delete definitions: `user_achievement_instances.achievement_id` has no cascade, and earned rows are append-only. Retire them through metadata or a future archived flag instead. Because this change ships no award hook, it cannot create instances on its own.
+- `tests/api/achievement-catalog-expansion.test.ts`: applies `0145`, then `0149`, asserts the corrected Hundred-K description and unchanged metadata.
+- A new `node:sqlite` test modeled on `tests/api/achievement-backfill-migration.test.ts`: applies a minimal `users`/`parties`/`party_members` schema plus `0142`/`0145`/`0150`, asserts founder and Good Company rows, the sentinel key, and idempotency on re-apply.
+- `tests/api/achievement-awards.test.ts`: rewrites the out-of-scope test (`:425-433`) into first-award, same-window suppression, non-Sunday, raw-vs-offset, and rank-progression coverage.
+- `tests/api/party-handlers.test.ts` and `tests/api/fellowship-invite-handlers.test.ts`: founder on create, threshold crossing, invite-accept activation, late joiner, duplicates, and award-failure isolation.
 
 ## Risks / Trade-offs
 
-- [`criteria` strings drift from the eventual hook] → The test asserts the exact strings; the hook must reuse them rather than re-declaring conditions.
-- [Community ownership collision] → Slug namespaces are disjoint and `campaign-*` stays with `community-campaigns`; only `badge_type` is shared.
-- [Definitions exist before they can be earned] → Intentional. Catalog data is inert; the display only shows earned badges, so no empty grid or broken slot appears.
-- [Artwork lags the data] → The placeholder already covers missing images; slugs are stable so art needs no migration.
-- [Seed ordering with `0144`] → No IDs, disjoint slugs, and `INSERT OR IGNORE` make order irrelevant.
+- [Sunday gate misses weeks without a Sunday log] → Accepted; matches faithful-walker and is stated in the description and spec.
+- [Award-to-all loop cost] → One active-member query per activation, bounded by fellowship size.
+- [Founder backfill proxy] → Current leader only; the limitation is documented in the migration header.
+- [`criteria` strings drift] → Tests assert the exact strings and the hook maps those literals.
+- [Award failure hides a missed badge] → Errors are logged; the party or walk write still succeeds by contract.
+- [Backfill and runtime duplicate] → Sentinel key, `INSERT OR IGNORE`, and the unique constraint keep both paths idempotent.
+- [Habit rank flooding] → Per-window keys cap one instance per weekend, month, and week.
+
+## Migration Plan
+
+1. Apply `0145` (seed), then `0149` (description alignment), then `0150` (fellowship backfill). All are data-only and idempotent; only `0149` depends on `0145`.
+2. Deploy the hook and party wiring after the migrations; there is no dual-write or feature flag.
+3. Rollback: revert the runtime commits first. Definitions can be deleted only while no instances exist; once instances exist they are append-only, so retire definitions through metadata instead of deleting rows.
 
 ## Open Questions
 
