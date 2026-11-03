@@ -9,6 +9,7 @@ const mockFetch = vi.fn();
 let storage: Record<string, string>;
 
 const OPEN_EVENT = 'wtm:open-badge-modal';
+const WALK_SAVED_EVENT = 'wtm:walk-saved';
 
 function setPath(pathname: string) {
   Object.defineProperty(window, 'location', {
@@ -50,6 +51,27 @@ function pendingResponse(pending: PendingAward[]) {
   return { ok: true, status: 200, json: () => Promise.resolve({ pending }) };
 }
 
+/**
+ * Serve a scripted list of pending responses in call order (the last entry
+ * repeats) while succeeding every acknowledge so queue navigation works.
+ * Returns a counter of pending GETs issued.
+ */
+function scriptPending(responses: Array<PendingAward[] | { failStatus: number }>) {
+  let calls = 0;
+  mockFetch.mockImplementation((url: string) => {
+    if (url === '/api/achievements/acknowledge') return Promise.resolve(okResponse());
+    if (url !== '/api/achievements/pending') {
+      return Promise.reject(new Error(`Unexpected fetch ${url}`));
+    }
+
+    const scripted = responses[Math.min(calls, responses.length - 1)];
+    calls += 1;
+    if ('failStatus' in scripted) return Promise.resolve({ ok: false, status: scripted.failStatus });
+    return Promise.resolve(pendingResponse(scripted));
+  });
+  return { calls: () => calls };
+}
+
 function okResponse() {
   return { ok: true, status: 200, json: () => Promise.resolve({ acknowledged: 1 }) };
 }
@@ -68,6 +90,12 @@ function tick(milliseconds = 0): Promise<void> {
 
 function dispatchViewOnly(detail: BadgeAwardEntry) {
   document.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail }));
+}
+
+function dispatchWalkSaved(action: 'save' | 'update' | 'delete' = 'save') {
+  document.dispatchEvent(new CustomEvent(WALK_SAVED_EVENT, {
+    detail: { action, date: '2026-10-02', distance: 5 },
+  }));
 }
 
 describe('BadgeAwardModal', () => {
@@ -217,6 +245,173 @@ describe('BadgeAwardModal', () => {
       } finally {
         map.remove();
       }
+    });
+  });
+
+  describe('save-triggered refresh', () => {
+    it('opens the modal on a save when nothing was visible', async () => {
+      const earned = makePending({ instance_id: 101, name: 'Fresh Badge' });
+      const script = scriptPending([[], [earned]]);
+
+      const { findByRole, queryByRole } = render(<BadgeAwardModal />);
+      await waitFor(() => expect(script.calls()).toBe(1));
+      await tick(20);
+      expect(queryByRole('dialog')).toBeNull();
+
+      dispatchWalkSaved('save');
+
+      expect(await findByRole('dialog', { name: 'Fresh Badge' })).toBeTruthy();
+      expect(await findByRole('button', { name: 'Collect badge' })).toBeTruthy();
+      expect(script.calls()).toBe(2);
+    });
+
+    it('appends a new award to an open queue without changing the current index', async () => {
+      const first = makePending({ instance_id: 201, slug: 'first', name: 'First Badge' });
+      const second = makePending({ instance_id: 202, slug: 'second', name: 'Second Badge' });
+      const late = makePending({ instance_id: 203, slug: 'late', name: 'Late Badge' });
+      scriptPending([[first, second], [first, second, late]]);
+
+      const { findByRole, findByText } = render(<BadgeAwardModal />);
+      await findByRole('dialog', { name: 'First Badge' });
+
+      fireEvent.click(await findByRole('button', { name: 'Continue' }));
+      expect(await findByText('Badge 2 of 2')).toBeTruthy();
+
+      dispatchWalkSaved('save');
+
+      expect(await findByText('Badge 2 of 3')).toBeTruthy();
+      expect(await findByRole('dialog', { name: 'Second Badge' })).toBeTruthy();
+
+      fireEvent.click(await findByRole('button', { name: 'Continue' }));
+      expect(await findByRole('dialog', { name: 'Late Badge' })).toBeTruthy();
+      expect(await findByText('Badge 3 of 3')).toBeTruthy();
+    });
+
+    it('does not queue an already queued instance twice', async () => {
+      const award = makePending({ instance_id: 301, name: 'Only Once Badge' });
+      const script = scriptPending([[award], [award]]);
+
+      const { findByRole, findByText } = render(<BadgeAwardModal />);
+      await findByRole('dialog', { name: 'Only Once Badge' });
+
+      dispatchWalkSaved('update');
+
+      await waitFor(() => expect(script.calls()).toBe(2));
+      await tick(20);
+      expect(script.calls(), 'a duplicate merge must not refetch').toBe(2);
+      expect(await findByText('Badge 1 of 1')).toBeTruthy();
+      expect(await findByRole('button', { name: 'Collect badge' })).toBeTruthy();
+    });
+
+    it('makes no request for a delete', async () => {
+      const script = scriptPending([[]]);
+
+      const { queryByRole } = render(<BadgeAwardModal />);
+      await waitFor(() => expect(script.calls()).toBe(1));
+      await tick(20);
+
+      dispatchWalkSaved('delete');
+
+      await tick(20);
+      expect(script.calls()).toBe(1);
+      expect(queryByRole('dialog')).toBeNull();
+    });
+
+    it('stays silent when the check fails', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const script = scriptPending([[], { failStatus: 500 }]);
+
+      const { container, queryByRole } = render(<BadgeAwardModal />);
+      await waitFor(() => expect(script.calls()).toBe(1));
+      await tick(20);
+
+      dispatchWalkSaved('save');
+
+      await waitFor(() => expect(script.calls()).toBe(2));
+      await tick(20);
+      expect(script.calls()).toBe(2);
+      expect(queryByRole('dialog')).toBeNull();
+      expect(queryByRole('alert')).toBeNull();
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('stays silent on a 401 without logging', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const script = scriptPending([[], { failStatus: 401 }]);
+
+      const { queryByRole } = render(<BadgeAwardModal />);
+      await waitFor(() => expect(script.calls()).toBe(1));
+      await tick(20);
+
+      dispatchWalkSaved('save');
+
+      await waitFor(() => expect(script.calls()).toBe(2));
+      await tick(20);
+      expect(queryByRole('dialog')).toBeNull();
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+
+    it('coalesces saves during one in-flight check into a single re-run', async () => {
+      // Requirement: at most one request in flight plus one queued re-run, so
+      // two checks never overlap and both saves are reflected.
+      const queued = makePending({ instance_id: 401, slug: 'queued', name: 'Queued Badge' });
+      const late = makePending({ instance_id: 402, slug: 'late', name: 'Late Badge' });
+
+      let calls = 0;
+      let concurrent = 0;
+      let maxConcurrent = 0;
+      let releaseSecond!: () => void;
+
+      mockFetch.mockImplementation((url: string) => {
+        if (url === '/api/achievements/acknowledge') return Promise.resolve(okResponse());
+        if (url !== '/api/achievements/pending') {
+          return Promise.reject(new Error(`Unexpected fetch ${url}`));
+        }
+
+        calls += 1;
+        concurrent += 1;
+        maxConcurrent = Math.max(maxConcurrent, concurrent);
+
+        if (calls === 1) {
+          concurrent -= 1;
+          return Promise.resolve(pendingResponse([]));
+        }
+
+        if (calls === 2) {
+          return new Promise((resolve) => {
+            releaseSecond = () => {
+              concurrent -= 1;
+              resolve(pendingResponse([queued]));
+            };
+          });
+        }
+
+        concurrent -= 1;
+        return Promise.resolve(pendingResponse([queued, late]));
+      });
+
+      const { findByRole, findByText } = render(<BadgeAwardModal />);
+      await waitFor(() => expect(calls).toBe(1));
+      await tick(20);
+
+      dispatchWalkSaved('save');
+      await waitFor(() => expect(calls).toBe(2));
+
+      dispatchWalkSaved('save');
+      dispatchWalkSaved('save');
+
+      releaseSecond();
+
+      expect(await findByRole('dialog', { name: 'Queued Badge' })).toBeTruthy();
+      await waitFor(() => expect(calls).toBe(3));
+      await tick(20);
+
+      expect(calls).toBe(3);
+      expect(maxConcurrent).toBe(1);
+      expect(await findByText('Badge 1 of 2')).toBeTruthy();
+
+      fireEvent.click(await findByRole('button', { name: 'Continue' }));
+      expect(await findByRole('dialog', { name: 'Late Badge' })).toBeTruthy();
     });
   });
 

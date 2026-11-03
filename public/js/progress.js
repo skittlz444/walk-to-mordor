@@ -51,6 +51,22 @@ window.onWalkDismiss = function(callback) {
   onDismissCallback = callback;
 };
 
+/**
+ * Announce a successful walk write to other islands (the badge award modal
+ * listens for this). Only called with an ok response, so rejected writes such
+ * as a 409 duplicate date never open a celebration.
+ * @param {'save'|'update'|'delete'} action
+ * @param {string} date
+ * @param {number|undefined} distance
+ * @param {Response} response
+ */
+function announceWalkSaved(action, date, distance, response) {
+  if (!response || !response.ok) return;
+  document.dispatchEvent(new CustomEvent('wtm:walk-saved', {
+    detail: { action, date, distance }
+  }));
+}
+
 // Helper function to format date with calendar module fallback
 function formatDateWithFallback(date) {
   return window.calendarModule ? window.calendarModule.formatDate(date) : formatDateLocal(date);
@@ -206,7 +222,7 @@ function handleSaveDistance() {
         ...window.getAuthHeaders()
       },
       body: JSON.stringify({ start: selectedDate, title: distance })
-    }).then(response => response).then(async () => {
+    }).then(async (response) => {
       if (window.updateCalendarAndTotal) {
         window.updateCalendarAndTotal();
       }
@@ -214,6 +230,8 @@ function handleSaveDistance() {
       if (onWalkSavedCallback) {
         onWalkSavedCallback({ action: 'update', date: selectedDate, distance: newDistance });
       }
+      // Let the badge award modal check for awards earned by this update
+      announceWalkSaved('update', selectedDate, newDistance, response);
       // Check for newly passed goals after calendar update
       if (window.goalsModule && window.goalsModule.checkForNewlyPassedGoals) {
         const updatedDisplayedTotal = await fetchDisplayedTotalDistanceOnly() ?? projectedDisplayedTotal;
@@ -242,7 +260,7 @@ function handleSaveDistance() {
         ...window.getAuthHeaders()
       },
       body: JSON.stringify({ start: selectedDate, title: distance })
-    }).then(response => response).then(async () => {
+    }).then(async (response) => {
       if (window.updateCalendarAndTotal) {
         window.updateCalendarAndTotal();
       }
@@ -250,6 +268,8 @@ function handleSaveDistance() {
       if (onWalkSavedCallback) {
         onWalkSavedCallback({ action: 'save', date: selectedDate, distance: newDistance });
       }
+      // Let the badge award modal check for awards earned by this save
+      announceWalkSaved('save', selectedDate, newDistance, response);
       // Check for newly passed goals after calendar update
       if (window.goalsModule && window.goalsModule.checkForNewlyPassedGoals) {
         const updatedDisplayedTotal = await fetchDisplayedTotalDistanceOnly() ?? projectedDisplayedTotal;
@@ -280,7 +300,7 @@ function handleDeleteDistance() {
       ...window.getAuthHeaders()
     },
     body: JSON.stringify({ start: selectedDate })
-  }).then(response => response).then(() => {
+  }).then(response => {
     if (window.updateCalendarAndTotal) {
       window.updateCalendarAndTotal();
     }
@@ -288,6 +308,8 @@ function handleDeleteDistance() {
     if (onWalkSavedCallback) {
       onWalkSavedCallback({ action: 'delete', date: selectedDate });
     }
+    // The badge award modal ignores deletes, but other listeners may care
+    announceWalkSaved('delete', selectedDate, undefined, response);
   }).catch(error => {
     console.error('Error deleting progress:', error);
   });

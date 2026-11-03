@@ -100,6 +100,20 @@ export function setPendingAwards(awards: PendingAward[]): void {
   currentAwardIndex.value = 0;
 }
 
+/**
+ * Append awards that are not already queued, keyed by `instance_id`.
+ *
+ * Used by the save-triggered check so an open queue keeps its position: the
+ * current index and any visible award are untouched, and only genuinely new
+ * instances are added.
+ */
+export function mergePendingAwards(awards: PendingAward[]): void {
+  const queuedIds = new Set(pendingAwards.value.map((award) => award.instance_id));
+  const additions = awards.filter((award) => !queuedIds.has(award.instance_id));
+  if (additions.length === 0) return;
+  pendingAwards.value = [...pendingAwards.value, ...additions];
+}
+
 /** Open the acknowledge queue if there is something to show and nothing else is open. */
 export function openAcknowledgeMode(): void {
   if (awardModalVisible.value) return;
