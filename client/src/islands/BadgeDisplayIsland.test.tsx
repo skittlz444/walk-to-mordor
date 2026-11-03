@@ -218,6 +218,38 @@ describe('BadgeDisplayIsland', () => {
       expect(chips[0].getAttribute('aria-label')).toBe('Earned 5 times');
     });
 
+    it('never shows or announces a repeat count for a non-repeatable badge', async () => {
+      mockFetch.mockResolvedValue(achievementsResponse([
+        makeEntry({
+          slug: 'journey-duplicate',
+          name: 'Duplicated Journey',
+          image_slug: 'journey-duplicate',
+          is_repeatable: false,
+          earned_count: 2,
+          presentation: { collection: null },
+        }),
+        makeEntry({
+          slug: 'habit-faithful-walker',
+          name: 'Faithful Walker',
+          image_slug: 'habit-faithful-walker',
+          is_repeatable: true,
+          earned_count: 2,
+          presentation: { collection: null },
+        }),
+      ]));
+
+      const { findByRole } = render(<BadgeDisplayIsland />);
+
+      // The accessible name of the non-repeatable card claims a single earn, and the card
+      // carries no count chip even though the summary reports earned_count: 2.
+      const nonRepeatable = await findByRole('button', { name: 'Duplicated Journey' });
+      expect(nonRepeatable.querySelector('.badge-repeat')).toBeNull();
+
+      // A repeatable badge with the same count still shows and announces the repeat.
+      const repeatable = await findByRole('button', { name: 'Faithful Walker. Earned 2 times' });
+      expect(repeatable.querySelector('.badge-repeat')?.textContent).toBe('×2');
+    });
+
     it('exposes rank, collection position and repeat count to assistive technology', async () => {
       mockFetch.mockResolvedValue(achievementsResponse([
         makeEntry({

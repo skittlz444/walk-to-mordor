@@ -200,7 +200,7 @@ describe('Achievement Utils', () => {
       expect(second).toEqual({ instanceId: 801, isNew: false });
     });
 
-    it('stores the same idempotency key for a non-repeatable badge regardless of the caller-supplied key', async () => {
+    it('stores the sentinel idempotency key for a non-repeatable badge regardless of the caller-supplied key', async () => {
       const { db, mockDB } = mockDbClient();
 
       const preCheckBindSpy = jest.fn().mockReturnValue({ first: jest.fn(() => Promise.resolve(null)) });
@@ -213,10 +213,9 @@ describe('Achievement Utils', () => {
 
       await awardAchievement(db, 1, 'nazgul-outrun', 'caller-key-A');
 
-      const preCheckKey = preCheckBindSpy.mock.calls[0][2];
       const insertKey = insertBindSpy.mock.calls[0][3];
-      expect(preCheckKey).toBe(insertKey);
-      expect(preCheckKey).not.toBe('caller-key-A');
+      expect(insertKey).toBe('__non_repeatable__');
+      expect(insertKey).not.toBe('caller-key-A');
     });
 
     it('closes the non-repeatable race window: a second concurrent award with a different key still hits the UNIQUE constraint', async () => {

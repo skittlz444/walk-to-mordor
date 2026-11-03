@@ -208,11 +208,14 @@ export async function getAchievementDefinitionBySlug(
  * - Resolves `achievementSlug` to a definition; throws `AchievementDefinitionNotFoundError`
  *   if no definition exists for that slug.
  * - For non-repeatable definitions, the caller-supplied idempotency key is ignored for
- *   storage purposes and replaced with a fixed sentinel (`NON_REPEATABLE_IDEMPOTENCY_KEY`).
- *   This means the `UNIQUE(user_id, achievement_id, idempotency_key)` constraint alone
- *   is enough to block a second award, even when two concurrent requests race each
- *   other using different caller-supplied keys -- there is no window where the
- *   pre-insert SELECT can be fooled by mismatched keys.
+ *   storage purposes and replaced with a fixed sentinel (`NON_REPEATABLE_IDEMPOTENCY_KEY`),
+ *   and the existence check ignores keys entirely: any instance of that (user, achievement)
+ *   blocks a later award, whichever key it was stored under. That matters for rows written
+ *   by one-off backfills such as `0148`, which used per-definition keys.
+ *   The `UNIQUE(user_id, achievement_id, idempotency_key)` constraint alone is enough to
+ *   block a second concurrent award, even when two racing requests use different
+ *   caller-supplied keys -- there is no window where the pre-insert SELECT can be fooled
+ *   by mismatched keys.
  * - For repeatable definitions, the caller-supplied idempotency key is stored as-is;
  *   the same constraint guards against duplicate awards for the same logical event.
  * - Never mutates or deletes an existing row.
@@ -231,11 +234,20 @@ export async function awardAchievement(
 
   const storageKey = definition.is_repeatable ? idempotencyKey : NON_REPEATABLE_IDEMPOTENCY_KEY;
 
-  const existing = await db.read.prepare(
-    `SELECT id FROM user_achievement_instances
-     WHERE user_id = ? AND achievement_id = ? AND idempotency_key = ?
-     LIMIT 1`,
-  ).bind(userId, definition.id, storageKey).first<{ id: number }>();
+  // Non-repeatables are identified by (user, achievement) alone: the idempotency key is a
+  // storage detail, and legacy rows (e.g. `0148` backfills) may carry a different one.
+  const existing = definition.is_repeatable
+    ? await db.read.prepare(
+      `SELECT id FROM user_achievement_instances
+       WHERE user_id = ? AND achievement_id = ? AND idempotency_key = ?
+       LIMIT 1`,
+    ).bind(userId, definition.id, storageKey).first<{ id: number }>()
+    : await db.read.prepare(
+      `SELECT id FROM user_achievement_instances
+       WHERE user_id = ? AND achievement_id = ?
+       ORDER BY id ASC
+       LIMIT 1`,
+    ).bind(userId, definition.id).first<{ id: number }>();
 
   if (existing) {
     return { instanceId: existing.id, isNew: false };

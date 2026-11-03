@@ -143,7 +143,9 @@ function badgeAccessibleName(entry: BadgeAchievement): string {
     parts.push(`Collection position ${collection.index} of ${collection.size}`);
   }
 
-  if (entry.earned_count > 1) {
+  // Only repeatables can be earned more than once; a stray duplicate count on a
+  // non-repeatable badge must never be announced as a repeat.
+  if (entry.is_repeatable && entry.earned_count > 1) {
     parts.push(`Earned ${entry.earned_count} times`);
   }
 
@@ -232,7 +234,7 @@ function BadgeCard({ entry }: { entry: BadgeAchievement }) {
               {collection.index}/{collection.size}
             </span>
           )}
-          {entry.earned_count > 1 && (
+          {entry.is_repeatable && entry.earned_count > 1 && (
             <span className="badge-repeat" role="img" aria-label={`Earned ${entry.earned_count} times`}>
               ×{entry.earned_count}
             </span>
