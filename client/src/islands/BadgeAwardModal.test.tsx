@@ -298,6 +298,7 @@ describe('BadgeAwardModal', () => {
 
       await waitFor(() => expect(script.calls()).toBe(2));
       await tick(20);
+      expect(script.calls(), 'a duplicate merge must not refetch').toBe(2);
       expect(await findByText('Badge 1 of 1')).toBeTruthy();
       expect(await findByRole('button', { name: 'Collect badge' })).toBeTruthy();
     });

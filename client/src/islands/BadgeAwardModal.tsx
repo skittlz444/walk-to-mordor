@@ -209,6 +209,9 @@ export function BadgeAwardModal() {
     }
 
     // Another modal is open; queue the request rather than dropping the awards.
+    // Replace any earlier deferral observer so repeated saves in the same page
+    // view leave exactly one observer watching the DOM.
+    observerRef.current?.disconnect();
     observerRef.current = new MutationObserver(tryOpen);
     observerRef.current.observe(document.body, {
       childList: true,
@@ -259,6 +262,7 @@ export function BadgeAwardModal() {
     let nextMode = mode;
 
     while (true) {
+      if (!mountedRef.current) return;
       if (refreshInFlightRef.current) {
         if (nextMode === 'merge') refreshQueuedRef.current = true;
         return;
