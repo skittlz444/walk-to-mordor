@@ -219,6 +219,44 @@ test('profile achievements flow covers award queue, badge grid, settings split a
     });
     await expect(awardContent).toHaveCount(0);
 
+    // A fresh browser context is a true app re-open (new tab/session storage).
+    // The acknowledged queue is server-side, so the modal must not return.
+    const browser = page.context().browser();
+    if (!browser) throw new Error('Browser fixture is unavailable');
+    const reopenedContext = await browser.newContext();
+    try {
+        await reopenedContext.addInitScript(({ token, dismissKey, dismissedAt }) => {
+            localStorage.setItem('sessionToken', token);
+            localStorage.setItem(dismissKey, String(dismissedAt));
+        }, {
+            token: authToken,
+            dismissKey: 'wtm_pwa_install_dismissed',
+            dismissedAt: Date.now(),
+        });
+        const reopened = await reopenedContext.newPage();
+
+        for (const path of ['/profile', '/journey']) {
+            const pendingResponse = reopened.waitForResponse(
+                (response) => response.url().includes('/api/achievements/pending')
+                    && response.request().method() === 'GET',
+                { timeout: 15000 },
+            );
+            await reopened.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' });
+            await waitForAuthenticated(reopened);
+            await pendingResponse;
+            // The pending fetch only runs after BadgeAwardModal mounts; give
+            // its state update a beat, then assert the queue stays closed.
+            await reopened.waitForTimeout(750);
+            await expect(
+                reopened.locator('.badge-award__content'),
+                `Cleared queue must not reopen on ${path} after an app re-open`,
+            ).toHaveCount(0);
+            await expect(reopened.locator('.badge-award-overlay')).toHaveCount(0);
+        }
+    } finally {
+        await reopenedContext.close();
+    }
+
     // ------------------------------------------------------ 6. Badge detail
     const firstCard = page.locator('.badge-card').first();
     const firstCardName = ((await firstCard.locator('.badge-card__name').textContent()) || '').trim();
