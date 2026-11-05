@@ -1,14 +1,14 @@
 ## Context
 
-The `personal-challenges` change creates the `personal_encounter_definitions` table and seeds the Nazgul pursuit. This change adds the admin CRUD layer on top of that table and an inline management UI on the existing `/admin` dashboard page.
+The archived `personal-challenges` change created the `personal_encounter_definitions` table and seeded the Nazgul pursuit, so this change's core dependency is satisfied. This change adds the admin CRUD layer on top of that table and an inline management UI on the existing `/admin` dashboard page.
 
 The admin page already renders `AdminDashboardIsland` (stats) inside an SSR shell from `renderAdminPage.ts`. The shell also contains navigation links to other admin sections (goals, storylines, users, metrics). This change adds a second island below the dashboard stats.
 
 The existing pattern for admin CRUD follows:
-- Handlers in domain-specific files (e.g., `admin-handlers.ts`) with `handleAdminXxx` naming
-- Admin session validation via `validateAdminSession` in `src/index.ts`
-- Audit logging to `admin_audit_log` table on mutation actions
-- Preact islands registered in `client/src/index.tsx` and hydraed via `data-island` attributes
+- Handlers in domain-specific files (e.g., `encounter-admin-handlers.ts`) with `handleAdminXxx` naming
+- Routes guarded by `adminGuard` in `src/index.ts`; guarded handlers receive `adminUserId` for audit logging
+- Audit logging through `logAdminAction` from `src/admin-shared.ts` on mutation actions
+- Preact islands registered in `client/src/index.tsx` and hydrated via `data-island` attributes
 
 ## Goals / Non-Goals
 
@@ -25,6 +25,8 @@ The existing pattern for admin CRUD follows:
 - No preview/playtest mode (testing encounters requires real user interaction).
 - No template duplication or cloning feature.
 - No multi-admin collaboration features.
+- No storyline, route-segment, or cooldown template eligibility rules. The schema for those rules is not present in `personal_encounter_definitions`; they remain deferred to a separate schema-bearing change. This change manages globally eligible definitions only.
+- No image browser or uploader; this change uses manual image slug entry.
 
 ## Decisions
 
@@ -47,7 +49,7 @@ Alternative considered: a new `/admin/encounters` page. Rejected because the use
 | PUT | `/api/admin/encounters/:id/enable` | Enable a definition |
 | PUT | `/api/admin/encounters/:id/disable` | Disable a definition |
 
-Rationale: matches the existing admin API pattern (`/api/admin/goals`, `/api/admin/storylines`) with parameterized routes via `matchRoute`. Separate enable/disable endpoints keep the audit log clear about intent (enable vs disable vs general update).
+Rationale: matches the existing admin API pattern (`/api/admin/goals`, `/api/admin/storylines`) with Hono parameterized routes guarded by `adminGuard`. Separate enable/disable endpoints keep the audit log clear about intent (enable vs disable vs general update).
 
 Alternative considered: a toggle endpoint with `{ enabled: true/false }` in the body. Rejected because separate endpoints produce cleaner audit log entries and prevent accidental enable/disable via a mis-sent update body.
 
@@ -58,17 +60,17 @@ Validation rules:
 - `name`: required, max 120 chars
 - `description`: required, max 2000 chars
 - `image_slug`: required, max 120 chars
-- `badge_slug`: required, max 120 chars, must reference an existing `achievement_definitions.slug` row (validated at save time with a lookup query)
+- `badge_slug`: required, max 120 chars, kebab-case; if no `achievement_definitions.slug` row matches, `badge_name`, `badge_description`, and `badge_image_slug` are required so the handler can create the definition
 - `duration_days`: required, integer 1-30
 - `target_stretch_multiplier`: required, number 1.0-5.0
-- `target_min_distance`: required, number > 0, must be < target_max_distance
-- `target_max_distance`: required, number > target_min_distance
+- `target_min_distance`: required, number > 0, must be <= target_max_distance
+- `target_max_distance`: required, number >= target_min_distance
 - `is_repeatable`: boolean, defaults to true
-- `enabled`: boolean, defaults to false on create
+- `enabled`: boolean, defaults to false on create; the insert must explicitly store false rather than rely on the schema default
 
 The API returns `{ error: "validation", fields: { fieldName: "message" } }` for validation failures, which the island renders inline on each field.
 
-Rationale: server-side validation is non-negotiable for admin APIs. Structured field-level errors let the UI show inline validation feedback without custom error parsing.
+Rationale: server-side validation is non-negotiable for admin APIs. Structured field-level errors let the UI show inline validation feedback without custom error parsing. Equal target bracket endpoints are supported by the schema and challenge engine.
 
 Alternative considered: client-only validation with server as fallback. Rejected because admin APIs must be robust regardless of client behavior.
 
@@ -78,7 +80,9 @@ The encounter definition form includes a `badge_slug` text field and inline fiel
 - Enter an existing `achievement_definitions.slug` to link to a badge already created by a migration or another feature.
 - Fill in the inline badge fields (name, description, image_slug), which causes the handler to auto-create the achievement definition row on save, using the `badge_slug` as the unique slug.
 
-Rationale: the restructuring plan and shared-achievement-infrastructure design both state that each consuming change manages its own badge definitions. There is no standalone badge admin UI. This inline approach keeps badge management within the encounter form while building reusable patterns — the inline badge field component can be extracted and imported by other admin surfaces (storyline-books-admin, field-guide-discovery-admin) later.
+Auto-created rows use `badge_type='challenge'`, inherit the encounter's `is_repeatable` value, and include the shared personal-encounter metadata convention: `storyline: null`, `rank_thresholds` (`[1]` for non-repeatable badges and `[1,3,7,15]` for repeatable badges), `unit: 'completions'`, and `criteria: 'personal_encounter_completed'`.
+
+Rationale: the restructuring plan and shared-achievement-infrastructure design both state that each consuming change manages its own badge definitions. There is no standalone badge admin UI. This inline approach keeps badge management within the encounter form while building reusable patterns — the inline badge field component can be extracted and imported by other admin surfaces (storyline-books-admin, field-guide-collectible-discovery-admin) later.
 
 Alternative considered: a full badge CRUD admin page. Rejected as over-scoped — each consuming change only needs to manage its own badges inline.
 
@@ -92,7 +96,7 @@ Rationale: the badge definition schema (`achievement_definitions`) is shared. Th
 When an admin clicks "disable" on an encounter definition, the API checks for active occurrences referencing that definition. If active occurrences exist, the API returns a count and the UI shows a confirmation modal:
 - "X users have active challenges for this encounter. What would you like to do?"
 - Option 1: "Keep active challenges" — disable only affects future rolls; active occurrences continue to completion.
-- Option 2: "Cancel all active challenges" — disable the definition AND update all active occurrences to status `failed`, then run settlement to finalize them.
+- Option 2: "Cancel all active challenges" — disable the definition AND set active occurrences to `status='failed', updated_at=CURRENT_TIMESTAMP`. No badge is awarded and no settlement pass is required; the occurrence schema has no separate `cancelled` state.
 
 If no active occurrences exist, the disable happens immediately without a modal.
 
@@ -104,13 +108,11 @@ Alternative considered: always leave active occurrences running and let the grac
 
 The encounter form has an `image_slug` text field. The admin types an image slug manually. No image browser or uploader is included in this change.
 
-Stretch goal (not required for this change): add an image browser that lists existing images from the asset inventory (`/api/admin/images`), letting admins pick from available images rather than typing slugs blindly. An image upload browser is explicitly NOT in scope — the existing image workflow uses build-time image manifests, not runtime uploads.
-
 Rationale: the existing goal editor has the same manual slug pattern. Adding an image browser is useful but not blocking — it's a separate improvement that benefits all admin surfaces.
 
 ### Audit log entries follow the existing pattern
 
-Insert into `admin_audit_log` with: `admin_user_id`, `action` (e.g., `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`), `target_type` = `'personal_encounter'`, `target_id` = definition ID, and `details` as JSON with changed fields.
+Call `logAdminAction` with `adminUserId`, `action` (`create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, or `cancel_active_occurrences`), `targetType='personal_encounter'`, `targetId` = definition ID, `details` as JSON with changed fields and active occurrence counts, `ipAddress`, and `success: true`.
 
 Rationale: matches how goal mutations, storyline mutations, and user management actions are audited. Consistent audit log format is critical for admin accountability.
 
@@ -125,13 +127,26 @@ Rationale: the admin layer is a pure API + UI addition on top of existing schema
 - [Admin page height with stats + encounter list] → The encounter management section could make the page long. Mitigation: use a collapsible section or place it below the fold — admins scrolling to manage encounters is acceptable.
 - [No soft-delete for definitions] → Definitions can be disabled but not deleted. Disabling with active occurrences offers cancellation. Mitigation: follow-on change can add deletion with safety checks.
 - [Validation rules may need tuning] → Initial validation bounds are reasonable defaults. Mitigation: rules are in the handler, easily adjusted without schema changes.
-- [Badge slug references external table] → `badge_slug` must reference an existing `achievement_definitions` row. Mitigation: validate with a lookup query on save; auto-create the row from inline badge fields if the slug doesn't exist.
+- [Badge slug references external table] → `badge_slug` can link to an existing `achievement_definitions` row or create one from inline fields. Mitigation: validate slug format and require complete inline fields before insertion.
+- [Badge slug reassignment may orphan the prior definition] → Changing an encounter's badge slug can leave the previous achievement definition unused, but earned achievements still reference its history. Mitigation: never delete the old definition during encounter edits; leave it available for historical display.
+- [Manual artwork slugs may not resolve] → Encounter and badge image slugs can name assets absent from the build-time manifest. Mitigation: surface the existing admin image inventory as a future shared picker; this change preserves the established manual-entry behavior.
 - [Active occurrence cancellation may surprise users] → Cancelling active challenges is a destructive admin action. Mitigation: confirmation modal with explicit count of affected users; audit log records the cancellation with the count.
+
+## Migration Plan
+
+1. Create `src/encounter-admin-handlers.ts` with list/create/get/update/enable/disable handlers.
+2. Register Hono routes in `src/index.ts` beside the existing admin routes, all behind `adminGuard`.
+3. Create `AdminEncountersIsland` and register it in `client/src/index.tsx` (`autoHydratedIslands`, `allIslands`).
+4. Add the island mount to `renderAdminPage.ts` and styles to `public/css/admin.css`.
+5. Add Jest, Vitest, and Playwright smoke coverage, then update the API documentation.
+
+Rollback: remove the island mount, both registry entries, route registrations, handler file, CSS, and tests. No schema or data needs to be reverted; definitions an admin created can simply be disabled.
 
 ## Open Questions
 
 None. All resolved:
 - `badge_slug` column in encounter definitions; admin form manages it inline with reusable badge fields
-- Image browser as stretch goal; manual slug entry for now
+- Image browser is a non-goal; manual slug entry for this change
 - Disable confirmation modal with option to cancel active occurrences
 - Reusable `BadgeDefinitionFields` component pattern for other admin surfaces
+- Template eligibility rules require a separate schema-bearing change

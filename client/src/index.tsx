@@ -18,6 +18,7 @@ import { FriendsListIsland } from './islands/FriendsListIsland';
 import { FriendAddIsland } from './islands/FriendAddIsland';
 import { FriendProfileIsland } from './islands/FriendProfileIsland';
 import { AdminDashboardIsland } from './islands/AdminDashboardIsland';
+import { AdminEncountersIsland } from './islands/AdminEncountersIsland';
 import { AdminGoalsListIsland } from './islands/AdminGoalsListIsland';
 import { AdminGoalEditIsland } from './islands/AdminGoalEditIsland';
 import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
@@ -39,6 +40,7 @@ import { triggerEncounterRoll } from './utils/encounterTrigger';
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
   AdminDashboardIsland,
+  AdminEncountersIsland,
   AdminGoalAddIsland,
   AdminGoalEditIsland,
   AdminGoalsListIsland,
@@ -70,6 +72,7 @@ const autoHydratedIslands = {
 // All islands including those rendered programmatically
 const allIslands = {
   AdminDashboardIsland,
+  AdminEncountersIsland,
   AdminGoalAddIsland,
   AdminGoalEditIsland,
   AdminGoalsListIsland,

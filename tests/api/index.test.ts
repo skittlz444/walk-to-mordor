@@ -33,6 +33,7 @@ jest.mock('../../src/renderAdminUsersPage');
 jest.mock('../../src/renderAdminMetricsPage');
 jest.mock('../../src/renderAdminStorylinesPage');
 jest.mock('../../src/admin-handlers');
+jest.mock('../../src/encounter-admin-handlers');
 jest.mock('../../src/friends-handlers');
 jest.mock('../../src/fellowship-invite-handlers');
 jest.mock('../../src/stats-handlers');
@@ -84,6 +85,14 @@ import {
   handleAdminGoalCreate,
   handleAdminGoalGet,
 } from '../../src/admin-handlers';
+import {
+  handleAdminEncountersList,
+  handleAdminEncounterGet,
+  handleAdminEncounterCreate,
+  handleAdminEncounterUpdate,
+  handleAdminEncounterEnable,
+  handleAdminEncounterDisable,
+} from '../../src/encounter-admin-handlers';
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleAcceptFriend } from '../../src/friends-handlers';
 import { handleInviteFriend, handleGetFellowshipInvites, handleAcceptFellowshipInvite } from '../../src/fellowship-invite-handlers';
 import { handleWeeklyStats, handleHeatmap } from '../../src/stats-handlers';
@@ -136,6 +145,12 @@ const mockHandleAdminDashboard = jest.mocked(handleAdminDashboard);
 const mockHandleAdminGoalsList = jest.mocked(handleAdminGoalsList);
 const mockHandleAdminGoalCreate = jest.mocked(handleAdminGoalCreate);
 const mockHandleAdminGoalGet = jest.mocked(handleAdminGoalGet);
+const mockHandleAdminEncountersList = jest.mocked(handleAdminEncountersList);
+const mockHandleAdminEncounterGet = jest.mocked(handleAdminEncounterGet);
+const mockHandleAdminEncounterCreate = jest.mocked(handleAdminEncounterCreate);
+const mockHandleAdminEncounterUpdate = jest.mocked(handleAdminEncounterUpdate);
+const mockHandleAdminEncounterEnable = jest.mocked(handleAdminEncounterEnable);
+const mockHandleAdminEncounterDisable = jest.mocked(handleAdminEncounterDisable);
 const mockHandleGetFriends = jest.mocked(handleGetFriends);
 const mockHandleGetPendingFriends = jest.mocked(handleGetPendingFriends);
 const mockHandleSearchUsers = jest.mocked(handleSearchUsers);
@@ -243,6 +258,12 @@ describe('Hono Router', () => {
     mockHandleAdminGoalsList.mockResolvedValue(jsonResponse({ goals: [] }));
     mockHandleAdminGoalCreate.mockResolvedValue(jsonResponse({ id: 1 }, 201));
     mockHandleAdminGoalGet.mockResolvedValue(jsonResponse({ id: 42, title: 'Test' }));
+    mockHandleAdminEncountersList.mockResolvedValue(jsonResponse({ encounters: [] }));
+    mockHandleAdminEncounterGet.mockResolvedValue(jsonResponse({ encounter: { id: 7 } }));
+    mockHandleAdminEncounterCreate.mockResolvedValue(jsonResponse({ encounter: { id: 8 } }, 201));
+    mockHandleAdminEncounterUpdate.mockResolvedValue(jsonResponse({ encounter: { id: 7 } }));
+    mockHandleAdminEncounterEnable.mockResolvedValue(jsonResponse({ encounter: { id: 7, enabled: true } }));
+    mockHandleAdminEncounterDisable.mockResolvedValue(jsonResponse({ encounter: { id: 7, enabled: false } }));
     mockHandleGetFriends.mockResolvedValue(jsonResponse({ friends: [] }));
     mockHandleGetPendingFriends.mockResolvedValue(jsonResponse({ pending: [] }));
     mockHandleSearchUsers.mockResolvedValue(jsonResponse({ results: [] }));
@@ -728,6 +749,105 @@ describe('Hono Router', () => {
       expect(await res.json()).toEqual({ error: 'Invalid goal ID' });
     });
 
+    it('routes GET /api/admin/encounters', async () => {
+      const res = await request('/api/admin/encounters');
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ encounters: [] });
+      expect(mockHandleAdminEncountersList).toHaveBeenCalled();
+    });
+
+    it('routes POST /api/admin/encounters with the parsed body', async () => {
+      const body = {
+        slug: 'moria-chase',
+        name: 'Moria Chase',
+        description: 'Run through Moria.',
+        image_slug: 'moria-chase',
+        badge_slug: 'challenge-moria-chase',
+        duration_days: 3,
+        target_stretch_multiplier: 1.3,
+        target_min_distance: 3,
+        target_max_distance: 50,
+      };
+      const res = await request('/api/admin/encounters', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      expect(res.status).toBe(201);
+      expect(await res.json()).toEqual({ encounter: { id: 8 } });
+      expect(mockHandleAdminEncounterCreate).toHaveBeenCalledWith(
+        expect.any(Request),
+        expect.anything(),
+        body,
+        1,
+      );
+    });
+
+    it('routes GET /api/admin/encounters/:id', async () => {
+      const res = await request('/api/admin/encounters/7');
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ encounter: { id: 7 } });
+      expect(mockHandleAdminEncounterGet).toHaveBeenCalledWith(
+        expect.any(Request),
+        expect.anything(),
+        7,
+      );
+    });
+
+    it('returns 400 for an invalid encounter ID', async () => {
+      const res = await request('/api/admin/encounters/not-a-number');
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: 'Invalid encounter ID' });
+    });
+
+    it('routes PUT /api/admin/encounters/:id with the parsed body', async () => {
+      const body = { name: 'Updated Encounter' };
+      const res = await request('/api/admin/encounters/7', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockHandleAdminEncounterUpdate).toHaveBeenCalledWith(
+        expect.any(Request),
+        expect.anything(),
+        7,
+        body,
+        1,
+      );
+    });
+
+    it('routes PUT /api/admin/encounters/:id/enable', async () => {
+      const res = await request('/api/admin/encounters/7/enable', { method: 'PUT' });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ encounter: { id: 7, enabled: true } });
+      expect(mockHandleAdminEncounterEnable).toHaveBeenCalledWith(
+        expect.any(Request),
+        expect.anything(),
+        7,
+        1,
+      );
+    });
+
+    it('routes PUT /api/admin/encounters/:id/disable with the cancel decision', async () => {
+      const res = await request('/api/admin/encounters/7/disable', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ cancelActive: true }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockHandleAdminEncounterDisable).toHaveBeenCalledWith(
+        expect.any(Request),
+        expect.anything(),
+        7,
+        { cancelActive: true },
+        1,
+      );
+    });
+
     it('returns 404 for unknown admin API endpoint', async () => {
       const res = await request('/api/admin/nonexistent');
       expect(res.status).toBe(404);
@@ -760,6 +880,12 @@ describe('Hono Router', () => {
       { method: 'GET', path: '/api/admin/storylines/1' },
       { method: 'PUT', path: '/api/admin/storylines/1' },
       { method: 'PUT', path: '/api/admin/storylines/1/goals' },
+      { method: 'GET', path: '/api/admin/encounters' },
+      { method: 'POST', path: '/api/admin/encounters' },
+      { method: 'GET', path: '/api/admin/encounters/1' },
+      { method: 'PUT', path: '/api/admin/encounters/1' },
+      { method: 'PUT', path: '/api/admin/encounters/1/enable' },
+      { method: 'PUT', path: '/api/admin/encounters/1/disable' },
       { method: 'GET', path: '/api/admin/images' },
     ];
 
