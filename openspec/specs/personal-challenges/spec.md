@@ -196,6 +196,12 @@ The system SHALL complete a personal challenge immediately when the cumulative c
 - **THEN** the system marks the challenge failed
 - **AND** no completion badge is awarded
 
+#### Scenario: Nazgul badge upgrades at the configured completion counts
+- **GIVEN** the `challenge-nazgul-outrun` badge has `rank_thresholds` `[1,3,7,15]`
+- **WHEN** the user earns the badge for the 1st, 3rd, 7th, or 15th time
+- **THEN** the badge presentation resolves to bronze, silver, gold, or mithril respectively
+- **AND** the 4th completion remains silver until the 7th completion
+
 ### Requirement: Scheduled settlement of personal challenges
 The system SHALL process expired personal challenge outcomes through scheduled settlement in the existing Worker `scheduled()` handler with independent error isolation from existing notification jobs. Settlement SHALL run only on the first scheduled pass strictly after the grace deadline's UTC date has fully passed, so walk logging during the entire grace day still counts.
 

@@ -154,7 +154,7 @@ These are rules the schema enforces or that the application layer must uphold �
 - Target is computed once at roll time (`preview_target_distance`) and copied to `personalized_target` at acceptance — the number shown in the modal is always the number the challenge uses.
 - Coverage window is `[started_at, coverage_end_date]`; `grace_deadline = coverage_end_date + 3 days`. Only `progress.date` values inside the window count, including walks logged during the grace period.
 - Completion is `SUM(ledger.distance) >= personalized_target` — there is no all-coverage-days precondition, so a challenge can complete at acceptance or on any later eligible reconciliation.
-- Seeds: definition `nazgul-pursuit` (3 days, 1.3 stretch, 3–50 km clamp) and badge `challenge-nazgul-outrun` (`challenge` type, repeatable, `rank_thresholds` `[1,2,3,5]`, `unit` `pursuits`).
+- Seeds: definition `nazgul-pursuit` (3 days, 1.3 stretch, 3–50 km clamp) and badge `challenge-nazgul-outrun` (`challenge` type, repeatable, `rank_thresholds` `[1,3,7,15]`, `unit` `pursuits`).
 
 ### parties
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.

@@ -28,6 +28,7 @@ const EVENT_MIGRATIONS = [
   '0157_seed_nazgul_encounter.sql',
   '0158_seed_nazgul_badge.sql',
   '0159_rebuild_legacy_event_tables.sql',
+  '0160_update_nazgul_rank_thresholds.sql',
 ];
 
 function readMigration(filename: string): string {
@@ -92,7 +93,7 @@ interface BadgeMetadata {
   criteria: string;
 }
 
-describe('personal challenge migrations (0152-0159)', () => {
+describe('personal challenge migrations (0152-0160)', () => {
   let sqlite: DatabaseSync;
 
   beforeEach(() => {
@@ -239,9 +240,36 @@ describe('personal challenge migrations (0152-0159)', () => {
 
     const metadata = JSON.parse(badge.metadata) as BadgeMetadata;
     expect(metadata.storyline).toBeNull();
-    expect(metadata.rank_thresholds).toEqual([1, 2, 3, 5]);
+    expect(metadata.rank_thresholds).toEqual([1, 3, 7, 15]);
     expect(metadata.unit).toBe('pursuits');
     expect(metadata.criteria).toBe('personal_encounter_completed');
+  });
+
+  it('repairs stale badge thresholds and stays idempotent when applied twice', () => {
+    const staleMetadata: BadgeMetadata = {
+      storyline: null,
+      rank_thresholds: [1, 2, 3, 5],
+      unit: 'pursuits',
+      criteria: 'personal_encounter_completed',
+    };
+    sqlite.prepare(
+      `UPDATE achievement_definitions
+       SET metadata = ?
+       WHERE slug = 'challenge-nazgul-outrun'`,
+    ).run(JSON.stringify(staleMetadata));
+
+    const repair = readMigration('0160_update_nazgul_rank_thresholds.sql');
+    sqlite.exec(repair);
+    sqlite.exec(repair);
+
+    const rows = sqlite.prepare(
+      `SELECT metadata FROM achievement_definitions
+       WHERE slug = 'challenge-nazgul-outrun'`,
+    ).all() as Array<{ metadata: string }>;
+
+    expect(rows).toHaveLength(1);
+    const metadata = JSON.parse(rows[0].metadata) as BadgeMetadata;
+    expect(metadata.rank_thresholds).toEqual([1, 3, 7, 15]);
   });
 
   it('repairs a legacy prototype event schema instead of silently keeping it', () => {

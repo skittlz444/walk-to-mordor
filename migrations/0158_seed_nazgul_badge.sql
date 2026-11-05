@@ -21,5 +21,5 @@ VALUES
         'challenge-nazgul-outrun',
         'challenge',
         1,
-        '{"storyline":null,"rank_thresholds":[1,2,3,5],"unit":"pursuits","criteria":"personal_encounter_completed"}'
+        '{"storyline":null,"rank_thresholds":[1,3,7,15],"unit":"pursuits","criteria":"personal_encounter_completed"}'
     );
