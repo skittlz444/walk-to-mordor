@@ -45,6 +45,8 @@ import {
 } from "./auth-handlers";
 import { handleMapPage } from "./map-handlers";
 import { handleGetAchievements, handleGetPendingAchievements, handleAcknowledgeAchievements } from "./achievement-handlers";
+import { handleDailyRoll, handleAcceptEncounter, handleDeclineEncounter } from "./event-handlers";
+import { settleExpiredChallenges } from "./event-utils";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyPositions, handlePartyProgress, handlePartyActivity, handleSendPartyMessage, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile, handleFriendPositions } from "./friends-handlers";
 import { handleGetProfileOverview } from "./profile-handlers";
@@ -339,6 +341,18 @@ app.get('/api/achievements/pending', authGuard, (c) =>
   handleGetPendingAchievements(c.req.raw, c.get('db'), c.get('userId')!));
 app.post('/api/achievements/acknowledge', authGuard, (c) =>
   handleAcknowledgeAchievements(c.req.raw, c.get('db'), c.get('userId')!));
+
+// ── Personal Challenges ──
+app.post('/api/events/daily-roll', authGuard, async (c) => {
+  const body = await safeJsonBody(c);
+  return handleDailyRoll(c.req.raw, c.get('db'), c.get('userId')!, {
+    forceOffer: c.env.ALLOW_TEST_AUTH === 'true' && body.force_offer === true,
+  });
+});
+app.post('/api/events/daily-roll/accept', authGuard, (c) =>
+  handleAcceptEncounter(c.req.raw, c.get('db'), c.get('userId')!));
+app.post('/api/events/daily-roll/decline', authGuard, (c) =>
+  handleDeclineEncounter(c.req.raw, c.get('db'), c.get('userId')!));
 
 // ── Push Notifications ──
 app.post('/api/push/subscribe', authGuard, async (c) =>
@@ -649,6 +663,13 @@ export default {
       await handleReengagementCron(env);
     } catch (error: unknown) {
       console.error("Scheduled re-engagement cron failed", error);
+    }
+
+    try {
+      const db = createDbClient(env.DB);
+      await settleExpiredChallenges(db);
+    } catch (error: unknown) {
+      console.error("Scheduled personal challenge settlement failed", error);
     }
   },
 } satisfies ExportedHandler<Env>;
