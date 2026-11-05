@@ -206,14 +206,15 @@ Rationale: the app stores one entry per date per user. Walk-date comparison is s
 
 ## Migration Plan
 
-1. Add D1 migrations `0152`–`0156` for `personal_encounter_definitions`, `encounter_occurrences`, `daily_rolls` (with `status` and `preview_target_distance` columns), `event_participants`, and `event_progress_ledger` with indexes and uniqueness constraints.
-2. Seed the Nazgul pursuit encounter definition (3-day duration, 1.3 stretch) and its completion achievement definition via migration, including repeatable badge rank metadata.
-3. Produce the artwork: the watercolour Nazgul illustration (selected: f-271828) through the shared image pipeline, and the Nazgul badge artwork (selected emblem: b-112358; base + four rank variants at three sizes, per the `achievement-badge-artwork` spec), with selections recorded.
-4. Add the event domain service, trigger module, and API handlers, wiring Hono routes into `src/index.ts` behind `authGuard`.
-5. Add progress reconciliation hooks to existing calendar progress create/update/delete handlers with graceful (non-blocking) error handling.
-6. Add scheduled settlement to the Worker `scheduled()` handler.
-7. Add the encounter popup island and focused CSS; the trigger runs from the Preact bootstrap on journey and map pages.
-8. Update docs and add focused tests.
+1. Add D1 migrations `0152`–`0156` for `personal_encounter_definitions`, `encounter_occurrences` (with a `UNIQUE(daily_roll_id)` guard so one roll can never create two challenges), `daily_rolls` (with `status` and `preview_target_distance` columns), `event_participants`, and `event_progress_ledger` with indexes and uniqueness constraints.
+2. Seed the Nazgul pursuit encounter definition (3-day duration, 1.3 stretch) and its completion achievement definition via migrations `0157`–`0158`, including repeatable badge rank metadata.
+3. Add corrective migration `0159_rebuild_legacy_event_tables.sql` that drops and recreates `event_participants` and `event_progress_ledger` when a pre-release prototype `events-and-challenges` schema is present, covered by the migration test.
+4. Produce the artwork: the watercolour Nazgul illustration (selected: f-271828) through the shared image pipeline, and the Nazgul badge artwork (selected emblem: b-112358; base + four rank variants at three sizes, per the `achievement-badge-artwork` spec), with selections recorded.
+5. Add the event domain service, trigger module, and API handlers, wiring Hono routes into `src/index.ts` behind `authGuard`.
+6. Add progress reconciliation hooks to existing calendar progress create/update/delete handlers with graceful (non-blocking) error handling.
+7. Add scheduled settlement to the Worker `scheduled()` handler.
+8. Add the encounter popup island and focused CSS; the trigger runs from the Preact bootstrap on journey and map pages.
+9. Update docs and add focused tests.
 
 Rollback strategy: all migrations are additive. If the UI or handlers need to be rolled back, existing journey, progress, party, push, and storyline behavior continues unchanged. Encounter tables sit unused and can be re-enabled later. Route registration and encounter bootstrap can be disabled independently.
 

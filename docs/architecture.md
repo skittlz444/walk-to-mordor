@@ -5,7 +5,7 @@ description: System architecture, runtime topology, source tree layout, and proj
 
 # Architecture
 
-Last updated: 2026-07-17
+Last updated: 2026-11-05
 
 ## Project Overview
 
@@ -17,6 +17,7 @@ Feature domains:
 - Interactive map (`/map` with friend markers and hover mini-cards)
 - Goal content / campfire lore attached to unlocked milestones
 - Fellowship system (parties, invites, messaging, unified activity feed)
+- Personal challenges (daily random encounter roll → accept/decline → personalized distance goal → badge)
 - Friends (search, requests, profiles)
 - Avatar system (40+ selectable avatars with slug validation)
 - Admin dashboard (goals CRUD, user management, metrics)
@@ -80,6 +81,8 @@ app.get('/api/party/:id/progress', async (c) => {
 | Goal content | `goal-content-handlers.ts`, `goal-content-helpers.ts` |
 | Fellowship | `party-handlers.ts`, `fellowship-invite-handlers.ts` |
 | Friends | `friends-handlers.ts` |
+| Achievements | `achievement-handlers.ts`, `achievement-utils.ts` |
+| Personal challenges | `event-handlers.ts`, `event-utils.ts` |
 | Admin | `admin-handlers.ts` (requires `validateAdminSession`) |
 | Pages | `render*.ts`, `map-handlers.ts` |
 
@@ -93,13 +96,13 @@ walk-to-mordor/
     src/components/  # Shared UI: Avatar, ActivityFeed, map/ (Konva), admin/
     src/stores/      # Preact Signals: mapStore, partyStore
     src/data/        # Waypoint coordinates, fellowship path data
-    src/utils/       # Map geometry, caching, color helpers
+    src/utils/       # Map geometry, caching, color helpers, encounter trigger
     src/types/       # TypeScript interfaces
   public/            # Static assets served by Assets binding
     css/             # Feature-scoped stylesheets
     js/              # Legacy vanilla JS + Vite-built island bundle (js/client/)
     img/             # Map tiles, avatars, goal images, image-manifest.json
-  migrations/        # D1 SQL migrations (0001–0141)
+  migrations/        # D1 SQL migrations (0001–0159)
   tests/api/         # Jest API tests (miniflare environment)
   tests/ui/          # Playwright E2E specs + helpers/
   scripts/           # Asset pipeline (image optimization, tiling, manifest)
@@ -110,8 +113,8 @@ walk-to-mordor/
 
 | Entry point | Role |
 |---|---|
-| `src/index.ts` | Worker entry: `matchRoute()` router, CORS, method guards |
-| `client/src/index.tsx` | Island hydration: discovers `[data-island]` mounts |
+| `src/index.ts` | Worker entry: Hono router, auth guards, scheduled jobs |
+| `client/src/index.tsx` | Island hydration: discovers `[data-island]` mounts; triggers the encounter popup on journey/map paths |
 | `public/js/main.js` | Legacy app controller: session management, `body.authenticated` signal |
 | `public/sw.js` | Service worker: cache-first for static assets, SWR for API endpoints |
 
@@ -153,6 +156,17 @@ Feature → file discovery: search `src/` for handler modules, `client/src/islan
 - `GET /api/goals` exposes `has_content` so clients can show teaser state for locked goals without receiving content bodies.
 - Discovery analytics (`teaser_impression`, `content_open`) are best-effort background writes. Routes schedule them with Cloudflare Workers `ExecutionContext.waitUntil(...)` so failed analytics inserts do not block modal opens, card rendering, or content reads.
 
+### Personal Challenge Encounters
+
+- **Definition vs occurrence:** `personal_encounter_definitions` holds reusable config; accepting creates an `encounter_occurrences` row with the personalized target, `started_at`, and deadlines. One definition (the seeded `nazgul-pursuit`) can generate repeated occurrences. Migration `0159` corrects pre-release databases because prototype event tables used the same names.
+- **Daily roll:** `POST /api/events/daily-roll` is idempotent per UTC day via `UNIQUE(user_id, roll_date)` and returns the stored offer on repeat. Previously accepted/declined rolls, active challenges, and users below the activity threshold get `{ offer: null }`. The preview target is computed once at roll time and copied to the occurrence at acceptance.
+- **Coverage and completion:** the coverage window is `[started_at, coverage_end_date]`, `grace_deadline` is the coverage end plus 3 days, and only `progress.date` values inside the window count (including walks logged during grace). Completion is cumulative credited distance ≥ `personalized_target`; there is **no** all-coverage-days precondition, so it can complete at acceptance or on any later reconciliation.
+- **Reconciliation:** hooks in `src/progress-handlers.ts` run after progress create/update/delete. Each eligible walk upserts or deletes an `event_progress_ledger` row and refreshes the cached `event_participants.progress_distance`, so create/update/delete are all idempotent. Reconciliation errors are logged but never propagated — saving a walk must always succeed (same graceful-degradation rule as `syncPartyProgressLog`).
+- **Settlement:** `scheduled()` (daily 09:00 UTC) settles active occurrences in its own try/catch block, so a failure cannot block push jobs. The condition is strictly `grace_deadline < today`; a challenge is never settled on its grace deadline day, keeping the last day of grace logging usable.
+- **Trigger and modal:** `client/src/index.tsx` calls the trigger after `initializeAppStore()`, only on journey (`/`, `/journey`) and map (`/map`) paths, and programmatically mounts `EncounterPopupIsland` via `window.preactIslands`. The modal defers while another dialog (for example `BadgeAwardModal`) is open.
+- **Badge award:** completion calls `awardAchievement` with the idempotency key `encounter_occurrence:<occurrence_id>`, so reconciliation retries cannot double-award and editing progress downward never revokes an earned badge.
+- **Artwork:** the illustration uses the shared static image pipeline (`image_slug` → `public/img/highres/<slug>.webp` + thumb, manifest); badge art stays in `scripts/badge-art/`. See `docs/asset-workflow.md`.
+
 ## Database Layer
 
 D1 is the source of truth. Full schema: `docs/data-models.md`. Migrations in `migrations/`.
@@ -164,9 +178,10 @@ D1 is the source of truth. Full schema: `docs/data-models.md`. Migrations in `mi
 | Auth support | `password_reset_tokens`, `email_confirmation_tokens` |
 | Fellowship | `parties`, `party_members`, `party_progress_log`, `party_messages` |
 | Social | `friendships`, `fellowship_invites` |
+| Personal challenges | `personal_encounter_definitions`, `encounter_occurrences`, `daily_rolls`, `event_participants`, `event_progress_ledger` |
 | Admin | `admin_audit_log` |
 
-Migration ranges: 0001–0005 core schema · 0006–0010 auth · 0011–0021 goal updates + email · 0022–0116 goal images · 0117–0118 preferences · 0119–0124 fellowship / social / admin · 0125–0139 push, storyline, and journals · 0140–0141 goal content and discovery analytics.
+Migration ranges: 0001–0005 core schema · 0006–0010 auth · 0011–0021 goal updates + email · 0022–0116 goal images · 0117–0118 preferences · 0119–0124 fellowship / social / admin · 0125–0139 push, storyline, and journals · 0140–0141 goal content and discovery analytics · 0142–0159 achievements and personal challenges (0159 repairs legacy prototype event tables).
 
 ### Read/Write Separation
 
