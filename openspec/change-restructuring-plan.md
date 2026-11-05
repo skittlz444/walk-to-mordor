@@ -128,7 +128,7 @@ These two changes implement the personal encounter system, starting with the Naz
 
 | Section | Tasks | Content |
 |---------|-------|---------|
-| Schema | 4 | Progress `created_at`/`updated_at` migration; `personal_encounter_definitions`, `encounter_occurrences`, `daily_rolls`, `event_participants`, `event_progress_ledger` tables + indexes; Nazgul pursuit encounter definition seed + Nazgul badge definition |
+| Schema | 4 | `personal_encounter_definitions`, `encounter_occurrences`, `daily_rolls`, `event_participants`, `event_progress_ledger` tables + indexes; Nazgul pursuit encounter definition seed + Nazgul badge definition. No progress timestamp migration — the personal-challenges design explicitly reuses `progress.date` walk-date coverage (post-2026-06 decision; do not add `created_at`/`updated_at` to progress) |
 | Domain | 5 | TypeScript interfaces; eligibility evaluation (Nazgul = globally eligible: all storylines, all distances); daily roll logic (1-in-10 / 1-in-30 branches, activity-gated, idempotent); personalized target calculation from active-day averages with template stretch and min/max bracketing; participant creation for accepted challenges; badge awarding via shared infra |
 | APIs | 4 | `POST /api/events/daily-roll`; `POST /api/events/daily-roll/accept`; `POST /api/events/daily-roll/decline`; `GET /api/events/mine` (active + past personal challenges) |
 | Progress | 5 | Reconciliation service (ledger-backed, cached totals); create/update/delete hooks on calendar progress; pre-join exclusion; ledger idempotency; Jest coverage |
