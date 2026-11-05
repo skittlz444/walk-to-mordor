@@ -17,6 +17,7 @@ export function renderHtml() {
         <div id="eventcalendar-container">
           <div id="eventcalendar"></div>
         </div>`,
+    stylesheets: ['/css/encounter-popup.css'],
     scripts: [
       '/js/validators.js',
       '/js/calendar.js',

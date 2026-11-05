@@ -4,6 +4,7 @@ import { AuthForms } from './islands/AuthForms';
 import { BadgeAwardModal } from './islands/BadgeAwardModal';
 import { BadgeDisplayIsland } from './islands/BadgeDisplayIsland';
 import { DrawerIsland } from './islands/DrawerIsland';
+import { EncounterPopupIsland } from './islands/EncounterPopupIsland';
 import { GoalModal } from './islands/GoalModal';
 import { MapIsland } from './islands/MapIsland';
 import { NextGoalCard } from './islands/NextGoalCard';
@@ -33,6 +34,7 @@ import { PalantirIsland } from './islands/PalantirIsland';
 import { StatsIsland } from './islands/StatsIsland';
 import * as partyStore from './stores/partyStore';
 import { initializeAppStore } from './stores/appStore';
+import { triggerEncounterRoll } from './utils/encounterTrigger';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
 const autoHydratedIslands = {
@@ -79,6 +81,7 @@ const allIslands = {
   BadgeDisplayIsland,
   DistanceModal,
   DrawerIsland,
+  EncounterPopupIsland,
   FriendAddIsland,
   FriendProfileIsland,
   FriendsListIsland,
@@ -157,6 +160,7 @@ function hydrateIslands() {
 async function bootstrap() {
   await initializeAppStore();
   hydrateIslands();
+  void triggerEncounterRoll();
 }
 
 if (document.readyState === 'loading') {

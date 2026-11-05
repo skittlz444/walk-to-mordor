@@ -1,0 +1,231 @@
+/* Encounter popup modal.
+ * Mobile-first: base styles target narrow viewports; the min-width query turns
+ * the stacked actions into a row. Self-contained positioning so the modal
+ * works on pages that do not load progress.css. Design-guide variables only.
+ */
+
+/* ── Overlay and dialog ─────────────────────────────────────────────────── */
+
+.encounter-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+  height: 100dvh;
+  padding: 0.75rem;
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  background: var(--bg-modal-overlay);
+  overscroll-behavior: contain;
+}
+
+.encounter-popup-dialog {
+  box-sizing: border-box;
+  width: min(calc(100% - 1.5rem), 34rem);
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  border: 1px solid var(--gold-border-light);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  box-shadow: 0 8px 32px var(--shadow-std);
+  animation: encounter-popup-enter 280ms ease-out;
+}
+
+.encounter-popup-dialog:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+.encounter-popup__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+/* ── Artwork ────────────────────────────────────────────────────────────── */
+
+.encounter-popup__art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 42dvh;
+  object-fit: cover;
+  border: 1px solid var(--gold-border-light);
+  border-radius: 10px;
+  background: var(--bg-dark-alt);
+}
+
+/* ── Copy ───────────────────────────────────────────────────────────────── */
+
+.encounter-popup__title {
+  margin: 0;
+  color: var(--accent-gold);
+  font-size: 1.35rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.encounter-popup__description {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.encounter-popup__target {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.encounter-popup__coverage {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.encounter-popup__grace {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.encounter-popup__error {
+  margin: 0;
+  color: var(--status-error);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.encounter-popup__success {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--gold-border-light);
+  border-radius: 8px;
+  background: var(--gold-glow-light);
+  color: var(--accent-gold);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────── */
+
+.encounter-popup__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.15rem;
+}
+
+.encounter-popup__accept,
+.encounter-popup__decline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.7rem 1.25rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: box-shadow 150ms ease, opacity 150ms ease;
+}
+
+.encounter-popup__accept {
+  border: 1px solid var(--gold-border-strong);
+  background: var(--accent-gold);
+  color: var(--text-black);
+  font-weight: 700;
+}
+
+.encounter-popup__accept:hover:not(:disabled) {
+  box-shadow: 0 0 12px var(--gold-glow-medium);
+}
+
+.encounter-popup__decline {
+  border: 1px solid var(--gold-border-light);
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.encounter-popup__decline:hover:not(:disabled) {
+  background: var(--hover-overlay);
+}
+
+.encounter-popup__accept:focus-visible,
+.encounter-popup__decline:focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+
+.encounter-popup__accept:disabled,
+.encounter-popup__decline:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* ── Entrance motion ────────────────────────────────────────────────────── */
+
+@keyframes encounter-popup-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .encounter-popup-dialog {
+    animation: none;
+  }
+
+  .encounter-popup__accept,
+  .encounter-popup__decline {
+    transition: none;
+  }
+}
+
+/* ── Desktop enhancement ────────────────────────────────────────────────── */
+
+@media (min-width: 640px) {
+  .encounter-popup__content {
+    gap: 0.8rem;
+    padding: 1.5rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom));
+  }
+
+  .encounter-popup__art {
+    max-height: 46dvh;
+  }
+
+  .encounter-popup__title {
+    font-size: 1.5rem;
+  }
+
+  .encounter-popup__actions {
+    flex-direction: row;
+  }
+
+  .encounter-popup__accept,
+  .encounter-popup__decline {
+    flex: 1 1 0;
+    width: auto;
+  }
+}

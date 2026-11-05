@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { useSignal } from '@preact/signals';
 import { markPalantirViewed } from '../stores/appStore';
 import { fetchPalantirWeeklyStats, type WeeklyStatsData } from '../utils/palantir';
+
+const OPEN_MODAL_SELECTOR = '[role="dialog"][aria-modal="true"], .modal-overlay';
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -50,6 +52,8 @@ export function PalantirInsightModal({
   const loading = useSignal(true);
   const error = useSignal<string | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const blockedRef = useRef(false);
+  const [blockedByOtherModal, setBlockedByOtherModal] = useState(false);
 
   // Fetch weekly stats on mount
   useEffect(() => {
@@ -83,11 +87,52 @@ export function PalantirInsightModal({
     };
   }, [initialStats]);
 
+  // Do not stack on top of another modal (badge award, encounter popup, goal
+  // modal). Defer until the open dialog closes, then render normally.
+  useEffect(() => {
+    if (alwaysOpen) return;
+
+    const isOtherModalOpen = () => {
+      const self = dialogRef.current;
+      return Array.from(document.querySelectorAll<HTMLElement>(OPEN_MODAL_SELECTOR))
+        .some((element) => {
+          if (self && (element === self || element.contains(self) || self.contains(element))) {
+            return false;
+          }
+          if (element.hidden) return false;
+          const style = window.getComputedStyle(element);
+          return style.display !== 'none' && style.visibility !== 'hidden';
+        });
+    };
+
+    const update = () => {
+      const blocked = isOtherModalOpen();
+      const wasBlocked = blockedRef.current;
+      blockedRef.current = blocked;
+      setBlockedByOtherModal(blocked);
+
+      if (wasBlocked && !blocked) {
+        window.requestAnimationFrame(() => dialogRef.current?.focus());
+      }
+    };
+
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['role', 'aria-modal', 'class', 'style', 'hidden'],
+    });
+    return () => observer.disconnect();
+  }, [alwaysOpen]);
+
   // Handle Escape key and initial focus (only in modal/popup mode)
   useEffect(() => {
     if (alwaysOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (blockedRef.current) return;
       if (e.key === 'Escape') handleDismiss();
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -245,6 +290,10 @@ export function PalantirInsightModal({
 
   if (alwaysOpen) {
     return <div class="palantir-inline">{content}</div>;
+  }
+
+  if (blockedByOtherModal) {
+    return null;
   }
 
   return (
