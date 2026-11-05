@@ -1,18 +1,28 @@
+## Purpose
+
+Provides administrators with secure API and dashboard workflows for authoring, inspecting, enabling, disabling, and tuning personal encounter definitions and their linked badges without manual migrations.
+
 ## ADDED Requirements
 
 ### Requirement: Admin encounter definition CRUD
-The system SHALL provide admin APIs to list, create, read, update, enable, and disable personal encounter definitions, SHALL validate all required fields including the badge slug against existing achievement definitions, SHALL auto-create achievement definition rows from inline badge fields when the badge slug does not already exist, and SHALL reject requests from non-admin users.
+The system SHALL provide admin APIs to list, create, read, update, enable, and disable personal encounter definitions, SHALL validate all required fields and badge slug format, SHALL require inline badge metadata and create an achievement definition when the badge slug does not already exist, and SHALL reject requests from non-admin users.
 
 #### Scenario: Admin lists all encounter definitions
 - **GIVEN** an authenticated admin
 - **WHEN** the admin calls `GET /api/admin/encounters`
 - **THEN** the response includes all definitions with their current fields and enabled state
 
+#### Scenario: Admin reads a single encounter definition
+- **GIVEN** an authenticated admin and an existing encounter definition
+- **WHEN** the admin calls `GET /api/admin/encounters/:id`
+- **THEN** the response includes that definition's current fields, enabled state, and linked badge metadata
+
 #### Scenario: Admin creates a valid encounter definition
 - **GIVEN** an authenticated admin submits valid definition fields including badge slug, name, description, and image
 - **WHEN** the admin calls `POST /api/admin/encounters`
 - **THEN** the definition is created with enabled=false
-- **AND** if the badge slug does not exist in achievement_definitions, a new achievement definition row is auto-created from the inline badge fields
+- **AND** the new definition is not eligible for daily encounter rolls until explicitly enabled
+- **AND** if the badge slug does not exist in achievement_definitions, a complete achievement definition row is auto-created from the inline badge fields using the shared challenge badge conventions
 - **AND** an audit log entry is recorded
 
 #### Scenario: Admin create is rejected for invalid fields
@@ -44,6 +54,7 @@ The system SHALL provide admin APIs to list, create, read, update, enable, and d
 - **WHEN** an admin calls `PUT /api/admin/encounters/:id/disable`
 - **THEN** the API returns the count of active occurrences and requires a confirmation body parameter
 - **AND** the admin must send `{ cancelActive: true }` to proceed with disabling and failing all active occurrences
+- **AND** cancelling records an audit entry containing the cancelled occurrence count
 - **OR** the admin can send `{ cancelActive: false }` to disable future rolls only while leaving active occurrences running
 
 #### Scenario: Non-admin cannot manage encounter definitions
@@ -59,6 +70,11 @@ The system SHALL render a personal encounter management section on the admin das
 - **WHEN** the page initializes
 - **THEN** a list of existing personal encounter definitions is displayed below the dashboard stats
 - **AND** each definition shows its name, slug, duration_days, enabled/disabled state, and badge name
+
+#### Scenario: Admin dashboard shows an empty encounter state
+- **GIVEN** an authenticated admin and no personal encounter definitions
+- **WHEN** the encounter management section initializes
+- **THEN** an empty state and a "New Encounter" action are displayed
 
 #### Scenario: Admin creates a new encounter via the dashboard
 - **GIVEN** an admin views the encounter management section on the dashboard

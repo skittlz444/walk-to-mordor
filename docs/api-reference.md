@@ -31,6 +31,7 @@ Last updated: 2026-11-05
 | Achievements | `src/achievement-handlers.ts`, `src/badge-presentation.ts`, `src/achievement-utils.ts`, `src/achievement-awards.ts` |
 | Events (personal challenges) | `src/event-handlers.ts`, `src/event-utils.ts` |
 | Admin | `src/admin-handlers.ts` |
+| Admin encounters | `src/encounter-admin-handlers.ts` |
 | Route wiring | `src/index.ts` |
 
 ## Auth & Profile Endpoints
@@ -350,7 +351,7 @@ Personal challenge encounters. All three are `POST`, protected by `authGuard` (`
 
 All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Every mutating action is audit-logged via `logAdminAction`.
 
-**Audit action strings:** `update_goal`, `create_goal`, `create_storyline`, `update_storyline`, `update_storyline_goals`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
+**Audit action strings:** `update_goal`, `create_goal`, `create_storyline`, `update_storyline`, `update_storyline_goals`, `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, `cancel_active_occurrences`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
 
 ### Dashboard & Metrics
 
@@ -392,6 +393,57 @@ All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Eve
 - Slugs and path keys use lowercase hyphenated format.
 - `adminOnly: true` keeps the storyline out of regular user/fellowship selectors while admins build and test it.
 - Admin UI is available at `/admin/storylines`.
+
+### Personal Encounter Management
+
+Handlers live in `src/encounter-admin-handlers.ts`. Every route is wrapped by `adminGuard`: missing/invalid session → `401`, authenticated non-admin → `403`. All mutations are audit-logged.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/admin/encounters` | All definitions ordered by `id ASC`. Response: `{ encounters: AdminEncounterDefinition[] }` |
+| POST | `/api/admin/encounters` | Creates a definition, always with `enabled: false` regardless of body. Returns `201 { encounter }` |
+| GET | `/api/admin/encounters/:id` | Single definition plus linked badge metadata. Returns `{ encounter }`; unknown ID → `404` |
+| PUT | `/api/admin/encounters/:id` | Updates fields and the linked badge; never changes `enabled`. Returns `{ encounter }` |
+| PUT | `/api/admin/encounters/:id/enable` | Sets `enabled = true`. Returns `{ encounter }` |
+| PUT | `/api/admin/encounters/:id/disable` | Sets `enabled = false`; may require a confirmation body (below). Returns `{ encounter }` |
+
+- `:id` must be a positive canonical integer (no sign, no leading zeros). Otherwise `400 { "error": "Invalid encounter ID" }`.
+- Missing definition on get/update/enable/disable → `404 { "error": "Encounter definition not found" }`.
+
+#### Definition body (POST/PUT)
+
+| Field | Type | Rules |
+|---|---|---|
+| `slug` | string | Required; ≤80; kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`); unique across definitions |
+| `name` | string | Required; ≤120 |
+| `description` | string | Required; ≤2,000 |
+| `image_slug` | string | Required by the API; ≤120 |
+| `badge_slug` | string | Required; ≤120; kebab-case; links to `achievement_definitions.slug` |
+| `duration_days` | integer | Required; 1–30 |
+| `target_stretch_multiplier` | number | Required; 1.0–5.0 |
+| `target_min_distance` | number | Required; > 0 |
+| `target_max_distance` | number | Required; ≥ `target_min_distance` (equal is valid) |
+| `is_repeatable` | boolean | Optional; defaults to `true` |
+| `badge_name`, `badge_description`, `badge_image_slug` | string | Required only when `badge_slug` does not yet exist |
+| `enabled` | boolean | Ignored on create (forced `false`) and not changed on update; use enable/disable |
+
+- Validation failure → `400 { "error": "validation", "fields": { "<field>": "<message>" } }` and no rows are written. Slug collisions return `fields.slug = "Slug is already in use"`.
+- POST/PUT with an unknown `badge_slug` requires all three inline badge fields. The handler creates a `badge_type = 'challenge'` achievement with metadata `{ storyline: null, rank_thresholds: [1, 3, 7, 15] | [1], unit: "completions", criteria: "personal_encounter_completed" }`; `[1]` is used when `is_repeatable` is false.
+- PUT rewrites an existing linked badge only when inline badge fields are supplied, or when `is_repeatable` changed and that badge has `metadata.criteria = "personal_encounter_completed"`. The previous badge definition is never deleted, so earned achievements keep their history.
+- Responses return the definition fields (`id`, `slug`, `name`, `description`, `image_slug`, `badge_slug`, `duration_days`, `target_stretch_multiplier`, `target_min_distance`, `target_max_distance`, `is_repeatable`, `enabled`, `created_at`, `updated_at`) plus `badge` (the full linked achievement: `id`, `slug`, `name`, `description`, `image_slug`, `badge_type`, `is_repeatable`, `metadata`) or `null`, and a convenience `badge_name`.
+
+#### Disable confirmation
+
+`PUT /api/admin/encounters/:id/disable` with no body (or without a boolean `cancelActive`):
+
+- No `active` occurrences → disables immediately and returns `200 { encounter }`.
+- Active occurrences → mutates nothing and returns `400 { "activeOccurrences": N, "requiresConfirmation": true }`.
+- Re-send with `{ "cancelActive": false }` → disables future rolls only; active occurrences keep running.
+- Re-send with `{ "cancelActive": true }` → marks every `active` occurrence for the definition `failed` without settlement or badge award, then disables it. Audit entries `disable_encounter` and `cancel_active_occurrences` record the affected count.
+
+#### Audit
+
+Actions: `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, `cancel_active_occurrences`. Rows use `targetType = 'personal_encounter'`, `targetId` = definition ID, and JSON `details` with changed fields, badge create/update flags, and active/cancelled occurrence counts.
 
 ### Image Inventory
 

@@ -84,6 +84,14 @@ import {
   handleAdminMetricsLeaderboard,
   handleAdminMetricsTimeline,
 } from "./admin-handlers";
+import {
+  handleAdminEncountersList,
+  handleAdminEncounterGet,
+  handleAdminEncounterCreate,
+  handleAdminEncounterUpdate,
+  handleAdminEncounterEnable,
+  handleAdminEncounterDisable,
+} from "./encounter-admin-handlers";
 import { renderAdminGoalEditPage } from "./renderAdminGoalEditPage";
 import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 import { renderAdminUsersPage } from "./renderAdminUsersPage";
@@ -583,6 +591,32 @@ app.put('/api/admin/storylines/:id/goals', adminGuard, async (c) => {
   const id = intParam(c.req.param('id'), 'storyline ID');
   if (id instanceof Response) return id;
   return handleAdminStorylineGoalsUpdate(c.req.raw, c.get('db'), id, await c.req.json(), c.get('adminUserId')!);
+});
+
+// ── Personal Encounters ──
+app.get('/api/admin/encounters', adminGuard, (c) =>
+  handleAdminEncountersList(c.req.raw, c.get('db')));
+app.post('/api/admin/encounters', adminGuard, async (c) =>
+  handleAdminEncounterCreate(c.req.raw, c.get('db'), await safeJsonBody(c), c.get('adminUserId')!));
+app.get('/api/admin/encounters/:id', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'encounter ID');
+  if (id instanceof Response) return id;
+  return handleAdminEncounterGet(c.req.raw, c.get('db'), id);
+});
+app.put('/api/admin/encounters/:id', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'encounter ID');
+  if (id instanceof Response) return id;
+  return handleAdminEncounterUpdate(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
+});
+app.put('/api/admin/encounters/:id/enable', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'encounter ID');
+  if (id instanceof Response) return id;
+  return handleAdminEncounterEnable(c.req.raw, c.get('db'), id, c.get('adminUserId')!);
+});
+app.put('/api/admin/encounters/:id/disable', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'encounter ID');
+  if (id instanceof Response) return id;
+  return handleAdminEncounterDisable(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
 });
 
 // ── Image Inventory ──

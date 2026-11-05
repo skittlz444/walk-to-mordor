@@ -20,9 +20,10 @@ The `personal-challenges` change seeds only the Nazgul pursuit encounter via mig
 
 ## Impact
 
-- Worker APIs: new admin endpoints under `/api/admin/encounters` for CRUD operations on `personal_encounter_definitions`, guarded by the existing `validateAdminSession` check. No new tables — reads and writes the `personal_encounter_definitions` table created by the `personal-challenges` change.
+- Worker APIs: new admin endpoints under `/api/admin/encounters` for CRUD operations on `personal_encounter_definitions`, guarded by the existing `adminGuard` middleware (which wraps `validateAdminSession`). No new tables — reads and writes the `personal_encounter_definitions` table created by the `personal-challenges` change.
 - Frontend: new `AdminEncountersIsland` Preact island registered in `client/src/index.tsx` and added to the admin dashboard via `data-island` in `renderAdminPage.ts`.
-- Admin audit: insert rows into the existing `admin_audit_log` table on encounter definition create, update, and enable/disable actions.
+- Admin audit: insert rows into the existing `admin_audit_log` table on encounter definition create, update, enable/disable, and active-occurrence cancellation actions.
 - CSS: new encounter management styles within the existing admin CSS patterns, without contaminating unrelated admin selector blocks.
-- Tests: Jest coverage for admin API auth, validation, and CRUD; Vitest coverage for the admin island form behavior and validation error display.
+- Tests: Jest coverage for admin API auth, validation, and CRUD; Vitest coverage for the admin island form behavior and validation error display; Playwright smoke coverage for the primary admin workflows.
 - Documentation: update `docs/api-reference.md` with admin encounter endpoints.
+- Rollout and rollback: purely additive with no schema changes. Roll back by removing the island mount and registry entries, routes, handlers, styles, and tests; any definitions already created can be disabled and remain inert.

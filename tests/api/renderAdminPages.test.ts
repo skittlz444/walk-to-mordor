@@ -161,6 +161,16 @@ describe('admin pages', () => {
     });
   });
 
+  it('mounts the encounters island below the dashboard stats island', () => {
+    const html = renderAdminPage();
+    const dashboardIndex = html.indexOf('data-island="AdminDashboardIsland"');
+    const encountersIndex = html.indexOf('data-island="AdminEncountersIsland"');
+
+    expect(dashboardIndex).toBeGreaterThan(-1);
+    expect(encountersIndex).toBeGreaterThan(-1);
+    expect(encountersIndex).toBeGreaterThan(dashboardIndex);
+  });
+
   it('renders the shared admin shell chrome', () => {
     const html = renderAdminPage();
     expect(html).toContain('/js/client/islands.css');

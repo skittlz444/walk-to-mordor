@@ -2050,3 +2050,237 @@
   color: var(--text-secondary, #aaa);
   font-style: italic;
 }
+
+/* ===== Admin Encounters ===== */
+
+.admin-encounters {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.admin-encounters-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-encounters-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-encounters-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.admin-encounters-table th,
+.admin-encounters-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border-gray);
+  vertical-align: middle;
+  text-align: left;
+}
+
+.admin-encounters-table th {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-encounters-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-encounters-name {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.admin-encounters-slug {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.admin-encounters-badge {
+  color: var(--text-secondary);
+}
+
+.admin-encounters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-encounters-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.admin-encounters-empty i {
+  font-size: 1.75rem;
+  color: var(--text-muted);
+}
+
+.admin-encounters-empty p {
+  margin: 0;
+}
+
+.admin-encounter-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-encounter-form h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.admin-encounter-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-encounter-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.admin-encounter-field label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.admin-encounter-field input,
+.admin-encounter-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--border-gray);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 0.6rem 0.75rem;
+}
+
+.admin-encounter-field textarea {
+  resize: vertical;
+}
+
+.admin-encounter-form__wide {
+  grid-column: 1 / -1;
+}
+
+.admin-encounter-checkbox {
+  align-self: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.admin-encounter-checkbox input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  accent-color: var(--accent-blue);
+}
+
+.admin-encounter-badge-fields {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+}
+
+.admin-encounter-badge-fields legend {
+  padding: 0 0.35rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.admin-encounter-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.admin-encounter-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-encounters-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.admin-encounters-modal__content {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  max-width: 480px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-gray);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.admin-encounters-modal__content h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.admin-encounters-modal__content p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.admin-encounters-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .admin-encounter-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-encounters-actions,
+  .admin-encounter-form__actions,
+  .admin-encounters-modal__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-encounters-actions .admin-btn,
+  .admin-encounter-form__actions .admin-btn,
+  .admin-encounters-modal__actions .admin-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

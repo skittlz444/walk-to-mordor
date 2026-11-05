@@ -6,6 +6,6 @@ export function renderAdminPage(): string {
     description: 'Admin dashboard for Walk to Mordor',
     activeNav: 'dashboard',
     breadcrumb: [{ label: 'Admin', href: '/admin' }, { label: 'Dashboard' }],
-    content: '<div data-island="AdminDashboardIsland"></div>',
+    content: '<div data-island="AdminDashboardIsland"></div><div data-island="AdminEncountersIsland"></div>',
   });
 }
