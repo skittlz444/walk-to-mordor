@@ -524,6 +524,26 @@
           "prompt": "A thin circular rank band with six evenly spaced round studs, pale blue-white elven metal, faint cool glow, enclosing a completely hollow, empty, flat black centre. Aged hand-finished metal with soft patina, fine hammer marks and worn highlights; a thin band only, with nothing inside the opening."
         }
       ]
+    },
+    {
+      "id": "emblem/challenge-nazgul-outrun",
+      "slug": "challenge-nazgul-outrun",
+      "name": "Outrun the Nazgul",
+      "group": "emblem",
+      "family": "challenge",
+      "rank": "thresholds",
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "The Witch-king's crown: a jagged nine-pointed iron crown, slender and blade-like, with a pale gleam along the sharp points and a faint wisp of cold mist curling beneath it. Polished hard enamel with glossy raised silver and gold outlines, deep black recesses with cold steel-blue highlights, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "The Witch-king's crown: a jagged nine-pointed iron crown, slender and blade-like, with a pale gleam along the sharp points and a faint wisp of cold mist curling beneath it. Aged engraved metal with hand-chased relief, blackened iron and tarnished silver, worn polished highlights, deep shadowed recesses, and no separate outer frame or border ring."
+        }
+      ]
     }
   ]
 }

@@ -39,6 +39,7 @@ This is the durable record for the badge artwork. Final art lives in `public/img
 | Hundred-K Week | `b-161803` |
 | Fellowship Founder | `b-271828` |
 | Good Company | `b-271828` |
+| Outrun the Nazgul | `b-112358` |
 
 **Palette rule:** the story beat chooses the material. Dark/bleak beats use aged or hard metal, deep blues and a limited palette; avoid candy green/blue, oversized sun/moon, too many colours, and flat polished gloss. Warm/home beats can use warm enamel; wonder/elder beats can use gold/silver/crystal; habit beats can use limited green/blue. Premium hard-metal detail beats cheap brightness.
 

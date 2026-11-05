@@ -23,7 +23,8 @@
     "habit-steady-month": "a-271828",
     "habit-hundred-week": "b-161803",
     "community-fellowship-founder": "b-271828",
-    "community-good-company": "b-271828"
+    "community-good-company": "b-271828",
+    "challenge-nazgul-outrun": "b-112358"
   },
   "bosses": {
     "bronze": "a-112358",
@@ -48,7 +49,8 @@
     "habit-faithful-walker",
     "habit-weekend-warrior",
     "habit-steady-month",
-    "habit-hundred-week"
+    "habit-hundred-week",
+    "challenge-nazgul-outrun"
   ],
   "ranks": [
     "bronze",
