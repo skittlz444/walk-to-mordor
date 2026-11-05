@@ -1,4 +1,9 @@
-## ADDED Requirements
+# personal-challenges Specification
+
+## Purpose
+Personal challenges turn routine walking into story moments: a daily random encounter offer the user accepts or declines becomes a timed, personalized distance goal, credited through an idempotent ledger from canonical walk logs, with completion rewarding a repeatable Nazgul badge via the shared achievement infrastructure.
+
+## Requirements
 
 ### Requirement: Personal encounter definitions and occurrences
 The system SHALL store reusable personal encounter definitions separately from concrete user-specific encounter occurrences, and SHALL seed the Nazgul pursuit definition as globally eligible across all active storylines and path distances.
@@ -56,7 +61,7 @@ The system SHALL roll for personal encounter offers at most once per authenticat
 - **THEN** the system returns a no-offer result with zero probability
 
 ### Requirement: Personal encounter choice
-The system SHALL let a user accept or decline an offered personal encounter, and declining an encounter SHALL carry no penalty and SHALL prevent another roll for that user on the same UTC day.
+The system SHALL let a user accept or decline an offered personal encounter, declining an encounter SHALL carry no penalty and SHALL prevent another roll for that user on the same UTC day, and the system SHALL never create more than one challenge from a single daily roll offer.
 
 #### Scenario: User accepts a Nazgul pursuit
 - **GIVEN** the user is offered the Nazgul pursuit encounter
@@ -64,6 +69,16 @@ The system SHALL let a user accept or decline an offered personal encounter, and
 - **THEN** the system creates a timed personal challenge for that user
 - **AND** the challenge has a coverage window of `[today, today + duration_days - 1]`
 - **AND** the response includes the personalized target distance, coverage end date, grace deadline, and the encounter definition's copy and badge information
+
+#### Scenario: Repeated accept does not create a duplicate challenge
+- **GIVEN** the user has already accepted today's offered encounter
+- **WHEN** the accept endpoint is called again for the same daily roll
+- **THEN** the system returns the existing challenge without creating a second occurrence
+
+#### Scenario: Accept is rejected when the roll is no longer pending
+- **GIVEN** a user's daily roll for today has already been accepted or declined
+- **WHEN** the accept endpoint is called
+- **THEN** the system rejects the accept without creating an occurrence
 
 #### Scenario: User declines a Nazgul pursuit
 - **GIVEN** the user is offered the Nazgul pursuit encounter
@@ -93,7 +108,7 @@ The system SHALL calculate accepted personal challenge target distances from the
 - **THEN** the final target is clamped to the definition's configured min/max bracket
 
 ### Requirement: Progress accounting for personal challenges
-The system SHALL credit personal challenge progress from canonical walk logs using an idempotent ledger, SHALL count only walks whose date falls within the coverage window (accept date through accept date + duration_days - 1), SHALL refresh cached participant totals when eligible walks are created or updated within the coverage window or during the grace period, SHALL not block walk saves when reconciliation encounters errors, and SHALL preserve earned achievements when later reconciliation reduces progress below a completed threshold.
+The system SHALL credit personal challenge progress from canonical walk logs using an idempotent ledger, SHALL count only walks whose date falls within the coverage window (accept date through accept date + duration_days − 1), SHALL recalculate cached participant totals whenever eligible walks are created, edited, or deleted, and SHALL not block walk saves when reconciliation encounters errors.
 
 #### Scenario: Walk with date within coverage window counts
 - **GIVEN** a user has accepted a 3-day personal challenge starting June 10
@@ -116,17 +131,17 @@ The system SHALL credit personal challenge progress from canonical walk logs usi
 - **WHEN** the user logs a walk for June 13 (outside coverage window)
 - **THEN** the walk does not contribute to the challenge participant's progress
 
-#### Scenario: Challenge completes when all coverage days have entries and target is met
+#### Scenario: Challenge completes when cumulative credited distance meets the target
 - **GIVEN** a user has a 3-day challenge with a 15 km target
-- **AND** the user has logged walks for all 3 coverage days totalling 16 km
-- **WHEN** the third day's walk is logged or updated
+- **AND** credited walks for the challenge total 16 km, whether from one day or several
+- **WHEN** the reconciled total is recalculated
 - **THEN** the challenge is marked completed
 - **AND** the completion badge is awarded
 
-#### Scenario: Challenge remains active when all days are covered but target is not met
+#### Scenario: Challenge remains active while the total is below the target
 - **GIVEN** a user has a 3-day challenge with a 15 km target
-- **AND** the user has logged walks for all 3 coverage days totalling only 12 km
-- **WHEN** all three days have been entered
+- **AND** credited walks total only 12 km
+- **WHEN** any number of coverage days have been entered so far
 - **THEN** the challenge remains active
 - **AND** the user can update any coverage day's distance to reach the target
 
@@ -160,7 +175,7 @@ The system SHALL credit personal challenge progress from canonical walk logs usi
 - **THEN** the achievement remains in the user's earned instances
 
 ### Requirement: Personal challenge outcomes
-The system SHALL complete a personal challenge immediately when all coverage days have walk entries and the cumulative total reaches or exceeds the personalized target, and SHALL fail the challenge when the grace period expires without the target being met.
+The system SHALL complete a personal challenge immediately when the cumulative credited distance reaches or exceeds the personalized target, and SHALL fail the challenge when the grace period expires with the target unmet.
 
 #### Scenario: Personal challenge completed during coverage window
 - **GIVEN** a user has an active personal challenge
@@ -181,13 +196,31 @@ The system SHALL complete a personal challenge immediately when all coverage day
 - **THEN** the system marks the challenge failed
 - **AND** no completion badge is awarded
 
+#### Scenario: Nazgul badge upgrades at the configured completion counts
+- **GIVEN** the `challenge-nazgul-outrun` badge has `rank_thresholds` `[1,3,7,15]`
+- **WHEN** the user earns the badge for the 1st, 3rd, 7th, or 15th time
+- **THEN** the badge presentation resolves to bronze, silver, gold, or mithril respectively
+- **AND** the 4th completion remains silver until the 7th completion
+
 ### Requirement: Scheduled settlement of personal challenges
-The system SHALL process expired personal challenge outcomes through scheduled settlement in the existing Worker `scheduled()` handler with independent error isolation from existing notification jobs.
+The system SHALL process expired personal challenge outcomes through scheduled settlement in the existing Worker `scheduled()` handler with independent error isolation from existing notification jobs. Settlement SHALL run only on the first scheduled pass strictly after the grace deadline's UTC date has fully passed, so walk logging during the entire grace day still counts.
 
 #### Scenario: Expired grace deadline triggers settlement
 - **GIVEN** a personal challenge's coverage window has ended and the grace deadline has passed
 - **WHEN** scheduled event processing runs
 - **THEN** the system evaluates the challenge outcome and settles it as completed or failed
+
+#### Scenario: Challenge is not settled on the grace deadline day itself
+- **GIVEN** a personal challenge whose grace deadline is June 15
+- **AND** the daily scheduled run executes on June 15
+- **WHEN** settlement evaluates the challenge
+- **THEN** the challenge remains active because the UTC date is not strictly past the grace deadline
+- **AND** walks logged for coverage dates during June 15 are still credited
+
+#### Scenario: Settlement happens on the next run after the grace deadline
+- **GIVEN** a personal challenge below its target whose grace deadline is June 15
+- **WHEN** the next scheduled run executes on June 16
+- **THEN** the challenge is settled as failed
 
 #### Scenario: Settlement failure does not block other scheduled jobs
 - **GIVEN** personal challenge settlement encounters an error
@@ -195,7 +228,28 @@ The system SHALL process expired personal challenge outcomes through scheduled s
 - **THEN** existing scheduled push notification jobs are not blocked
 
 ### Requirement: Encounter popup modal
-The system SHALL display a modal overlay on journey and map pages when a daily roll returns a personal encounter offer, showing the encounter's themed copy, personalized target distance, coverage window dates, and explicit accept and decline actions. The modal SHALL include a footnote explaining which days count and the grace logging period. The modal SHALL NOT reappear after the user declines an offer on the same UTC day.
+The system SHALL display a modal overlay on journey and map pages when a daily roll returns a personal encounter offer, and the user SHALL NOT see the encounter modal again on the same UTC day after declining it.
+
+#### Scenario: Encounter modal shows the encounter illustration
+- **WHEN** the encounter popup modal is displayed for a definition that has an illustration
+- **THEN** the modal presents the watercolour-style illustration bound to the definition's image slug
+- **AND** modal copy and actions remain usable regardless of the image
+
+#### Scenario: Encounter modal degrades gracefully when the illustration is missing
+- **GIVEN** an encounter offer is displayed whose image file does not exist
+- **WHEN** the modal renders
+- **THEN** no broken image is shown
+- **AND** the themed copy, target, and accept/decline actions still render
+
+#### Scenario: Encounter modal has dialog semantics
+- **WHEN** the encounter popup modal is displayed
+- **THEN** it is exposed as a modal dialog (`role="dialog"`, `aria-modal="true"`)
+- **AND** keyboard focus moves into the modal and is restored to the page after it closes
+
+#### Scenario: Encounter modal defers while another modal is open
+- **GIVEN** another modal dialog (for example a badge award modal) is already open on the page
+- **WHEN** an encounter offer would be displayed
+- **THEN** the encounter modal is deferred until the open dialog closes, so only one modal dialog is shown at a time
 
 #### Scenario: Encounter offer modal appears on journey page
 - **GIVEN** an authenticated user loads the journey page

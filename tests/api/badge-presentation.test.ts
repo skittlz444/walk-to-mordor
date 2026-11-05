@@ -182,6 +182,16 @@ describe('Badge presentation', () => {
       });
     });
 
+    it('resolves the seeded Nazgul badge ranks at its completion thresholds', () => {
+      const metadata = '{"storyline":null,"rank_thresholds":[1,3,7,15],"unit":"pursuits","criteria":"personal_encounter_completed"}';
+
+      expect(resolveBadgePresentation(metadata, 1).rank_label).toBe('bronze');
+      expect(resolveBadgePresentation(metadata, 3).rank_label).toBe('silver');
+      expect(resolveBadgePresentation(metadata, 4).rank_label).toBe('silver');
+      expect(resolveBadgePresentation(metadata, 7).rank_label).toBe('gold');
+      expect(resolveBadgePresentation(metadata, 15).rank_label).toBe('mithril');
+    });
+
     it('falls back safely for null, malformed, and out-of-range metadata', () => {
       const fallback = {
         rank: 1,

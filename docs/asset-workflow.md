@@ -1,27 +1,27 @@
 ---
 name: asset-workflow
-description: Goal image optimization pipeline, image_id conventions, admin image management, and static asset rules.
+description: Goal and encounter image optimization pipeline, image_id/image_slug conventions, admin image management, and static asset rules.
 ---
 
 # Asset Workflow
 
-> Last updated: 2026-11-02
+> Last updated: 2026-11-05
 
 ## Architecture Decision: Static Assets over R2
 
-Goal images are repository-backed static files served from `public/img/` via the Workers Assets Binding (`env.ASSETS.fetch()`) — not from R2 or any external object store.
+Goal and personal-challenge images are repository-backed static files served from `public/img/` via the Workers Assets Binding (`env.ASSETS.fetch()`) — not from R2 or any external object store.
 
-- Images are finite (one per goal milestone) and change infrequently
+- Images are finite (one per goal milestone, one per encounter definition) and change infrequently
 - Static assets deploy atomically with the Worker — no separate infra
 - No signed-URL logic, CORS headers, or bucket policies needed
-- Do **not** introduce R2 for goal images without explicit approval
+- Do **not** introduce R2 for goal or encounter images without explicit approval
 
 ## Directory Layout
 
 | Path | Contents |
 |---|---|
 | `raw_assets/` | Unprocessed source images (gitignored — never commit) |
-| `public/img/highres/` | Optimized full-size WebP images |
+| `public/img/highres/` | Optimized full-size WebP images (goal and encounter images) |
 | `public/img/thumbs/` | Thumbnail WebP images (`-thumb` suffix) |
 | `public/img/avatars/` | Avatar images (separate pipeline — `scripts/optimize-avatars.js`, 64×64 thumbs) |
 | `public/img/achievements/` | Badge cards (512 px) and thumbs (200 px, `-thumb` suffix) |
@@ -29,9 +29,9 @@ Goal images are repository-backed static files served from `public/img/` via the
 | `assets/badge-art/` | Tracked reusable badge frames and rank bosses |
 | `public/img/image-manifest.json` | Build-time generated list of all available image slugs |
 
-## image_id Convention & Naming Rules
+## image_id / image_slug Convention & Naming Rules
 
-The `image_id` column in `goals` is the **base filename without extension or suffix** — the single key mapping a goal to its images.
+The `image_id` column in `goals` is the **base filename without extension or suffix** — the single key mapping a goal to its images. Personal challenge definitions use the same convention through `personal_encounter_definitions.image_slug`.
 
 - File paths: `public/img/highres/{image_id}.webp`, `public/img/thumbs/{image_id}-thumb.webp`
 - URL paths: `/img/highres/{image_id}.webp`, `/img/thumbs/{image_id}-thumb.webp`
@@ -77,6 +77,16 @@ Distance is stored in **kilometers** — multiply miles by `1.60934`.
 4. Create a migration to set `image_id` on the target goal
 5. Commit the optimized WebP files in `public/img/` (not the raw sources)
 6. Deploy — assign `image_id` to goal via admin UI or migration
+
+## Encounter Illustrations
+
+Personal challenge illustrations are consumers of the same pipeline, not a separate image surface.
+
+- `personal_encounter_definitions.image_slug` is the single key. It follows the same slug rules as `goals.image_id`.
+- Seeded Nazgul encounter: `nazgul-pursuit` → `public/img/highres/nazgul-pursuit.webp` and `public/img/thumbs/nazgul-pursuit-thumb.webp`.
+- Add the source to `raw_assets/`, run `npm run optimize:images`, then rebuild the manifest. The slug appears in `public/img/image-manifest.json` alongside goal images.
+- `EncounterPopupIsland` renders `/img/highres/<image_slug>.webp` and falls back to copy-only rendering when the file is missing.
+- Badge artwork for the completion badge (`challenge-nazgul-outrun`) stays in the badge pipeline below — `challenge` frame plus rank bosses via `scripts/badge-art/`; it is not processed by `scripts/optimize-images.js` and is not in the image manifest.
 
 ## Achievement Badge Artwork
 
@@ -156,6 +166,7 @@ Both require admin bearer token (401/403 on failure). Saving a goal with a non-e
 - `raw_assets/` is gitignored — never commit source images
 - Durable badge source layers live in `assets/badge-art/`, not `raw_assets/`
 - Badge images use the 512/200/1024 paths above and are not run through `scripts/optimize-images.js`
+- Encounter illustrations use the goal-image pipeline with `image_slug` as the key (`highres/<slug>.webp` + `thumbs/<slug>-thumb.webp`) and must appear in the manifest
 - Avatar images use a **separate** pipeline (`scripts/optimize-avatars.js`) with different sizes
 - After optimizing, always rebuild the manifest so the admin UI stays in sync
 - Script config constants are at the top of `scripts/optimize-images.js` — tune there if size targets change

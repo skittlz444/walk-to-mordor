@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-11-03
+Last updated: 2026-11-05
 
 ## Conventions
 
@@ -29,6 +29,7 @@ Last updated: 2026-11-03
 | Fellowship Invites | `src/fellowship-invite-handlers.ts` |
 | Friends | `src/friends-handlers.ts` |
 | Achievements | `src/achievement-handlers.ts`, `src/badge-presentation.ts`, `src/achievement-utils.ts`, `src/achievement-awards.ts` |
+| Events (personal challenges) | `src/event-handlers.ts`, `src/event-utils.ts` |
 | Admin | `src/admin-handlers.ts` |
 | Route wiring | `src/index.ts` |
 
@@ -284,6 +285,66 @@ Goal content is authenticated and uses the same unlock semantics as goal viewing
   ]
 }
 ```
+
+## Event Endpoints
+
+Personal challenge encounters. All three are `POST`, protected by `authGuard` (`401` without a valid session), and therefore network-only in the service worker.
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/api/events/daily-roll` | Yes | Idempotent per UTC day. Returns `{ offer: null }` or one offer |
+| POST | `/api/events/daily-roll/accept` | Yes | Body: `{ encounter_definition_id }`. Creates the occurrence or returns the existing one |
+| POST | `/api/events/daily-roll/decline` | Yes | Optional body: `{ encounter_definition_id }`. Hides the modal for the rest of the UTC day |
+
+### Daily roll
+
+`POST /api/events/daily-roll`
+
+- One roll per user per UTC day (`UNIQUE(user_id, roll_date)`). Repeated calls return the stored result without re-rolling.
+- `{ offer: null }` is returned for an accepted or declined roll, a user below the activity threshold, or a user with an active challenge.
+- Offer fields are camelCase; the definition block matches the `personal_encounter_definitions` columns.
+- `force_offer` in the body is **test-only**: honored only when `ALLOW_TEST_AUTH=true`.
+
+```json
+{ "offer": null }
+```
+
+```json
+{
+  "offer": {
+    "status": "offered",
+    "target": 12.4,
+    "coverageStart": "2026-11-05",
+    "coverageEnd": "2026-11-07",
+    "graceDeadline": "2026-11-10",
+    "definition": {
+      "id": 1,
+      "slug": "nazgul-pursuit",
+      "name": "Outrun the Nazgûl",
+      "description": "The Black Riders have caught your scent on the road.",
+      "image_slug": "nazgul-pursuit",
+      "badge_slug": "challenge-nazgul-outrun",
+      "duration_days": 3
+    }
+  }
+}
+```
+
+### Accept encounter
+
+`POST /api/events/daily-roll/accept` with `{ "encounter_definition_id": 1 }`.
+
+- Validates that today's roll is still `offered` and its definition matches. Stale (different UTC day), declined, or mismatched rolls → `409`; missing or invalid body → `400`.
+- Writes the occurrence, participant, and roll status atomically. A repeated accept for the same roll returns the existing occurrence (`200`) instead of creating a second one.
+- Acceptance immediately reconciles any walk already logged for the accept date, so a challenge can complete on its first day.
+- Response: the occurrence's `id`, `status` (`active`), `personalized_target`, `started_at`, `coverage_end_date`, and `grace_deadline`.
+
+### Decline encounter
+
+`POST /api/events/daily-roll/decline` with an optional `{ "encounter_definition_id": 1 }`.
+
+- Idempotent: marks today's roll `declined` and creates no challenge. Repeated declines are no-ops.
+- The declined roll returns `{ offer: null }` on later roll calls, so refreshing the page on the same UTC day does not re-show the modal.
 
 ## Admin Endpoints
 

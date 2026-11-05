@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-11-02 · Migrations: 0001–0147 · Full DDL: `migrations/`
+> Last updated: 2026-11-05 · Migrations: 0001–0159 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -34,6 +34,11 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `achievement_definitions` | Shared reusable badge metadata (slug, name, image, type, repeatability) registered by any feature | 0142 |
 | `user_achievement_instances` | Append-only earned-badge records with idempotency keys, shared across features | 0143 |
 | `user_achievement_acknowledgements` | Per-user acknowledgement projection over earned instances (pending = instances minus acks) | 0147 |
+| `personal_encounter_definitions` | Reusable personal challenge config (copy, artwork keys, duration, target strategy) | 0152 |
+| `encounter_occurrences` | Per-user accepted challenge instance (target, coverage window, grace deadline, status) | 0153 |
+| `daily_rolls` | One personal encounter roll per user per UTC day (offer, preview target, status) | 0154 |
+| `event_participants` | Participant row per occurrence with cached credited distance | 0155 |
+| `event_progress_ledger` | Idempotent credit rows linking walk progress to a participant | 0156 |
 
 ## Key Constraints & Invariants
 
@@ -139,6 +144,18 @@ These are rules the schema enforces or that the application layer must uphold �
 - The composite primary key's `user_id` prefix serves the pending anti-join, so no secondary index is created.
 - Both foreign keys cascade: acknowledgements are meaningless without their user or earned instance.
 
+### personal challenges (0152–0159)
+- Five tables form one engine: reusable definitions, per-user occurrences, per-day rolls, participants, and a progress ledger. They are deliberately separate from any future community campaign schema.
+- `personal_encounter_definitions`: `slug` is unique. Stores `name`, `description`, `image_slug`, `badge_slug`, `duration_days`, `target_stretch_multiplier`, `target_min_distance`, `target_max_distance`, `is_repeatable`, `enabled`, and timestamps. Definitions are soft-disabled via `enabled`, never hard-deleted; `encounter_occurrences.definition_id` does **not** cascade.
+- `encounter_occurrences`: one row per acceptance, linked to `definition_id` (no cascade) and `daily_roll_id` (cascades, `UNIQUE` — one daily roll produces at most one occurrence, so a repeated accept returns the existing row). `user_id` cascades. `status` is `active` / `completed` / `failed`; stores `personalized_target`, `started_at`, `coverage_end_date`, `grace_deadline`, `completed_at`, and timestamps. Indexes: `(user_id, status)` for user-scoped lookups and `(status, grace_deadline)` for settlement.
+- `daily_rolls`: `user_id` cascades. `roll_date` is a UTC date; `encounter_definition_id` and `preview_target_distance` are nullable (null = no offer). `status` is `offered` / `accepted` / `declined`. `UNIQUE(user_id, roll_date)` makes the roll idempotent — repeated calls return the stored row including its status. Index on `roll_date`.
+- `event_participants`: `occurrence_id` and `user_id` cascade. `progress_distance` is a **cached** total recomputed from the ledger, never the source of truth; `joined_at` is the acceptance timestamp. `UNIQUE(user_id, occurrence_id)`; index on `user_id`.
+- `event_progress_ledger`: `participant_id` cascades; `source_progress_id` cascades to `progress`, so deleting a walk removes its credit. `UNIQUE(participant_id, source_progress_id)` makes crediting idempotent. Index on `participant_id`.
+- Target is computed once at roll time (`preview_target_distance`) and copied to `personalized_target` at acceptance — the number shown in the modal is always the number the challenge uses.
+- Coverage window is `[started_at, coverage_end_date]`; `grace_deadline = coverage_end_date + 3 days`. Only `progress.date` values inside the window count, including walks logged during the grace period.
+- Completion is `SUM(ledger.distance) >= personalized_target` — there is no all-coverage-days precondition, so a challenge can complete at acceptance or on any later eligible reconciliation.
+- Seeds: definition `nazgul-pursuit` (3 days, 1.3 stretch, 3–50 km clamp) and badge `challenge-nazgul-outrun` (`challenge` type, repeatable, `rank_thresholds` `[1,3,7,15]`, `unit` `pursuits`).
+
 ### parties
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.
 - `leave_distance_behavior` (`keep` | `remove`): leader-updatable.
@@ -172,6 +189,11 @@ These are rules the schema enforces or that the application layer must uphold �
 | `user_achievement_instances.user_id` | CASCADE | Standard cleanup on user deletion |
 | `user_achievement_instances.achievement_id` | **No cascade** | Definitions are not expected to be deleted; earned instances must never be silently orphaned by app-level cleanup |
 | `user_achievement_acknowledgements.user_id` / `.instance_id` | CASCADE | Acknowledgements are meaningless without the user or the earned instance they acknowledge |
+| `encounter_occurrences.definition_id` | **No cascade** | Definitions are soft-disabled via `enabled`, mirroring achievement definitions |
+| `encounter_occurrences.user_id`, `daily_rolls.user_id`, `event_participants.user_id` | CASCADE | Standard cleanup on user deletion |
+| `encounter_occurrences.daily_roll_id` | CASCADE | An occurrence cannot outlive the roll that created it |
+| `event_participants.occurrence_id`, `event_progress_ledger.participant_id` | CASCADE | Challenge data is meaningless without its occurrence/participant |
+| `event_progress_ledger.source_progress_id` → `progress.id` | CASCADE | Deleting a walk removes its ledger credit |
 | All other user FKs | CASCADE | Standard cleanup |
 
 `content_discovery_events` intentionally has no foreign keys because those rows are best-effort analytics.
@@ -183,6 +205,7 @@ These are rules the schema enforces or that the application layer must uphold �
 - Schema changes go in migrations; application logic stays in TypeScript.
 - Goal description updates use dedicated migrations (see `0011`–`0019` series).
 - Goal content tables are additive migrations: `0140` for `goal_content`, `0141` for `content_discovery_events`.
+- Personal challenge tables are additive: `0152`–`0156` create the five tables; `0157`–`0158` seed the Nazgul definition and its `challenge-nazgul-outrun` badge; `0159` repairs legacy prototype tables by dropping and recreating `event_participants` and `event_progress_ledger` with the canonical FKs/columns.
 - Deploy: `npx wrangler d1 migrations apply walk-to-mordor-db`.
 
 ## Entity Relationship Diagram
@@ -215,4 +238,13 @@ erDiagram
     parties ||--o{ party_progress_log : "receives"
     parties ||--o{ fellowship_invites : "has"
     parties ||--o{ party_messages : "has"
+    personal_encounter_definitions ||--o{ encounter_occurrences : "instantiates"
+    personal_encounter_definitions ||--o{ daily_rolls : "offers"
+    users ||--o{ daily_rolls : "rolls"
+    users ||--o{ encounter_occurrences : "accepts"
+    users ||--o{ event_participants : "participates"
+    daily_rolls ||--o| encounter_occurrences : "accepted into"
+    encounter_occurrences ||--o{ event_participants : "has"
+    event_participants ||--o{ event_progress_ledger : "credits"
+    progress ||--o{ event_progress_ledger : "sources"
 ```

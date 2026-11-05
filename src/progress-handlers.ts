@@ -5,6 +5,7 @@ import {
 } from "./validators";
 import { validateSession } from "./auth-handlers";
 import { checkAndAwardJourneyBadges } from "./achievement-awards";
+import { reconcileProgressForUser } from "./event-utils";
 import type { DbClient } from "./db";
 
 /** Row shape returned by active party membership query */
@@ -133,7 +134,7 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
   }
 
   try {
-    await db.write.prepare("INSERT INTO progress (date, distance, user_id) VALUES (?, ?, ?)"
+    const insertResult = await db.write.prepare("INSERT INTO progress (date, distance, user_id) VALUES (?, ?, ?)"
     )
       .bind(start, Number(title), userId)
       .run();
@@ -155,6 +156,21 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
       await checkAndAwardJourneyBadges(db, userId!, start);
     } catch (awardError: unknown) {
       console.error('Failed to award achievements after progress create:', awardError);
+    }
+
+    // Credit active personal challenges. Derived state: never fail the walk log.
+    try {
+      const progressId = insertResult.meta.last_row_id;
+      if (Number.isFinite(progressId)) {
+        await reconcileProgressForUser(db, userId!, {
+          progressId,
+          date: start,
+          distance: Number(title),
+          operation: 'upsert',
+        });
+      }
+    } catch (reconcileError: unknown) {
+      console.error('Failed to reconcile personal challenge progress after create:', reconcileError);
     }
 
     return new Response(JSON.stringify({ 
@@ -265,6 +281,23 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
       console.error('Failed to award achievements after progress update:', awardError);
     }
 
+    // Refresh active personal challenge credit. Derived state: never fail the walk log.
+    try {
+      const progressRow = await db.read.prepare(
+        'SELECT id FROM progress WHERE date = ? AND user_id = ?'
+      ).bind(start, userId).first<{ id: number }>();
+      if (progressRow) {
+        await reconcileProgressForUser(db, userId!, {
+          progressId: progressRow.id,
+          date: start,
+          distance: Number(title),
+          operation: 'upsert',
+        });
+      }
+    } catch (reconcileError: unknown) {
+      console.error('Failed to reconcile personal challenge progress after update:', reconcileError);
+    }
+
     return new Response(JSON.stringify({ 
       message: "Updated successfully",
       date: start,
@@ -314,6 +347,16 @@ export async function handleProgressDelete(request: Request, db: DbClient, body:
     });
   }
 
+  let progressId: number | null = null;
+  try {
+    const progressRow = await db.read.prepare(
+      'SELECT id FROM progress WHERE date = ? AND user_id = ?'
+    ).bind(start, userId).first<{ id: number }>();
+    progressId = progressRow ? progressRow.id : null;
+  } catch (lookupError: unknown) {
+    console.error('Failed to look up progress id before delete:', lookupError);
+  }
+
   try {
     const result = await db.write.prepare("DELETE FROM progress WHERE date = ? AND user_id = ?")
       .bind(start, userId)
@@ -330,6 +373,20 @@ export async function handleProgressDelete(request: Request, db: DbClient, body:
 
     // Sync to party_progress_log for all active memberships (graceful degradation)
     await syncPartyProgressLog(db, userId!, start, 0, 'delete');
+
+    // Remove personal challenge credit. Derived state: never fail the walk log.
+    try {
+      if (progressId !== null) {
+        await reconcileProgressForUser(db, userId!, {
+          progressId,
+          date: start,
+          distance: 0,
+          operation: 'delete',
+        });
+      }
+    } catch (reconcileError: unknown) {
+      console.error('Failed to reconcile personal challenge progress after delete:', reconcileError);
+    }
     
     return new Response(JSON.stringify({ 
       message: "Deleted successfully",

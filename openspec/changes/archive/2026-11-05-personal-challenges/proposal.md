@@ -19,15 +19,16 @@ Walk to Mordor motivates progress through milestones, stats, fellowships, and pu
 - `personal-challenges`: Daily random encounter rolls, personal encounter acceptance and personalized challenge targets, ledger-backed progress reconciliation for personal challenges, scheduled settlement of expired personal challenges, Nazgul pursuit encounter UI, and badge awarding via shared achievement infrastructure.
 
 ### Modified Capabilities
-- None.
+- `events-and-challenges`: Retires the personal-encounter requirement set (daily rolls, contextual eligibility, encounter choice, personalized targets, progress accounting, personal challenge outcomes) in favor of the `personal-challenges` capability. Community-campaign requirements in that spec remain for the pending community-campaigns changes.
 
 ## Impact
 
-- D1 schema: new tables for `personal_encounter_definitions`, `encounter_occurrences`, `daily_rolls`, `event_participants`, and `event_progress_ledger` with indexes and uniqueness constraints. No progress timestamp migration needed — personal challenges start at acceptance time and the participant record carries the accept timestamp.
-- Worker APIs: new authenticated endpoints for daily roll, encounter accept/decline, and user's active/past personal challenges, wired through `src/index.ts`.
+- D1 schema: new tables for `personal_encounter_definitions`, `encounter_occurrences`, `daily_rolls`, `event_participants`, and `event_progress_ledger` with indexes and uniqueness constraints, added as migrations `0152`–`0156`. No progress timestamp migration needed — personal challenges start at acceptance time and the participant record carries the accept timestamp.
+- Worker APIs: new authenticated endpoints for daily roll, encounter accept, and encounter decline, wired as Hono routes in `src/index.ts` behind the existing `authGuard` middleware.
 - Progress handlers: reconciliation hooks on calendar progress create/update/delete paths in `src/progress-handlers.ts`, with idempotent ledger entries and cached participant totals.
 - Scheduled Worker: personal challenge expiry and failure settlement in the existing `scheduled()` handler with independent error isolation from existing cron jobs.
-- Frontend: new `EncounterPopupIsland` Preact island registered in `client/src/index.tsx`; called from journey and map pages; modal overlay with Nazgul themed copy.
-- Badge display: Nazgul badge definition seeded via migration; display handled by the existing `profile-badge-display` change.
-- Tests: Jest coverage for eligibility, daily roll, personalized targets, progress reconciliation, and scheduled settlement; Vitest coverage for the encounter popup island; Playwright coverage for the accept/decline flow.
+- Frontend: new `EncounterPopupIsland` Preact island registered in `client/src/index.tsx`; a trigger module under `client/src/utils` invokes the roll after the Preact bootstrap on journey and map pages and renders the island programmatically (same pattern as the existing progress modals via `window.preactIslands`). The modal presents the encounter's watercolour illustration.
+- Badge display and artwork: Nazgul badge definition seeded via migration with repeatable rank metadata; display handled by the existing `profile-badge-display`; artwork follows the locked `achievement-badge-artwork` rules (challenge family frame, four rank bosses, three sizes).
+- Assets: the watercolour Nazgul illustration goes through the shared static image pipeline (`raw_assets/` → `npm run optimize:images` → `public/img/highres/` + `thumbs/`, served via the ASSETS binding), documented per `docs/asset-workflow.md`.
+- Tests: Jest coverage for eligibility, daily roll, personalized targets, progress reconciliation, and scheduled settlement; migration test following the `tests/api/achievement-catalog-expansion.test.ts` pattern; Vitest coverage for the encounter popup island; Playwright coverage for the accept/decline flow.
 - Documentation: updates to `docs/data-models.md`, `docs/api-reference.md`, and `docs/architecture.md`.
