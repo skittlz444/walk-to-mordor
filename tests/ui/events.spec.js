@@ -2,6 +2,7 @@
 const {
     test,
     expect,
+    dismissBadgeAwardModal,
 } = require('./helpers/common');
 
 const { execSync } = require('node:child_process');
@@ -386,6 +387,9 @@ test.describe('community campaigns page', () => {
 
         const card = page.locator(`${CARD}[data-campaign="${campaign.slug}"]`).first();
         await expect(card.locator(JOIN_BUTTON)).toBeVisible({ timeout: 15000 });
+        // The walk posted above awards "First Steps"; its award overlay opens on
+        // load and would intercept the join click.
+        await dismissBadgeAwardModal(page);
         await card.locator(JOIN_BUTTON).click();
 
         await expect(card.locator('.event-join__contribution')).toBeVisible({ timeout: 15000 });
