@@ -8,6 +8,7 @@ import {
   handleProgressPut,
 } from '../../src/progress-handlers';
 import type { DbClient } from '../../src/db';
+import { joinCampaignRun } from '../../src/campaign-utils';
 import { addDays, utcToday } from '../../src/event-utils';
 
 jest.mock('../../src/achievement-awards', () => ({
@@ -101,6 +102,36 @@ function createFailingDb(database: DatabaseSync, fragment: string): DbClient {
         throw new Error(`injected failure for ${fragment}`);
       }
       return d1.prepare(sql);
+    },
+  } as unknown as D1Database);
+
+  return { read: wrap(base.read), write: wrap(base.write) };
+}
+
+/**
+ * DbClient whose badge insert throws for one user only, so a completion award
+ * failure stays isolated to that contributor.
+ */
+function createBadgeFailureDb(database: DatabaseSync, failingUserId: number): DbClient {
+  const base = createTestDb(database);
+  const wrap = (d1: D1Database): D1Database => ({
+    prepare(sql: string) {
+      const statement = d1.prepare(sql);
+      if (!sql.includes('INSERT INTO user_achievement_instances')) return statement;
+
+      return {
+        bind(...values: SqlValue[]) {
+          const bound = statement.bind(...values);
+          if (values[0] !== failingUserId) return bound;
+          return {
+            first: () => bound.first(),
+            all: () => bound.all(),
+            async run() {
+              throw new Error('injected badge failure');
+            },
+          };
+        },
+      } as unknown as D1PreparedStatement;
     },
   } as unknown as D1Database);
 
@@ -228,6 +259,40 @@ describe('walk saves → community campaign reconciliation', () => {
     ).all(participantId) as Array<{ distance: number; source_progress_id: number }>;
   }
 
+  function participantRows(runId: number): Array<{
+    id: number;
+    user_id: number;
+    progress_distance: number;
+    status: string;
+  }> {
+    return sqlite.prepare(
+      `SELECT id, user_id, progress_distance, status
+       FROM campaign_participants WHERE run_id = ? ORDER BY id ASC`,
+    ).all(runId) as Array<{
+      id: number;
+      user_id: number;
+      progress_distance: number;
+      status: string;
+    }>;
+  }
+
+  function ledgerRowsForRun(runId: number): Array<{
+    id: number;
+    participant_id: number;
+    source_progress_id: number;
+    distance: number;
+  }> {
+    return sqlite.prepare(
+      `SELECT id, participant_id, source_progress_id, distance
+       FROM campaign_progress_ledger WHERE run_id = ? ORDER BY id ASC`,
+    ).all(runId) as Array<{
+      id: number;
+      participant_id: number;
+      source_progress_id: number;
+      distance: number;
+    }>;
+  }
+
   function badgeRows(achievementUserId: number): Array<{ idempotency_key: string }> {
     return sqlite.prepare(
       `SELECT uai.idempotency_key
@@ -291,13 +356,16 @@ describe('walk saves → community campaign reconciliation', () => {
     expect(readParticipantDistance(participantId)).toBe(7);
   });
 
-  it('does not credit a walk dated outside the active run window', async () => {
+  it('does not credit a walk created or edited outside the active run window', async () => {
     const runId = insertRun({ start: TODAY, end: addDays(TODAY, 6) });
     const participantId = insertParticipant(runId, userId);
+    const outsideDate = addDays(TODAY, -1);
 
-    const response = await createWalk(addDays(TODAY, -1), 7);
+    const createResponse = await createWalk(outsideDate, 7);
+    const updateResponse = await updateWalk(outsideDate, 9);
 
-    expect(response.status).toBe(201);
+    expect(createResponse.status).toBe(201);
+    expect(updateResponse.status).toBe(200);
     expect(ledgerRows(participantId)).toEqual([]);
     expect(readParticipantDistance(participantId)).toBe(0);
   });
@@ -417,6 +485,8 @@ describe('walk saves → community campaign reconciliation', () => {
     insertParticipant(runOneId, userId);
     await createWalk(TODAY, 10);
     expect(readRun(runOneId).status).toBe('completed');
+    const runOneParticipants = participantRows(runOneId);
+    const runOneLedger = ledgerRowsForRun(runOneId);
 
     const runTwoId = insertRun({
       target: 10,
@@ -433,6 +503,107 @@ describe('walk saves → community campaign reconciliation', () => {
       `campaign:beacon-watch:run:${runOneId}`,
       `campaign:beacon-watch:run:${runTwoId}`,
     ]);
+    // Retriggering never rewrites the previous run's history.
+    expect(participantRows(runOneId)).toEqual(runOneParticipants);
+    expect(ledgerRowsForRun(runOneId)).toEqual(runOneLedger);
+  });
+
+  it('completes a run when join-time backfill pushes the total past target', async () => {
+    const runId = insertRun({ target: 100 });
+    const otherParticipant = insertParticipant(runId, otherUserId, 99);
+    insertLedger(otherParticipant, runId, insertWalk(otherUserId, addDays(TODAY, -1), 99), 99);
+    insertWalk(userId, TODAY, 5);
+
+    const joined = await joinCampaignRun(db, campaignId, userId, { today: TODAY });
+
+    expect(joined.participant.progress_distance).toBe(5);
+    expect(readRun(runId)).toMatchObject({
+      status: 'completed',
+      participant_count: 2,
+      contributor_count: 2,
+      total_distance: 104,
+    });
+    const idempotencyKey = `campaign:beacon-watch:run:${runId}`;
+    expect(badgeRows(userId).map((row) => row.idempotency_key)).toEqual([idempotencyKey]);
+    expect(badgeRows(otherUserId).map((row) => row.idempotency_key)).toEqual([idempotencyKey]);
+  });
+
+  it('completes a run whose target was already met when a user joins', async () => {
+    const runId = insertRun({ target: 100 });
+    const otherParticipant = insertParticipant(runId, otherUserId, 100);
+    insertLedger(otherParticipant, runId, insertWalk(otherUserId, addDays(TODAY, -1), 100), 100);
+
+    const joined = await joinCampaignRun(db, campaignId, userId, { today: TODAY });
+
+    expect(joined.participant.progress_distance).toBe(0);
+    expect(readRun(runId)).toMatchObject({
+      status: 'completed',
+      participant_count: 2,
+      contributor_count: 1,
+      total_distance: 100,
+    });
+    expect(badgeRows(otherUserId).map((row) => row.idempotency_key)).toEqual([
+      `campaign:beacon-watch:run:${runId}`,
+    ]);
+    expect(badgeRows(userId)).toEqual([]);
+  });
+
+  it('does not complete an over-target upcoming run when a user joins', async () => {
+    const runId = insertRun({
+      target: 10,
+      status: 'upcoming',
+      start: addDays(TODAY, 1),
+      end: addDays(TODAY, 7),
+    });
+    const preCreditedParticipant = insertParticipant(runId, otherUserId, 20);
+    insertLedger(
+      preCreditedParticipant,
+      runId,
+      insertWalk(otherUserId, addDays(TODAY, 1), 20),
+      20,
+    );
+
+    await joinCampaignRun(db, campaignId, userId, { today: TODAY });
+
+    expect(readRun(runId)).toMatchObject({
+      status: 'upcoming',
+      completed_at: null,
+      participant_count: null,
+      contributor_count: null,
+      total_distance: null,
+    });
+    expect(badgeRows(otherUserId)).toEqual([]);
+  });
+
+  it('isolates a badge-award failure to one contributor', async () => {
+    const consoleError = jest.spyOn(console, 'error');
+    const runId = insertRun({ target: 10 });
+    const firstParticipant = insertParticipant(runId, userId, 5);
+    insertLedger(firstParticipant, runId, insertWalk(userId, addDays(TODAY, -1), 5), 5);
+    const secondParticipant = insertParticipant(runId, otherUserId, 5);
+    insertLedger(secondParticipant, runId, insertWalk(otherUserId, addDays(TODAY, -2), 5), 5);
+    const failingDb = createBadgeFailureDb(sqlite, userId);
+
+    const response = await handleProgressPost(
+      request('POST'),
+      failingDb,
+      { start: TODAY, title: 5 },
+      'true',
+    );
+
+    expect(response.status).toBe(201);
+    expect(readRun(runId)).toMatchObject({
+      status: 'completed',
+      total_distance: 15,
+    });
+    expect(badgeRows(userId)).toEqual([]);
+    expect(badgeRows(otherUserId).map((row) => row.idempotency_key)).toEqual([
+      `campaign:beacon-watch:run:${runId}`,
+    ]);
+    expect(consoleError).toHaveBeenCalledWith(
+      'Error awarding campaign completion badge:',
+      expect.anything(),
+    );
   });
 
   it('never blocks the walk save when campaign reconciliation fails', async () => {

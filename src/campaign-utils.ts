@@ -310,6 +310,15 @@ interface CampaignRunIdRow {
   id: number;
 }
 
+/** The run facts the completion check needs, independent of its caller. */
+interface CampaignRunCompletionContext {
+  runId: number;
+  runNumber: number;
+  targetDistance: number;
+  campaignSlug: string;
+  badgeSlug: string | null;
+}
+
 // ── Mapping + helpers ──────────────────────────────────────────────────────
 
 const CAMPAIGN_DEFINITION_COLUMNS = `id, slug, name, description, image_slug, badge_slug,
@@ -808,6 +817,22 @@ export async function joinCampaignRun(
 
   await backfillParticipantWalks(db, participant, run);
 
+  // Join-time backfill can cross the community target on its own, so run the
+  // same guarded completion check the walk-save path uses. The participant row
+  // is already committed and completion is derived state: a failure here is
+  // logged, never surfaced as a failed join.
+  try {
+    await completeCampaignRunIfTargetMet(db, {
+      runId: run.id,
+      runNumber: run.run_number,
+      targetDistance: run.target_distance,
+      campaignSlug: campaign.slug,
+      badgeSlug: campaign.badge_slug,
+    });
+  } catch (error: unknown) {
+    console.error('Error checking campaign completion after join:', error);
+  }
+
   const refreshed = await getParticipantForRun(db, run.id, userId) ?? participant;
   return { campaign, run, participant: refreshed };
 }
@@ -942,18 +967,22 @@ export async function getCommunityProgress(
  *
  * The guarded UPDATE only succeeds from `active`, so it closes the
  * future-dated-walk leak: a walk dated inside an upcoming run's window cannot
- * complete it because reconciliation never selects an upcoming run. The final
- * snapshot is written in the same statement, so it is recorded exactly once
- * even when two walk saves race. Every active contributor then receives the
- * campaign badge under the per-run key `campaign:<slug>:run:<run_id>`, which
- * lets a repeatable badge escalate across runs.
+ * complete it because reconciliation never selects an upcoming run. The guard
+ * is also what makes the completion check callable from both walk-save
+ * reconciliation and join-time backfill without a double-complete race: only
+ * the first guarded UPDATE wins (`changes > 0`), the loser returns early
+ * before writing a snapshot or awarding anything. The final snapshot is
+ * written in the same statement as the status change, so it is recorded
+ * exactly once. Every active contributor then receives the campaign badge
+ * under the per-run key `campaign:<slug>:run:<run_id>`, which lets a
+ * repeatable badge escalate across runs.
  */
 async function completeCampaignRunIfTargetMet(
   db: DbClient,
-  participation: ActiveCampaignParticipationRow,
+  context: CampaignRunCompletionContext,
 ): Promise<boolean> {
-  const aggregate = await aggregateRunProgress(db, participation.run_id);
-  if (aggregate.total_distance < participation.target_distance) return false;
+  const aggregate = await aggregateRunProgress(db, context.runId);
+  if (aggregate.total_distance < context.targetDistance) return false;
 
   const completion = await db.write.prepare(
     `UPDATE campaign_runs
@@ -968,32 +997,32 @@ async function completeCampaignRunIfTargetMet(
     aggregate.participant_count,
     aggregate.contributor_count,
     aggregate.total_distance,
-    participation.run_id,
+    context.runId,
   ).run();
 
   if (completion.meta.changes === 0) return false;
 
-  if (!participation.badge_slug) return true;
+  if (!context.badgeSlug) return true;
 
   const { results: contributors } = await db.read.prepare(
     `SELECT id, user_id, progress_distance
      FROM campaign_participants
      WHERE run_id = ? AND status = 'active' AND progress_distance > 0
      ORDER BY id ASC`,
-  ).bind(participation.run_id).all<CampaignContributorRow>();
+  ).bind(context.runId).all<CampaignContributorRow>();
 
-  const idempotencyKey = `campaign:${participation.slug}:run:${participation.run_id}`;
+  const idempotencyKey = `campaign:${context.campaignSlug}:run:${context.runId}`;
   for (const contributor of contributors) {
     try {
       await awardAchievement(
         db,
         contributor.user_id,
-        participation.badge_slug,
+        context.badgeSlug,
         idempotencyKey,
         JSON.stringify({
-          campaign_slug: participation.slug,
-          run_id: participation.run_id,
-          run_number: participation.run_number,
+          campaign_slug: context.campaignSlug,
+          run_id: context.runId,
+          run_number: context.runNumber,
           progress_distance: contributor.progress_distance,
         }),
       );
@@ -1069,7 +1098,13 @@ export async function reconcileCampaignProgressForUser(
       }
 
       await recomputeParticipantDistance(db, participation.participant_id);
-      await completeCampaignRunIfTargetMet(db, participation);
+      await completeCampaignRunIfTargetMet(db, {
+        runId: participation.run_id,
+        runNumber: participation.run_number,
+        targetDistance: participation.target_distance,
+        campaignSlug: participation.slug,
+        badgeSlug: participation.badge_slug,
+      });
     }
   } catch (error: unknown) {
     console.error('Error reconciling campaign progress:', error);
