@@ -8,6 +8,7 @@
 // snapshot. At most one run per campaign is upcoming or active (enforced by a
 // partial unique index); every read below scopes to that active run.
 import type { DbClient } from './db';
+import { awardAchievement } from './achievement-utils';
 import { utcToday } from './event-utils';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -169,6 +170,28 @@ export interface JoinCampaignOptions {
   today?: string;
 }
 
+/** A canonical walk write that should be mirrored into the campaign ledger. */
+export interface CampaignReconciliationParams {
+  progressId: number;
+  /** Walk date (YYYY-MM-DD); credit is gated on the active run window. */
+  date: string;
+  distance: number;
+  operation: 'upsert' | 'delete';
+  /**
+   * Distance before an edit. Supplied by the walk-update handler so a no-op
+   * edit can skip reconciliation; the ledger upsert itself is keyed on
+   * `(participant_id, source_progress_id)` and updates in place.
+   */
+  previousDistance?: number;
+}
+
+/** Outcome of one lifecycle pass over enabled campaigns' runs. */
+export interface CampaignLifecycleResult {
+  activated: number;
+  expired: number;
+  failed: number;
+}
+
 // ── Errors ─────────────────────────────────────────────────────────────────
 
 export class CampaignNotFoundError extends Error {
@@ -262,6 +285,29 @@ interface ContributorRow {
 interface OwnContributionRow {
   distance: number;
   ahead_count: number;
+}
+
+interface ActiveCampaignParticipationRow {
+  participant_id: number;
+  run_id: number;
+  campaign_id: number;
+  progress_distance: number;
+  run_number: number;
+  target_distance: number;
+  start_date: string;
+  end_date: string;
+  slug: string;
+  badge_slug: string | null;
+}
+
+interface CampaignContributorRow {
+  id: number;
+  user_id: number;
+  progress_distance: number;
+}
+
+interface CampaignRunIdRow {
+  id: number;
 }
 
 // ── Mapping + helpers ──────────────────────────────────────────────────────
@@ -887,4 +933,224 @@ export async function getCommunityProgress(
     contributors,
     you,
   };
+}
+
+// ── Reconciliation and synchronous completion ──────────────────────────────
+
+/**
+ * Complete a run whose scoped ledger total has reached its target.
+ *
+ * The guarded UPDATE only succeeds from `active`, so it closes the
+ * future-dated-walk leak: a walk dated inside an upcoming run's window cannot
+ * complete it because reconciliation never selects an upcoming run. The final
+ * snapshot is written in the same statement, so it is recorded exactly once
+ * even when two walk saves race. Every active contributor then receives the
+ * campaign badge under the per-run key `campaign:<slug>:run:<run_id>`, which
+ * lets a repeatable badge escalate across runs.
+ */
+async function completeCampaignRunIfTargetMet(
+  db: DbClient,
+  participation: ActiveCampaignParticipationRow,
+): Promise<boolean> {
+  const aggregate = await aggregateRunProgress(db, participation.run_id);
+  if (aggregate.total_distance < participation.target_distance) return false;
+
+  const completion = await db.write.prepare(
+    `UPDATE campaign_runs
+     SET status = 'completed',
+         completed_at = CURRENT_TIMESTAMP,
+         participant_count = ?,
+         contributor_count = ?,
+         total_distance = ?,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND status = 'active'`,
+  ).bind(
+    aggregate.participant_count,
+    aggregate.contributor_count,
+    aggregate.total_distance,
+    participation.run_id,
+  ).run();
+
+  if (completion.meta.changes === 0) return false;
+
+  if (!participation.badge_slug) return true;
+
+  const { results: contributors } = await db.read.prepare(
+    `SELECT id, user_id, progress_distance
+     FROM campaign_participants
+     WHERE run_id = ? AND status = 'active' AND progress_distance > 0
+     ORDER BY id ASC`,
+  ).bind(participation.run_id).all<CampaignContributorRow>();
+
+  const idempotencyKey = `campaign:${participation.slug}:run:${participation.run_id}`;
+  for (const contributor of contributors) {
+    try {
+      await awardAchievement(
+        db,
+        contributor.user_id,
+        participation.badge_slug,
+        idempotencyKey,
+        JSON.stringify({
+          campaign_slug: participation.slug,
+          run_id: participation.run_id,
+          run_number: participation.run_number,
+          progress_distance: contributor.progress_distance,
+        }),
+      );
+    } catch (error: unknown) {
+      // A missing or broken badge definition must not stop the remaining
+      // contributors from being awarded.
+      console.error('Error awarding campaign completion badge:', error);
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Mirror a canonical walk write into every active run the user has joined.
+ *
+ * Only active participants of active, enabled campaigns are selected, so
+ * removed participants, upcoming/completed/expired runs, and disabled
+ * campaigns neither credit nor complete. Credit requires the walk date to fall
+ * inside the run window; the ledger upsert is idempotent per walk, so editing
+ * updates the existing row instead of double-counting. Cached participant
+ * totals are recomputed before the run-level completion check.
+ *
+ * Graceful degradation: errors are logged and never propagated, matching the
+ * `syncPartyProgressLog` / personal-challenge reconciliation pattern — a walk
+ * save must succeed even when campaign bookkeeping fails.
+ */
+export async function reconcileCampaignProgressForUser(
+  db: DbClient,
+  userId: number,
+  params: CampaignReconciliationParams,
+): Promise<void> {
+  // A walk edit that keeps the same distance cannot change any total.
+  if (
+    params.operation === 'upsert'
+    && params.previousDistance !== undefined
+    && params.previousDistance === params.distance
+  ) {
+    return;
+  }
+
+  try {
+    const { results: participations } = await db.read.prepare(
+      `SELECT p.id AS participant_id, p.run_id, p.campaign_id, p.progress_distance,
+              r.run_number, r.target_distance, r.start_date, r.end_date,
+              d.slug, d.badge_slug
+       FROM campaign_participants p
+       JOIN campaign_runs r ON r.id = p.run_id
+       JOIN campaign_definitions d ON d.id = p.campaign_id
+       WHERE p.user_id = ? AND p.status = 'active'
+         AND r.status = 'active' AND d.enabled = 1
+       ORDER BY p.id ASC`,
+    ).bind(userId).all<ActiveCampaignParticipationRow>();
+
+    for (const participation of participations) {
+      if (params.date < participation.start_date || params.date > participation.end_date) {
+        continue;
+      }
+
+      if (params.operation === 'upsert') {
+        await upsertProgressLedgerEntry(
+          db,
+          participation.participant_id,
+          participation.run_id,
+          params.progressId,
+          params.distance,
+        );
+      } else {
+        await db.write.prepare(
+          `DELETE FROM campaign_progress_ledger
+           WHERE participant_id = ? AND source_progress_id = ?`,
+        ).bind(participation.participant_id, params.progressId).run();
+      }
+
+      await recomputeParticipantDistance(db, participation.participant_id);
+      await completeCampaignRunIfTargetMet(db, participation);
+    }
+  } catch (error: unknown) {
+    console.error('Error reconciling campaign progress:', error);
+  }
+}
+
+// ── Lifecycle transitions (daily scheduled run) ────────────────────────────
+
+/**
+ * Apply date-based run lifecycle transitions for enabled campaigns:
+ * `upcoming → active` once the start date arrives, and `active → expired`
+ * after the end date when the scoped total is below the target. Expiry writes
+ * the final snapshot. Completion is never decided here — it happens during
+ * reconciliation — and no run is ever created. All comparisons are UTC dates.
+ *
+ * Each run is isolated so one broken row cannot block the rest of the pass.
+ */
+export async function runCampaignLifecycleTransitions(
+  db: DbClient,
+  options: { today?: string } = {},
+): Promise<CampaignLifecycleResult> {
+  const today = options.today ?? utcToday();
+  const result: CampaignLifecycleResult = { activated: 0, expired: 0, failed: 0 };
+
+  const { results: upcoming } = await db.read.prepare(
+    `SELECT r.id
+     FROM campaign_runs r
+     JOIN campaign_definitions d ON d.id = r.campaign_id
+     WHERE d.enabled = 1 AND r.status = 'upcoming' AND r.start_date <= ?
+     ORDER BY r.id ASC`,
+  ).bind(today).all<CampaignRunIdRow>();
+
+  for (const run of upcoming) {
+    try {
+      const update = await db.write.prepare(
+        `UPDATE campaign_runs
+         SET status = 'active', updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND status = 'upcoming'`,
+      ).bind(run.id).run();
+      if (update.meta.changes > 0) result.activated += 1;
+    } catch (error: unknown) {
+      console.error('Error activating campaign run:', error);
+      result.failed += 1;
+    }
+  }
+
+  const { results: expiring } = await db.read.prepare(
+    `SELECT r.id, r.target_distance
+     FROM campaign_runs r
+     JOIN campaign_definitions d ON d.id = r.campaign_id
+     WHERE d.enabled = 1 AND r.status = 'active' AND r.end_date < ?
+     ORDER BY r.id ASC`,
+  ).bind(today).all<CampaignRunIdRow & { target_distance: number }>();
+
+  for (const run of expiring) {
+    try {
+      const aggregate = await aggregateRunProgress(db, run.id);
+      // A target-met run is left for reconciliation to complete; the cron
+      // never completes runs and never awards badges.
+      if (aggregate.total_distance >= run.target_distance) continue;
+
+      const update = await db.write.prepare(
+        `UPDATE campaign_runs
+         SET status = 'expired',
+             participant_count = ?,
+             contributor_count = ?,
+             total_distance = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND status = 'active'`,
+      ).bind(
+        aggregate.participant_count,
+        aggregate.contributor_count,
+        aggregate.total_distance,
+        run.id,
+      ).run();
+      if (update.meta.changes > 0) result.expired += 1;
+    } catch (error: unknown) {
+      console.error('Error expiring campaign run:', error);
+      result.failed += 1;
+    }
+  }
+
+  return result;
 }

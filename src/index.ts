@@ -46,7 +46,14 @@ import {
 import { handleMapPage } from "./map-handlers";
 import { handleGetAchievements, handleGetPendingAchievements, handleAcknowledgeAchievements } from "./achievement-handlers";
 import { handleDailyRoll, handleAcceptEncounter, handleDeclineEncounter } from "./event-handlers";
+import {
+  handleCampaignsList,
+  handleCampaignDetail,
+  handleCampaignCommunityProgress,
+  handleCampaignJoin,
+} from "./campaign-handlers";
 import { settleExpiredChallenges } from "./event-utils";
+import { runCampaignLifecycleTransitions } from "./campaign-utils";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyPositions, handlePartyProgress, handlePartyActivity, handleSendPartyMessage, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile, handleFriendPositions } from "./friends-handlers";
 import { handleGetProfileOverview } from "./profile-handlers";
@@ -244,6 +251,20 @@ app.get('/api/push/vapid-key', (c) =>
 app.get('/api/party/join/:inviteCode', (c) =>
   handlePreviewParty(c.req.raw, c.get('db'), c.req.param('inviteCode')));
 
+// ── Community Campaigns (public; auth adds a personal overlay) ──
+app.get('/api/events', (c) =>
+  handleCampaignsList(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/events/:id/community-progress', (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleCampaignCommunityProgress(c.req.raw, c.get('db'), id, c.env.ALLOW_TEST_AUTH);
+});
+app.get('/api/events/:id', (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleCampaignDetail(c.req.raw, c.get('db'), id, c.env.ALLOW_TEST_AUTH);
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // AUTHENTICATED API ROUTES (session required)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -361,6 +382,13 @@ app.post('/api/events/daily-roll/accept', authGuard, (c) =>
   handleAcceptEncounter(c.req.raw, c.get('db'), c.get('userId')!));
 app.post('/api/events/daily-roll/decline', authGuard, (c) =>
   handleDeclineEncounter(c.req.raw, c.get('db'), c.get('userId')!));
+
+// ── Community Campaigns (join) ──
+app.post('/api/events/:id/join', authGuard, (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleCampaignJoin(c.get('db'), id, c.get('userId')!);
+});
 
 // ── Push Notifications ──
 app.post('/api/push/subscribe', authGuard, async (c) =>
@@ -704,6 +732,13 @@ export default {
       await settleExpiredChallenges(db);
     } catch (error: unknown) {
       console.error("Scheduled personal challenge settlement failed", error);
+    }
+
+    try {
+      const db = createDbClient(env.DB);
+      await runCampaignLifecycleTransitions(db);
+    } catch (error: unknown) {
+      console.error("Scheduled campaign lifecycle transition failed", error);
     }
   },
 } satisfies ExportedHandler<Env>;
