@@ -372,7 +372,7 @@ export function PushPermissionIsland() {
                 <div className="toggle-label">
                   <label htmlFor="push-community-campaigns-toggle">Community Campaigns</label>
                   <small className="field-hint">
-                    Hear when a new community campaign run goes live and when a run is completed.
+                    Hear when a new community campaign round goes live and when a round is completed.
                   </small>
                 </div>
                 <label className="toggle-switch">

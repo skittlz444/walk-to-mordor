@@ -297,7 +297,7 @@ describe('PushPermissionIsland', () => {
       expect(getByText('Community Campaigns')).toBeTruthy();
     });
 
-    expect(getByText('Hear when a new community campaign run goes live and when a run is completed.'))
+    expect(getByText('Hear when a new community campaign round goes live and when a round is completed.'))
       .toBeTruthy();
 
     const toggle = container.querySelector('#push-community-campaigns-toggle') as HTMLInputElement;

@@ -279,8 +279,8 @@ describe('EventsIsland', () => {
     expect(container.textContent).toContain('Final progress: 600 km of 581 km');
     expect(container.textContent).toContain('Completed');
     expect(container.textContent).toContain('Expired');
-    expect(container.textContent).toContain('Run 1');
-    expect(container.textContent).toContain('Run 2');
+    expect(container.textContent).toContain('Round 1');
+    expect(container.textContent).toContain('Round 2');
   });
 
   it('shows anonymous visitors campaign data and a sign-in link instead of a join button', async () => {
@@ -379,7 +379,7 @@ describe('EventsIsland', () => {
       expect(container.querySelector('.event-join__removed')).toBeTruthy();
     });
 
-    expect(container.textContent).toContain('Your participation in this run has been removed.');
+    expect(container.textContent).toContain('Your participation in this round has been removed.');
     expect(container.querySelector('.event-join__contribution')).toBeNull();
     expect(queryByRole('button', { name: 'Join campaign' })).toBeNull();
   });
@@ -550,7 +550,7 @@ describe('EventsIsland', () => {
     await waitFor(() => {
       expect(container.querySelector('.events-empty')).toBeTruthy();
     });
-    expect(container.textContent).toContain('No community campaigns are running right now');
+    expect(container.textContent).toContain('No community campaigns are active right now');
   });
 
   it('still renders a campaign card when the community-progress request fails', async () => {

@@ -227,7 +227,7 @@ function CampaignCard({
             {run.participantCount} {run.participantCount === 1 ? 'walker' : 'walkers'}
             {' · '}
             {run.contributorCount} {run.contributorCount === 1 ? 'contributor' : 'contributors'}
-            {' · '}run {run.runNumber}
+            {' · '}round {run.runNumber}
           </p>
         </div>
 
@@ -281,7 +281,7 @@ function CampaignCard({
             )
           ) : participation ? (
             <p className="event-join__removed">
-              Your participation in this run has been removed.
+              Your participation in this round has been removed.
             </p>
           ) : authenticated ? (
             <button
@@ -323,7 +323,7 @@ function PastRunCard({ campaign, run }: { campaign: CampaignSummary; run: Campai
       <div className="event-past-card__header">
         <h3 className="event-past-card__title">
           {campaign.name}
-          <span className="event-card__run">Run {run.runNumber}</span>
+          <span className="event-card__run">Round {run.runNumber}</span>
         </h3>
         <span className={statusClass(run.status)}>{STATUS_LABELS[run.status]}</span>
       </div>
@@ -483,7 +483,7 @@ export function EventsIsland() {
     return (
       <div className="events-page">
         <div className="events-empty">
-          <i className="fas fa-flag" aria-hidden="true"></i> No community campaigns are running right now. Check back soon.
+          <i className="fas fa-flag" aria-hidden="true"></i> No community campaigns are active right now. Check back soon.
         </div>
       </div>
     );

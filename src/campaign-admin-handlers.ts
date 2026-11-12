@@ -837,23 +837,23 @@ export async function handleAdminCampaignUpdate(
 
     if (referenceRun && !runIsUpcoming) {
       if (data.targetDistance !== referenceRun.target_distance) {
-        fields.target_distance = 'Target distance is frozen once the run has started';
+        fields.target_distance = 'Target distance is frozen once the window has started';
       }
       if (data.startDate !== referenceRun.start_date) {
-        fields.start_date = 'Start date is frozen once the run has started';
+        fields.start_date = 'Start date is frozen once the window has started';
       }
       if (activeRun) {
         if (data.endDate < referenceRun.end_date) {
           fields.end_date = 'The end date can only be extended';
         }
       } else if (data.endDate !== referenceRun.end_date) {
-        fields.end_date = 'End date is frozen once the run has ended';
+        fields.end_date = 'End date is frozen once the window has ended';
       }
     }
 
     const badgeFrozen = referenceRun !== null && !runIsUpcoming;
     if (badgeFrozen && data.badgeSlug !== (existing.badge_slug ?? '')) {
-      fields.badge_slug = 'Badge slug is frozen once the run has started';
+      fields.badge_slug = 'Badge slug is frozen once the window has started';
     }
 
     if (Object.keys(fields).length > 0) return validationResponse(fields);
@@ -1182,15 +1182,15 @@ export async function handleAdminCampaignRetrigger(
 
     if (!existing.enabled) {
       return jsonResponse({
-        error: 'Enable this campaign before starting its next run',
+        error: 'Enable this campaign before re-triggering it',
       }, 400);
     }
 
     const latestRun = existing.latestRun;
     if (latestRun && latestRun.status !== 'completed' && latestRun.status !== 'expired') {
       return jsonResponse({
-        error: `Run ${latestRun.run_number} is still ${latestRun.status}. `
-          + 'Start the next run only after it completes or expires.',
+        error: `Round ${latestRun.run_number} is still ${latestRun.status}. `
+          + 'Re-trigger the campaign only after it completes or expires.',
       }, 400);
     }
 
@@ -1289,7 +1289,7 @@ export async function handleAdminCampaignRetrigger(
   } catch (error: unknown) {
     if (isUniqueViolation(error)) {
       return jsonResponse({
-        error: 'A current run already exists for this campaign',
+        error: 'This campaign already has a current window',
       }, 400);
     }
     console.error('Error retriggering admin campaign:', error);

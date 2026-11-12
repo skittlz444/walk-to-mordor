@@ -907,17 +907,20 @@ export function AdminCommunityCampaignsIsland() {
             : current);
         } else {
           setRetrigger((current) => current
-            ? { ...current, formError: errorMessage(data, 'Failed to start the next run') }
+            ? { ...current, formError: errorMessage(data, 'Failed to re-trigger the campaign') }
             : current);
         }
         return;
       }
       setRetrigger(null);
-      setNotice(`Started run ${(data.run as AdminCampaignRun | undefined)?.run_number ?? ''}`.trim());
+      const completedRound = (data.run as AdminCampaignRun | undefined)?.run_number;
+      setNotice(completedRound === undefined
+        ? 'Re-triggered campaign'
+        : `Re-triggered campaign — round ${completedRound}`);
       await fetchCampaigns(true);
     } catch (err) {
       setRetrigger((current) => current
-        ? { ...current, formError: err instanceof Error ? err.message : 'Failed to start the next run' }
+        ? { ...current, formError: err instanceof Error ? err.message : 'Failed to re-trigger the campaign' }
         : current);
     } finally {
       setRetriggerSaving(false);
@@ -1013,7 +1016,7 @@ export function AdminCommunityCampaignsIsland() {
                 <thead>
                   <tr>
                     <th scope="col">Campaign</th>
-                    <th scope="col">Current run</th>
+                    <th scope="col">Current window</th>
                     <th scope="col">Badge</th>
                     <th scope="col">Participants</th>
                     <th scope="col">Status</th>
@@ -1036,7 +1039,7 @@ export function AdminCommunityCampaignsIsland() {
                         <td>
                           {run ? (
                             <span className="admin-campaigns-run">
-                              <span className="admin-campaigns-run__label">Run {run.run_number}</span>
+                              <span className="admin-campaigns-run__label">Round {run.run_number}</span>
                               <span>{run.target_distance} km</span>
                               <span className="admin-campaigns-run__dates">
                                 {run.start_date} – {run.end_date}
@@ -1046,7 +1049,7 @@ export function AdminCommunityCampaignsIsland() {
                               </span>
                             </span>
                           ) : (
-                            <span className="admin-campaigns-run__dates">No run yet</span>
+                            <span className="admin-campaigns-run__dates">No window yet</span>
                           )}
                         </td>
                         <td className="admin-campaigns-badge">{badgeLabel(campaign)}</td>
@@ -1092,7 +1095,7 @@ export function AdminCommunityCampaignsIsland() {
                                 onClick={() => void openRetrigger(campaign)}
                                 disabled={busyId === campaign.id}
                               >
-                                Start next run
+                                Re-trigger campaign
                               </button>
                             )}
                           </div>
@@ -1124,7 +1127,7 @@ export function AdminCommunityCampaignsIsland() {
             <p>
               {disableConfirmation.activeParticipants} participant
               {disableConfirmation.activeParticipants === 1 ? ' is' : 's are'} active in this campaign.
-              Choose whether to leave them running or cancel their participation. Ledger history and
+              Choose whether to leave them active or cancel their participation. Ledger history and
               earned badges are always kept.
             </p>
             <div className="admin-campaigns-modal__actions">
@@ -1163,7 +1166,7 @@ export function AdminCommunityCampaignsIsland() {
           className="admin-campaigns-modal"
           role="dialog"
           aria-modal="true"
-          aria-label="Start next run"
+          aria-label="Re-trigger campaign"
           onClick={(event) => {
             if (event.target === event.currentTarget && !retriggerSaving) setRetrigger(null);
           }}
@@ -1172,10 +1175,10 @@ export function AdminCommunityCampaignsIsland() {
             className="admin-panel admin-campaign-form admin-campaigns-modal__content"
             onSubmit={submitRetrigger}
           >
-            <h3>Start next run: {retrigger.campaign.name}</h3>
+            <h3>Re-trigger campaign: {retrigger.campaign.name}</h3>
             <p className="admin-campaign-hint">
-              The new run starts with zero participants and zero progress. Every past run,
-              participant history, and earned badge is kept unchanged.
+              The new round starts with zero participants and zero progress. Past rounds,
+              participant history, and earned badges are kept.
             </p>
             <div className="admin-campaign-form__grid">
               <div className="admin-campaign-field">
@@ -1225,7 +1228,7 @@ export function AdminCommunityCampaignsIsland() {
             )}
             <div className="admin-campaign-form__actions">
               <button type="submit" className="admin-btn admin-btn-primary" disabled={retriggerSaving}>
-                {retriggerSaving ? 'Starting…' : 'Start next run'}
+                {retriggerSaving ? 'Re-triggering…' : 'Re-trigger campaign'}
               </button>
               <button
                 type="button"

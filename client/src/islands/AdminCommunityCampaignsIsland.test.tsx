@@ -202,11 +202,11 @@ describe('AdminCommunityCampaignsIsland', () => {
     expect(within(firstRow).getByText('3')).toBeTruthy();
     expect(within(firstRow).getByRole('button', { name: 'Edit' })).toBeTruthy();
     expect(within(firstRow).getByRole('button', { name: 'Disable' })).toBeTruthy();
-    expect(within(firstRow).queryByRole('button', { name: 'Start next run' })).toBeNull();
+    expect(within(firstRow).queryByRole('button', { name: 'Re-trigger campaign' })).toBeNull();
 
     const secondRow = rowFor(container, 1);
     expect(within(secondRow).getByRole('button', { name: 'Enable' })).toBeTruthy();
-    expect(within(secondRow).queryByRole('button', { name: 'Start next run' })).toBeNull();
+    expect(within(secondRow).queryByRole('button', { name: 'Re-trigger campaign' })).toBeNull();
   });
 
   it('renders a loading state while the list request is pending', () => {
@@ -574,9 +574,9 @@ describe('AdminCommunityCampaignsIsland', () => {
       expect(getByText('Upcoming Campaign')).toBeTruthy();
     });
 
-    expect(within(rowFor(container, 0)).queryByRole('button', { name: 'Start next run' })).toBeNull();
-    expect(within(rowFor(container, 1)).queryByRole('button', { name: 'Start next run' })).toBeNull();
-    expect(within(rowFor(container, 2)).queryByRole('button', { name: 'Start next run' })).toBeNull();
+    expect(within(rowFor(container, 0)).queryByRole('button', { name: 'Re-trigger campaign' })).toBeNull();
+    expect(within(rowFor(container, 1)).queryByRole('button', { name: 'Re-trigger campaign' })).toBeNull();
+    expect(within(rowFor(container, 2)).queryByRole('button', { name: 'Re-trigger campaign' })).toBeNull();
   });
 
   it('opens the retrigger form pre-filled from suggestions and submits overrides', async () => {
@@ -614,15 +614,15 @@ describe('AdminCommunityCampaignsIsland', () => {
       expect(getByText('Done Campaign')).toBeTruthy();
     });
 
-    fireEvent.click(within(rowFor(container, 0)).getByRole('button', { name: 'Start next run' }));
+    fireEvent.click(within(rowFor(container, 0)).getByRole('button', { name: 'Re-trigger campaign' }));
 
     const dialog = await waitFor(() => {
-      const element = document.querySelector<HTMLElement>('[role="dialog"][aria-label="Start next run"]');
+      const element = document.querySelector<HTMLElement>('[role="dialog"][aria-label="Re-trigger campaign"]');
       expect(element).toBeTruthy();
       return element as HTMLElement;
     });
     expect(within(dialog).getByText(/zero participants and zero progress/)).toBeTruthy();
-    expect(within(dialog).getByText(/earned badge is kept unchanged/)).toBeTruthy();
+    expect(within(dialog).getByText(/earned badges are kept/)).toBeTruthy();
 
     await waitFor(() => {
       expect((getByLabelText('Target distance (km)') as HTMLInputElement).value).toBe('1');
@@ -636,7 +636,7 @@ describe('AdminCommunityCampaignsIsland', () => {
     fireEvent.submit(dialog.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
-      expect(getByText('Started run 2')).toBeTruthy();
+      expect(getByText('Re-triggered campaign — round 2')).toBeTruthy();
     });
 
     const postCall = mockFetch.mock.calls.find(
@@ -663,7 +663,7 @@ describe('AdminCommunityCampaignsIsland', () => {
         return jsonResponse({ suggestedTargetDistance: 10, suggestedDurationDays: 14 });
       }
       if (url === '/api/admin/campaigns/7/retrigger' && init?.method === 'POST') {
-        return jsonResponse({ error: 'A current run already exists for this campaign' }, 400);
+        return jsonResponse({ error: 'This campaign already has a current window' }, 400);
       }
       return undefined;
     }, [terminal]));
@@ -673,19 +673,19 @@ describe('AdminCommunityCampaignsIsland', () => {
     await waitFor(() => {
       expect(getByText('Done Campaign')).toBeTruthy();
     });
-    fireEvent.click(within(rowFor(container, 0)).getByRole('button', { name: 'Start next run' }));
+    fireEvent.click(within(rowFor(container, 0)).getByRole('button', { name: 'Re-trigger campaign' }));
 
     const dialog = await waitFor(() => {
-      const element = document.querySelector<HTMLElement>('[role="dialog"][aria-label="Start next run"]');
+      const element = document.querySelector<HTMLElement>('[role="dialog"][aria-label="Re-trigger campaign"]');
       expect(element).toBeTruthy();
       return element as HTMLElement;
     });
     fireEvent.submit(dialog.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
-      expect(within(dialog).getByText('A current run already exists for this campaign')).toBeTruthy();
+      expect(within(dialog).getByText('This campaign already has a current window')).toBeTruthy();
     });
-    expect(document.querySelector('[role="dialog"][aria-label="Start next run"]')).toBeTruthy();
+    expect(document.querySelector('[role="dialog"][aria-label="Re-trigger campaign"]')).toBeTruthy();
   });
 
   it('redirects to login on 401 and shows the unauthorized state', async () => {
