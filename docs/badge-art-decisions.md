@@ -56,7 +56,7 @@ Mithril is a user override of the shortlist recommendation (`b-314159`).
 
 ## Final asset layout
 
-All badges are circular. The F1 stack is emblem 800 → opaque dark well 880 → family frame 1016/880 → 6 o'clock rank boss. There is no rank ring.
+All badges are circular. The F1 stack is painted in this order: opaque dark well 880 first, then emblem 800 over it, then family frame 1016/880, then the 6 o'clock rank boss over its contact shadow. There is no rank ring.
 
 | Output | Path | Size |
 |---|---|---|
@@ -72,7 +72,7 @@ All badges are circular. The F1 stack is emblem 800 → opaque dark well 880 →
 
 - `<slug>--bronze`, `--silver`, `--gold`, `--mithril`, with thumbs and full images.
 - The base `<slug>` image is a no-boss fallback.
-- The client must select the variant from `presentation.rank`; otherwise the fallback shows the emblem + frame without a boss.
+- The client must select the variant from `presentation.rank_label`; otherwise the fallback shows the emblem + frame without a boss.
 
 All sizes are generated from the same 1024 master; do not hand-edit the 512 or 200 files. Budgets: card ≤ 120 KiB, thumb ≤ 20 KiB, full ≤ 500 KiB.
 
@@ -88,13 +88,16 @@ On 2026-11-02 the set was rebuilt from the original ComfyUI 1024 candidates. The
 | Boss masters | `assets/badge-art/bosses/<rank>.png` | 1024 RGBA, 800 px art |
 | Boss tiles | `assets/badge-art/bosses/<rank>-tile.png` | 90 × 90 RGBA, 70 px art, place at `(466, 934)` |
 | Boss shadows | `assets/badge-art/bosses/<rank>-shadow.png` | 90 × 90 RGBA, place at `(466, 936)` |
+| Emblem masters | `assets/badge-art/emblems/<slug>.png` | one processed 1024 RGBA emblem layer per badge (recovered 2026-11-12 by disc-crop from the committed full images) |
 
-Machine-readable picks are in `scripts/badge-art/final-selections.json`. Rebuild all composites with `scripts/badge-art/rebuild_finals.py`; the script refreshes `assets/badge-art/` by default. Rebuilding needs the processed emblem layers in the gitignored `raw_assets/badges/` workspace; the final `full/` images are the durable inspection copies. Only reusable frames and bosses are retained as source layers; emblems are achievement-specific.
+Machine-readable picks are in `scripts/badge-art/final-selections.json`. Rebuild all composites with `scripts/badge-art/rebuild_finals.py`; the script refreshes `assets/badge-art/` by default. The script reads layers **tracked-first** from `assets/badge-art/` (`emblems/<slug>.png`, `frames/<family>.png`, `bosses/<rank>-tile|shadow.png`) and falls back to the gitignored `raw_assets/badges/` staging workspace when a tracked layer is absent.
+
+**Emblem masters are tracked as of 2026-11-12.** Each badge's processed emblem layer is retained at `assets/badge-art/emblems/<slug>.png`, recovered from the committed `public/img/achievements/full/<slug>.webp` by cropping the center disc (r=410 — the emblem sits at r=400 inside the uniform dark well; the frame ring and the 6 o'clock boss never enter that disc). These masters are derived from lossy WebP, so a rebuild from them reproduces the committed set within WebP re-encode tolerance (RMS ≤ ~4.5/255, worst on 200 px thumbnails; visually identical) rather than byte-identically; rebuilds after recovery are deterministic from the tracked files. A new badge's emblem master is created by its normal generation pipeline and committed alongside the finals.
 
 ## Standing decisions
 
 - Circle badges only; no hexagon silhouette.
-- F1 stack: emblem 800 → opaque well 880 → family frame 1016/880 → 6 o'clock rank boss.
+- F1 stack paint order: opaque well 880 first, then emblem 800, then family frame 1016/880, then the 6 o'clock rank boss over its contact shadow.
 - Rank rings are retired.
 - The card's rank label is authoritative; the boss is the visual cue.
 - The achievement image-generation skill has been updated with the palette/material preferences.

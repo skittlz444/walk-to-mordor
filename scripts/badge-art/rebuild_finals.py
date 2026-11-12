@@ -1,26 +1,31 @@
 #!/usr/bin/env python3
-"""Rebuild the final badge composites from the recovered production layers.
+"""Rebuild the final badge composites from retained production layers.
 
 Reads the machine-readable picks in `final-selections.json` and the processed
-1024 px layers under `raw_assets/badges/processed/` and
-`raw_assets/badges/bosses/tiles/`, then writes:
+1024 px layers, preferring the tracked sources under `assets/badge-art/`
+(`emblems/<slug>.png`, `frames/<family>.png`, `bosses/<rank>-tile.png`,
+`bosses/<rank>-shadow.png`) and falling back to the gitignored staging
+workspace under `raw_assets/badges/` (`processed/` and `bosses/tiles/`) when
+a tracked layer is absent. It then writes:
 
   raw_assets/badges/final-complete/<name>.png   1024 px RGBA master
   <out-root>/img/achievements/full/<name>.webp  1024 px inspection image
   <out-root>/img/achievements/<name>.webp        512 px card image
   <out-root>/img/achievements/<name>-thumb.webp  200 px thumbnail
 
-It also refreshes the tracked reusable layers under `assets/badge-art/`:
-family frames, boss masters, boss tiles, and boss shadows. Use
-`--no-retain-layers` to skip that copy.
+It also fills in missing tracked layers under `assets/badge-art/` from the
+staging workspace (a newly generated emblem master, or a layer absent on a
+fresh checkout); it never overwrites an existing tracked layer. Use
+`--no-retain-layers` to skip that entirely.
 
 `<name>` is `<slug>` for fixed-rank badges and the no-boss fallback, and
 `<slug>--<rank_label>` for repeatable rank variants.
 
-The composite is the locked F1 stack: an opaque dark well at 880, the emblem
-at 800, the family frame at 1016/880, and the selected handcrafted rank boss
-at 6 o'clock with its contact shadow. The boss and shadow are clipped to the
-badge alpha so they cannot spill outside the silhouette.
+The composite is the locked F1 stack: an opaque dark well at 880 painted
+first, then the emblem at 800, then the family frame at 1016/880, and finally
+the selected handcrafted rank boss at 6 o'clock over its contact shadow. The
+boss and shadow are clipped to the badge alpha so they cannot spill outside
+the silhouette.
 
 Usage:
   /run/media/skittlz/LinuxStorageSSD/github/comfyui/venv/bin/python \
@@ -54,6 +59,7 @@ SHADOW_POSITION = (466, 936)
 MAIN_PX, THUMB_PX, FULL_PX = 512, 200, 1024
 MAIN_KB, THUMB_KB, FULL_KB = 120, 20, 500
 RETAIN = REPO / "assets" / "badge-art"
+EMBLEMS = RETAIN / "emblems"
 
 
 def load_config():
@@ -72,19 +78,39 @@ def require(path: Path):
     return path
 
 
+def require_first(*paths: Path):
+    for path in paths:
+        if path.is_file():
+            return path
+    raise FileNotFoundError(
+        "none of the candidate layers exist: " + ", ".join(str(p) for p in paths)
+    )
+
+
 def emblem_layer(config, slug):
-    return require(PROCESSED / "emblem" / slug / f"{config['emblems'][slug]}.png")
+    return require_first(
+        EMBLEMS / f"{slug}.png",
+        PROCESSED / "emblem" / slug / f"{config['emblems'][slug]}.png",
+    )
 
 
 def frame_layer(config, family):
-    return require(PROCESSED / "frame" / family / f"{config['frames'][family]}.png")
+    return require_first(
+        RETAIN / "frames" / f"{family}.png",
+        PROCESSED / "frame" / family / f"{config['frames'][family]}.png",
+    )
 
 
 def boss_layers(config, rank):
+    tracked_tile = RETAIN / "bosses" / f"{rank}-tile.png"
+    tracked_shadow = RETAIN / "bosses" / f"{rank}-shadow.png"
     candidate = config["bosses"][rank]
-    return (
-        require(BOSS_TILES / rank / f"{candidate}.png"),
-        require(BOSS_TILES / rank / f"{candidate}-shadow.png"),
+    return require_first(
+        tracked_tile,
+        BOSS_TILES / rank / f"{candidate}.png",
+    ), require_first(
+        tracked_shadow,
+        BOSS_TILES / rank / f"{candidate}-shadow.png",
     )
 
 
@@ -114,21 +140,42 @@ def add_boss(config, base, rank):
 
 
 def retain_layers(config):
-    """Copy the reusable frame and boss layers out of the gitignored workspace."""
+    """Fill in missing tracked layers from the staging workspace.
+
+    Tracked layers under `assets/badge-art/` are the build source, so retain
+    never overwrites an existing tracked file; it only adds tracked copies
+    for layers that are absent — a newly generated emblem, or a layer missing
+    on a fresh checkout. Use `--no-retain-layers` to skip entirely.
+    """
     import shutil
+
+    def adopt(source: Path, destination: Path) -> None:
+        if source.is_file() and not destination.is_file():
+            shutil.copy2(source, destination)
 
     frames = RETAIN / "frames"
     bosses = RETAIN / "bosses"
     frames.mkdir(parents=True, exist_ok=True)
     bosses.mkdir(parents=True, exist_ok=True)
+    EMBLEMS.mkdir(parents=True, exist_ok=True)
     for family in config["frames"]:
-        shutil.copy2(frame_layer(config, family), frames / f"{family}.png")
+        adopt(
+            PROCESSED / "frame" / family / f"{config['frames'][family]}.png",
+            frames / f"{family}.png",
+        )
     for rank in config["bosses"]:
-        master = BOSS_TILES.parent / "processed" / rank / f"{config['bosses'][rank]}.png"
+        adopt(
+            BOSS_TILES.parent / "processed" / rank / f"{config['bosses'][rank]}.png",
+            bosses / f"{rank}.png",
+        )
         tile, shadow = boss_layers(config, rank)
-        shutil.copy2(require(master), bosses / f"{rank}.png")
-        shutil.copy2(tile, bosses / f"{rank}-tile.png")
-        shutil.copy2(shadow, bosses / f"{rank}-shadow.png")
+        adopt(tile, bosses / f"{rank}-tile.png")
+        adopt(shadow, bosses / f"{rank}-shadow.png")
+    for slug in config["emblems"]:
+        adopt(
+            PROCESSED / "emblem" / slug / f"{config['emblems'][slug]}.png",
+            EMBLEMS / f"{slug}.png",
+        )
 
 
 def save_webp(image: Image.Image, path: Path, size: int, max_kb: int, quality: int):

@@ -26,7 +26,7 @@ Goal and personal-challenge images are repository-backed static files served fro
 | `public/img/avatars/` | Avatar images (separate pipeline — `scripts/optimize-avatars.js`, 64×64 thumbs) |
 | `public/img/achievements/` | Badge cards (512 px) and thumbs (200 px, `-thumb` suffix) |
 | `public/img/achievements/full/` | Badge inspection images (1024 px) |
-| `assets/badge-art/` | Tracked reusable badge frames and rank bosses |
+| `assets/badge-art/` | Tracked reusable badge frames, rank bosses, and per-badge emblem masters |
 | `public/img/image-manifest.json` | Build-time generated list of all available image slugs |
 
 ## image_id / image_slug Convention & Naming Rules
@@ -109,14 +109,15 @@ Badge artwork is a separate pipeline from goal images. All outputs are WebP with
 ### Compositing
 
 - PhotoCraft MCP is used for one-off or preview composites.
-- `scripts/badge-art/rebuild_finals.py` is the deterministic production path: emblem 800 → opaque well 880 → family frame 1016/880 → rank boss tile at `(466, 934)` and shadow at `(466, 936)`, clipped to the badge alpha.
-- The rebuild script writes the 512 card, 200 thumb, and 1024 full image, and refreshes `assets/badge-art/` by default.
+- `scripts/badge-art/rebuild_finals.py` is the deterministic production path: opaque well 880 painted first, then emblem 800 over it, then family frame 1016/880, then rank boss shadow and tile at `(466, 936)` / `(466, 934)`, clipped to the badge alpha. It reads layers tracked-first from `assets/badge-art/` (including per-badge emblem masters) and falls back to the `raw_assets/badges/` staging workspace.
+- The rebuild script writes the 512 card, 200 thumb, and 1024 full image, and fills in missing tracked layers under `assets/badge-art/` from the staging workspace by default (it never overwrites an existing tracked layer); `--no-retain-layers` skips that.
 - Repeatable badges get four rank variants plus a no-boss base image.
 
 ### Retained layers
 
 - `assets/badge-art/frames/<family>.png` — six locked 1024 RGBA frames, 1016 outer / 880 inner.
 - `assets/badge-art/bosses/<rank>.png` — 800 px master; `<rank>-tile.png` and `<rank>-shadow.png` are the ready-to-place 90 × 90 layers.
+- `assets/badge-art/emblems/<slug>.png` — one processed 1024 RGBA emblem layer per badge (recovered for the recorded set by disc-cropping the committed `full/<slug>.webp`).
 - These are tracked source layers. Do not delete them; `raw_assets/` is disposable.
 - Picks: `scripts/badge-art/final-selections.json`. Decisions: `docs/badge-art-decisions.md`.
 
@@ -125,9 +126,9 @@ Badge artwork is a separate pipeline from goal images. All outputs are WebP with
 1. Choose the family frame from `badge_type` and the rank boss from the badge rank.
 2. Generate and normalise the emblem.
 3. Add the emblem candidate and frame family to `final-selections.json`.
-4. Run `rebuild_finals.py`.
+4. Run `rebuild_finals.py` with the staging workspace present so the rebuild adopts the new emblem master into `assets/badge-art/emblems/<slug>.png`.
 5. Verify alpha, size budgets, and legibility at 96/200 px.
-6. Commit the public assets and any changed `assets/badge-art/` layers.
+6. Commit the public assets and the new `assets/badge-art/emblems/<slug>.png` layer.
 
 Badge artwork is not processed by `scripts/optimize-images.js` and is not part of the goal image manifest.
 
@@ -155,7 +156,7 @@ Both require admin bearer token (401/403 on failure). Saving a goal with a non-e
 | Concern | Location |
 |---|---|
 | Optimization pipeline | `scripts/optimize-images.js` |
-| Manifest generation | `scripts/build-image-manifest.js` |
+| Manifest generation | `scripts/generate-image-manifest.js` |
 | Admin image API handler | `src/admin-handlers.ts` |
 | Admin goal edit island | `client/src/islands/AdminGoalEditIsland.tsx` |
 | Image slug validation | `src/validators.ts` |
