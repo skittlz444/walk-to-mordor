@@ -362,49 +362,75 @@ export function EventsIsland() {
   const [joinError, setJoinError] = useState<{ campaignId: number; message: string } | null>(null);
   const [authenticated] = useState<boolean>(() => readSessionToken() !== null);
 
+  /**
+   * Fetch the campaign list plus each active card's contributor ranking.
+   * Deliberately does not touch component state: callers decide whether the
+   * request is a page-level load (show the loading state) or a silent refresh
+   * after an action (keep the rendered cards in place).
+   */
+  const fetchCampaignData = useCallback(async () => {
+    const response = await fetch('/api/events', { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Failed to load campaigns');
+
+    const body = await response.json() as { campaigns?: CampaignSummary[] };
+    const list = Array.isArray(body.campaigns) ? body.campaigns : [];
+
+    // Contributor rankings live on the per-campaign progress endpoint; a
+    // failed or slow progress call must not hide the campaign card itself.
+    const progressEntries = await Promise.all(
+      list
+        .filter((campaign) => campaign.activeRun !== null)
+        .map(async (campaign): Promise<[number, CommunityProgress | null]> => {
+          try {
+            const progressResponse = await fetch(
+              `/api/events/${campaign.id}/community-progress`,
+              { headers: getAuthHeaders() },
+            );
+            if (!progressResponse.ok) return [campaign.id, null];
+            return [campaign.id, await progressResponse.json() as CommunityProgress];
+          } catch {
+            return [campaign.id, null];
+          }
+        }),
+    );
+
+    const progress: Record<number, CommunityProgress> = {};
+    for (const [campaignId, entry] of progressEntries) {
+      if (entry) progress[campaignId] = entry;
+    }
+
+    return { campaigns: list, progress };
+  }, []);
+
+  /** Page-level load: initial mount and the explicit Retry action. */
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/events', { headers: getAuthHeaders() });
-      if (!response.ok) throw new Error('Failed to load campaigns');
-
-      const body = await response.json() as { campaigns?: CampaignSummary[] };
-      const list = Array.isArray(body.campaigns) ? body.campaigns : [];
-
-      // Contributor rankings live on the per-campaign progress endpoint; a
-      // failed or slow progress call must not hide the campaign card itself.
-      const progressEntries = await Promise.all(
-        list
-          .filter((campaign) => campaign.activeRun !== null)
-          .map(async (campaign): Promise<[number, CommunityProgress | null]> => {
-            try {
-              const progressResponse = await fetch(
-                `/api/events/${campaign.id}/community-progress`,
-                { headers: getAuthHeaders() },
-              );
-              if (!progressResponse.ok) return [campaign.id, null];
-              return [campaign.id, await progressResponse.json() as CommunityProgress];
-            } catch {
-              return [campaign.id, null];
-            }
-          }),
-      );
-
-      const nextProgress: Record<number, CommunityProgress> = {};
-      for (const [campaignId, progress] of progressEntries) {
-        if (progress) nextProgress[campaignId] = progress;
-      }
-
-      setCampaigns(list);
-      setProgressByCampaign(nextProgress);
+      const data = await fetchCampaignData();
+      setCampaigns(data.campaigns);
+      setProgressByCampaign(data.progress);
     } catch (loadError) {
       console.error('EventsIsland: failed to load campaigns', loadError);
       setError('We could not load the community campaigns. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchCampaignData]);
+
+  /**
+   * Post-join refresh. Cards stay rendered while this runs; a transient
+   * failure here must not replace a successful join with the page error state.
+   */
+  const refreshAfterJoin = useCallback(async () => {
+    try {
+      const data = await fetchCampaignData();
+      setCampaigns(data.campaigns);
+      setProgressByCampaign(data.progress);
+    } catch (refreshError) {
+      console.error('EventsIsland: failed to refresh campaigns after join', refreshError);
+    }
+  }, [fetchCampaignData]);
 
   useEffect(() => {
     void load();
@@ -422,7 +448,7 @@ export function EventsIsland() {
         const body = await response.json().catch(() => ({})) as { error?: string };
         throw new Error(body.error || 'We could not join this campaign. Please try again.');
       }
-      await load();
+      await refreshAfterJoin();
     } catch (joinFailure) {
       console.error('EventsIsland: failed to join campaign', joinFailure);
       setJoinError({
@@ -434,7 +460,7 @@ export function EventsIsland() {
     } finally {
       setJoiningId(null);
     }
-  }, [load]);
+  }, [refreshAfterJoin]);
 
   if (loading) {
     return (

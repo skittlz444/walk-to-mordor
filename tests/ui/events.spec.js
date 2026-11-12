@@ -4,6 +4,11 @@ const {
     expect,
 } = require('./helpers/common');
 
+const { execSync } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:8787';
 const EVENTS_PATH = '/events';
 const CARD = '.event-card';
@@ -11,6 +16,106 @@ const SIGN_IN = '.event-join__signin';
 const JOIN_BUTTON = '.event-join__button';
 const NOTICE = '.event-join__notice';
 const CONTRIBUTOR_ITEM = '.event-contributors__item';
+const REPO_ROOT = path.join(__dirname, '..', '..');
+
+/**
+ * The seeded Beacon Watch campaign ships `enabled = 0` and its run window is
+ * relative to migration time, so out of the box the events page has no cards.
+ * This fixture activates the feature end-to-end through the local D1 database
+ * (the same one `wrangler dev` serves): enable the campaign, shift its run
+ * window around today, add six contributing walkers so the ranking has depth,
+ * add a copy-only campaign card, and add a campaign with a completed run so
+ * the past section renders.
+ *
+ * Every statement is idempotent (`INSERT OR IGNORE` / guarded `UPDATE`), so a
+ * partially applied seed heals on the next run instead of aborting.
+ * If the seed cannot run (no local D1 state, wrangler failure), the
+ * data-dependent tests skip themselves exactly as they would on an unseeded
+ * database.
+ */
+const SEED_SQL = `-- Activate Beacon Watch: enable the campaign and centre its run window on
+-- today. The UPDATE is skipped while another run is current so a re-seed can
+-- never violate the one-current-run partial unique index.
+UPDATE campaign_definitions SET enabled = 1 WHERE slug = 'beacon-watch';
+UPDATE campaign_runs
+SET status = 'active',
+    start_date = date('now', '-5 day'),
+    end_date = date('now', '+9 day')
+WHERE campaign_id = (SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch')
+  AND run_number = 1
+  AND NOT EXISTS (
+    SELECT 1 FROM campaign_runs other
+    WHERE other.campaign_id = campaign_runs.campaign_id
+      AND other.id <> campaign_runs.id
+      AND other.status IN ('upcoming', 'active')
+  );
+
+-- Six contributing walkers so the ranking and the "and X more" indicator have
+-- depth. users.email/password_hash/salt are NOT NULL, so they must be supplied
+-- explicitly (there is no usable default).
+INSERT OR IGNORE INTO users (username, email, password_hash, salt, approved, email_verified) VALUES
+    ('beacon-contrib-1', 'beacon-contrib-1@example.test', 'seed-hash', 'seed-salt', 1, 1),
+    ('beacon-contrib-2', 'beacon-contrib-2@example.test', 'seed-hash', 'seed-salt', 1, 1),
+    ('beacon-contrib-3', 'beacon-contrib-3@example.test', 'seed-hash', 'seed-salt', 1, 1),
+    ('beacon-contrib-4', 'beacon-contrib-4@example.test', 'seed-hash', 'seed-salt', 1, 1),
+    ('beacon-contrib-5', 'beacon-contrib-5@example.test', 'seed-hash', 'seed-salt', 1, 1),
+    ('beacon-contrib-6', 'beacon-contrib-6@example.test', 'seed-hash', 'seed-salt', 1, 1);
+
+-- progress is UNIQUE(date, user_id); without OR IGNORE a re-seed aborts the
+-- whole script and leaves the fixtures half-applied.
+INSERT OR IGNORE INTO progress (date, distance, user_id) VALUES
+    (date('now', '-1 day'), 4.2, (SELECT id FROM users WHERE username = 'beacon-contrib-1')),
+    (date('now', '-1 day'), 5.1, (SELECT id FROM users WHERE username = 'beacon-contrib-2')),
+    (date('now', '-1 day'), 6.3, (SELECT id FROM users WHERE username = 'beacon-contrib-3')),
+    (date('now', '-2 day'), 7.8, (SELECT id FROM users WHERE username = 'beacon-contrib-4')),
+    (date('now', '-2 day'), 8.9, (SELECT id FROM users WHERE username = 'beacon-contrib-5')),
+    (date('now', '-3 day'), 12.4, (SELECT id FROM users WHERE username = 'beacon-contrib-6'));
+
+-- campaign_participants is UNIQUE(user_id, campaign_id, run_id); OR IGNORE
+-- makes a re-seed idempotent instead of aborting on the first existing row.
+INSERT OR IGNORE INTO campaign_participants (campaign_id, run_id, user_id, progress_distance, joined_at) VALUES
+    ((SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch'), (SELECT id FROM campaign_runs WHERE campaign_id = (SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch') AND run_number = 1), (SELECT id FROM users WHERE username = 'beacon-contrib-1'), 4.2, datetime('now', '-2 day')),
+    ((SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch'), (SELECT id FROM campaign_runs WHERE campaign_id = (SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch') AND run_number = 1), (SELECT id FROM users WHERE username = 'beacon-contrib-2'), 5.1, datetime('now', '-2 day')),
+    ((SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch'), (SELECT id FROM campaign_runs WHERE campaign_id = (SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch') AND run_number = 1), (SELECT id FROM users WHERE username = 'beacon-contrib-3'), 6.3, datetime('now', '-2 day')),
+    ((SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch'), (SELECT id FROM campaign_runs WHERE campaign_id = (SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch') AND run_number = 1), (SELECT id FROM users WHERE username = 'beacon-contrib-4'), 7.8, datetime('now', '-2 day')),
+    ((SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch'), (SELECT id FROM campaign_runs WHERE campaign_id = (SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch') AND run_number = 1), (SELECT id FROM users WHERE username = 'beacon-contrib-5'), 8.9, datetime('now', '-2 day')),
+    ((SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch'), (SELECT id FROM campaign_runs WHERE campaign_id = (SELECT id FROM campaign_definitions WHERE slug = 'beacon-watch') AND run_number = 1), (SELECT id FROM users WHERE username = 'beacon-contrib-6'), 12.4, datetime('now', '-2 day'));
+
+-- Mirror each in-window seeded walk into the ledger. The unique
+-- (participant_id, source_progress_id) constraint plus OR IGNORE keeps re-runs
+-- from double-crediting a walk.
+INSERT OR IGNORE INTO campaign_progress_ledger (participant_id, run_id, source_progress_id, distance)
+SELECT p.id, p.run_id, pr.id, pr.distance
+FROM campaign_participants p
+JOIN users u ON u.id = p.user_id
+JOIN campaign_definitions d ON d.id = p.campaign_id
+JOIN campaign_runs r ON r.id = p.run_id AND r.campaign_id = p.campaign_id
+JOIN progress pr ON pr.user_id = p.user_id
+WHERE d.slug = 'beacon-watch'
+  AND r.run_number = 1
+  AND u.username IN (
+    'beacon-contrib-1', 'beacon-contrib-2', 'beacon-contrib-3',
+    'beacon-contrib-4', 'beacon-contrib-5', 'beacon-contrib-6'
+  )
+  AND pr.date >= r.start_date
+  AND pr.date <= r.end_date;
+
+-- A second campaign with a current (upcoming) run and no image_slug: the card
+-- must render copy-only instead of a broken image.
+INSERT OR IGNORE INTO campaign_definitions (slug, name, description, image_slug, badge_slug, enabled)
+VALUES ('beacon-plain', 'Plain Beacon', 'A beacon rally with no artwork, rendered copy-only.', NULL, NULL, 1);
+
+INSERT OR IGNORE INTO campaign_runs (campaign_id, run_number, target_distance, start_date, end_date, status)
+VALUES ((SELECT id FROM campaign_definitions WHERE slug = 'beacon-plain'), 1, 200, date('now', '+1 day'), date('now', '+14 day'), 'upcoming');
+
+-- A completed campaign with no imagery, so the past section renders its final
+-- snapshot.
+INSERT OR IGNORE INTO campaign_definitions (slug, name, description, image_slug, badge_slug, enabled)
+VALUES ('beacon-history', 'The First Lighting', 'The first community lighting of the beacon chain, kept here as history.', 'beacon-history-card', 'community-beacon-watch', 1);
+
+INSERT OR IGNORE INTO campaign_runs (campaign_id, run_number, target_distance, start_date, end_date, status, completed_at, participant_count, contributor_count, total_distance)
+VALUES ((SELECT id FROM campaign_definitions WHERE slug = 'beacon-history'), 1, 100, date('now', '-30 day'), date('now', '-16 day'), 'completed', datetime('now', '-16 day'), 3, 2, 104.5);
+`;
 
 function authHeaders(authToken) {
     return {
@@ -65,7 +170,63 @@ function joinableCampaigns(campaigns) {
     ));
 }
 
+async function seedCampaignFixtures(request) {
+    const today = utcToday();
+    const before = await fetchCampaigns(request);
+    const beaconWatch = before.find((campaign) => campaign.slug === 'beacon-watch');
+    const windowCoversToday = Boolean(
+        beaconWatch?.activeRun
+        && beaconWatch.activeRun.status === 'active'
+        && beaconWatch.activeRun.startDate <= today
+        && today <= beaconWatch.activeRun.endDate,
+    );
+    const hasCopyOnlyCard = before.some((campaign) => (
+        campaign.slug === 'beacon-plain' && campaign.activeRun
+    ));
+    const hasHistory = before.some((campaign) => (
+        campaign.slug === 'beacon-history'
+        && Array.isArray(campaign.pastRuns)
+        && campaign.pastRuns.length > 0
+    ));
+
+    // Healthy fixtures: skip the wrangler round-trip. Any missing fixture, or a
+    // run window that has aged out, falls through to the idempotent re-seed.
+    if (windowCoversToday && hasCopyOnlyCard && hasHistory) {
+        return;
+    }
+
+    const sqlPath = path.join(os.tmpdir(), 'wtm-events-spec-seed.sql');
+    fs.writeFileSync(sqlPath, SEED_SQL, 'utf8');
+    try {
+        execSync(`npx wrangler d1 execute DB --local --yes --file "${sqlPath}"`, {
+            cwd: REPO_ROOT,
+            timeout: 120000,
+            stdio: 'pipe',
+            encoding: 'utf8',
+        });
+    } catch (error) {
+        console.error('events spec: campaign fixture seed failed; data tests will skip', error.message);
+        return;
+    }
+
+    // Verify the dev server actually serves the seeded state before the
+    // data-dependent tests rely on it.
+    const after = await fetchCampaigns(request);
+    const seeded = after.find((campaign) => campaign.slug === 'beacon-watch');
+    if (!seeded || !seeded.activeRun) {
+        console.error('events spec: seeded campaign is not visible through the API; data tests will skip');
+    }
+}
+
 test.describe('community campaigns page', () => {
+    // One worker seeds the fixtures; serial mode keeps every test in this file
+    // behind that single beforeAll.
+    test.describe.configure({ mode: 'serial' });
+
+    test.beforeAll(async ({ request }) => {
+        await seedCampaignFixtures(request);
+    });
+
     test('renders publicly without a login redirect and hydrates the island', async ({ page }) => {
         const response = await page.goto(`${BASE_URL}${EVENTS_PATH}`, { waitUntil: 'domcontentloaded' });
 
@@ -97,32 +258,44 @@ test.describe('community campaigns page', () => {
         expect(friendsIndex).toBeGreaterThan(campaignsIndex);
     });
 
-    test('campaign card shows imagery, progress bar, participants, and which-days copy', async ({ page, request }) => {
+    test('campaign cards show imagery or copy-only, progress bar, participants, and which-days copy', async ({ page, request }) => {
         const campaigns = await fetchCampaigns(request);
-        if (campaigns.length === 0) {
-            test.skip(true, 'No enabled campaigns are seeded; only the campaign shell assertions run.');
+        const withRun = campaigns.filter((entry) => entry.activeRun);
+        if (withRun.length === 0) {
+            test.skip(true, 'No campaign has an upcoming or active run; nothing to render a card for.');
             return;
         }
 
+        const imageryCampaign = withRun.find((entry) => entry.imageSlug);
+        const copyOnlyCampaign = withRun.find((entry) => !entry.imageSlug);
+        const campaign = imageryCampaign ?? copyOnlyCampaign;
+
         await page.goto(`${BASE_URL}${EVENTS_PATH}`, { waitUntil: 'domcontentloaded' });
 
-        const firstCampaign = campaigns.find((campaign) => campaign.activeRun) ?? campaigns[0];
-        const card = page.locator(`${CARD}[data-campaign="${firstCampaign.slug}"]`).first();
+        const card = page.locator(`${CARD}[data-campaign="${campaign.slug}"]`).first();
         await expect(card).toBeVisible({ timeout: 15000 });
 
-        await expect(card.locator('.event-card__title')).toHaveText(firstCampaign.name);
+        await expect(card.locator('.event-card__title')).toHaveText(campaign.name);
         await expect(card.locator('.event-progress__track[role="progressbar"]')).toBeVisible();
         await expect(card.locator('.event-progress__meta')).toContainText('walker');
         await expect(card).toContainText('Walks dated');
         await expect(card).toContainText('count toward this campaign');
 
-        if (firstCampaign.imageSlug) {
+        if (campaign.imageSlug) {
             const image = card.locator('.event-card__image');
-            await expect(image).toHaveAttribute('src', `/img/highres/${firstCampaign.imageSlug}.webp`);
+            await expect(image).toHaveAttribute('src', `/img/highres/${campaign.imageSlug}.webp`);
             const thumb = card.locator('.event-card__thumb');
-            await expect(thumb).toHaveAttribute('src', `/img/thumbs/${firstCampaign.imageSlug}-thumb.webp`);
+            await expect(thumb).toHaveAttribute('src', `/img/thumbs/${campaign.imageSlug}-thumb.webp`);
         } else {
             await expect(card.locator('.event-card__art')).toHaveCount(0);
+        }
+
+        // The copy-only campaign must never render a broken image.
+        if (copyOnlyCampaign && copyOnlyCampaign.slug !== campaign.slug) {
+            const plainCard = page.locator(`${CARD}[data-campaign="${copyOnlyCampaign.slug}"]`).first();
+            await expect(plainCard).toBeVisible({ timeout: 15000 });
+            await expect(plainCard.locator('.event-card__art')).toHaveCount(0);
+            await expect(plainCard).toContainText(copyOnlyCampaign.description);
         }
     });
 
@@ -257,7 +430,8 @@ test.describe('community campaigns page', () => {
 
         const pastSection = page.locator('.events-past');
         await expect(pastSection).toBeVisible({ timeout: 15000 });
-        const pastCards = pastSection.locator('.event-past-card');
+        // Scope to this campaign: other campaigns may also carry past runs.
+        const pastCards = pastSection.locator(`.event-past-card[data-campaign="${withHistory.slug}"]`);
         await expect(pastCards).toHaveCount(withHistory.pastRuns.length);
         await expect(pastCards.first()).toContainText('Final progress');
         await expect(pastCards.first()).toContainText(/Completed|Expired/);

@@ -437,6 +437,69 @@ describe('EventsIsland', () => {
     expect(container.textContent).toContain('42.5 km');
   });
 
+  it('keeps campaign cards rendered while refreshing after a successful join', async () => {
+    sessionToken = 'test-token';
+    const campaign = makeCampaign();
+    let postJoin = false;
+    const participation = {
+      participantId: 9,
+      status: 'active',
+      joinedAt: '2026-11-05T10:00:00.000Z',
+      contributionDistance: 5,
+    };
+
+    // Hold every post-join request open, whichever endpoint the island chooses
+    // to refresh from. The test only cares that the cards stay rendered.
+    const gate: { release: () => void } = { release: () => {} };
+    const refreshGate = new Promise<void>((resolve) => { gate.release = resolve; });
+
+    mockFetch.mockImplementation(async (input: unknown, init?: FetchInit) => {
+      const url = String(input);
+
+      if (url === '/api/events') {
+        if (postJoin) await refreshGate;
+        return jsonResponse({ campaigns: [{ ...campaign, participation: postJoin ? participation : null }] });
+      }
+
+      if (url === '/api/events/1/community-progress') {
+        if (postJoin) await refreshGate;
+        return jsonResponse(makeProgress(campaign, {
+          you: postJoin ? { distance: 5, rank: 1 } : null,
+        }));
+      }
+
+      if (url === '/api/events/1/join' && init?.method === 'POST') {
+        postJoin = true;
+        return jsonResponse({ joined: true, campaignId: 1, participation }, 201);
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    const { getByRole, container } = render(<EventsIsland />);
+
+    fireEvent.click(await waitFor(() => getByRole('button', { name: 'Join campaign' })));
+
+    await waitFor(() => {
+      expect(fetchCalls('/api/events/1/join')).toHaveLength(1);
+    });
+
+    // Give a re-fetch-based implementation time to flip its loading flag; the
+    // join path must keep the cards mounted either way.
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(container.querySelector('.events-loading')).toBeNull();
+    expect(container.querySelector('.event-card')).toBeTruthy();
+    expect(container.textContent).toContain('Beacon Watch');
+
+    gate.release();
+
+    await waitFor(() => {
+      expect(container.querySelector('.event-join__contribution')).toBeTruthy();
+    });
+    expect(container.querySelector('.events-loading')).toBeNull();
+    expect(container.querySelector('.event-card')).toBeTruthy();
+  });
+
   it('shows a join error without losing the campaign card', async () => {
     sessionToken = 'test-token';
     const campaign = makeCampaign();
