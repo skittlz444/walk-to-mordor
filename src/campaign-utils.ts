@@ -9,7 +9,7 @@
 // partial unique index); every read below scopes to that active run.
 import type { DbClient } from './db';
 import { awardAchievement } from './achievement-utils';
-import { utcToday } from './event-utils';
+import { isUniqueConstraintViolation, utcToday } from './event-utils';
 import {
   buildCommunityCampaignCompletedPayload,
   dispatchPushInBackground,
@@ -393,13 +393,6 @@ function toCampaignParticipant(row: CampaignParticipantRow): CampaignParticipant
   };
 }
 
-/** True if `error` (or its `.cause`) looks like a UNIQUE constraint violation. */
-function isUniqueConstraintViolation(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  const causeMessage = error instanceof Error && error.cause instanceof Error ? error.cause.message : '';
-  return message.includes('UNIQUE constraint') || causeMessage.includes('UNIQUE constraint');
-}
-
 /** Whole UTC days from `fromDate` to `toDate`, never negative. */
 function daysBetween(fromDate: string, toDate: string): number {
   const from = Date.parse(`${fromDate}T00:00:00.000Z`);
@@ -423,7 +416,7 @@ const ACTIVE_RUN_STATUS_ORDER: Record<CampaignRunStatus | 'none', number> = {
 // ── Definitions and runs ───────────────────────────────────────────────────
 
 /** Fetch a campaign definition by id, including disabled campaigns. */
-export async function getCampaignDefinitionById(
+async function getCampaignDefinitionById(
   db: DbClient,
   id: number,
 ): Promise<CampaignDefinition | null> {
@@ -451,6 +444,24 @@ export async function getActiveCampaignRun(
   ).bind(campaignId).first<CampaignRunRow>();
 
   return row ? toCampaignRun(row) : null;
+}
+
+/**
+ * Active participants of one run, oldest first. Shared by the admin enable
+ * path's backfill; the participant columns mirror `CAMPAIGN_PARTICIPANT_COLUMNS`.
+ */
+export async function listRunParticipants(
+  db: DbClient,
+  runId: number,
+): Promise<CampaignParticipant[]> {
+  const { results } = await db.read.prepare(
+    `SELECT ${CAMPAIGN_PARTICIPANT_COLUMNS}
+     FROM campaign_participants
+     WHERE run_id = ? AND status = 'active'
+     ORDER BY id ASC`,
+  ).bind(runId).all<CampaignParticipantRow>();
+
+  return results.map(toCampaignParticipant);
 }
 
 /** Every run of a campaign, oldest first. */
@@ -705,7 +716,7 @@ export async function getCampaignDetail(
  * Idempotent ledger upsert: one row per (participant, canonical walk). Editing
  * a walk updates the existing row instead of inserting a duplicate.
  */
-export async function upsertProgressLedgerEntry(
+async function upsertProgressLedgerEntry(
   db: DbClient,
   participantId: number,
   runId: number,
@@ -722,7 +733,7 @@ export async function upsertProgressLedgerEntry(
 }
 
 /** Recompute the participant's cached total from the ledger. */
-export async function recomputeParticipantDistance(
+async function recomputeParticipantDistance(
   db: DbClient,
   participantId: number,
 ): Promise<void> {
@@ -994,7 +1005,7 @@ export async function getCommunityProgress(
  * under the per-run key `campaign:<slug>:run:<run_id>`, which lets a
  * repeatable badge escalate across runs.
  */
-async function completeCampaignRunIfTargetMet(
+export async function completeCampaignRunIfTargetMet(
   db: DbClient,
   context: CampaignRunCompletionContext,
 ): Promise<boolean> {

@@ -47,11 +47,17 @@ const CAMPAIGN_MIGRATIONS = [
 
 type SqlValue = string | number | null;
 
+/**
+ * Structural subset of `node:sqlite`'s prepared statement that this adapter
+ * calls; D1 statements are shaped close enough for the DbClient contract.
+ */
+type SqlitePreparedStatement = ReturnType<DatabaseSync['prepare']>;
+
 class SqliteStatement {
-  private readonly statement: any;
+  private readonly statement: SqlitePreparedStatement;
   private readonly params: unknown[];
 
-  constructor(statement: any, params: unknown[] = []) {
+  constructor(statement: SqlitePreparedStatement, params: unknown[] = []) {
     this.statement = statement;
     this.params = params;
   }
@@ -1035,6 +1041,95 @@ describe('admin campaign handlers', () => {
       expect(participant.id).toBe(participantId);
       expect(participant.progress_distance).toBe(7.5);
       expect(auditRows()[0]).toMatchObject({ action: 'enable_campaign', target_id: campaignId });
+    });
+
+    it('completes the run when re-enable backfill credits walks saved while disabled', async () => {
+      seedAchievement('community-beacon-watch');
+      const campaignId = insertCampaign({ enabled: 1, badge_slug: 'community-beacon-watch' });
+      const runId = insertRun(campaignId, {
+        status: 'active',
+        target: 10,
+        start: addDays(TODAY, -3),
+        end: addDays(TODAY, 3),
+      });
+      insertParticipant(campaignId, runId, { userId: 1 });
+
+      // Mid-run freeze: participants stay active, so credit stops only because
+      // the campaign is disabled.
+      const disableResponse = await handleAdminCampaignDisable(
+        adminRequest('PUT'),
+        db,
+        campaignId,
+        { cancelActive: false },
+        ADMIN_ID,
+      );
+      expect(disableResponse.status).toBe(200);
+      expect(campaignRow(campaignId).enabled).toBe(0);
+
+      // Saved while disabled: no reconciliation ran, so nothing is credited yet.
+      insertProgress(1, TODAY, 12);
+      expect(ledgerCount()).toBe(0);
+
+      const response = await handleAdminCampaignEnable(
+        adminRequest('PUT'),
+        db,
+        campaignId,
+        ADMIN_ID,
+      );
+
+      expect(response.status).toBe(200);
+      expect(runRows(campaignId)[0]).toMatchObject({
+        status: 'completed',
+        participant_count: 1,
+        contributor_count: 1,
+        total_distance: 12,
+      });
+      expect(runRows(campaignId)[0].completed_at).not.toBeNull();
+
+      const badges = sqlite.prepare(
+        'SELECT user_id, idempotency_key FROM user_achievement_instances ORDER BY id ASC',
+      ).all() as unknown as Array<{ user_id: number; idempotency_key: string }>;
+      expect(badges).toHaveLength(1);
+      expect(badges[0]).toMatchObject({
+        user_id: 1,
+        idempotency_key: `campaign:beacon-watch:run:${runId}`,
+      });
+    });
+
+    it('leaves the run active when re-enable backfill stays below the target', async () => {
+      const campaignId = insertCampaign({ enabled: 1 });
+      const runId = insertRun(campaignId, {
+        status: 'active',
+        target: 100,
+        start: addDays(TODAY, -3),
+        end: addDays(TODAY, 3),
+      });
+      insertParticipant(campaignId, runId, { userId: 1 });
+
+      await handleAdminCampaignDisable(
+        adminRequest('PUT'),
+        db,
+        campaignId,
+        { cancelActive: false },
+        ADMIN_ID,
+      );
+      insertProgress(1, TODAY, 5);
+
+      const response = await handleAdminCampaignEnable(
+        adminRequest('PUT'),
+        db,
+        campaignId,
+        ADMIN_ID,
+      );
+
+      expect(response.status).toBe(200);
+      expect(runRows(campaignId)[0]).toMatchObject({
+        status: 'active',
+        completed_at: null,
+        participant_count: null,
+        total_distance: null,
+      });
+      expect(participantRows(campaignId)[0].progress_distance).toBe(5);
     });
   });
 

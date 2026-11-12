@@ -100,38 +100,62 @@ function createFailingDb(database: DatabaseSync, fragment: string): DbClient {
 
 /**
  * DbClient whose first participant lookup returns null even though a row
- * exists, simulating a concurrent join that wins the insert race.
+ * exists, simulating a concurrent join that wins the insert race. The `write`
+ * side counts `INSERT INTO campaign_participants` attempts so the test can
+ * prove the race path (pre-check passed, insert rejected) actually ran instead
+ * of falling back to the duplicate pre-check.
  */
-function hideFirstParticipantLookup(database: DatabaseSync): DbClient {
+function hideFirstParticipantLookup(database: DatabaseSync): {
+  db: DbClient;
+  insertAttempts: () => number;
+} {
   const base = createTestDb(database);
   let hidden = false;
+  let insertAttempts = 0;
+
+  const write = {
+    prepare(sql: string) {
+      const statement = base.write.prepare(sql);
+      if (!sql.includes('INSERT INTO campaign_participants')) return statement;
+
+      return {
+        bind(...values: unknown[]) {
+          insertAttempts += 1;
+          return statement.bind(...values);
+        },
+      } as unknown as D1PreparedStatement;
+    },
+  } as unknown as D1Database;
 
   return {
-    read: {
-      prepare(sql: string) {
-        const statement = base.read.prepare(sql);
-        if (
-          hidden
-          || !sql.includes('FROM campaign_participants')
-          || !sql.includes('WHERE run_id = ? AND user_id = ?')
-        ) {
-          return statement;
-        }
+    db: {
+      read: {
+        prepare(sql: string) {
+          const statement = base.read.prepare(sql);
+          if (
+            hidden
+            || !sql.includes('FROM campaign_participants')
+            || !sql.includes('WHERE run_id = ? AND user_id = ?')
+          ) {
+            return statement;
+          }
 
-        return {
-          bind(...values: unknown[]) {
-            hidden = true;
-            const bound = statement.bind(...values);
-            return {
-              first: async (): Promise<null> => null,
-              all: () => bound.all(),
-              run: () => bound.run(),
-            };
-          },
-        } as unknown as D1PreparedStatement;
-      },
-    } as unknown as D1Database,
-    write: base.write,
+          return {
+            bind(...values: unknown[]) {
+              hidden = true;
+              const bound = statement.bind(...values);
+              return {
+                first: async (): Promise<null> => null,
+                all: () => bound.all(),
+                run: () => bound.run(),
+              };
+            },
+          } as unknown as D1PreparedStatement;
+        },
+      } as unknown as D1Database,
+      write,
+    },
+    insertAttempts: () => insertAttempts,
   };
 }
 
@@ -746,10 +770,11 @@ describe('campaign domain services', () => {
       const runId = insertRun({ campaignId });
       const userId = insertUser('frodo');
       insertParticipant(campaignId, runId, userId);
-      const racingDb = hideFirstParticipantLookup(sqlite);
+      const { db: racingDb, insertAttempts } = hideFirstParticipantLookup(sqlite);
 
       await expect(joinCampaignRun(racingDb, campaignId, userId, { today: TODAY }))
         .rejects.toBeInstanceOf(CampaignConflictError);
+      expect(insertAttempts()).toBe(1);
       expect(countRows('campaign_participants')).toBe(1);
     });
 

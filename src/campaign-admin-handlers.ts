@@ -7,16 +7,17 @@
 // `adminUserId`. All mutations are audit-logged; retrigger writes its run and
 // audit row in one D1 batch so a partial action is impossible.
 import type { DbClient } from './db';
-import { SLUG_REGEX, logAdminAction } from './admin-shared';
+import { SLUG_REGEX, auditIp, isUniqueViolation, jsonResponse, logAdminAction } from './admin-shared';
 import {
   getAchievementDefinitionBySlug,
   type AchievementDefinition,
 } from './achievement-utils';
 import {
   backfillParticipantWalks,
+  completeCampaignRunIfTargetMet,
   getActiveCampaignRun,
   listCampaignRuns,
-  type CampaignParticipant,
+  listRunParticipants,
   type CampaignRun,
 } from './campaign-utils';
 import {
@@ -124,19 +125,6 @@ interface InlineBadgeFields {
   rankThresholds: number[] | null;
 }
 
-interface ParticipantRow {
-  id: number;
-  campaign_id: number;
-  run_id: number;
-  user_id: number;
-  progress_distance: number;
-  joined_at: string;
-  status: 'active' | 'removed';
-  removed_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 interface CountRow {
   count: number;
   run_id?: number;
@@ -160,27 +148,10 @@ const CAMPAIGN_SELECT = `
   LEFT JOIN achievement_definitions b ON b.slug = d.badge_slug
 `;
 
-// ── Shared helpers ─────────────────────────────────────────────────────────
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// ── Validation helpers ─────────────────────────────────────────────────────
 
 function validationResponse(fields: Record<string, string>): Response {
   return jsonResponse({ error: 'validation', fields }, 400);
-}
-
-function auditIp(request: Request): string {
-  return request.headers.get('CF-Connecting-IP') || 'unknown';
-}
-
-/** Best-effort UNIQUE detection; native driver errors may cross vm realms. */
-function isUniqueViolation(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes('UNIQUE');
 }
 
 function isIsoDate(value: string): boolean {
@@ -228,14 +199,6 @@ function splitRuns(runs: CampaignRun[]): { activeRun: CampaignRun | null; latest
   ) ?? null;
   const latestRun = runs.length > 0 ? runs[runs.length - 1] : null;
   return { activeRun, latestRun };
-}
-
-async function countActiveParticipants(db: DbClient, campaignId: number): Promise<number> {
-  const row = await db.read.prepare(
-    `SELECT COUNT(*) AS count FROM campaign_participants
-     WHERE campaign_id = ? AND status = 'active'`,
-  ).bind(campaignId).first<CountRow>();
-  return Number(row?.count ?? 0);
 }
 
 async function getAdminCampaign(db: DbClient, campaignId: number): Promise<AdminCampaignDefinition | null> {
@@ -1043,17 +1006,29 @@ export async function handleAdminCampaignEnable(
     const run = await getActiveCampaignRun(db, campaignId);
     let backfilledParticipants = 0;
     if (run) {
-      const { results: participants } = await db.read.prepare(
-        `SELECT id, campaign_id, run_id, user_id, progress_distance, joined_at,
-                status, removed_at, created_at, updated_at
-         FROM campaign_participants
-         WHERE run_id = ? AND status = 'active'
-         ORDER BY id ASC`,
-      ).bind(run.id).all<ParticipantRow>();
-
+      const participants = await listRunParticipants(db, run.id);
       for (const participant of participants) {
-        await backfillParticipantWalks(db, toCampaignParticipant(participant), run);
+        await backfillParticipantWalks(db, participant, run);
         backfilledParticipants += 1;
+      }
+
+      // Enable-time backfill can cross the community target on its own (walks
+      // saved while the campaign was disabled were never reconciled), so run
+      // the same guarded completion check the join and walk-save paths use.
+      // Completion is derived state: a failure here is logged, never surfaced
+      // as a failed enable.
+      try {
+        await completeCampaignRunIfTargetMet(db, {
+          runId: run.id,
+          runNumber: run.run_number,
+          targetDistance: run.target_distance,
+          campaignSlug: existing.slug,
+          campaignName: existing.name,
+          badgeSlug: existing.badge_slug,
+          pushContext,
+        });
+      } catch (error: unknown) {
+        console.error('Error checking campaign completion after enable:', error);
       }
     }
 
@@ -1094,21 +1069,6 @@ export async function handleAdminCampaignEnable(
   }
 }
 
-function toCampaignParticipant(row: ParticipantRow): CampaignParticipant {
-  return {
-    id: row.id,
-    campaign_id: row.campaign_id,
-    run_id: row.run_id,
-    user_id: row.user_id,
-    progress_distance: row.progress_distance,
-    joined_at: row.joined_at,
-    status: row.status,
-    removed_at: row.removed_at,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
-}
-
 /**
  * PUT /api/admin/campaigns/:id/disable — freeze the campaign. When active
  * participants exist and no `cancelActive` decision is supplied, returns a
@@ -1133,7 +1093,11 @@ export async function handleAdminCampaignDisable(
       return jsonResponse({ error: 'Campaign definition not found' }, 404);
     }
 
-    const activeParticipants = await countActiveParticipants(db, campaignId);
+    const participantCountRow = await db.read.prepare(
+      `SELECT COUNT(*) AS count FROM campaign_participants
+       WHERE campaign_id = ? AND status = 'active'`,
+    ).bind(campaignId).first<CountRow>();
+    const activeParticipants = Number(participantCountRow?.count ?? 0);
 
     if (activeParticipants > 0 && cancelActive === null) {
       return jsonResponse({ activeParticipants, requiresConfirmation: true }, 400);

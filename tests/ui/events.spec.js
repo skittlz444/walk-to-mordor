@@ -206,6 +206,7 @@ async function seedCampaignFixtures(request) {
         });
     } catch (error) {
         console.error('events spec: campaign fixture seed failed; data tests will skip', error.message);
+        console.error('events spec: 6 data tests will skip (seed unavailable)');
         return;
     }
 

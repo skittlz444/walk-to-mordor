@@ -274,15 +274,18 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
   }
 
   try {
-    // Capture the pre-edit distance so reconciliation can skip a no-op edit
-    // and update the existing ledger row rather than duplicating it. A failed
+    // One read feeds both reconcilers: the pre-edit distance lets reconciliation
+    // skip a no-op edit and update the existing ledger row rather than
+    // duplicating it, and the row id is what both reconcilers key on. A failed
     // lookup is not fatal — the UPDATE below remains the primary operation.
     let previousDistance: number | undefined;
+    let progressId: number | undefined;
     try {
       const existingRow = await db.read.prepare(
-        'SELECT distance FROM progress WHERE date = ? AND user_id = ?'
-      ).bind(start, userId).first<{ distance: number }>();
+        'SELECT id, distance FROM progress WHERE date = ? AND user_id = ?'
+      ).bind(start, userId).first<{ id: number; distance: number }>();
       previousDistance = existingRow ? existingRow.distance : undefined;
+      progressId = existingRow?.id;
     } catch (lookupError: unknown) {
       console.error('Failed to look up previous progress distance:', lookupError);
     }
@@ -313,12 +316,9 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
 
     // Refresh active personal challenge credit. Derived state: never fail the walk log.
     try {
-      const progressRow = await db.read.prepare(
-        'SELECT id FROM progress WHERE date = ? AND user_id = ?'
-      ).bind(start, userId).first<{ id: number }>();
-      if (progressRow) {
+      if (progressId !== undefined) {
         await reconcileProgressForUser(db, userId!, {
-          progressId: progressRow.id,
+          progressId,
           date: start,
           distance: Number(title),
           operation: 'upsert',
@@ -330,12 +330,9 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
 
     // Refresh active community campaign credit. Derived state: never fail the walk log.
     try {
-      const progressRow = await db.read.prepare(
-        'SELECT id FROM progress WHERE date = ? AND user_id = ?'
-      ).bind(start, userId).first<{ id: number }>();
-      if (progressRow) {
+      if (progressId !== undefined) {
         await reconcileCampaignProgressForUser(db, userId!, {
-          progressId: progressRow.id,
+          progressId,
           date: start,
           distance: Number(title),
           previousDistance,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
-import { getAuthHeaders } from '../utils/auth';
+import { getAuthHeaders, isAuthenticated } from '../utils/auth';
 
 /**
  * Public `/events` island.
@@ -67,7 +67,6 @@ interface CommunityProgress {
   startDate: string | null;
   endDate: string | null;
   status: CampaignRunStatus | null;
-  daysRemaining: number | null;
   totalDistance: number;
   participantCount: number;
   contributorCount: number;
@@ -124,14 +123,6 @@ function progressPercent(totalDistance: number, targetDistance: number): number 
     return 0;
   }
   return Math.min(100, Math.max(0, Math.round((totalDistance / targetDistance) * 100)));
-}
-
-function readSessionToken(): string | null {
-  try {
-    return localStorage.getItem('sessionToken');
-  } catch {
-    return null;
-  }
 }
 
 function statusClass(status: CampaignRunStatus): string {
@@ -360,7 +351,7 @@ export function EventsIsland() {
   const [error, setError] = useState<string | null>(null);
   const [joiningId, setJoiningId] = useState<number | null>(null);
   const [joinError, setJoinError] = useState<{ campaignId: number; message: string } | null>(null);
-  const [authenticated] = useState<boolean>(() => readSessionToken() !== null);
+  const [authenticated] = useState<boolean>(() => isAuthenticated());
 
   /**
    * Fetch the campaign list plus each active card's contributor ranking.

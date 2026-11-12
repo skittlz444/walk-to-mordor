@@ -1,6 +1,9 @@
 import type { DbClient } from './db';
 import {
   SLUG_REGEX,
+  auditIp,
+  isUniqueViolation,
+  jsonResponse,
   logAdminAction,
 } from './admin-shared';
 import {
@@ -94,13 +97,6 @@ const ENCOUNTER_SELECT = `
   FROM personal_encounter_definitions d
   LEFT JOIN achievement_definitions b ON b.slug = d.badge_slug
 `;
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 function validationResponse(fields: Record<string, string>): Response {
   return jsonResponse({ error: 'validation', fields }, 400);
@@ -401,16 +397,6 @@ async function slugInUse(db: DbClient, slug: string, excludeId?: number): Promis
     : await db.read.prepare('SELECT id FROM personal_encounter_definitions WHERE slug = ? AND id <> ?')
       .bind(slug, excludeId).first<{ id: number }>();
   return row != null;
-}
-
-function auditIp(request: Request): string {
-  return request.headers.get('CF-Connecting-IP') || 'unknown';
-}
-
-/** Best-effort UNIQUE detection; native driver errors may cross vm realms. */
-function isUniqueViolation(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes('UNIQUE');
 }
 
 /**

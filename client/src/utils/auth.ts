@@ -19,3 +19,15 @@ export function getAuthHeaders(): Record<string, string> {
     ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
     : { 'Content-Type': 'application/json' };
 }
+
+/**
+ * Whether a session token is present. Storage failures (blocked/partitioned
+ * localStorage) count as unauthenticated rather than throwing.
+ */
+export function isAuthenticated(): boolean {
+  try {
+    return localStorage.getItem('sessionToken') !== null;
+  } catch {
+    return false;
+  }
+}

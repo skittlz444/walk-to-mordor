@@ -17,6 +17,25 @@ export function escapeLikeSearch(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
+/** JSON response shared by the admin handler modules. */
+export function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/** Client IP recorded on audit rows; Cloudflare sets `CF-Connecting-IP`. */
+export function auditIp(request: Request): string {
+  return request.headers.get('CF-Connecting-IP') || 'unknown';
+}
+
+/** Best-effort UNIQUE detection; native driver errors may cross vm realms. */
+export function isUniqueViolation(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('UNIQUE');
+}
+
 /**
  * Log an admin action to the admin_audit_log table.
  * This is append-only — entries are never deleted by the application.

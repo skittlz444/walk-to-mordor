@@ -130,13 +130,17 @@ function withList(
   };
 }
 
-function rowFor(container: HTMLElement, index: number): HTMLElement {
+function rowFor(container: Element, index: number): HTMLElement {
   const rows = container.querySelectorAll<HTMLElement>('.admin-campaigns-row');
   expect(rows[index]).toBeTruthy();
   return rows[index];
 }
 
 beforeEach(() => {
+  // Pin the clock: the component and the fixtures both derive "tomorrow", and a
+  // UTC-midnight straddle would make them disagree.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-06-01T12:00:00.000Z'));
   vi.clearAllMocks();
   vi.stubGlobal('fetch', mockFetch);
   vi.stubGlobal('localStorage', {
@@ -160,6 +164,7 @@ afterEach(() => {
   });
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe('AdminCommunityCampaignsIsland', () => {
