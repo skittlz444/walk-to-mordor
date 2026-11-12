@@ -5,10 +5,12 @@ The `community-campaigns` change makes campaigns publicly discoverable, but user
 ## What Changes
 
 - Add a `community_campaigns_enabled` boolean column to the `users` table (default enabled), following the existing pattern of `one_more_mile_enabled` and `inactivity_nudge_enabled`.
-- Extend `handlePushSettings` and `handlePushStatus` to read and write the new category preference.
-- Send push notifications when a new community campaign is created (to all users with subscriptions and the category enabled).
-- Send push notifications when a community campaign reaches its target and completes (to all participants who contributed and have the category enabled).
-- Reuse the existing `sendPushToUser` utility from `src/push-utils.ts` for delivery.
+- Extend `handlePushSettings` and `handlePushStatus` to read and write the new category preference, including the settings-presence guard and the `PushStatusRow` shape.
+- Add a "Community Campaigns" toggle to the existing Notification Types block in the push settings card, with matching client types.
+- Send push notifications when a campaign run first becomes publicly visible (retrigger of an enabled campaign announces the new run; enabling a disabled campaign announces its unannounced run), to all users with subscriptions and the category enabled. Seeded runs stay silent until an admin enables the campaign. Announcement is once per run via the run's `announced_at` stamp.
+- Send push notifications when a community campaign run reaches its target and completes, to all contributing participants with the category enabled.
+- Reuse the existing `sendPushToUser` utility from `src/push-utils.ts` and the route-layer background scheduling pattern for non-blocking delivery.
+- Declare the cross-change dependency: this change requires `community-campaigns` (run model, `announced_at`, completion hook) and `community-campaigns-admin` (retrigger and enable trigger points).
 
 ## Capabilities
 
@@ -21,8 +23,9 @@ The `community-campaigns` change makes campaigns publicly discoverable, but user
 ## Impact
 
 - D1 schema: new `community_campaigns_enabled` column on `users` table (additive migration, default 1).
-- Worker APIs: extend `GET /api/push/status` and `PUT /api/push/settings` to include `communityCampaignsEnabled`.
-- Worker domain: add notification trigger points in `community-campaigns` lifecycle hooks — send "new campaign" notification on campaign create, send "campaign completed" notification on completion.
-- No new API endpoints, no new tables, no UI changes beyond the existing push settings toggle.
-- Tests: Jest coverage for settings persistence and notification trigger logic.
+- Worker APIs: extend `GET /api/push/status` and `PUT /api/push/settings` to include `communityCampaignsEnabled`; extend the settings-presence guard to accept the new key alone.
+- Worker domain: add notification trigger points in the campaign lifecycle — announce a run when it first becomes publicly visible (retrigger route, or enable route for an unannounced run, stamping `announced_at`), and announce completion on synchronous run completion. Delivery runs through the route-layer background scheduling callback, not `ctx.waitUntil` inside handlers (handlers have no execution context).
+- Frontend: add the third toggle to `PushPermissionIsland` and the new field to `client/src/utils/push-client.ts` types.
+- No new API endpoints, no new tables.
+- Tests: Jest coverage for settings persistence and notification trigger logic; Vitest coverage for the new settings toggle.
 - Documentation: update `docs/api-reference.md` and `docs/email.md` (or push documentation) with the new category.
