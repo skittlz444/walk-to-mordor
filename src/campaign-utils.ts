@@ -10,6 +10,12 @@
 import type { DbClient } from './db';
 import { awardAchievement } from './achievement-utils';
 import { utcToday } from './event-utils';
+import {
+  buildCommunityCampaignCompletedPayload,
+  dispatchPushInBackground,
+  sendPushToUserIds,
+  type PushDispatchContext,
+} from './push-utils';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -297,6 +303,7 @@ interface ActiveCampaignParticipationRow {
   start_date: string;
   end_date: string;
   slug: string;
+  campaign_name: string;
   badge_slug: string | null;
 }
 
@@ -304,6 +311,10 @@ interface CampaignContributorRow {
   id: number;
   user_id: number;
   progress_distance: number;
+}
+
+interface CampaignContributorUserRow {
+  user_id: number;
 }
 
 interface CampaignRunIdRow {
@@ -316,7 +327,10 @@ interface CampaignRunCompletionContext {
   runNumber: number;
   targetDistance: number;
   campaignSlug: string;
+  campaignName: string;
   badgeSlug: string | null;
+  /** Route-layer delivery context; absent in direct domain calls and tests. */
+  pushContext?: PushDispatchContext;
 }
 
 // ── Mapping + helpers ──────────────────────────────────────────────────────
@@ -772,6 +786,7 @@ export async function joinCampaignRun(
   campaignId: number,
   userId: number,
   options: JoinCampaignOptions = {},
+  pushContext?: PushDispatchContext,
 ): Promise<JoinCampaignResult> {
   const today = options.today ?? utcToday();
 
@@ -827,7 +842,9 @@ export async function joinCampaignRun(
       runNumber: run.run_number,
       targetDistance: run.target_distance,
       campaignSlug: campaign.slug,
+      campaignName: campaign.name,
       badgeSlug: campaign.badge_slug,
+      pushContext,
     });
   } catch (error: unknown) {
     console.error('Error checking campaign completion after join:', error);
@@ -1002,35 +1019,66 @@ async function completeCampaignRunIfTargetMet(
 
   if (completion.meta.changes === 0) return false;
 
-  if (!context.badgeSlug) return true;
+  if (context.badgeSlug) {
+    const { results: contributors } = await db.read.prepare(
+      `SELECT id, user_id, progress_distance
+       FROM campaign_participants
+       WHERE run_id = ? AND status = 'active' AND progress_distance > 0
+       ORDER BY id ASC`,
+    ).bind(context.runId).all<CampaignContributorRow>();
 
-  const { results: contributors } = await db.read.prepare(
-    `SELECT id, user_id, progress_distance
-     FROM campaign_participants
-     WHERE run_id = ? AND status = 'active' AND progress_distance > 0
-     ORDER BY id ASC`,
-  ).bind(context.runId).all<CampaignContributorRow>();
-
-  const idempotencyKey = `campaign:${context.campaignSlug}:run:${context.runId}`;
-  for (const contributor of contributors) {
-    try {
-      await awardAchievement(
-        db,
-        contributor.user_id,
-        context.badgeSlug,
-        idempotencyKey,
-        JSON.stringify({
-          campaign_slug: context.campaignSlug,
-          run_id: context.runId,
-          run_number: context.runNumber,
-          progress_distance: contributor.progress_distance,
-        }),
-      );
-    } catch (error: unknown) {
-      // A missing or broken badge definition must not stop the remaining
-      // contributors from being awarded.
-      console.error('Error awarding campaign completion badge:', error);
+    const idempotencyKey = `campaign:${context.campaignSlug}:run:${context.runId}`;
+    for (const contributor of contributors) {
+      try {
+        await awardAchievement(
+          db,
+          contributor.user_id,
+          context.badgeSlug,
+          idempotencyKey,
+          JSON.stringify({
+            campaign_slug: context.campaignSlug,
+            run_id: context.runId,
+            run_number: context.runNumber,
+            progress_distance: contributor.progress_distance,
+          }),
+        );
+      } catch (error: unknown) {
+        // A missing or broken badge definition must not stop the remaining
+        // contributors from being awarded.
+        console.error('Error awarding campaign completion badge:', error);
+      }
     }
+  }
+
+  // Completion notices are personal ("your effort helped"), so only active
+  // contributors who left the category enabled are told. Delivery is
+  // best-effort and scheduled through the route layer; the guarded completion
+  // UPDATE above already guarantees a single dispatch per run.
+  if (context.pushContext) {
+    const pushContext = context.pushContext;
+    const { runId, runNumber, campaignSlug, campaignName } = context;
+    dispatchPushInBackground(pushContext, async () => {
+      const { results } = await db.read.prepare(
+        `SELECT p.user_id
+         FROM campaign_participants p
+         JOIN users u ON u.id = p.user_id
+         WHERE p.run_id = ? AND p.status = 'active' AND p.progress_distance > 0
+           AND u.community_campaigns_enabled = 1
+         ORDER BY p.id ASC`,
+      ).bind(runId).all<CampaignContributorUserRow>();
+
+      const payload = buildCommunityCampaignCompletedPayload(
+        campaignName,
+        campaignSlug,
+        runNumber,
+      );
+      await sendPushToUserIds(
+        db,
+        results.map((row) => row.user_id),
+        payload,
+        pushContext.env,
+      );
+    });
   }
 
   return true;
@@ -1054,6 +1102,7 @@ export async function reconcileCampaignProgressForUser(
   db: DbClient,
   userId: number,
   params: CampaignReconciliationParams,
+  pushContext?: PushDispatchContext,
 ): Promise<void> {
   // A walk edit that keeps the same distance cannot change any total.
   if (
@@ -1068,7 +1117,7 @@ export async function reconcileCampaignProgressForUser(
     const { results: participations } = await db.read.prepare(
       `SELECT p.id AS participant_id, p.run_id, p.campaign_id, p.progress_distance,
               r.run_number, r.target_distance, r.start_date, r.end_date,
-              d.slug, d.badge_slug
+              d.slug, d.name AS campaign_name, d.badge_slug
        FROM campaign_participants p
        JOIN campaign_runs r ON r.id = p.run_id
        JOIN campaign_definitions d ON d.id = p.campaign_id
@@ -1103,7 +1152,9 @@ export async function reconcileCampaignProgressForUser(
         runNumber: participation.run_number,
         targetDistance: participation.target_distance,
         campaignSlug: participation.slug,
+        campaignName: participation.campaign_name,
         badgeSlug: participation.badge_slug,
+        pushContext,
       });
     }
   } catch (error: unknown) {

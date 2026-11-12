@@ -146,7 +146,7 @@ describe('Push Handlers', () => {
 
   it('returns subscription count and notificationsEnabled status', async () => {
     const statusQuery = createChainableMock({
-      first: { notifications_enabled: 0, one_more_mile_enabled: 1, inactivity_nudge_enabled: 1, subscription_count: 2 },
+      first: { notifications_enabled: 0, one_more_mile_enabled: 1, inactivity_nudge_enabled: 1, community_campaigns_enabled: 1, subscription_count: 2 },
     });
     mockReadDb.prepare.mockReturnValueOnce(statusQuery);
 
@@ -161,6 +161,7 @@ describe('Push Handlers', () => {
         notificationsEnabled: false,
         oneMoreMileEnabled: true,
         inactivityNudgeEnabled: true,
+        communityCampaignsEnabled: true,
       },
     });
   });
@@ -256,7 +257,7 @@ describe('Push Handlers', () => {
 
   it('returns inactivityNudgeEnabled in push status', async () => {
     const statusQuery = createChainableMock({
-      first: { notifications_enabled: 1, one_more_mile_enabled: 1, inactivity_nudge_enabled: 0, subscription_count: 1 },
+      first: { notifications_enabled: 1, one_more_mile_enabled: 1, inactivity_nudge_enabled: 0, community_campaigns_enabled: 0, subscription_count: 1 },
     });
     mockReadDb.prepare.mockReturnValueOnce(statusQuery);
 
@@ -271,6 +272,7 @@ describe('Push Handlers', () => {
         notificationsEnabled: true,
         oneMoreMileEnabled: true,
         inactivityNudgeEnabled: false,
+        communityCampaignsEnabled: false,
       },
     });
   });

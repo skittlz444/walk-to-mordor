@@ -14,6 +14,7 @@ import {
   listCampaigns,
 } from './campaign-utils';
 import type { DbClient } from './db';
+import type { PushDispatchContext } from './push-utils';
 import { createErrorResponse, createSuccessResponse } from './validators';
 
 /**
@@ -106,9 +107,10 @@ export async function handleCampaignJoin(
   db: DbClient,
   campaignId: number,
   userId: number,
+  pushContext?: PushDispatchContext,
 ): Promise<Response> {
   try {
-    const joined = await joinCampaignRun(db, campaignId, userId);
+    const joined = await joinCampaignRun(db, campaignId, userId, {}, pushContext);
 
     return createSuccessResponse({
       joined: true,

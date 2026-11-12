@@ -11,7 +11,7 @@ import {
   updateNotificationSettings,
 } from '../utils/push-client';
 
-type NotificationAction = 'enable-device' | 'disable-device' | 'toggle-global' | 'toggle-one-more-mile' | 'toggle-inactivity-nudge' | null;
+type NotificationAction = 'enable-device' | 'disable-device' | 'toggle-global' | 'toggle-one-more-mile' | 'toggle-inactivity-nudge' | 'toggle-community-campaigns' | null;
 
 function getPermissionLabel(permission: NotificationPermission): string {
   if (permission === 'granted') {
@@ -35,6 +35,7 @@ export function PushPermissionIsland() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [oneMoreMileEnabled, setOneMoreMileEnabled] = useState(true);
   const [inactivityNudgeEnabled, setInactivityNudgeEnabled] = useState(true);
+  const [communityCampaignsEnabled, setCommunityCampaignsEnabled] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [action, setAction] = useState<NotificationAction>(null);
@@ -63,6 +64,7 @@ export function PushPermissionIsland() {
       setNotificationsEnabled(status.notificationsEnabled);
       setOneMoreMileEnabled(status.oneMoreMileEnabled);
       setInactivityNudgeEnabled(status.inactivityNudgeEnabled);
+      setCommunityCampaignsEnabled(status.communityCampaignsEnabled);
       setErrorMessage('');
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to load push notification settings');
@@ -219,6 +221,30 @@ export function PushPermissionIsland() {
     }
   }, [refreshState, token]);
 
+  const handleCommunityCampaignsToggle = useCallback(async (event: Event) => {
+    if (!token) {
+      return;
+    }
+
+    const nextValue = (event.currentTarget as HTMLInputElement).checked;
+    setAction('toggle-community-campaigns');
+    setStatusMessage('');
+    setErrorMessage('');
+
+    try {
+      await updateNotificationSettings(token, { communityCampaignsEnabled: nextValue });
+      setCommunityCampaignsEnabled(nextValue);
+      setStatusMessage(nextValue
+        ? 'Community campaign notifications are enabled.'
+        : 'Community campaign notifications are disabled.');
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to update notification settings');
+      await refreshState();
+    } finally {
+      setAction(null);
+    }
+  }, [refreshState, token]);
+
   if (!token) {
     return null;
   }
@@ -336,6 +362,26 @@ export function PushPermissionIsland() {
                     checked={inactivityNudgeEnabled}
                     disabled={action === 'toggle-inactivity-nudge'}
                     onChange={handleInactivityNudgeToggle}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            </div>
+            <div className="form-group push-setting-group">
+              <div className="toggle-group">
+                <div className="toggle-label">
+                  <label htmlFor="push-community-campaigns-toggle">Community Campaigns</label>
+                  <small className="field-hint">
+                    Hear when a new community campaign run goes live and when a run is completed.
+                  </small>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    id="push-community-campaigns-toggle"
+                    type="checkbox"
+                    checked={communityCampaignsEnabled}
+                    disabled={action === 'toggle-community-campaigns'}
+                    onChange={handleCommunityCampaignsToggle}
                   />
                   <span className="toggle-slider" />
                 </label>

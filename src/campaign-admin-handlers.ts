@@ -19,6 +19,13 @@ import {
   type CampaignParticipant,
   type CampaignRun,
 } from './campaign-utils';
+import {
+  buildCommunityCampaignCreatedPayload,
+  dispatchPushInBackground,
+  listCommunityCampaignAudienceUserIds,
+  sendPushToUserIds,
+  type PushDispatchContext,
+} from './push-utils';
 import { addDays, utcToday } from './event-utils';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -262,6 +269,43 @@ async function slugInUse(db: DbClient, slug: string, excludeId?: number): Promis
     : await db.read.prepare('SELECT id FROM campaign_definitions WHERE slug = ? AND id <> ?')
       .bind(slug, excludeId).first<{ id: number }>();
   return row != null;
+}
+
+/**
+ * Announce a run exactly once. The guarded stamp is the dispatch decision: only
+ * the caller that flips `announced_at` from NULL schedules delivery, so a
+ * seeded run stays silent until enabling and a disable→enable maintenance cycle
+ * re-announces nothing. Delivery is best-effort and never affects the response.
+ */
+async function announceCampaignRunOnce(
+  db: DbClient,
+  runId: number,
+  campaign: { name: string; slug: string },
+  runNumber: number,
+  pushContext: PushDispatchContext | undefined,
+): Promise<void> {
+  if (!pushContext) return;
+  const context = pushContext;
+  const payload = buildCommunityCampaignCreatedPayload(campaign.name, campaign.slug, runNumber);
+
+  try {
+    const announcement = await db.write.prepare(
+      `UPDATE campaign_runs
+       SET announced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND announced_at IS NULL`,
+    ).bind(runId).run();
+    if (announcement.meta.changes === 0) return;
+  } catch (error: unknown) {
+    // Announcement bookkeeping is best-effort: the campaign operation that
+    // brought the run into existence must still succeed.
+    console.error('Error stamping community campaign run announcement:', error);
+    return;
+  }
+
+  dispatchPushInBackground(context, async () => {
+    const userIds = await listCommunityCampaignAudienceUserIds(db);
+    await sendPushToUserIds(db, userIds, payload, context.env);
+  });
 }
 
 // ── Field validation ───────────────────────────────────────────────────────
@@ -982,6 +1026,7 @@ export async function handleAdminCampaignEnable(
   db: DbClient,
   campaignId: number,
   adminUserId: number,
+  pushContext?: PushDispatchContext,
 ): Promise<Response> {
   try {
     const existing = await getAdminCampaign(db, campaignId);
@@ -1027,7 +1072,16 @@ export async function handleAdminCampaignEnable(
     });
 
     // Notification dispatch point (community-campaign-notifications change):
-    // the unannounced upcoming/active run, if any, is announced from here.
+    // announce the campaign's unannounced upcoming/active run, if any.
+    if (run) {
+      await announceCampaignRunOnce(
+        db,
+        run.id,
+        { name: existing.name, slug: existing.slug },
+        run.run_number,
+        pushContext,
+      );
+    }
 
     const campaign = await getAdminCampaign(db, campaignId);
     if (!campaign) {
@@ -1154,6 +1208,7 @@ export async function handleAdminCampaignRetrigger(
   campaignId: number,
   body: unknown,
   adminUserId: number,
+  pushContext?: PushDispatchContext,
 ): Promise<Response> {
   try {
     const existing = await getAdminCampaign(db, campaignId);
@@ -1252,6 +1307,13 @@ export async function handleAdminCampaignRetrigger(
 
     // Notification dispatch point (community-campaign-notifications change):
     // announce the newly created, unannounced run from here.
+    await announceCampaignRunOnce(
+      db,
+      newRunId,
+      { name: existing.name, slug: existing.slug },
+      runNumber,
+      pushContext,
+    );
 
     const campaign = await getAdminCampaign(db, campaignId);
     if (!campaign) {

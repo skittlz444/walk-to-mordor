@@ -130,6 +130,7 @@ import {
   handleUpdateUserStoryline,
 } from './storyline-handlers';
 import { handleOneMoreMileCron, handleReengagementCron } from './scheduled-handlers';
+import type { PushDispatchContext } from './push-utils';
 
 // ── Hono Context Variables ────────────────────────────────────────────────
 type Variables = {
@@ -184,6 +185,26 @@ async function safeJsonBody(c: Context<{ Bindings: Env; Variables: Variables }>)
     console.warn('Failed to parse JSON request body:', e);
     return {};
   }
+}
+
+// ── Helper: campaign push dispatch context ────────────────────────────────
+// Campaign lifecycle work runs inside request handlers that never see the
+// ExecutionContext, so the route layer supplies this context instead. Push
+// delivery is non-blocking when the runtime provides `waitUntil`; in tests (and
+// any environment without one) the promise is simply left to settle.
+function campaignPushContext(c: Context<{ Bindings: Env; Variables: Variables }>): PushDispatchContext {
+  return {
+    env: c.env,
+    /* istanbul ignore next -- executionCtx.waitUntil is a Cloudflare-only runtime API */
+    scheduleBackground: (promise: Promise<unknown>) => {
+      try {
+        c.executionCtx.waitUntil(promise);
+      } catch {
+        // No execution context available (e.g. tests) — best-effort only.
+        void promise;
+      }
+    },
+  };
 }
 
 // ── Auth Guards ────────────────────────────────────────────────────────────
@@ -298,11 +319,11 @@ app.get('/api/storylines', authGuard, (c) =>
 
 // ── Progress ──
 app.post('/api/calendar-progress', authGuard, async (c) =>
-  handleProgressPost(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+  handleProgressPost(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH, campaignPushContext(c)));
 app.put('/api/calendar-progress', authGuard, async (c) =>
-  handleProgressPut(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+  handleProgressPut(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH, campaignPushContext(c)));
 app.delete('/api/calendar-progress', authGuard, async (c) =>
-  handleProgressDelete(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+  handleProgressDelete(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH, campaignPushContext(c)));
 app.get('/api/calendar-progress', authGuard, (c) =>
   handleProgressGet(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
 
@@ -400,7 +421,7 @@ app.post('/api/events/daily-roll/decline', authGuard, (c) =>
 app.post('/api/events/:id/join', authGuard, (c) => {
   const id = intParam(c.req.param('id'), 'campaign ID');
   if (id instanceof Response) return id;
-  return handleCampaignJoin(c.get('db'), id, c.get('userId')!);
+  return handleCampaignJoin(c.get('db'), id, c.get('userId')!, campaignPushContext(c));
 });
 
 // ── Push Notifications ──
@@ -682,7 +703,7 @@ app.put('/api/admin/campaigns/:id', adminGuard, async (c) => {
 app.put('/api/admin/campaigns/:id/enable', adminGuard, async (c) => {
   const id = intParam(c.req.param('id'), 'campaign ID');
   if (id instanceof Response) return id;
-  return handleAdminCampaignEnable(c.req.raw, c.get('db'), id, c.get('adminUserId')!);
+  return handleAdminCampaignEnable(c.req.raw, c.get('db'), id, c.get('adminUserId')!, campaignPushContext(c));
 });
 app.put('/api/admin/campaigns/:id/disable', adminGuard, async (c) => {
   const id = intParam(c.req.param('id'), 'campaign ID');
@@ -692,7 +713,7 @@ app.put('/api/admin/campaigns/:id/disable', adminGuard, async (c) => {
 app.post('/api/admin/campaigns/:id/retrigger', adminGuard, async (c) => {
   const id = intParam(c.req.param('id'), 'campaign ID');
   if (id instanceof Response) return id;
-  return handleAdminCampaignRetrigger(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
+  return handleAdminCampaignRetrigger(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!, campaignPushContext(c));
 });
 
 // ── Image Inventory ──

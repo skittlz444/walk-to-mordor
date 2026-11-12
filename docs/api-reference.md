@@ -74,13 +74,14 @@ Page routes return SSR HTML. They are not auth-guarded: `public/js/main.js` redi
 | GET | `/api/push/vapid-key` | No | Returns `{ status: 'success', data: { vapidPublicKey } }` when configured |
 | POST | `/api/push/subscribe` | Yes | Body: `{ endpoint, keys: { p256dh, auth } }`. Same-user endpoint updates in place; different-user endpoint → `409` |
 | DELETE | `/api/push/subscribe` | Yes | Body: `{ endpoint }`. Removes only the current user's matching device subscription |
-| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled, oneMoreMileEnabled, inactivityNudgeEnabled } }` |
-| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled?: boolean, oneMoreMileEnabled?: boolean, inactivityNudgeEnabled?: boolean }`. At least one field required. Updates global delivery toggle and/or per-feature toggles |
+| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled, oneMoreMileEnabled, inactivityNudgeEnabled, communityCampaignsEnabled } }` |
+| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled?: boolean, oneMoreMileEnabled?: boolean, inactivityNudgeEnabled?: boolean, communityCampaignsEnabled?: boolean }`. At least one field required. Updates global delivery toggle and/or per-feature toggles |
 
 - Subscription endpoints must be valid `https://` URLs.
 - `notificationsEnabled` controls whether server-side jobs send push notifications to the user. It does not change browser permission state or remove stored subscriptions.
 - `oneMoreMileEnabled` controls the "One More Mile" milestone nudge notification. When enabled, users within 2 km of their next goal who haven't walked in 3 days receive a one-time push notification.
 - `inactivityNudgeEnabled` controls the "Gandalf's Absence Arc" re-engagement notification series. When enabled, inactive users receive up to 4 themed notifications at escalating intervals (days 6, 10, 15, 25+).
+- `communityCampaignsEnabled` controls community campaign notifications (defaults to `true`). When enabled, the user receives a run announcement (`type: community_campaign_created`) when a campaign run first becomes publicly visible and a completion notice (`type: community_campaign_completed`) when a run they contributed to reaches its target. Both use `url: '/events'`. Announcements target all subscribers with the category enabled; completion notices target only active contributors with `progress_distance > 0`. Delivery is best-effort and never blocks the campaign operation.
 - Invalid or expired subscriptions are cleaned up when a push send later receives `404` or `410` from the push service.
 
 ### Scheduled Handlers (Cron)

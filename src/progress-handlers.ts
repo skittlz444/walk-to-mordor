@@ -6,6 +6,7 @@ import {
 import { validateSession } from "./auth-handlers";
 import { checkAndAwardJourneyBadges } from "./achievement-awards";
 import { reconcileCampaignProgressForUser } from "./campaign-utils";
+import type { PushDispatchContext } from "./push-utils";
 import { reconcileProgressForUser } from "./event-utils";
 import type { DbClient } from "./db";
 
@@ -61,7 +62,7 @@ export async function syncPartyProgressLog(
   }
 }
 
-export async function handleProgressPost(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
+export async function handleProgressPost(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string, pushContext?: PushDispatchContext) {
   // Validate session
   const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
@@ -183,7 +184,7 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
           date: start,
           distance: Number(title),
           operation: 'upsert',
-        });
+        }, pushContext);
       }
     } catch (reconcileError: unknown) {
       console.error('Failed to reconcile campaign progress after create:', reconcileError);
@@ -223,7 +224,7 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
   }
 }
 
-export async function handleProgressPut(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
+export async function handleProgressPut(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string, pushContext?: PushDispatchContext) {
   // Validate session
   const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
@@ -339,7 +340,7 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
           distance: Number(title),
           previousDistance,
           operation: 'upsert',
-        });
+        }, pushContext);
       }
     } catch (reconcileError: unknown) {
       console.error('Failed to reconcile campaign progress after update:', reconcileError);
@@ -364,7 +365,7 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
   }
 }
 
-export async function handleProgressDelete(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
+export async function handleProgressDelete(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string, pushContext?: PushDispatchContext) {
   // Validate session
   const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
@@ -444,7 +445,7 @@ export async function handleProgressDelete(request: Request, db: DbClient, body:
           date: start,
           distance: 0,
           operation: 'delete',
-        });
+        }, pushContext);
       }
     } catch (reconcileError: unknown) {
       console.error('Failed to reconcile campaign progress after delete:', reconcileError);
