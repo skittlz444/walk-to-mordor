@@ -20,6 +20,7 @@ import { FriendAddIsland } from './islands/FriendAddIsland';
 import { FriendProfileIsland } from './islands/FriendProfileIsland';
 import { AdminDashboardIsland } from './islands/AdminDashboardIsland';
 import { AdminEncountersIsland } from './islands/AdminEncountersIsland';
+import { AdminCommunityCampaignsIsland } from './islands/AdminCommunityCampaignsIsland';
 import { AdminGoalsListIsland } from './islands/AdminGoalsListIsland';
 import { AdminGoalEditIsland } from './islands/AdminGoalEditIsland';
 import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
@@ -42,6 +43,7 @@ import { triggerEncounterRoll } from './utils/encounterTrigger';
 const autoHydratedIslands = {
   AdminDashboardIsland,
   AdminEncountersIsland,
+  AdminCommunityCampaignsIsland,
   AdminGoalAddIsland,
   AdminGoalEditIsland,
   AdminGoalsListIsland,
@@ -75,6 +77,7 @@ const autoHydratedIslands = {
 const allIslands = {
   AdminDashboardIsland,
   AdminEncountersIsland,
+  AdminCommunityCampaignsIsland,
   AdminGoalAddIsland,
   AdminGoalEditIsland,
   AdminGoalsListIsland,

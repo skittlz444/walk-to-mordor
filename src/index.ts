@@ -100,6 +100,16 @@ import {
   handleAdminEncounterEnable,
   handleAdminEncounterDisable,
 } from "./encounter-admin-handlers";
+import {
+  handleAdminCampaignsList,
+  handleAdminCampaignSuggestions,
+  handleAdminCampaignGet,
+  handleAdminCampaignCreate,
+  handleAdminCampaignUpdate,
+  handleAdminCampaignEnable,
+  handleAdminCampaignDisable,
+  handleAdminCampaignRetrigger,
+} from "./campaign-admin-handlers";
 import { renderAdminGoalEditPage } from "./renderAdminGoalEditPage";
 import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 import { renderAdminUsersPage } from "./renderAdminUsersPage";
@@ -648,6 +658,41 @@ app.put('/api/admin/encounters/:id/disable', adminGuard, async (c) => {
   const id = intParam(c.req.param('id'), 'encounter ID');
   if (id instanceof Response) return id;
   return handleAdminEncounterDisable(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
+});
+
+// ── Community Campaigns ──
+// Static `suggestions` is registered before `:id`; Hono matches static
+// segments first either way.
+app.get('/api/admin/campaigns/suggestions', adminGuard, (c) =>
+  handleAdminCampaignSuggestions(c.req.raw, c.get('db')));
+app.get('/api/admin/campaigns', adminGuard, (c) =>
+  handleAdminCampaignsList(c.req.raw, c.get('db')));
+app.post('/api/admin/campaigns', adminGuard, async (c) =>
+  handleAdminCampaignCreate(c.req.raw, c.get('db'), await safeJsonBody(c), c.get('adminUserId')!));
+app.get('/api/admin/campaigns/:id', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignGet(c.req.raw, c.get('db'), id);
+});
+app.put('/api/admin/campaigns/:id', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignUpdate(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
+});
+app.put('/api/admin/campaigns/:id/enable', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignEnable(c.req.raw, c.get('db'), id, c.get('adminUserId')!);
+});
+app.put('/api/admin/campaigns/:id/disable', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignDisable(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
+});
+app.post('/api/admin/campaigns/:id/retrigger', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignRetrigger(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
 });
 
 // ── Image Inventory ──

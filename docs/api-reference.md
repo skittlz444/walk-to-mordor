@@ -385,7 +385,7 @@ Public discovery plus one authenticated action (`src/campaign-handlers.ts`, `src
 
 All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Every mutating action is audit-logged via `logAdminAction`.
 
-**Audit action strings:** `update_goal`, `create_goal`, `create_storyline`, `update_storyline`, `update_storyline_goals`, `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, `cancel_active_occurrences`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
+**Audit action strings:** `update_goal`, `create_goal`, `create_storyline`, `update_storyline`, `update_storyline_goals`, `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, `cancel_active_occurrences`, `create_campaign`, `update_campaign`, `enable_campaign`, `disable_campaign`, `cancel_campaign_participants`, `retrigger_campaign`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
 
 ### Dashboard & Metrics
 
@@ -478,6 +478,46 @@ Handlers live in `src/encounter-admin-handlers.ts`. Every route is wrapped by `a
 #### Audit
 
 Actions: `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, `cancel_active_occurrences`. Rows use `targetType = 'personal_encounter'`, `targetId` = definition ID, and JSON `details` with changed fields, badge create/update flags, and active/cancelled occurrence counts.
+
+### Community Campaign Management
+
+Handlers live in `src/campaign-admin-handlers.ts`. All routes sit behind `adminGuard` (`401` unauthenticated, `403` non-admin) and every mutation is audit-logged with `targetType = 'community_campaign'`.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/admin/campaigns/suggestions` | Metric suggestions from the last 30 days of walks |
+| GET | `/api/admin/campaigns` | `{ campaigns }`; each has `activeRun`, `latestRun`, `badge`, `activeParticipantCount` |
+| POST | `/api/admin/campaigns` | Creates the definition (`enabled: false`), run 1 (`upcoming`, `announced_at null`), and a missing badge. `201 { campaign }` |
+| GET | `/api/admin/campaigns/:id` | `{ campaign }` with `runs` (all run history); unknown → `404` |
+| PUT | `/api/admin/campaigns/:id` | Updates copy, linked badge, and run fields while upcoming. Never changes `enabled` |
+| PUT | `/api/admin/campaigns/:id/enable` | Sets `enabled = 1` and backfills active participants' in-window walks |
+| PUT | `/api/admin/campaigns/:id/disable` | Sets `enabled = 0`; may require `cancelActive` confirmation |
+| POST | `/api/admin/campaigns/:id/retrigger` | Appends the next run; terminal latest run plus enabled campaign only |
+
+#### Definition body (POST/PUT)
+
+`slug` (≤80, kebab-case, unique), `name` (≤120), `description` (≤2000), `image_slug` (≤120), `badge_slug` (≤120), `target_distance` (> 0), `start_date` (ISO), `end_date` (ISO, after start). `start_date` must be today or later **on create only**; updates accept a past start while the run is still upcoming. Inline badge fields: `badge_name`, `badge_description`, `badge_image_slug`, `repeatable`, `rank_thresholds` (ascending positive integers). Validation failure → `400 { "error": "validation", "fields": { ... } }` with no writes.
+
+- A missing `badge_slug` requires all three inline badge fields. The handler creates a `badge_type = 'community'` achievement; repeatable badges store the supplied `metadata.rank_thresholds` (default `[1, 3, 7, 15]`), non-repeatable store `[1]`, and `metadata.rank` is never written.
+- Updates touch an existing linked community badge only when inline fields, repeatability, or thresholds changed; other badge types are never modified (attempts → `fields.badge_slug`).
+- Once the current run leaves `upcoming`, `target_distance`, `start_date`, and `badge_slug` are frozen. An active run's `end_date` may be extended only; a terminal run's window is immutable.
+- PUT on a definition with no runs creates run 1 from the supplied run fields (recovery path; create always inserts it).
+
+#### Suggestions
+
+`GET /api/admin/campaigns/suggestions?durationDays=<n>` → `{ suggestedTargetDistance, suggestedDurationDays, suggestedParticipantCount, thirtyDayTotalDistance, thirtyDayActiveUsers }`.
+`suggestedTargetDistance = round(total30d / max(activeUsers, 1) * durationDays * 0.25)`; `durationDays` defaults to 14 and is clamped to 7–30. The 0.25 opt-in rate is a documented handler constant.
+
+#### Disable confirmation
+
+- No active participants → disables immediately, `200 { campaign }`.
+- Active participants and no boolean `cancelActive` → mutates nothing, `400 { activeParticipants, requiresConfirmation: true }`.
+- `{ "cancelActive": false }` → disables, leaves participant rows untouched.
+- `{ "cancelActive": true }` → disables and marks active participants `status = 'removed'` with `removed_at`; ledger rows and earned badges are retained. Audit entries `disable_campaign` and `cancel_campaign_participants` share the action.
+
+#### Retrigger
+
+Allowed only when the latest run is `completed` or `expired` **and** `enabled = 1`; otherwise `400 { "error": ... }` (disabled campaigns direct the admin to enable first). Defaults: target from the suggestion formula clamped to ≥ 1 km, start tomorrow UTC, end `start + 13` (14-day inclusive window). `target_distance`, `start_date`, and `end_date` overrides use the create validation rules. The next run uses `run_number = max + 1`, `status = 'upcoming'`, `announced_at = NULL`, and is inserted together with its audit row in one D1 batch; previous runs, participants, ledger rows, and badges are never modified. Response `201 { campaign, run }`.
 
 ### Image Inventory
 
