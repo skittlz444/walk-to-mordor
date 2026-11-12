@@ -60,7 +60,7 @@
 - [x] 7.2 Update `docs/api-reference.md` with public campaign list, detail, community-progress, and authenticated join endpoint specifications.
 - [x] 7.3 Update `docs/architecture.md` with the run lifecycle (daily cron + sync completion, admin-triggered retriggering), walk-date-based progress reconciliation, and lifecycle notes.
 - [x] 7.4 Add Vitest coverage for `EventsIsland`: renders campaign cards with imagery, progress bars, and which-days copy, shows sign-in link for anonymous visitors, shows join button for authenticated user on unjoined active/upcoming run, shows joined/upcoming state, shows contribution for joined run, renders top-five contributors with "and X more", renders past-run outcomes, handles loading/error/empty states, and displays the public-visibility notice.
-- [ ] 7.5 Run `npm test` and fix regressions related to campaign handlers, route dispatch, progress reconciliation, and lifecycle cron.
+- [x] 7.5 Run `npm test` and fix regressions related to campaign handlers, route dispatch, progress reconciliation, and lifecycle cron.
 - [x] 7.6 Run `npm run test:client` and fix regressions related to the events island and island registration.
 - [x] 7.7 Run focused Playwright coverage for the events page join and community-progress flow, campaign imagery, and public vs authenticated view differences.
-- [ ] 7.8 Run `npm run check` and resolve any TypeScript or Wrangler dry-run issues.
+- [x] 7.8 Run `npm run check` and resolve any TypeScript or Wrangler dry-run issues.
