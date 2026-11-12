@@ -8,7 +8,7 @@
 - [x] 1.6 Audit log mutations via `logAdminAction` with `action` (create_campaign, update_campaign, enable_campaign, disable_campaign, cancel_campaign_participants, retrigger_campaign), `targetType` = 'community_campaign', `targetId`, and `details` as JSON.
 - [x] 1.7 Register admin campaign routes on the Hono app under the admin block behind `adminGuard`: `app.get('/api/admin/campaigns/suggestions')`, `app.get/post('/api/admin/campaigns')`, `app.get/put('/api/admin/campaigns/:id')`, `app.put('/api/admin/campaigns/:id/enable')`, `app.put('/api/admin/campaigns/:id/disable')`, `app.post('/api/admin/campaigns/:id/retrigger')`. Hono matches the static `suggestions` path before `:id`; no `getAllowedMethods` changes.
 - [x] 1.8 Add Jest coverage for: admin CRUD operations, badge auto-create on save (including repeatable + rank_thresholds metadata), non-community badge rejection, field validation (including create-only start-date rule and frozen fields), non-admin rejection via adminGuard, metric suggestion calculation, disable with/without active participants, cancel vs keep-active flow, enable backfill, retrigger preconditions (latest run terminal + enabled), retrigger defaults and overrides (14-day window, 1 km clamp, run_number increment), retrigger leaving history untouched, audit log entries.
-- [ ] 1.9 When the `community-campaign-notifications` change is applied, dispatch the run-announcement notification when a run first becomes publicly visible: on enable (unannounced upcoming/active run) from the enable route, and on retrigger from the retrigger route — both via the route-layer background scheduling callback. Migration-seeded runs stay silent until an admin enables the campaign.
+- [x] 1.9 When the `community-campaign-notifications` change is applied, dispatch the run-announcement notification when a run first becomes publicly visible: on enable (unannounced upcoming/active run) from the enable route, and on retrigger from the retrigger route — both via the route-layer background scheduling callback. Migration-seeded runs stay silent until an admin enables the campaign.
 
 ## 2. Admin Campaigns UI
 
@@ -22,7 +22,7 @@
 ## 3. Validation
 
 - [x] 3.1 Add Vitest coverage for `AdminCommunityCampaignsIsland`: renders campaign list with run status and enable/disable, opens create form with badge fields (including repeatability and thresholds) and suggestions button, submits with suggestions data, shows field validation errors, toggles enable/disable, shows disable confirmation modal for active participants, shows the retrigger action only for terminal runs with pre-filled overridable values, and hides retrigger while a run is upcoming or active or the campaign is disabled.
-- [ ] 3.2 Run `npm test` and fix regressions related to admin campaign handlers, route dispatch, and audit logging.
-- [ ] 3.3 Run `npm run test:client` and fix regressions related to the new admin island and island registration.
-- [ ] 3.4 Run `npm run check` and resolve any TypeScript or Wrangler dry-run issues.
+- [x] 3.2 Run `npm test` and fix regressions related to admin campaign handlers, route dispatch, and audit logging.
+- [x] 3.3 Run `npm run test:client` and fix regressions related to the new admin island and island registration.
+- [x] 3.4 Run `npm run check` and resolve any TypeScript or Wrangler dry-run issues.
 - [x] 3.5 Update `docs/api-reference.md` with admin campaign endpoint specifications.

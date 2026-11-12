@@ -18,7 +18,7 @@
 
 - [x] 3.1 Add Jest coverage for: push status includes new setting, push settings update writes new setting, settings body with only the new key is accepted, retrigger of an enabled campaign triggers the run announcement, enable announces an unannounced run, repeated enable does not re-announce, seeded silent run announced only after enabling, run completion triggers notification to contributors only, users with category disabled are excluded, notification failure does not block campaign operations.
 - [x] 3.2 Add Vitest coverage for the new `PushPermissionIsland` toggle: renders with label and hint, reflects status, and sends the updated settings payload.
-- [ ] 3.3 Run `npm test` and fix regressions related to the new column, handler extensions, and notification triggers.
-- [ ] 3.4 Run `npm run test:client` and fix regressions related to the settings toggle.
-- [ ] 3.5 Run `npm run check` and resolve any TypeScript or Wrangler dry-run issues.
+- [x] 3.3 Run `npm test` and fix regressions related to the new column, handler extensions, and notification triggers.
+- [x] 3.4 Run `npm run test:client` and fix regressions related to the settings toggle.
+- [x] 3.5 Run `npm run check` and resolve any TypeScript or Wrangler dry-run issues.
 - [x] 3.6 Update `docs/api-reference.md` with the new `communityCampaignsEnabled` field in push status and settings endpoints.
