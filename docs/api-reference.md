@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-11-05
+Last updated: 2026-11-12
 
 ## Conventions
 
@@ -30,6 +30,7 @@ Last updated: 2026-11-05
 | Friends | `src/friends-handlers.ts` |
 | Achievements | `src/achievement-handlers.ts`, `src/badge-presentation.ts`, `src/achievement-utils.ts`, `src/achievement-awards.ts` |
 | Events (personal challenges) | `src/event-handlers.ts`, `src/event-utils.ts` |
+| Community campaigns | `src/campaign-handlers.ts`, `src/campaign-utils.ts` |
 | Admin | `src/admin-handlers.ts` |
 | Admin encounters | `src/encounter-admin-handlers.ts` |
 | Route wiring | `src/index.ts` |
@@ -64,6 +65,7 @@ Page routes return SSR HTML. They are not auth-guarded: `public/js/main.js` redi
 | GET | `/profile` | `src/renderProfileViewPage.ts` | `ProfileViewIsland`, `BadgeDisplayIsland` inside `.party-page` |
 | GET | `/profile/settings` | `src/renderProfileSettingsPage.ts` | SSR back row, then `ProfileSettingsIsland`, `PushPermissionIsland`, `ProfileAccountIsland` inside `.profile-page` |
 | GET | `/friends/:id` | `src/renderFriendProfilePage.ts` | `FriendProfileIsland`, `BadgeDisplayIsland` (unchanged) |
+| GET | `/events` | `src/renderEventsPage.ts` | `publicPage: true` (skips `main.js`; anonymous visitors are never redirected), `EventsIsland` |
 
 ## Push Endpoints
 
@@ -346,6 +348,38 @@ Personal challenge encounters. All three are `POST`, protected by `authGuard` (`
 
 - Idempotent: marks today's roll `declined` and creates no challenge. Repeated declines are no-ops.
 - The declined roll returns `{ offer: null }` on later roll calls, so refreshing the page on the same UTC day does not re-show the modal.
+
+## Community Campaign Endpoints
+
+Public discovery plus one authenticated action (`src/campaign-handlers.ts`, `src/campaign-utils.ts`). `GET`s are auth-optional: a missing/invalid `Authorization` header means anonymous (never `401`); a valid one adds the caller's overlay. camelCase; distances in km.
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/events` | No | Enabled campaigns with current and past-run summaries |
+| GET | `/api/events/:id` | No | One campaign with every run summary; unknown/disabled → `404` |
+| GET | `/api/events/:id/community-progress` | No | Current-run totals and ranked contributors; unknown/disabled → `404` |
+| POST | `/api/events/:id/join` | Yes | Opt into the current run; `401` without a session |
+
+### Campaign payloads
+- `GET /api/events` → `{ campaigns: CampaignSummary[] }`, ordered by run status then start date. Summary: `{ id, slug, name, description, imageSlug, badgeSlug, enabled, activeRun, pastRuns, participation }`.
+- Run summary: `{ id, runNumber, targetDistance, startDate, endDate, status, completedAt, announcedAt, participantCount, contributorCount, totalDistance, fromSnapshot }`. `activeRun` is the upcoming/active run or `null`; `pastRuns` are terminal runs (snapshot values when `fromSnapshot: true`).
+- `participation` (valid session only, else `null`): `{ participantId, status: 'active'|'removed', joinedAt, contributionDistance }`.
+- `GET /api/events/:id` returns the summary plus `runs` (all runs). Unknown id or `enabled = 0` → `404`. `imageSlug` → `/img/highres/<slug>.webp` + `/img/thumbs/<slug>-thumb.webp`; `null` = copy-only.
+
+### Community progress
+`GET /api/events/:id/community-progress` → `{ campaignId, campaignSlug, runId, runNumber, targetDistance, startDate, endDate, status, daysRemaining, totalDistance, participantCount, contributorCount, contributors[], you }`.
+
+- `totalDistance` is `SUM(campaign_progress_ledger.distance)` across active participants; `participantCount` includes zero-distance joiners, while `contributorCount`/`contributors` include only distances > 0.
+- Ranking is `distance DESC, username ASC`, capped at 50, competition-ranked for ties (1, 2, 2, 4, …). `you` appears only for a valid session with contribution > 0; no current run → zeros with null run fields.
+
+### Join a campaign run
+`POST /api/events/:id/join` (session required)
+
+- Rejects disabled campaigns, no current run, or a passed end date (UTC). Creates a per-run participant and backfills existing in-window walks through the idempotent ledger upsert; prior-run participation never blocks a new run.
+- `201` → `{ joined: true, campaignId, campaignSlug, runId, runNumber, participation: { participantId, status, joinedAt, contributionDistance } }`.
+- Errors: `401` unauthenticated · `404` unknown campaign · `409` already joined this run · `400` ended/not joinable · `500` unexpected. No leave action; username and contribution distance are public via the progress endpoint.
+
+> `/api/events/daily-roll*` is the separate personal-challenges API; Hono resolves static segments before `:id`.
 
 ## Admin Endpoints
 

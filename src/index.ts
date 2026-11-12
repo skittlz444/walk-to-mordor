@@ -64,6 +64,7 @@ import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
 import { renderFriendsPage } from "./renderFriendsPage";
 import { renderStatsPage } from "./renderStatsPage";
+import { renderEventsPage } from "./renderEventsPage";
 import { renderFriendAddPage } from "./renderFriendAddPage";
 import { renderFriendProfilePage } from "./renderFriendProfilePage";
 import { renderProfileSettingsPage } from "./renderProfileSettingsPage";
@@ -217,6 +218,8 @@ app.get('/friends', (c) => c.html(renderFriendsPage()));
 app.get('/friends/add/:friendCode', (c) => c.html(renderFriendAddPage()));
 app.get('/friends/:id', (c) => c.html(renderFriendProfilePage()));
 app.get('/stats', (c) => c.html(renderStatsPage()));
+
+app.get('/events', (c) => c.html(renderEventsPage()));
 
 app.get('/party', (c) => c.html(renderPartyListPage()));
 app.get('/party/join/:inviteCode', (c) => c.html(renderPartyJoinPage()));

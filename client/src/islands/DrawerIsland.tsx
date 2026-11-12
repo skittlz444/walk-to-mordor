@@ -189,6 +189,7 @@ export function DrawerIsland() {
             Fellowships
             {pendingInvitesCount > 0 && <span className="drawer-badge">{pendingInvitesCount}</span>}
           </a>
+          <a className="drawer-link" href="/events" onClick={closeDrawer}>Campaigns</a>
           <a className="drawer-link" href="/friends" onClick={closeDrawer}>
             Friends
             {pendingFriendsCount > 0 && <span className="drawer-badge">{pendingFriendsCount}</span>}

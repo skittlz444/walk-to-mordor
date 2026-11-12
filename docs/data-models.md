@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-11-05 · Migrations: 0001–0159 · Full DDL: `migrations/`
+> Last updated: 2026-11-12 · Migrations: 0001–0167 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -39,6 +39,10 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `daily_rolls` | One personal encounter roll per user per UTC day (offer, preview target, status) | 0154 |
 | `event_participants` | Participant row per occurrence with cached credited distance | 0155 |
 | `event_progress_ledger` | Idempotent credit rows linking walk progress to a participant | 0156 |
+| `campaign_definitions` | Community campaign identity (copy, artwork, badge, enabled flag) | 0161 |
+| `campaign_runs` | One lifecycle cycle per campaign (window, target, status, final snapshot) | 0162 |
+| `campaign_participants` | Per-run opt-in with cached credited distance | 0163 |
+| `campaign_progress_ledger` | Retained per-run credit rows linking walk progress to a participant | 0164 |
 
 ## Key Constraints & Invariants
 
@@ -156,6 +160,17 @@ These are rules the schema enforces or that the application layer must uphold �
 - Completion is `SUM(ledger.distance) >= personalized_target` — there is no all-coverage-days precondition, so a challenge can complete at acceptance or on any later eligible reconciliation.
 - Seeds: definition `nazgul-pursuit` (3 days, 1.3 stretch, 3–50 km clamp) and badge `challenge-nazgul-outrun` (`challenge` type, repeatable, `rank_thresholds` `[1,3,7,15]`, `unit` `pursuits`).
 
+### community campaigns (0161–0167)
+- Four tables form one retriggerable engine: a **definition** carries identity/copy only; each **run** carries the window, target, status, and terminal snapshot; **participants** are per-run opt-ins; the **ledger** holds retained credit rows. Definitions never hold dates or targets.
+- `campaign_definitions`: `slug` is unique; stores `name`, `description`, `image_slug`, `badge_slug`, and `enabled`. Disable (`enabled = 0`) freezes a campaign — it is excluded from public listings, reconciliation, completion, lifecycle transitions, and joining. Never hard-delete: history and participant rows are retained.
+- `campaign_runs`: `UNIQUE(campaign_id, run_number)` and a **partial unique index** on `(campaign_id) WHERE status IN ('upcoming','active')` — at most one current run per campaign. `status` is `upcoming` / `active` / `completed` / `expired`; `CHECK (end_date >= start_date)`. Snapshot columns (`participant_count`, `contributor_count`, `total_distance`) are nullable until the terminal transition and are then written **once** so history survives later edits. `announced_at` is reserved for the notifications change.
+- `campaign_participants`: `UNIQUE(user_id, campaign_id, run_id)` makes opt-in **per run**; joining a retriggered run is always explicit. `progress_distance` is a cache derived from the ledger (never the source of truth). `status` is `active` / `removed`; removal is per run and never blocks joining a later run.
+- `campaign_progress_ledger`: one row per `(participant_id, source_progress_id)` (`UNIQUE`) with `run_id` denormalized for aggregation. Rows are **never deleted by retriggering**; deleting a walk removes only its own credit row. Past-run leaderboards and snapshots stay queryable.
+- Credit is **walk-date based** and gated on `status = 'active'`: only `progress.date` inside `[start_date, end_date]` counts. Joining backfills existing in-window walks through the same idempotent ledger upsert. `upcoming`, `completed`, and `expired` runs never credit or complete, which also blocks future-dated walks from completing an unstarted run.
+- Community progress aggregates `SUM(ledger.distance)` scoped through the run's **active** participants. `participantCount` includes zero-distance joiners; `contributorCount` and the ranked list include only `progress_distance > 0`. Ranking is `distance DESC, username ASC`, capped at 50, with competition ranking for ties.
+- Completion is synchronous during walk reconciliation: when the scoped total meets `target_distance`, a guarded UPDATE (`WHERE status = 'active'`, proceed on `changes > 0`) marks the run completed and awards the badge to every active contributor with the per-run key `campaign:<slug>:run:<run_id>`.
+- Seeds: `beacon-watch` (enabled `0`), run 1 (upcoming, 14-day window, 581 km target), and repeatable badge `community-beacon-watch` (`rank_thresholds` `[1,3,7,15]`, `unit` `beacons`).
+
 ### parties
 - `distance_mode` (`incremental` | `cumulative`): set at creation, **immutable**.
 - `leave_distance_behavior` (`keep` | `remove`): leader-updatable.
@@ -194,6 +209,10 @@ These are rules the schema enforces or that the application layer must uphold �
 | `encounter_occurrences.daily_roll_id` | CASCADE | An occurrence cannot outlive the roll that created it |
 | `event_participants.occurrence_id`, `event_progress_ledger.participant_id` | CASCADE | Challenge data is meaningless without its occurrence/participant |
 | `event_progress_ledger.source_progress_id` → `progress.id` | CASCADE | Deleting a walk removes its ledger credit |
+| `campaign_runs.campaign_id` → `campaign_definitions.id` | **No cascade** | Campaign history and run snapshots must survive definition changes; definitions are soft-disabled |
+| `campaign_participants.campaign_id` / `.run_id` | Definition no cascade; run CASCADE | History is definition-scoped, but a deleted run cannot leave orphan participants |
+| `campaign_participants.user_id` | CASCADE | Standard cleanup on user deletion |
+| `campaign_progress_ledger.participant_id` / `.run_id` / `.source_progress_id` | CASCADE | Credit is meaningless without its participant/run, and deleting a walk removes its credit |
 | All other user FKs | CASCADE | Standard cleanup |
 
 `content_discovery_events` intentionally has no foreign keys because those rows are best-effort analytics.
@@ -206,6 +225,7 @@ These are rules the schema enforces or that the application layer must uphold �
 - Goal description updates use dedicated migrations (see `0011`–`0019` series).
 - Goal content tables are additive migrations: `0140` for `goal_content`, `0141` for `content_discovery_events`.
 - Personal challenge tables are additive: `0152`–`0156` create the five tables; `0157`–`0158` seed the Nazgul definition and its `challenge-nazgul-outrun` badge; `0159` repairs legacy prototype tables by dropping and recreating `event_participants` and `event_progress_ledger` with the canonical FKs/columns.
+- Community campaign tables are additive: `0161`–`0164` create definitions/runs/participants/ledger; `0165`–`0167` seed the disabled `beacon-watch` definition, run 1, and the `community-beacon-watch` badge. Seed guards (`INSERT OR IGNORE`, `NOT EXISTS`) keep re-applying them a no-op.
 - Deploy: `npx wrangler d1 migrations apply walk-to-mordor-db`.
 
 ## Entity Relationship Diagram

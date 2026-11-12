@@ -5,6 +5,7 @@ import { BadgeAwardModal } from './islands/BadgeAwardModal';
 import { BadgeDisplayIsland } from './islands/BadgeDisplayIsland';
 import { DrawerIsland } from './islands/DrawerIsland';
 import { EncounterPopupIsland } from './islands/EncounterPopupIsland';
+import { EventsIsland } from './islands/EventsIsland';
 import { GoalModal } from './islands/GoalModal';
 import { MapIsland } from './islands/MapIsland';
 import { NextGoalCard } from './islands/NextGoalCard';
@@ -51,6 +52,7 @@ const autoHydratedIslands = {
   BadgeAwardModal,
   BadgeDisplayIsland,
   DrawerIsland,
+  EventsIsland,
   FriendAddIsland,
   FriendProfileIsland,
   FriendsListIsland,
@@ -85,6 +87,7 @@ const allIslands = {
   DistanceModal,
   DrawerIsland,
   EncounterPopupIsland,
+  EventsIsland,
   FriendAddIsland,
   FriendProfileIsland,
   FriendsListIsland,
