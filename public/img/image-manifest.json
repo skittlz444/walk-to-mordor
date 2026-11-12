@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-05T12:37:19.228Z",
+  "generated": "2026-11-12T14:21:58.590Z",
   "images": [
     "0",
     "1",
@@ -102,6 +102,7 @@
     "beacon-of-halifirien",
     "beacon-on-nardol",
     "beacon-tower-of-calenhad",
+    "beacon-watch",
     "brandywine-bridge",
     "brandywine-bridge-tookland",
     "bruinen-turns-south",
@@ -230,5 +231,5 @@
     "wide-curving-valley",
     "wide-grassy-swells"
   ],
-  "count": 228
+  "count": 229
 }
