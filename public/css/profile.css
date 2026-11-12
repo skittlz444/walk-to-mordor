@@ -387,6 +387,12 @@ input:checked + .toggle-slider:before {
   margin-bottom: 0;
 }
 
+/* Keep the notification-type rows visually separated; the italic hint of one
+   row must not sit flush against the next row's heading. */
+.push-notification-types .push-setting-group + .push-setting-group {
+  margin-top: 1rem;
+}
+
 .push-notification-types {
   border-top: 1px solid var(--border-gray, #333);
   margin-top: 1rem;

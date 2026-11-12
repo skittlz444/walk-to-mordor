@@ -2342,6 +2342,7 @@
 
 .admin-campaigns-run {
   display: grid;
+  justify-items: start;
   gap: 0.15rem;
   color: var(--text-secondary);
   font-size: 0.9rem;
@@ -2355,6 +2356,7 @@
 .admin-campaigns-run__dates {
   color: var(--text-muted);
   font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .admin-campaigns-badge {
@@ -2566,5 +2568,137 @@
   .admin-campaigns-modal__actions .admin-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* ===== Admin Community Campaigns — mobile cards ===== */
+/* Below 768px the table becomes one stacked card per campaign. Scoped to the
+   admin-campaigns* classes so no other admin table is affected. */
+
+@media (max-width: 900px) {
+  .admin-campaigns .admin-section-heading > .admin-btn {
+    justify-content: center;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-campaigns-panel {
+    overflow: visible;
+  }
+
+  .admin-campaigns-table-wrap {
+    overflow-x: visible;
+  }
+
+  .admin-campaigns-table {
+    min-width: 0;
+  }
+
+  .admin-campaigns-table,
+  .admin-campaigns-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-campaigns-table thead {
+    display: none;
+  }
+
+  .admin-campaigns-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "campaign status"
+      "window window"
+      "badge participants"
+      "actions actions";
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+  }
+
+  .admin-campaigns-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .admin-campaigns-table td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .admin-campaigns-table td:nth-child(1) {
+    grid-area: campaign;
+  }
+
+  .admin-campaigns-table td:nth-child(2) {
+    grid-area: window;
+  }
+
+  .admin-campaigns-table td:nth-child(3) {
+    grid-area: badge;
+    font-size: 0.85rem;
+  }
+
+  .admin-campaigns-table td:nth-child(4) {
+    grid-area: participants;
+    justify-self: end;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .admin-campaigns-table td:nth-child(5) {
+    grid-area: status;
+    align-self: start;
+    justify-self: end;
+  }
+
+  .admin-campaigns-table td:nth-child(6) {
+    grid-area: actions;
+  }
+
+  .admin-campaigns-table td:nth-child(3)::before,
+  .admin-campaigns-table td:nth-child(4)::before {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .admin-campaigns-table td:nth-child(3)::before {
+    content: "Badge: ";
+  }
+
+  .admin-campaigns-table td:nth-child(4)::before {
+    content: "Participants: ";
+  }
+
+  .admin-campaigns-name,
+  .admin-campaigns-slug {
+    overflow-wrap: anywhere;
+  }
+
+  .admin-campaigns-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .admin-campaigns-actions .admin-btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .admin-campaigns-actions .admin-btn:nth-child(3) {
+    grid-column: 1 / -1;
   }
 }
