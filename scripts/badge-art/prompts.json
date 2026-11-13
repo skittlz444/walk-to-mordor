@@ -326,6 +326,26 @@
       ]
     },
     {
+      "id": "emblem/community-beacon-watch",
+      "slug": "community-beacon-watch",
+      "name": "Beacon Warden",
+      "group": "emblem",
+      "family": "community",
+      "rank": "thresholds",
+      "canvas": 1024,
+      "target_outer_px": 800,
+      "variants": [
+        {
+          "id": "a",
+          "prompt": "A hilltop signal beacon: an iron brazier set on a stone cairn, crowned by a tall leaping flame with a single curl of smoke rising, warm bronze and gold. Polished hard enamel with glossy raised gold outlines, smooth saturated colour fields, a thin bright metal edge, and no separate outer frame or border ring."
+        },
+        {
+          "id": "b",
+          "prompt": "A hilltop signal beacon: an iron brazier set on a stone cairn, crowned by a tall leaping flame with a single curl of smoke rising. Aged engraved metal with hand-chased relief, patinated bronze and weathered iron, warm gold highlights on the flame, deep recessed colour, and no separate outer frame or border ring."
+        }
+      ]
+    },
+    {
       "id": "frame/journey",
       "slug": "journey",
       "name": "Journey Frame",

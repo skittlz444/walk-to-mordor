@@ -83,6 +83,7 @@ app.get('/api/party/:id/progress', async (c) => {
 | Friends | `friends-handlers.ts` |
 | Achievements | `achievement-handlers.ts`, `achievement-utils.ts` |
 | Personal challenges | `event-handlers.ts`, `event-utils.ts` |
+| Community campaigns | `campaign-handlers.ts`, `campaign-utils.ts` |
 | Admin | `admin-handlers.ts` (requires `validateAdminSession`) |
 | Pages | `render*.ts`, `map-handlers.ts` |
 
@@ -102,7 +103,7 @@ walk-to-mordor/
     css/             # Feature-scoped stylesheets
     js/              # Legacy vanilla JS + Vite-built island bundle (js/client/)
     img/             # Map tiles, avatars, goal images, image-manifest.json
-  migrations/        # D1 SQL migrations (0001–0159)
+  migrations/        # D1 SQL migrations (0001–0167)
   tests/api/         # Jest API tests (miniflare environment)
   tests/ui/          # Playwright E2E specs + helpers/
   scripts/           # Asset pipeline (image optimization, tiling, manifest)
@@ -167,6 +168,16 @@ Feature → file discovery: search `src/` for handler modules, `client/src/islan
 - **Badge award:** completion calls `awardAchievement` with the idempotency key `encounter_occurrence:<occurrence_id>`, so reconciliation retries cannot double-award and editing progress downward never revokes an earned badge.
 - **Artwork:** the illustration uses the shared static image pipeline (`image_slug` → `public/img/highres/<slug>.webp` + thumb, manifest); badge art stays in `scripts/badge-art/`. See `docs/asset-workflow.md`.
 
+### Community Campaigns
+
+- **Definition vs run:** `campaign_definitions` holds identity/copy/artwork/badge link only. Each `campaign_runs` row carries one cycle's window, target, status, and terminal snapshot. A partial unique index allows at most one `upcoming`/`active` run per campaign; retriggering (admin action, future `community-campaigns-admin`) adds the next `run_number` instead of resetting a row.
+- **Per-run opt-in:** `campaign_participants` is unique per `(user_id, campaign_id, run_id)`. Joining a new run is always explicit; removal in a prior run never blocks joining the next one. `campaign_progress_ledger` rows are retained across runs, so past leaderboards and snapshots stay queryable.
+- **Walk-date credit, gated on the active run:** reconciliation checks `progress.date` against `[start_date, end_date]` and only credits runs with `status = 'active'`. `upcoming`, `completed`, and `expired` runs never credit or complete — this is also what blocks a future-dated walk from completing an unstarted run. Joining backfills existing in-window walks through the same idempotent ledger upsert.
+- **Synchronous completion:** after a walk create/update/delete, the scoped ledger total is compared to `target_distance`. On target met, a guarded UPDATE (`WHERE status = 'active'`, proceed only on `changes > 0`) writes the final snapshot and calls `awardAchievement` with the per-run key `campaign:<slug>:run:<run_id>` for every active contributor. Reconciliation hooks run in `src/progress-handlers.ts`, mirroring personal challenges and `syncPartyProgressLog`: errors are logged, never propagated.
+- **Lifecycle cron:** the existing daily 09:00 UTC `scheduled()` run adds an independent try/catch block: `upcoming → active` when `start_date <= DATE('now')`, and `active → expired` when `end_date < DATE('now')` and the total is below target (snapshot written at expiry). Completion is never done by cron, and cron never creates runs. All date comparisons are UTC.
+- **Disabled campaigns are frozen:** `enabled = 0` excludes a campaign from listing, reconciliation, completion, lifecycle, and joining; re-enabling re-runs backfill reconciliation for the active run.
+- **Public surface:** `GET /api/events*` is auth-optional — a valid token adds the caller's participation/contribution, an invalid or absent one is anonymous (not `401`). `POST /api/events/:id/join` is the only authenticated campaign action. The `/events` page (`src/renderEventsPage.ts` + `EventsIsland`) uses `publicPage: true`, so anonymous visitors are never redirected to `/login` and see a "Sign in to join" link instead of a join button. The island fetches `/api/events` then `/api/events/:id/community-progress` per active card; a failed progress call degrades to the card without the contributor list.
+
 ## Database Layer
 
 D1 is the source of truth. Full schema: `docs/data-models.md`. Migrations in `migrations/`.
@@ -179,9 +190,10 @@ D1 is the source of truth. Full schema: `docs/data-models.md`. Migrations in `mi
 | Fellowship | `parties`, `party_members`, `party_progress_log`, `party_messages` |
 | Social | `friendships`, `fellowship_invites` |
 | Personal challenges | `personal_encounter_definitions`, `encounter_occurrences`, `daily_rolls`, `event_participants`, `event_progress_ledger` |
+| Community campaigns | `campaign_definitions`, `campaign_runs`, `campaign_participants`, `campaign_progress_ledger` |
 | Admin | `admin_audit_log` |
 
-Migration ranges: 0001–0005 core schema · 0006–0010 auth · 0011–0021 goal updates + email · 0022–0116 goal images · 0117–0118 preferences · 0119–0124 fellowship / social / admin · 0125–0139 push, storyline, and journals · 0140–0141 goal content and discovery analytics · 0142–0159 achievements and personal challenges (0159 repairs legacy prototype event tables).
+Migration ranges: 0001–0005 core schema · 0006–0010 auth · 0011–0021 goal updates + email · 0022–0116 goal images · 0117–0118 preferences · 0119–0124 fellowship / social / admin · 0125–0139 push, storyline, and journals · 0140–0141 goal content and discovery analytics · 0142–0159 achievements and personal challenges (0159 repairs legacy prototype event tables) · 0160–0167 campaign schema, seeds, and the beacon badge.
 
 ### Read/Write Separation
 

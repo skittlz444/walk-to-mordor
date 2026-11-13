@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-02",
+  "date": "2026-11-13",
   "frames": {
     "journey": "a-271828",
     "habit": "a-112358",
@@ -24,7 +24,8 @@
     "habit-hundred-week": "b-161803",
     "community-fellowship-founder": "b-271828",
     "community-good-company": "b-271828",
-    "challenge-nazgul-outrun": "b-112358"
+    "challenge-nazgul-outrun": "b-112358",
+    "community-beacon-watch": "b-141421"
   },
   "bosses": {
     "bronze": "a-112358",
@@ -50,7 +51,8 @@
     "habit-weekend-warrior",
     "habit-steady-month",
     "habit-hundred-week",
-    "challenge-nazgul-outrun"
+    "challenge-nazgul-outrun",
+    "community-beacon-watch"
   ],
   "ranks": [
     "bronze",

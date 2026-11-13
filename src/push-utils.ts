@@ -214,3 +214,106 @@ export async function sendPushToUser(
     skipped: false,
   };
 }
+
+/** Route-layer context the campaign lifecycle uses to deliver push messages. */
+export interface PushDispatchContext {
+  /** VAPID configuration for the delivery attempt. */
+  env: PushDeliveryEnv;
+  /**
+   * Wraps background work in `ctx.waitUntil` when the runtime provides an
+   * execution context. Handlers never receive the context themselves.
+   */
+  scheduleBackground?: (promise: Promise<unknown>) => void;
+}
+
+interface CampaignAudienceRow {
+  user_id: number;
+}
+
+/**
+ * The run-announcement audience: every user with the community campaign
+ * category enabled who has at least one stored push subscription. A fresh run
+ * has no participants, so announcements target subscribers at large — that is
+ * what makes a new run discoverable.
+ */
+export async function listCommunityCampaignAudienceUserIds(db: DbClient): Promise<number[]> {
+  const { results } = await db.read.prepare(
+    `SELECT DISTINCT u.id AS user_id
+     FROM users u
+     JOIN push_subscriptions ps ON ps.user_id = u.id
+     WHERE u.community_campaigns_enabled = 1
+     ORDER BY u.id ASC`,
+  ).all<CampaignAudienceRow>();
+
+  return results.map((row) => row.user_id);
+}
+
+/** Deliver one payload to each user, letting `sendPushToUser` apply preferences. */
+export async function sendPushToUserIds(
+  db: DbClient,
+  userIds: number[],
+  payload: PushPayload,
+  env: PushDeliveryEnv,
+): Promise<void> {
+  for (const userId of userIds) {
+    await sendPushToUser(db, userId, payload, env);
+  }
+}
+
+/**
+ * Run `task` without ever affecting the caller's response. Delivery runs in the
+ * background when the route layer supplied a scheduler, otherwise it is left to
+ * settle on its own; errors are logged, never propagated.
+ */
+export function dispatchPushInBackground(
+  context: PushDispatchContext | undefined,
+  task: () => Promise<void>,
+): void {
+  if (!context) return;
+
+  const promise = (async () => {
+    try {
+      await task();
+    } catch (error: unknown) {
+      console.error('Error dispatching community campaign push notification:', error);
+    }
+  })();
+
+  if (context.scheduleBackground) {
+    context.scheduleBackground(promise);
+  } else {
+    void promise;
+  }
+}
+
+/** Flat payload for a run that just became publicly visible. */
+export function buildCommunityCampaignCreatedPayload(
+  campaignName: string,
+  campaignSlug: string,
+  runNumber: number,
+): PushPayload {
+  return {
+    title: 'Community campaign',
+    body: `"${campaignName}" is live — rally the community to the target!`,
+    url: '/events',
+    type: 'community_campaign_created',
+    campaignSlug,
+    runNumber: String(runNumber),
+  };
+}
+
+/** Flat payload for a run that reached its target. */
+export function buildCommunityCampaignCompletedPayload(
+  campaignName: string,
+  campaignSlug: string,
+  runNumber: number,
+): PushPayload {
+  return {
+    title: 'Campaign completed',
+    body: `Campaign "${campaignName}" has been completed! Well done!`,
+    url: '/events',
+    type: 'community_campaign_completed',
+    campaignSlug,
+    runNumber: String(runNumber),
+  };
+}

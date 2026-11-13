@@ -4,6 +4,7 @@ interface PushStatusData {
   notificationsEnabled: boolean;
   oneMoreMileEnabled: boolean;
   inactivityNudgeEnabled: boolean;
+  communityCampaignsEnabled: boolean;
 }
 
 interface PushStatusResponse {
@@ -240,6 +241,7 @@ export interface NotificationSettingsPayload {
   notificationsEnabled?: boolean;
   oneMoreMileEnabled?: boolean;
   inactivityNudgeEnabled?: boolean;
+  communityCampaignsEnabled?: boolean;
 }
 
 export async function updateNotificationSettings(

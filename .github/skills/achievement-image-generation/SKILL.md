@@ -132,7 +132,7 @@ Rank maps to one boss:
 | 4 | Mithril, cool blue `#7fc9e8` | Four-point star | Dark bezel `#12232e` + cyan halo |
 
 - **Fixed rank:** bake that boss.
-- **`rank_thresholds`:** the rank varies per user. Ship four baked variants, `<slug>--bronze.webp` through `<slug>--mithril.webp`, and keep the base `<slug>.webp` as a no-boss fallback. The client selects from `presentation.rank`; the card label stays authoritative.
+- **`rank_thresholds`:** the rank varies per user. Ship four baked variants, `<slug>--bronze.webp` through `<slug>--mithril.webp`, and keep the base `<slug>.webp` as a no-boss fallback. The client selects from `presentation.rank_label`; the card label stays authoritative.
 - **No rank ring.** Do not generate, composite, or restore one.
 
 The gold boss cut is a **hexagon**. That is a cut on the boss, not a hexagonal badge silhouette; the ban applies to the badge shape only. The selected boss per rank is recorded in `docs/badge-art-decisions.md`.

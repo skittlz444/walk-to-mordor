@@ -51,6 +51,16 @@ const EVENT_MIGRATIONS = [
   '0158_seed_nazgul_badge.sql',
 ];
 
+// The progress handlers also reconcile community campaigns, so the fixture
+// needs the real campaign tables (empty here) instead of letting that hook
+// error against a missing schema.
+const CAMPAIGN_MIGRATIONS = [
+  '0161_create_campaign_definitions.sql',
+  '0162_create_campaign_runs.sql',
+  '0163_create_campaign_participants.sql',
+  '0164_create_campaign_progress_ledger.sql',
+];
+
 type SqlValue = string | number | null;
 
 /** Minimal DbClient adapter over an in-memory SQLite database. */
@@ -195,6 +205,9 @@ describe('progress handlers → personal challenge reconciliation', () => {
     sqlite.exec(readMigration('0142_create_achievement_definitions.sql'));
     sqlite.exec(readMigration('0143_create_user_achievement_instances.sql'));
     for (const filename of EVENT_MIGRATIONS) {
+      sqlite.exec(readMigration(filename));
+    }
+    for (const filename of CAMPAIGN_MIGRATIONS) {
       sqlite.exec(readMigration(filename));
     }
 

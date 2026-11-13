@@ -58,6 +58,7 @@ describe('PushPermissionIsland', () => {
       notificationsEnabled: true,
       oneMoreMileEnabled: true,
       inactivityNudgeEnabled: true,
+      communityCampaignsEnabled: true,
     });
     vi.mocked(getDevicePushSubscription).mockResolvedValue({ endpoint: 'https://push.example/sub-1' } as PushSubscription);
     mockRequestPermission.mockResolvedValue('granted');
@@ -288,5 +289,73 @@ describe('PushPermissionIsland', () => {
       expect(toggle).toBeTruthy();
       expect(toggle.checked).toBe(false);
     });
+  });
+  it('shows the Community Campaigns toggle with its hint when notifications are enabled', async () => {
+    const { getByText, container } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(getByText('Community Campaigns')).toBeTruthy();
+    });
+
+    expect(getByText('Hear when a new community campaign round goes live and when a round is completed.'))
+      .toBeTruthy();
+
+    const toggle = container.querySelector('#push-community-campaigns-toggle') as HTMLInputElement;
+    expect(toggle).toBeTruthy();
+    expect(toggle.checked).toBe(true);
+  });
+
+  it('reflects communityCampaignsEnabled=false from the status response', async () => {
+    vi.mocked(getPushStatus).mockResolvedValue({
+      hasSubscriptions: true,
+      subscriptionCount: 2,
+      notificationsEnabled: true,
+      oneMoreMileEnabled: true,
+      inactivityNudgeEnabled: true,
+      communityCampaignsEnabled: false,
+    });
+
+    const { container } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      const toggle = container.querySelector('#push-community-campaigns-toggle') as HTMLInputElement;
+      expect(toggle).toBeTruthy();
+      expect(toggle.checked).toBe(false);
+    });
+  });
+
+  it('calls API with communityCampaignsEnabled when toggling Community Campaigns', async () => {
+    const { container } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(container.querySelector('#push-community-campaigns-toggle')).toBeTruthy();
+    });
+
+    const toggle = container.querySelector('#push-community-campaigns-toggle') as HTMLInputElement;
+    toggle.checked = false;
+    fireEvent.change(toggle);
+
+    await waitFor(() => {
+      expect(updateNotificationSettings).toHaveBeenCalledWith('test-token', { communityCampaignsEnabled: false });
+    });
+  });
+
+  it('hides the Community Campaigns toggle when global notifications are disabled', async () => {
+    vi.mocked(getPushStatus).mockResolvedValue({
+      hasSubscriptions: true,
+      subscriptionCount: 2,
+      notificationsEnabled: false,
+      oneMoreMileEnabled: true,
+      inactivityNudgeEnabled: true,
+      communityCampaignsEnabled: true,
+    });
+
+    const { container, queryByText } = render(<PushPermissionIsland />);
+
+    await waitFor(() => {
+      expect(container.querySelector('#push-global-toggle')).toBeTruthy();
+    });
+
+    expect(queryByText('Community Campaigns')).toBeNull();
   });
 });

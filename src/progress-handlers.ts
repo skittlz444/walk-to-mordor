@@ -5,6 +5,8 @@ import {
 } from "./validators";
 import { validateSession } from "./auth-handlers";
 import { checkAndAwardJourneyBadges } from "./achievement-awards";
+import { reconcileCampaignProgressForUser } from "./campaign-utils";
+import type { PushDispatchContext } from "./push-utils";
 import { reconcileProgressForUser } from "./event-utils";
 import type { DbClient } from "./db";
 
@@ -60,7 +62,7 @@ export async function syncPartyProgressLog(
   }
 }
 
-export async function handleProgressPost(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
+export async function handleProgressPost(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string, pushContext?: PushDispatchContext) {
   // Validate session
   const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
@@ -173,6 +175,21 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
       console.error('Failed to reconcile personal challenge progress after create:', reconcileError);
     }
 
+    // Credit active community campaign runs. Derived state: never fail the walk log.
+    try {
+      const progressId = insertResult.meta.last_row_id;
+      if (Number.isFinite(progressId)) {
+        await reconcileCampaignProgressForUser(db, userId!, {
+          progressId,
+          date: start,
+          distance: Number(title),
+          operation: 'upsert',
+        }, pushContext);
+      }
+    } catch (reconcileError: unknown) {
+      console.error('Failed to reconcile campaign progress after create:', reconcileError);
+    }
+
     return new Response(JSON.stringify({ 
       message: "Created successfully",
       date: start,
@@ -207,7 +224,7 @@ export async function handleProgressPost(request: Request, db: DbClient, body: R
   }
 }
 
-export async function handleProgressPut(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
+export async function handleProgressPut(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string, pushContext?: PushDispatchContext) {
   // Validate session
   const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
@@ -257,6 +274,22 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
   }
 
   try {
+    // One read feeds both reconcilers: the pre-edit distance lets reconciliation
+    // skip a no-op edit and update the existing ledger row rather than
+    // duplicating it, and the row id is what both reconcilers key on. A failed
+    // lookup is not fatal — the UPDATE below remains the primary operation.
+    let previousDistance: number | undefined;
+    let progressId: number | undefined;
+    try {
+      const existingRow = await db.read.prepare(
+        'SELECT id, distance FROM progress WHERE date = ? AND user_id = ?'
+      ).bind(start, userId).first<{ id: number; distance: number }>();
+      previousDistance = existingRow ? existingRow.distance : undefined;
+      progressId = existingRow?.id;
+    } catch (lookupError: unknown) {
+      console.error('Failed to look up previous progress distance:', lookupError);
+    }
+
     const result = await db.write.prepare("UPDATE progress SET distance = ? WHERE date = ? AND user_id = ?"
     )
       .bind(Number(title), start, userId)
@@ -283,12 +316,9 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
 
     // Refresh active personal challenge credit. Derived state: never fail the walk log.
     try {
-      const progressRow = await db.read.prepare(
-        'SELECT id FROM progress WHERE date = ? AND user_id = ?'
-      ).bind(start, userId).first<{ id: number }>();
-      if (progressRow) {
+      if (progressId !== undefined) {
         await reconcileProgressForUser(db, userId!, {
-          progressId: progressRow.id,
+          progressId,
           date: start,
           distance: Number(title),
           operation: 'upsert',
@@ -296,6 +326,21 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
       }
     } catch (reconcileError: unknown) {
       console.error('Failed to reconcile personal challenge progress after update:', reconcileError);
+    }
+
+    // Refresh active community campaign credit. Derived state: never fail the walk log.
+    try {
+      if (progressId !== undefined) {
+        await reconcileCampaignProgressForUser(db, userId!, {
+          progressId,
+          date: start,
+          distance: Number(title),
+          previousDistance,
+          operation: 'upsert',
+        }, pushContext);
+      }
+    } catch (reconcileError: unknown) {
+      console.error('Failed to reconcile campaign progress after update:', reconcileError);
     }
 
     return new Response(JSON.stringify({ 
@@ -317,7 +362,7 @@ export async function handleProgressPut(request: Request, db: DbClient, body: Re
   }
 }
 
-export async function handleProgressDelete(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string) {
+export async function handleProgressDelete(request: Request, db: DbClient, body: Record<string, unknown>, allowTestAuth?: string, pushContext?: PushDispatchContext) {
   // Validate session
   const sessionValidation = await validateSession(request, db, allowTestAuth);
   if (!sessionValidation.valid) {
@@ -386,6 +431,21 @@ export async function handleProgressDelete(request: Request, db: DbClient, body:
       }
     } catch (reconcileError: unknown) {
       console.error('Failed to reconcile personal challenge progress after delete:', reconcileError);
+    }
+
+    // Remove this walk's community campaign credit. Derived state: never fail
+    // the walk log. Earned badges are never revoked.
+    try {
+      if (progressId !== null) {
+        await reconcileCampaignProgressForUser(db, userId!, {
+          progressId,
+          date: start,
+          distance: 0,
+          operation: 'delete',
+        }, pushContext);
+      }
+    } catch (reconcileError: unknown) {
+      console.error('Failed to reconcile campaign progress after delete:', reconcileError);
     }
     
     return new Response(JSON.stringify({ 

@@ -6,6 +6,7 @@ interface PushStatusRow {
   notifications_enabled: number;
   one_more_mile_enabled: number;
   inactivity_nudge_enabled: number;
+  community_campaigns_enabled: number;
   subscription_count: number;
 }
 
@@ -148,17 +149,20 @@ export async function handlePushStatus(
          COALESCE(u.notifications_enabled, 1) AS notifications_enabled,
          COALESCE(u.one_more_mile_enabled, 1) AS one_more_mile_enabled,
          COALESCE(u.inactivity_nudge_enabled, 1) AS inactivity_nudge_enabled,
+         COALESCE(u.community_campaigns_enabled, 1) AS community_campaigns_enabled,
          COUNT(ps.id) AS subscription_count
        FROM users u
        LEFT JOIN push_subscriptions ps ON ps.user_id = u.id
        WHERE u.id = ?
-       GROUP BY u.id, u.notifications_enabled, u.one_more_mile_enabled, u.inactivity_nudge_enabled`
+       GROUP BY u.id, u.notifications_enabled, u.one_more_mile_enabled,
+                u.inactivity_nudge_enabled, u.community_campaigns_enabled`
     ).bind(sessionValidation.userId).first<PushStatusRow>();
 
     const subscriptionCount = row?.subscription_count ?? 0;
     const notificationsEnabled = (row?.notifications_enabled ?? 1) === 1;
     const oneMoreMileEnabled = (row?.one_more_mile_enabled ?? 1) === 1;
     const inactivityNudgeEnabled = (row?.inactivity_nudge_enabled ?? 1) === 1;
+    const communityCampaignsEnabled = (row?.community_campaigns_enabled ?? 1) === 1;
 
     return createSuccessResponse({
       status: 'success',
@@ -168,6 +172,7 @@ export async function handlePushStatus(
         notificationsEnabled,
         oneMoreMileEnabled,
         inactivityNudgeEnabled,
+        communityCampaignsEnabled,
       },
     });
   } catch (error: unknown) {
@@ -199,12 +204,26 @@ export async function handlePushSettings(
     return createErrorResponse('inactivityNudgeEnabled must be a boolean', 400);
   }
 
+  if (body?.communityCampaignsEnabled !== undefined && typeof body.communityCampaignsEnabled !== 'boolean') {
+    return createErrorResponse('communityCampaignsEnabled must be a boolean', 400);
+  }
+
   const hasNotificationsEnabled = typeof body?.notificationsEnabled === 'boolean';
   const hasOneMoreMileEnabled = typeof body?.oneMoreMileEnabled === 'boolean';
   const hasInactivityNudgeEnabled = typeof body?.inactivityNudgeEnabled === 'boolean';
+  const hasCommunityCampaignsEnabled = typeof body?.communityCampaignsEnabled === 'boolean';
 
-  if (!hasNotificationsEnabled && !hasOneMoreMileEnabled && !hasInactivityNudgeEnabled) {
-    return createErrorResponse('At least one setting must be provided: notificationsEnabled, oneMoreMileEnabled, or inactivityNudgeEnabled', 400);
+  if (
+    !hasNotificationsEnabled
+    && !hasOneMoreMileEnabled
+    && !hasInactivityNudgeEnabled
+    && !hasCommunityCampaignsEnabled
+  ) {
+    return createErrorResponse(
+      'At least one setting must be provided: notificationsEnabled, oneMoreMileEnabled, '
+      + 'inactivityNudgeEnabled, or communityCampaignsEnabled',
+      400,
+    );
   }
 
   try {
@@ -224,6 +243,11 @@ export async function handlePushSettings(
     if (hasInactivityNudgeEnabled) {
       updates.push('inactivity_nudge_enabled = ?');
       values.push(body!.inactivityNudgeEnabled ? 1 : 0);
+    }
+
+    if (hasCommunityCampaignsEnabled) {
+      updates.push('community_campaigns_enabled = ?');
+      values.push(body!.communityCampaignsEnabled ? 1 : 0);
     }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');

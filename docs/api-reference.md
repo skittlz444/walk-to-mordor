@@ -5,7 +5,7 @@ description: Complete HTTP API route reference including public, authenticated, 
 
 # API Reference
 
-Last updated: 2026-11-05
+Last updated: 2026-11-12
 
 ## Conventions
 
@@ -30,6 +30,7 @@ Last updated: 2026-11-05
 | Friends | `src/friends-handlers.ts` |
 | Achievements | `src/achievement-handlers.ts`, `src/badge-presentation.ts`, `src/achievement-utils.ts`, `src/achievement-awards.ts` |
 | Events (personal challenges) | `src/event-handlers.ts`, `src/event-utils.ts` |
+| Community campaigns | `src/campaign-handlers.ts`, `src/campaign-utils.ts` |
 | Admin | `src/admin-handlers.ts` |
 | Admin encounters | `src/encounter-admin-handlers.ts` |
 | Route wiring | `src/index.ts` |
@@ -64,6 +65,7 @@ Page routes return SSR HTML. They are not auth-guarded: `public/js/main.js` redi
 | GET | `/profile` | `src/renderProfileViewPage.ts` | `ProfileViewIsland`, `BadgeDisplayIsland` inside `.party-page` |
 | GET | `/profile/settings` | `src/renderProfileSettingsPage.ts` | SSR back row, then `ProfileSettingsIsland`, `PushPermissionIsland`, `ProfileAccountIsland` inside `.profile-page` |
 | GET | `/friends/:id` | `src/renderFriendProfilePage.ts` | `FriendProfileIsland`, `BadgeDisplayIsland` (unchanged) |
+| GET | `/events` | `src/renderEventsPage.ts` | `publicPage: true` (skips `main.js`; anonymous visitors are never redirected), `EventsIsland` |
 
 ## Push Endpoints
 
@@ -72,13 +74,14 @@ Page routes return SSR HTML. They are not auth-guarded: `public/js/main.js` redi
 | GET | `/api/push/vapid-key` | No | Returns `{ status: 'success', data: { vapidPublicKey } }` when configured |
 | POST | `/api/push/subscribe` | Yes | Body: `{ endpoint, keys: { p256dh, auth } }`. Same-user endpoint updates in place; different-user endpoint → `409` |
 | DELETE | `/api/push/subscribe` | Yes | Body: `{ endpoint }`. Removes only the current user's matching device subscription |
-| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled, oneMoreMileEnabled, inactivityNudgeEnabled } }` |
-| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled?: boolean, oneMoreMileEnabled?: boolean, inactivityNudgeEnabled?: boolean }`. At least one field required. Updates global delivery toggle and/or per-feature toggles |
+| GET | `/api/push/status` | Yes | Returns `{ status: 'success', data: { hasSubscriptions, subscriptionCount, notificationsEnabled, oneMoreMileEnabled, inactivityNudgeEnabled, communityCampaignsEnabled } }` |
+| PUT | `/api/push/settings` | Yes | Body: `{ notificationsEnabled?: boolean, oneMoreMileEnabled?: boolean, inactivityNudgeEnabled?: boolean, communityCampaignsEnabled?: boolean }`. At least one field required. Updates global delivery toggle and/or per-feature toggles |
 
 - Subscription endpoints must be valid `https://` URLs.
 - `notificationsEnabled` controls whether server-side jobs send push notifications to the user. It does not change browser permission state or remove stored subscriptions.
 - `oneMoreMileEnabled` controls the "One More Mile" milestone nudge notification. When enabled, users within 2 km of their next goal who haven't walked in 3 days receive a one-time push notification.
 - `inactivityNudgeEnabled` controls the "Gandalf's Absence Arc" re-engagement notification series. When enabled, inactive users receive up to 4 themed notifications at escalating intervals (days 6, 10, 15, 25+).
+- `communityCampaignsEnabled` controls community campaign notifications (defaults to `true`). When enabled, the user receives a run announcement (`type: community_campaign_created`) when a campaign run first becomes publicly visible and a completion notice (`type: community_campaign_completed`) when a run they contributed to reaches its target. Both use `url: '/events'`. Announcements target all subscribers with the category enabled; completion notices target only active contributors with `progress_distance > 0`. Delivery is best-effort and never blocks the campaign operation.
 - Invalid or expired subscriptions are cleaned up when a push send later receives `404` or `410` from the push service.
 
 ### Scheduled Handlers (Cron)
@@ -347,11 +350,43 @@ Personal challenge encounters. All three are `POST`, protected by `authGuard` (`
 - Idempotent: marks today's roll `declined` and creates no challenge. Repeated declines are no-ops.
 - The declined roll returns `{ offer: null }` on later roll calls, so refreshing the page on the same UTC day does not re-show the modal.
 
+## Community Campaign Endpoints
+
+Public discovery plus one authenticated action (`src/campaign-handlers.ts`, `src/campaign-utils.ts`). `GET`s are auth-optional: a missing/invalid `Authorization` header means anonymous (never `401`); a valid one adds the caller's overlay. camelCase; distances in km.
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/api/events` | No | Enabled campaigns with current and past-run summaries |
+| GET | `/api/events/:id` | No | One campaign with every run summary; unknown/disabled → `404` |
+| GET | `/api/events/:id/community-progress` | No | Current-run totals and ranked contributors; unknown/disabled → `404` |
+| POST | `/api/events/:id/join` | Yes | Opt into the current run; `401` without a session |
+
+### Campaign payloads
+- `GET /api/events` → `{ campaigns: CampaignSummary[] }`, ordered by run status then start date. Summary: `{ id, slug, name, description, imageSlug, badgeSlug, enabled, activeRun, pastRuns, participation }`.
+- Run summary: `{ id, runNumber, targetDistance, startDate, endDate, status, completedAt, announcedAt, participantCount, contributorCount, totalDistance, fromSnapshot }`. `activeRun` is the upcoming/active run or `null`; `pastRuns` are terminal runs (snapshot values when `fromSnapshot: true`).
+- `participation` (valid session only, else `null`): `{ participantId, status: 'active'|'removed', joinedAt, contributionDistance }`.
+- `GET /api/events/:id` returns the summary plus `runs` (all runs). Unknown id or `enabled = 0` → `404`. `imageSlug` → `/img/highres/<slug>.webp` + `/img/thumbs/<slug>-thumb.webp`; `null` = copy-only.
+
+### Community progress
+`GET /api/events/:id/community-progress` → `{ campaignId, campaignSlug, runId, runNumber, targetDistance, startDate, endDate, status, daysRemaining, totalDistance, participantCount, contributorCount, contributors[], you }`.
+
+- `totalDistance` is `SUM(campaign_progress_ledger.distance)` across active participants; `participantCount` includes zero-distance joiners, while `contributorCount`/`contributors` include only distances > 0.
+- Ranking is `distance DESC, username ASC`, capped at 50, competition-ranked for ties (1, 2, 2, 4, …). `you` appears only for a valid session with contribution > 0; no current run → zeros with null run fields.
+
+### Join a campaign run
+`POST /api/events/:id/join` (session required)
+
+- Rejects disabled campaigns, no current run, or a passed end date (UTC). Creates a per-run participant and backfills existing in-window walks through the idempotent ledger upsert; prior-run participation never blocks a new run.
+- `201` → `{ joined: true, campaignId, campaignSlug, runId, runNumber, participation: { participantId, status, joinedAt, contributionDistance } }`.
+- Errors: `401` unauthenticated · `404` unknown campaign · `409` already joined this run · `400` ended/not joinable · `500` unexpected. No leave action; username and contribution distance are public via the progress endpoint.
+
+> `/api/events/daily-roll*` is the separate personal-challenges API; Hono resolves static segments before `:id`.
+
 ## Admin Endpoints
 
 All admin endpoints require a user with `is_admin = 1`. Non-admin → `403`. Every mutating action is audit-logged via `logAdminAction`.
 
-**Audit action strings:** `update_goal`, `create_goal`, `create_storyline`, `update_storyline`, `update_storyline_goals`, `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, `cancel_active_occurrences`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
+**Audit action strings:** `update_goal`, `create_goal`, `create_storyline`, `update_storyline`, `update_storyline_goals`, `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, `cancel_active_occurrences`, `create_campaign`, `update_campaign`, `enable_campaign`, `disable_campaign`, `cancel_campaign_participants`, `retrigger_campaign`, `verify_user_email`, `trigger_password_reset`, `toggle_admin_access`, `delete_user`.
 
 ### Dashboard & Metrics
 
@@ -444,6 +479,46 @@ Handlers live in `src/encounter-admin-handlers.ts`. Every route is wrapped by `a
 #### Audit
 
 Actions: `create_encounter`, `update_encounter`, `enable_encounter`, `disable_encounter`, `cancel_active_occurrences`. Rows use `targetType = 'personal_encounter'`, `targetId` = definition ID, and JSON `details` with changed fields, badge create/update flags, and active/cancelled occurrence counts.
+
+### Community Campaign Management
+
+Handlers live in `src/campaign-admin-handlers.ts`. All routes sit behind `adminGuard` (`401` unauthenticated, `403` non-admin) and every mutation is audit-logged with `targetType = 'community_campaign'`.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/admin/campaigns/suggestions` | Metric suggestions from the last 30 days of walks |
+| GET | `/api/admin/campaigns` | `{ campaigns }`; each has `activeRun`, `latestRun`, `badge`, `activeParticipantCount` |
+| POST | `/api/admin/campaigns` | Creates the definition (`enabled: false`), run 1 (`upcoming`, `announced_at null`), and a missing badge. `201 { campaign }` |
+| GET | `/api/admin/campaigns/:id` | `{ campaign }` with `runs` (all run history); unknown → `404` |
+| PUT | `/api/admin/campaigns/:id` | Updates copy, linked badge, and run fields while upcoming. Never changes `enabled` |
+| PUT | `/api/admin/campaigns/:id/enable` | Sets `enabled = 1` and backfills active participants' in-window walks |
+| PUT | `/api/admin/campaigns/:id/disable` | Sets `enabled = 0`; may require `cancelActive` confirmation |
+| POST | `/api/admin/campaigns/:id/retrigger` | Appends the next run; terminal latest run plus enabled campaign only |
+
+#### Definition body (POST/PUT)
+
+`slug` (≤80, kebab-case, unique), `name` (≤120), `description` (≤2000), `image_slug` (≤120), `badge_slug` (≤120), `target_distance` (> 0), `start_date` (ISO), `end_date` (ISO, after start). `start_date` must be today or later **on create only**; updates accept a past start while the run is still upcoming. Inline badge fields: `badge_name`, `badge_description`, `badge_image_slug`, `repeatable`, `rank_thresholds` (ascending positive integers). Validation failure → `400 { "error": "validation", "fields": { ... } }` with no writes.
+
+- A missing `badge_slug` requires all three inline badge fields. The handler creates a `badge_type = 'community'` achievement; repeatable badges store the supplied `metadata.rank_thresholds` (default `[1, 3, 7, 15]`), non-repeatable store `[1]`, and `metadata.rank` is never written.
+- Updates touch an existing linked community badge only when inline fields, repeatability, or thresholds changed; other badge types are never modified (attempts → `fields.badge_slug`).
+- Once the current run leaves `upcoming`, `target_distance`, `start_date`, and `badge_slug` are frozen. An active run's `end_date` may be extended only; a terminal run's window is immutable.
+- PUT on a definition with no runs creates run 1 from the supplied run fields (recovery path; create always inserts it).
+
+#### Suggestions
+
+`GET /api/admin/campaigns/suggestions?durationDays=<n>` → `{ suggestedTargetDistance, suggestedDurationDays, suggestedParticipantCount, thirtyDayTotalDistance, thirtyDayActiveUsers }`.
+`suggestedTargetDistance = round(total30d / max(activeUsers, 1) * durationDays * 0.25)`; `durationDays` defaults to 14 and is clamped to 7–30. The 0.25 opt-in rate is a documented handler constant.
+
+#### Disable confirmation
+
+- No active participants → disables immediately, `200 { campaign }`.
+- Active participants and no boolean `cancelActive` → mutates nothing, `400 { activeParticipants, requiresConfirmation: true }`.
+- `{ "cancelActive": false }` → disables, leaves participant rows untouched.
+- `{ "cancelActive": true }` → disables and marks active participants `status = 'removed'` with `removed_at`; ledger rows and earned badges are retained. Audit entries `disable_campaign` and `cancel_campaign_participants` share the action.
+
+#### Retrigger
+
+Allowed only when the latest run is `completed` or `expired` **and** `enabled = 1`; otherwise `400 { "error": ... }` (disabled campaigns direct the admin to enable first). Defaults: target from the suggestion formula clamped to ≥ 1 km, start tomorrow UTC, end `start + 13` (14-day inclusive window). `target_distance`, `start_date`, and `end_date` overrides use the create validation rules. The next run uses `run_number = max + 1`, `status = 'upcoming'`, `announced_at = NULL`, and is inserted together with its audit row in one D1 batch; previous runs, participants, ledger rows, and badges are never modified. Response `201 { campaign, run }`.
 
 ### Image Inventory
 

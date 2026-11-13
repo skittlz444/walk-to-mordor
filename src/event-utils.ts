@@ -296,8 +296,12 @@ function buildOffer(
   };
 }
 
-/** True if `error` (or its `.cause`) looks like a UNIQUE constraint violation. */
-function isUniqueConstraintViolation(error: unknown): boolean {
+/**
+ * True if `error` (or its `.cause`) looks like a UNIQUE constraint violation.
+ * This is a best-effort string match against the underlying D1/SQLite driver's
+ * error wording — keep in sync with the driver if that phrasing ever changes.
+ */
+export function isUniqueConstraintViolation(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   const causeMessage = error instanceof Error && error.cause instanceof Error ? error.cause.message : '';
   return message.includes('UNIQUE constraint') || causeMessage.includes('UNIQUE constraint');

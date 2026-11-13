@@ -2,6 +2,7 @@
 // and aggregated summaries. Consumed by personal challenges, storyline
 // books, and the Field Guide -- all through this same path.
 import type { DbClient } from './db';
+import { isUniqueConstraintViolation } from './event-utils';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -77,15 +78,6 @@ export class AchievementDefinitionNotFoundError extends Error {
  * award even when two racing callers pass different idempotency keys.
  */
 const NON_REPEATABLE_IDEMPOTENCY_KEY = '__non_repeatable__';
-
-/** True if `error` (or its `.cause`) looks like a UNIQUE constraint violation. This is a
- * best-effort string match against the underlying D1/SQLite driver's error wording --
- * keep in sync with the driver if that phrasing ever changes. */
-function isUniqueConstraintViolation(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  const causeMessage = error instanceof Error && error.cause instanceof Error ? error.cause.message : '';
-  return message.includes('UNIQUE constraint') || causeMessage.includes('UNIQUE constraint');
-}
 
 // ── Row shapes ─────────────────────────────────────────────────────────────
 

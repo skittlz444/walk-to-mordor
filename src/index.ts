@@ -46,7 +46,14 @@ import {
 import { handleMapPage } from "./map-handlers";
 import { handleGetAchievements, handleGetPendingAchievements, handleAcknowledgeAchievements } from "./achievement-handlers";
 import { handleDailyRoll, handleAcceptEncounter, handleDeclineEncounter } from "./event-handlers";
+import {
+  handleCampaignsList,
+  handleCampaignDetail,
+  handleCampaignCommunityProgress,
+  handleCampaignJoin,
+} from "./campaign-handlers";
 import { settleExpiredChallenges } from "./event-utils";
+import { runCampaignLifecycleTransitions } from "./campaign-utils";
 import { handleCreateParty, handlePreviewParty, handleJoinParty, handleRegenerateInvite, handleGetUserParties, handlePartyPositions, handlePartyProgress, handlePartyActivity, handleSendPartyMessage, handleLeaveParty, handleKickMember, handleUpdatePartySettings, handleTransferLeadership } from "./party-handlers";
 import { handleGetFriends, handleGetPendingFriends, handleSearchUsers, handleResolveFriendCode, handleFriendRequest, handleFriendRequestByCode, handleAcceptFriend, handleRejectFriend, handleUnfriend, handleGetFriendProfile, handleFriendPositions } from "./friends-handlers";
 import { handleGetProfileOverview } from "./profile-handlers";
@@ -57,6 +64,7 @@ import { renderPartyManagePage } from "./renderPartyManagePage";
 import { renderPartyJoinPage } from "./renderPartyJoinPage";
 import { renderFriendsPage } from "./renderFriendsPage";
 import { renderStatsPage } from "./renderStatsPage";
+import { renderEventsPage } from "./renderEventsPage";
 import { renderFriendAddPage } from "./renderFriendAddPage";
 import { renderFriendProfilePage } from "./renderFriendProfilePage";
 import { renderProfileSettingsPage } from "./renderProfileSettingsPage";
@@ -92,6 +100,16 @@ import {
   handleAdminEncounterEnable,
   handleAdminEncounterDisable,
 } from "./encounter-admin-handlers";
+import {
+  handleAdminCampaignsList,
+  handleAdminCampaignSuggestions,
+  handleAdminCampaignGet,
+  handleAdminCampaignCreate,
+  handleAdminCampaignUpdate,
+  handleAdminCampaignEnable,
+  handleAdminCampaignDisable,
+  handleAdminCampaignRetrigger,
+} from "./campaign-admin-handlers";
 import { renderAdminGoalEditPage } from "./renderAdminGoalEditPage";
 import { renderAdminGoalAddPage } from "./renderAdminGoalAddPage";
 import { renderAdminUsersPage } from "./renderAdminUsersPage";
@@ -112,6 +130,7 @@ import {
   handleUpdateUserStoryline,
 } from './storyline-handlers';
 import { handleOneMoreMileCron, handleReengagementCron } from './scheduled-handlers';
+import type { PushDispatchContext } from './push-utils';
 
 // ── Hono Context Variables ────────────────────────────────────────────────
 type Variables = {
@@ -168,6 +187,26 @@ async function safeJsonBody(c: Context<{ Bindings: Env; Variables: Variables }>)
   }
 }
 
+// ── Helper: campaign push dispatch context ────────────────────────────────
+// Campaign lifecycle work runs inside request handlers that never see the
+// ExecutionContext, so the route layer supplies this context instead. Push
+// delivery is non-blocking when the runtime provides `waitUntil`; in tests (and
+// any environment without one) the promise is simply left to settle.
+function campaignPushContext(c: Context<{ Bindings: Env; Variables: Variables }>): PushDispatchContext {
+  return {
+    env: c.env,
+    /* istanbul ignore next -- executionCtx.waitUntil is a Cloudflare-only runtime API */
+    scheduleBackground: (promise: Promise<unknown>) => {
+      try {
+        c.executionCtx.waitUntil(promise);
+      } catch {
+        // No execution context available (e.g. tests) — best-effort only.
+        void promise;
+      }
+    },
+  };
+}
+
 // ── Auth Guards ────────────────────────────────────────────────────────────
 const authGuard = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
   const db = c.get('db');
@@ -211,6 +250,8 @@ app.get('/friends/add/:friendCode', (c) => c.html(renderFriendAddPage()));
 app.get('/friends/:id', (c) => c.html(renderFriendProfilePage()));
 app.get('/stats', (c) => c.html(renderStatsPage()));
 
+app.get('/events', (c) => c.html(renderEventsPage()));
+
 app.get('/party', (c) => c.html(renderPartyListPage()));
 app.get('/party/join/:inviteCode', (c) => c.html(renderPartyJoinPage()));
 app.get('/party/:id/manage', (c) => c.html(renderPartyManagePage()));
@@ -244,6 +285,20 @@ app.get('/api/push/vapid-key', (c) =>
 app.get('/api/party/join/:inviteCode', (c) =>
   handlePreviewParty(c.req.raw, c.get('db'), c.req.param('inviteCode')));
 
+// ── Community Campaigns (public; auth adds a personal overlay) ──
+app.get('/api/events', (c) =>
+  handleCampaignsList(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
+app.get('/api/events/:id/community-progress', (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleCampaignCommunityProgress(c.req.raw, c.get('db'), id, c.env.ALLOW_TEST_AUTH);
+});
+app.get('/api/events/:id', (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleCampaignDetail(c.req.raw, c.get('db'), id, c.env.ALLOW_TEST_AUTH);
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // AUTHENTICATED API ROUTES (session required)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -264,11 +319,11 @@ app.get('/api/storylines', authGuard, (c) =>
 
 // ── Progress ──
 app.post('/api/calendar-progress', authGuard, async (c) =>
-  handleProgressPost(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+  handleProgressPost(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH, campaignPushContext(c)));
 app.put('/api/calendar-progress', authGuard, async (c) =>
-  handleProgressPut(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+  handleProgressPut(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH, campaignPushContext(c)));
 app.delete('/api/calendar-progress', authGuard, async (c) =>
-  handleProgressDelete(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH));
+  handleProgressDelete(c.req.raw, c.get('db'), await c.req.json(), c.env.ALLOW_TEST_AUTH, campaignPushContext(c)));
 app.get('/api/calendar-progress', authGuard, (c) =>
   handleProgressGet(c.req.raw, c.get('db'), c.env.ALLOW_TEST_AUTH));
 
@@ -361,6 +416,13 @@ app.post('/api/events/daily-roll/accept', authGuard, (c) =>
   handleAcceptEncounter(c.req.raw, c.get('db'), c.get('userId')!));
 app.post('/api/events/daily-roll/decline', authGuard, (c) =>
   handleDeclineEncounter(c.req.raw, c.get('db'), c.get('userId')!));
+
+// ── Community Campaigns (join) ──
+app.post('/api/events/:id/join', authGuard, (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleCampaignJoin(c.get('db'), id, c.get('userId')!, campaignPushContext(c));
+});
 
 // ── Push Notifications ──
 app.post('/api/push/subscribe', authGuard, async (c) =>
@@ -619,6 +681,41 @@ app.put('/api/admin/encounters/:id/disable', adminGuard, async (c) => {
   return handleAdminEncounterDisable(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
 });
 
+// ── Community Campaigns ──
+// Static `suggestions` is registered before `:id`; Hono matches static
+// segments first either way.
+app.get('/api/admin/campaigns/suggestions', adminGuard, (c) =>
+  handleAdminCampaignSuggestions(c.req.raw, c.get('db')));
+app.get('/api/admin/campaigns', adminGuard, (c) =>
+  handleAdminCampaignsList(c.req.raw, c.get('db')));
+app.post('/api/admin/campaigns', adminGuard, async (c) =>
+  handleAdminCampaignCreate(c.req.raw, c.get('db'), await safeJsonBody(c), c.get('adminUserId')!));
+app.get('/api/admin/campaigns/:id', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignGet(c.req.raw, c.get('db'), id);
+});
+app.put('/api/admin/campaigns/:id', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignUpdate(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
+});
+app.put('/api/admin/campaigns/:id/enable', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignEnable(c.req.raw, c.get('db'), id, c.get('adminUserId')!, campaignPushContext(c));
+});
+app.put('/api/admin/campaigns/:id/disable', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignDisable(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!);
+});
+app.post('/api/admin/campaigns/:id/retrigger', adminGuard, async (c) => {
+  const id = intParam(c.req.param('id'), 'campaign ID');
+  if (id instanceof Response) return id;
+  return handleAdminCampaignRetrigger(c.req.raw, c.get('db'), id, await safeJsonBody(c), c.get('adminUserId')!, campaignPushContext(c));
+});
+
 // ── Image Inventory ──
 app.get('/api/admin/images', adminGuard, (c) =>
   handleAdminImageInventory(c.req.raw, c.get('db'), c.env.ASSETS));
@@ -704,6 +801,13 @@ export default {
       await settleExpiredChallenges(db);
     } catch (error: unknown) {
       console.error("Scheduled personal challenge settlement failed", error);
+    }
+
+    try {
+      const db = createDbClient(env.DB);
+      await runCampaignLifecycleTransitions(db);
+    } catch (error: unknown) {
+      console.error("Scheduled campaign lifecycle transition failed", error);
     }
   },
 } satisfies ExportedHandler<Env>;

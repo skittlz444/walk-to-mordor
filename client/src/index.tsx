@@ -5,6 +5,7 @@ import { BadgeAwardModal } from './islands/BadgeAwardModal';
 import { BadgeDisplayIsland } from './islands/BadgeDisplayIsland';
 import { DrawerIsland } from './islands/DrawerIsland';
 import { EncounterPopupIsland } from './islands/EncounterPopupIsland';
+import { EventsIsland } from './islands/EventsIsland';
 import { GoalModal } from './islands/GoalModal';
 import { MapIsland } from './islands/MapIsland';
 import { NextGoalCard } from './islands/NextGoalCard';
@@ -19,6 +20,7 @@ import { FriendAddIsland } from './islands/FriendAddIsland';
 import { FriendProfileIsland } from './islands/FriendProfileIsland';
 import { AdminDashboardIsland } from './islands/AdminDashboardIsland';
 import { AdminEncountersIsland } from './islands/AdminEncountersIsland';
+import { AdminCommunityCampaignsIsland } from './islands/AdminCommunityCampaignsIsland';
 import { AdminGoalsListIsland } from './islands/AdminGoalsListIsland';
 import { AdminGoalEditIsland } from './islands/AdminGoalEditIsland';
 import { AdminGoalAddIsland } from './islands/AdminGoalAddIsland';
@@ -41,6 +43,7 @@ import { triggerEncounterRoll } from './utils/encounterTrigger';
 const autoHydratedIslands = {
   AdminDashboardIsland,
   AdminEncountersIsland,
+  AdminCommunityCampaignsIsland,
   AdminGoalAddIsland,
   AdminGoalEditIsland,
   AdminGoalsListIsland,
@@ -51,6 +54,7 @@ const autoHydratedIslands = {
   BadgeAwardModal,
   BadgeDisplayIsland,
   DrawerIsland,
+  EventsIsland,
   FriendAddIsland,
   FriendProfileIsland,
   FriendsListIsland,
@@ -73,6 +77,7 @@ const autoHydratedIslands = {
 const allIslands = {
   AdminDashboardIsland,
   AdminEncountersIsland,
+  AdminCommunityCampaignsIsland,
   AdminGoalAddIsland,
   AdminGoalEditIsland,
   AdminGoalsListIsland,
@@ -85,6 +90,7 @@ const allIslands = {
   DistanceModal,
   DrawerIsland,
   EncounterPopupIsland,
+  EventsIsland,
   FriendAddIsland,
   FriendProfileIsland,
   FriendsListIsland,

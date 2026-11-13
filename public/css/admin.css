@@ -2284,3 +2284,421 @@
     justify-content: center;
   }
 }
+
+/* ===== Admin Community Campaigns ===== */
+
+.admin-campaigns {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.admin-campaigns-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-campaigns-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-campaigns-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.admin-campaigns-table th,
+.admin-campaigns-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border-gray);
+  vertical-align: middle;
+  text-align: left;
+}
+
+.admin-campaigns-table th {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-campaigns-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-campaigns-name {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.admin-campaigns-slug {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.admin-campaigns-run {
+  display: grid;
+  justify-items: start;
+  gap: 0.15rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.admin-campaigns-run__label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.admin-campaigns-run__dates {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.admin-campaigns-badge {
+  color: var(--text-secondary);
+}
+
+.admin-campaigns-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-campaigns-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.admin-campaigns-empty i {
+  font-size: 1.75rem;
+  color: var(--text-muted);
+}
+
+.admin-campaigns-empty p {
+  margin: 0;
+}
+
+.admin-campaign-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-campaign-form h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.admin-campaign-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-campaign-field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.admin-campaign-field label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.admin-campaign-field input,
+.admin-campaign-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--border-gray);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 0.6rem 0.75rem;
+}
+
+.admin-campaign-field input:disabled,
+.admin-campaign-field textarea:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-campaign-field textarea {
+  resize: vertical;
+}
+
+.admin-campaign-form__wide {
+  grid-column: 1 / -1;
+}
+
+.admin-campaign-checkbox {
+  align-self: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.admin-campaign-checkbox input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  accent-color: var(--accent-blue);
+}
+
+.admin-campaign-badge-fields {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border-gray);
+  border-radius: 8px;
+}
+
+.admin-campaign-badge-fields legend {
+  padding: 0 0.35rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.admin-campaign-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.admin-campaign-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-campaign-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-campaigns-status--upcoming {
+  background: rgba(255, 196, 0, 0.16);
+  color: #ffc400;
+}
+
+.admin-campaigns-status--active {
+  background: rgba(80, 200, 120, 0.16);
+  color: #50c878;
+}
+
+.admin-campaigns-status--completed {
+  background: rgba(100, 149, 237, 0.16);
+  color: #6495ed;
+}
+
+.admin-campaigns-status--expired {
+  background: rgba(180, 180, 180, 0.16);
+  color: var(--text-muted);
+}
+
+.admin-campaigns-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.admin-campaigns-modal__content {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  max-width: 520px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-gray);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.admin-campaigns-modal__content h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.admin-campaigns-modal__content p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.admin-campaigns-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .admin-campaign-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-campaigns-actions,
+  .admin-campaign-form__actions,
+  .admin-campaigns-modal__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-campaigns-actions .admin-btn,
+  .admin-campaign-form__actions .admin-btn,
+  .admin-campaigns-modal__actions .admin-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ===== Admin Community Campaigns — mobile cards ===== */
+/* Below 768px the table becomes one stacked card per campaign. Scoped to the
+   admin-campaigns* classes so no other admin table is affected. */
+
+@media (max-width: 900px) {
+  .admin-campaigns .admin-section-heading > .admin-btn {
+    justify-content: center;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-campaigns-panel {
+    overflow: visible;
+  }
+
+  .admin-campaigns-table-wrap {
+    overflow-x: visible;
+  }
+
+  .admin-campaigns-table {
+    min-width: 0;
+  }
+
+  .admin-campaigns-table,
+  .admin-campaigns-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-campaigns-table thead {
+    display: none;
+  }
+
+  .admin-campaigns-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "campaign status"
+      "window window"
+      "badge participants"
+      "actions actions";
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+  }
+
+  .admin-campaigns-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .admin-campaigns-table td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .admin-campaigns-table td:nth-child(1) {
+    grid-area: campaign;
+  }
+
+  .admin-campaigns-table td:nth-child(2) {
+    grid-area: window;
+  }
+
+  .admin-campaigns-table td:nth-child(3) {
+    grid-area: badge;
+    font-size: 0.85rem;
+  }
+
+  .admin-campaigns-table td:nth-child(4) {
+    grid-area: participants;
+    justify-self: end;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .admin-campaigns-table td:nth-child(5) {
+    grid-area: status;
+    align-self: start;
+    justify-self: end;
+  }
+
+  .admin-campaigns-table td:nth-child(6) {
+    grid-area: actions;
+  }
+
+  .admin-campaigns-table td:nth-child(3)::before,
+  .admin-campaigns-table td:nth-child(4)::before {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .admin-campaigns-table td:nth-child(3)::before {
+    content: "Badge: ";
+  }
+
+  .admin-campaigns-table td:nth-child(4)::before {
+    content: "Participants: ";
+  }
+
+  .admin-campaigns-name,
+  .admin-campaigns-slug {
+    overflow-wrap: anywhere;
+  }
+
+  .admin-campaigns-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .admin-campaigns-actions .admin-btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .admin-campaigns-actions .admin-btn:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}

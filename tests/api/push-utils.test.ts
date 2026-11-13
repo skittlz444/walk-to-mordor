@@ -1,5 +1,8 @@
 import {
+  buildCommunityCampaignCompletedPayload,
+  buildCommunityCampaignCreatedPayload,
   cleanupExpiredSubscription,
+  dispatchPushInBackground,
   sendPushNotification,
   sendPushToUser,
   type PushDeliveryEnv,
@@ -121,5 +124,84 @@ describe('push-utils', () => {
       cleanedUp: 1,
       skipped: false,
     });
+  });
+});
+describe('community campaign push helpers', () => {
+  const env: PushDeliveryEnv = {
+    VAPID_PUBLIC_KEY: 'public-key',
+    VAPID_PRIVATE_KEY: 'private-key',
+    VAPID_SUBJECT: 'mailto:info@example.com',
+  };
+
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('builds a flat run announcement payload linking to the events page', () => {
+    expect(buildCommunityCampaignCreatedPayload('Beacon Watch', 'beacon-watch', 2)).toEqual({
+      title: 'Community campaign',
+      body: '"Beacon Watch" is live — rally the community to the target!',
+      url: '/events',
+      type: 'community_campaign_created',
+      campaignSlug: 'beacon-watch',
+      runNumber: '2',
+    });
+  });
+
+  it('builds a flat completion payload linking to the events page', () => {
+    expect(buildCommunityCampaignCompletedPayload('Beacon Watch', 'beacon-watch', 2)).toEqual({
+      title: 'Campaign completed',
+      body: 'Campaign "Beacon Watch" has been completed! Well done!',
+      url: '/events',
+      type: 'community_campaign_completed',
+      campaignSlug: 'beacon-watch',
+      runNumber: '2',
+    });
+  });
+
+  it('does nothing when no dispatch context is supplied', () => {
+    const task = jest.fn(async () => undefined);
+
+    dispatchPushInBackground(undefined, task);
+
+    expect(task).not.toHaveBeenCalled();
+  });
+
+  it('runs the task on its own when the route layer has no scheduler', async () => {
+    const task = jest.fn(async () => undefined);
+
+    dispatchPushInBackground({ env }, task);
+    await Promise.resolve();
+
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands the task promise to the supplied scheduler', async () => {
+    const scheduled: Promise<unknown>[] = [];
+    const task = jest.fn(async () => undefined);
+
+    dispatchPushInBackground({ env, scheduleBackground: (promise) => scheduled.push(promise) }, task);
+    await Promise.all(scheduled);
+
+    expect(task).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs and swallows delivery errors so the campaign operation continues', async () => {
+    const task = jest.fn(async () => {
+      throw new Error('push service down');
+    });
+
+    dispatchPushInBackground({ env }, task);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(console.error).toHaveBeenCalledWith(
+      'Error dispatching community campaign push notification:',
+      expect.any(Error),
+    );
   });
 });
