@@ -91,6 +91,7 @@ function writeFile(absPath, content) {
 }
 
 function checkTileVersion(problems) {
+  const before = problems.length;
   const metadata = requireJsonFile(TILE_METADATA_PATH, 'public/img/map/tiles/metadata.json');
   const expectedVersion = computeTileSetVersion(TILE_DIR);
 
@@ -99,14 +100,16 @@ function checkTileVersion(problems) {
       `public/img/map/tiles/metadata.json has no "version" field (expected ${expectedVersion}); ` +
         'rerun `npm run tile:map`'
     );
-    return;
+    return problems.length - before;
   }
   if (metadata.version !== expectedVersion) {
     problems.push(
       `stale tile-set version in public/img/map/tiles/metadata.json ` +
-        `(committed ${metadata.version}, expected ${expectedVersion}); tile bytes changed without a metadata update`
+        `(committed ${metadata.version}, expected ${expectedVersion}); tile bytes changed without a metadata update — ` +
+        'rerun `npm run tile:map` to re-encode the tiles and rewrite the version'
     );
   }
+  return problems.length - before;
 }
 
 function run({ check }) {
@@ -146,13 +149,24 @@ function run({ check }) {
       );
     }
 
-    checkTileVersion(problems);
+    const tileProblems = checkTileVersion(problems);
 
     if (problems.length > 0) {
       for (const problem of problems) {
         console.error(`❌ ${problem}`);
       }
-      console.error(`\n❌ Asset version check failed (${problems.length} problem(s)). Run \`npm run generate:assets\`.`);
+      // `generate:assets` rewrites the two committed maps; only `tile:map`
+      // can rebuild a stale tile set and stamp metadata.json.version.
+      const fixes = [];
+      if (problems.length > tileProblems) {
+        fixes.push('`npm run generate:assets`');
+      }
+      if (tileProblems > 0) {
+        fixes.push('`npm run tile:map`');
+      }
+      console.error(
+        `\n❌ Asset version check failed (${problems.length} problem(s)). Run ${fixes.join(' and ')}.`
+      );
       process.exitCode = 1;
       return;
     }

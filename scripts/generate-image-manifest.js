@@ -25,7 +25,7 @@ const {
   PUBLIC_DIR,
   byteWiseCompare,
   formatJson,
-  listFilesRecursive,
+  listTrackedFiles,
   requireDirectory,
 } = require('./lib/asset-manifest');
 
@@ -35,7 +35,7 @@ const MANIFEST_PATH = path.join(PUBLIC_DIR, 'img', 'image-manifest.json');
 function buildManifest() {
   requireDirectory(HIGHRES_DIR, 'public/img/highres');
 
-  const slugs = listFilesRecursive(HIGHRES_DIR)
+  const slugs = listTrackedFiles(HIGHRES_DIR)
     .map((absPath) => path.basename(absPath))
     .filter((name) => name.endsWith('.webp'))
     .map((name) => name.replace(/\.webp$/, ''))

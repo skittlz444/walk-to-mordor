@@ -9,6 +9,7 @@
  * Version format: first 12 lowercase hex characters of SHA-256 over the bytes.
  */
 
+const { execFileSync } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -103,6 +104,45 @@ function listFilesRecursive(dirAbs) {
   return found.sort((a, b) => byteWiseCompare(toPosix(a), toPosix(b)));
 }
 
+/**
+ * Files git tracks under the absolute `scope` directory, sorted byte-wise by
+ * POSIX path.
+ *
+ * Maps must only describe committed assets: an untracked or gitignored file on
+ * disk (local map sources, scratch files) must never pollute a committed map.
+ * On a normal checkout the index equals HEAD, so this is deterministic. Index
+ * entries whose working-tree file is missing are skipped, matching the previous
+ * directory-walk behaviour.
+ */
+function listTrackedFiles(scopeAbs) {
+  const relativeScope = toPosix(path.relative(ROOT, scopeAbs));
+  if (relativeScope.startsWith('..')) {
+    throw new MissingInputError(`Tracked-file scope must be inside the repository: ${scopeAbs}`);
+  }
+  const pathspec = relativeScope === '' ? '.' : relativeScope;
+
+  let output;
+  try {
+    output = execFileSync('git', ['ls-files', '-z', '--cached', '--', pathspec], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch (error) {
+    throw new MissingInputError(
+      `Cannot enumerate tracked files under ${pathspec}; run the asset generators inside the git repository: ${error.message}`
+    );
+  }
+
+  return output
+    .split('\0')
+    .filter(Boolean)
+    .map((relativePath) => path.join(ROOT, relativePath))
+    .filter((absPath) => fs.existsSync(absPath) && fs.statSync(absPath).isFile())
+    .sort((a, b) => byteWiseCompare(toPosix(a), toPosix(b)));
+}
+
 function urlPathFor(absPath) {
   return `/${toPosix(path.relative(PUBLIC_DIR, absPath))}`;
 }
@@ -137,19 +177,23 @@ function buildEntryAssetMap() {
   const assets = {};
 
   for (const directory of ['css', 'icons']) {
-    for (const absPath of listFilesRecursive(publicPathFor(directory))) {
+    for (const absPath of listTrackedFiles(publicPathFor(directory))) {
       assets[urlPathFor(absPath)] = hashFile(absPath);
     }
   }
 
-  const bundleFiles = new Set(['islands.js', 'islands.css']);
-  for (const absPath of listFilesRecursive(publicPathFor('js'))) {
+  // Tracked legacy JS only; the client bundle directory is gitignored, so its
+  // two required outputs are added explicitly below (after the hard-failure
+  // check above).
+  for (const absPath of listTrackedFiles(publicPathFor('js'))) {
     const relative = toPosix(path.relative(publicPathFor('js'), absPath));
     if (relative.startsWith('client/')) {
-      if (!bundleFiles.has(relative.slice('client/'.length))) {
-        continue;
-      }
+      continue;
     }
+    assets[urlPathFor(absPath)] = hashFile(absPath);
+  }
+  for (const bundleFile of ['islands.js', 'islands.css']) {
+    const absPath = publicPathFor(`js/client/${bundleFile}`);
     assets[urlPathFor(absPath)] = hashFile(absPath);
   }
 
@@ -171,7 +215,7 @@ function buildImageAssetMap() {
   const excludedFiles = new Set(['/img/image-versions.json', '/img/image-manifest.json']);
 
   const assets = {};
-  for (const absPath of listFilesRecursive(imageDir)) {
+  for (const absPath of listTrackedFiles(imageDir)) {
     const urlPath = urlPathFor(absPath);
     if (excludedFiles.has(urlPath)) {
       continue;
@@ -248,6 +292,7 @@ module.exports = {
   formatJson,
   hashString,
   listFilesRecursive,
+  listTrackedFiles,
   requireDirectory,
   requireFile,
   requireJsonFile,

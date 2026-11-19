@@ -155,7 +155,7 @@ Public assets are addressed with `?v=<hash>`, where `<hash>` is the first 12 low
 | `public/sw.js` | Browser | Generated from `scripts/templates/sw.js`; versioned precache URLs and deterministic cache names |
 | `public/img/image-manifest.json` | Worker | Deterministic image slug list |
 
-`public/js/client/` stays gitignored. Generators hard-fail when a required input is missing (for example an unbuilt `islands.js`) and never write empty or partial maps.
+`public/js/client/` stays gitignored. Generators enumerate **git-tracked** files only (via `listTrackedFiles()` in `scripts/lib/asset-manifest.js`), plus the required built `islands.js`/`islands.css`. Untracked or gitignored files on disk never enter a committed map. Generators hard-fail when a required input is missing (for example an unbuilt `islands.js`) and never write empty or partial maps.
 
 ### Build order
 
@@ -236,6 +236,8 @@ A PR fails on any drift between the tree and the generators, or on a raw asset U
 npm run tile:map        # re-encode tiles and write metadata.json + its version
 npm run check:assets:versions
 ```
+
+The tile source image `public/img/map/ctd58g7fsmyf1.webp` is **local-only and gitignored** (like every `public/img/map/*.webp`). `tile:map` needs it on disk to re-encode the pyramid, but it is never committed and never enters the generated asset maps. If it is missing, recover it from git history first, for example `git log --all -- public/img/map/ctd58g7fsmyf1.webp` then `git show <commit>:public/img/map/ctd58g7fsmyf1.webp > public/img/map/ctd58g7fsmyf1.webp`. Tile drift can only be fixed by `npm run tile:map`; `generate:assets` does not rewrite tiles or `metadata.json.version`.
 
 The map island appends `?v=<version>` to every tile URL and falls back to unversioned URLs when metadata has no `version`.
 

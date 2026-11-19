@@ -10,7 +10,15 @@ const HIGHRES_DIR = path.join(ROOT, 'public', 'img', 'highres');
 
 const sandboxes: string[] = [];
 
-function createSandbox(slugs: string[]): string {
+function runGit(dir: string, args: string[]): string {
+  return execFileSync('git', args, {
+    cwd: dir,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+function createSandbox(slugs: string[], untrackedSlugs: string[] = []): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wtm-manifest-test-'));
   sandboxes.push(dir);
   fs.mkdirSync(path.join(dir, 'scripts'), { recursive: true });
@@ -23,6 +31,14 @@ function createSandbox(slugs: string[]): string {
   const highres = path.join(dir, 'public', 'img', 'highres');
   fs.mkdirSync(highres, { recursive: true });
   for (const slug of slugs) {
+    fs.writeFileSync(path.join(highres, `${slug}.webp`), '');
+  }
+  runGit(dir, ['init', '-q']);
+  if (slugs.length > 0) {
+    runGit(dir, ['add', '--', path.join('public', 'img', 'highres')]);
+  }
+  // Written after `git add` so they stay untracked on disk.
+  for (const slug of untrackedSlugs) {
     fs.writeFileSync(path.join(highres, `${slug}.webp`), '');
   }
   return dir;
@@ -44,9 +60,13 @@ afterAll(() => {
 });
 
 describe('generate-image-manifest.js', () => {
-  describe('committed manifest matches the real image directory', () => {
+  describe('committed manifest matches the tracked image directory', () => {
     const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
-    const webpFiles = fs.readdirSync(HIGHRES_DIR).filter((f) => f.endsWith('.webp'));
+    const webpFiles = runGit(ROOT, ['ls-files', '--', 'public/img/highres'])
+      .split('\n')
+      .filter(Boolean)
+      .map((file) => path.basename(file))
+      .filter((name) => name.endsWith('.webp'));
 
     it('has one entry per high-res image', () => {
       expect(manifest.count).toBe(webpFiles.length);
@@ -81,6 +101,14 @@ describe('generate-image-manifest.js', () => {
     expect(manifest.images).toEqual(['alpha', 'mike', 'zulu']);
     expect(manifest.count).toBe(3);
     expect(manifest).not.toHaveProperty('generated');
+  });
+
+  it('ignores untracked .webp files on disk', () => {
+    const dir = createSandbox(['alpha'], ['scratch']);
+    const manifest = runGenerator(dir);
+
+    expect(manifest.images).toEqual(['alpha']);
+    expect(manifest.count).toBe(1);
   });
 
   it('fails without writing a manifest when the image directory is missing', () => {
