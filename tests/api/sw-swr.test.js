@@ -91,7 +91,7 @@ function loadSWModule() {
     'Headers',
     'URL',
     'Date',
-    swSource + '\n; return { SWR_CACHE_NAME, SWR_CACHE_VERSION, SWR_VERSION_CACHE_NAME, SWR_TTL_MS, SWR_ENDPOINTS, isSWREndpoint, getCacheKey, cacheWithTimestamp, notifyClients, revalidateAndNotify, fetchAndCache, getCurrentSWRMutationVersion, bumpSWRMutationVersion };'
+    swSource + '\n; return { CACHE_NAME, SWR_CACHE_NAME, SWR_CACHE_VERSION, SWR_VERSION_CACHE_NAME, SWR_TTL_MS, SWR_ENDPOINTS, isSWREndpoint, getCacheKey, cacheWithTimestamp, notifyClients, revalidateAndNotify, fetchAndCache, getCurrentSWRMutationVersion, bumpSWRMutationVersion };'
   );
 
   const exports = fn(self, caches, globalFetch, Response, Headers, URL, Date);
@@ -783,9 +783,7 @@ describe('Service Worker SWR API Caching', () => {
         status: 200,
         headers: { 'Content-Type': 'text/css' },
       });
-      const staticCache = await sw.caches.open(
-        'walk-to-mordor-{{BUILD_TIMESTAMP}}'
-      );
+      const staticCache = await sw.caches.open(sw.CACHE_NAME);
       await staticCache.put(
         { url: 'https://example.com/css/main.css' },
         cachedCSS
@@ -828,9 +826,9 @@ describe('Service Worker SWR API Caching', () => {
     });
 
     test('does not clear SWR cache when version matches', async () => {
-      // Store the current version
+      // Store the generated SWR version so the activate handler sees a match.
       const versionCache = await sw.caches.open('walk-to-mordor-swr-version');
-      await versionCache.put('version', new Response('{{SWR_CACHE_VERSION}}'));
+      await versionCache.put('version', new Response(sw.SWR_CACHE_VERSION));
 
       const waitUntilFn = jest.fn();
       sw.activateCallback({ waitUntil: waitUntilFn });
@@ -861,8 +859,8 @@ describe('Service Worker SWR API Caching', () => {
     });
 
     test('preserves static asset CACHE_NAME during activate', async () => {
-      // Pre-populate with the current static cache
-      await sw.caches.open('walk-to-mordor-{{BUILD_TIMESTAMP}}');
+      // Pre-populate with the current generated static cache
+      await sw.caches.open(sw.CACHE_NAME);
 
       const waitUntilFn = jest.fn();
       sw.activateCallback({ waitUntil: waitUntilFn });
@@ -871,7 +869,7 @@ describe('Service Worker SWR API Caching', () => {
 
       // Static cache should not be deleted
       const deleteCalls = sw.caches.delete.mock.calls.map((c) => c[0]);
-      expect(deleteCalls).not.toContain('walk-to-mordor-{{BUILD_TIMESTAMP}}');
+      expect(deleteCalls).not.toContain(sw.CACHE_NAME);
     });
 
     test('deletes old static caches but keeps SWR and version caches', async () => {
@@ -880,7 +878,7 @@ describe('Service Worker SWR API Caching', () => {
 
       // Store matching SWR version so SWR cache is not deleted by version check
       const versionCache = await sw.caches.open('walk-to-mordor-swr-version');
-      await versionCache.put('version', new Response('{{SWR_CACHE_VERSION}}'));
+      await versionCache.put('version', new Response(sw.SWR_CACHE_VERSION));
 
       // Create SWR cache
       await sw.caches.open('walk-to-mordor-api-swr');

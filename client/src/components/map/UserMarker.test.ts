@@ -187,6 +187,7 @@ class MockBrowserImage implements MockBrowserImageLike {
 
 import Konva from 'konva';
 import { createUserMarker } from './UserMarker';
+import { assetUrl } from '../../utils/assetUrl';
 
 function findCircle(predicate: (attrs: Record<string, unknown>) => boolean): MockNodeLike | undefined {
   return konvaMockState.circleInstances.find((circle) => predicate(circle.attrs));
@@ -251,7 +252,7 @@ describe('UserMarker', () => {
     );
 
     expect(browserImages).toHaveLength(1);
-    expect(browserImages[0].src).toBe('/img/avatars/thumbs/frodo.webp');
+    expect(browserImages[0].src).toBe(assetUrl('/img/avatars/thumbs/frodo.webp'));
     expect(browserImages[0].crossOrigin).toBe('anonymous');
 
     browserImages[0].onload?.();

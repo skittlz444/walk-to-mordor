@@ -1,3 +1,22 @@
+import { assetUrl } from './asset-url';
+
+/**
+ * Base stylesheets, in cascade order. The six domain sheets used to be
+ * `@import`ed by main.css; linking them explicitly lets each file be versioned
+ * independently while keeping main.css's own rules last in the base set.
+ */
+const BASE_STYLESHEETS = [
+    assetUrl('/css/calendar.css'),
+    assetUrl('/css/progress.css'),
+    assetUrl('/css/goals.css'),
+    assetUrl('/css/profile.css'),
+    assetUrl('/css/palantir.css'),
+    assetUrl('/css/wrapped.css'),
+    assetUrl('/css/main.css'),
+    assetUrl('/css/drawer.css'),
+    assetUrl('/css/badge-award.css'),
+];
+
 export interface PageConfig {
     title: string;
     description: string;
@@ -22,11 +41,16 @@ export interface PageConfig {
 }
 
 export function renderLayout(config: PageConfig): string {
-    const extraStylesheets = (config.stylesheets ?? [])
+    const stylesheets = [
+        ...BASE_STYLESHEETS,
+        ...(config.stylesheets ?? []).map(assetUrl),
+    ];
+    const stylesheetLinks = stylesheets
         .map(href => `        <link href="${href}" rel="stylesheet" />`)
         .join('\n');
 
     const extraScripts = (config.scripts ?? [])
+        .map(assetUrl)
         .map(src => `      <script src="${src}"></script>`)
         .join('\n');
 
@@ -59,18 +83,15 @@ ${config.inlineStyles}
         <meta name="apple-mobile-web-app-title" content="Walk to Mordor" />
         
         <!-- Web App Manifest -->
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="${assetUrl('/manifest.json')}" />
         
         <!-- Favicon and App Icons -->
-        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/svg+xml" href="${assetUrl('/icons/icon.svg')}" />
+        <link rel="apple-touch-icon" href="${assetUrl('/icons/icon-192x192.png')}" />
         
         <!-- Stylesheets -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
-        <link href="/css/main.css" rel="stylesheet" />
-        <link href="/css/drawer.css" rel="stylesheet" />
-        <link href="/css/badge-award.css" rel="stylesheet" />
-${extraStylesheets}
+${stylesheetLinks}
         ${inlineStyleBlock}
         <!-- Service Worker Registration -->
         <script>
@@ -99,12 +120,12 @@ ${extraStylesheets}
       </main>
       
       <!-- Preact Islands - Load before vanilla JS that depends on it -->
-      <link rel="stylesheet" href="/js/client/islands.css">
-      <script type="module" src="/js/client/islands.js"></script>
+      <link rel="stylesheet" href="${assetUrl('/js/client/islands.css')}">
+      <script type="module" src="${assetUrl('/js/client/islands.js')}"></script>
       
       <!-- Scripts -->
 ${extraScripts}
-${config.publicPage ? '' : '      <script src="/js/main.js"></script>'}
+${config.publicPage ? '' : `      <script src="${assetUrl('/js/main.js')}"></script>`}
       <!-- Badge award modal (global, handled by Preact island) -->
       <div data-island="BadgeAwardModal"></div>
       <!-- PWA Install Banner (mobile only, handled by Preact island) -->

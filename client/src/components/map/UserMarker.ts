@@ -10,6 +10,7 @@
 import Konva from 'konva';
 import type { Point } from '../../utils/map-utils';
 import { markerScale, MILES_TO_KM } from '../../utils/map-utils';
+import { assetUrl } from '../../utils/assetUrl';
 
 /** Visual size of the marker in screen pixels (maintained across zoom levels). */
 const MARKER_SIZE = 32;
@@ -35,7 +36,7 @@ const TOOLTIP_TEXT_COLOR = '#e0e0e0';
 const ANIMATION_DURATION_MS = 400;
 
 function getAvatarThumbPath(avatarId: string): string {
-  return `/img/avatars/thumbs/${avatarId}.webp`;
+  return assetUrl(`/img/avatars/thumbs/${avatarId}.webp`);
 }
 
 export interface UserMarkerNodes {

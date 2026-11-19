@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/preact';
 import { Avatar } from '../Avatar';
+import { assetUrl } from '../../utils/assetUrl';
 
 describe('Avatar', () => {
   describe('image mode (avatarId set)', () => {
@@ -8,7 +9,7 @@ describe('Avatar', () => {
       const { container } = render(<Avatar avatarId="gandalf-grey" username="Gandalf" size={64} />);
       const img = container.querySelector('img');
       expect(img).not.toBeNull();
-      expect(img!.getAttribute('src')).toBe('/img/avatars/gandalf-grey.webp');
+      expect(img!.getAttribute('src')).toBe(assetUrl('/img/avatars/gandalf-grey.webp'));
       expect(img!.getAttribute('alt')).toBe('Gandalf');
     });
 

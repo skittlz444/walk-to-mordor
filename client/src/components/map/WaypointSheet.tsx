@@ -8,6 +8,7 @@
 import { useSignal } from '@preact/signals';
 import type { Waypoint } from '../../data/waypoints';
 import { MILES_TO_KM } from '../../utils/map-utils';
+import { assetUrl } from '../../utils/assetUrl';
 
 export interface WaypointSheetProps {
   waypoint: Waypoint;
@@ -20,7 +21,7 @@ export function WaypointSheet({ waypoint, onClose, onExpand, locked = false }: W
   const imgError = useSignal(false);
 
   const distanceKm = (waypoint.distance * MILES_TO_KM).toFixed(1);
-  const thumbSrc = waypoint.image_id ? `/img/thumbs/${waypoint.image_id}-thumb.webp` : null;
+  const thumbSrc = waypoint.image_id ? assetUrl(`/img/thumbs/${waypoint.image_id}-thumb.webp`) : null;
 
   const handleImgError = () => {
     imgError.value = true;

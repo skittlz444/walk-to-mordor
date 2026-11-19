@@ -28,6 +28,7 @@ import { FriendMiniCard } from '../components/map/FriendMiniCard';
 import { WaypointPopupContainer } from '../components/map/WaypointPopupContainer';
 import { GoalModal } from './GoalModal';
 import { getUserPosition, getPathTotalDistance, MILES_TO_KM, KM_TO_MILES, type Point } from '../utils/map-utils';
+import { assetUrl } from '../utils/assetUrl';
 import {
   getScreenPosition,
   getOptimalPopupPosition,
@@ -105,6 +106,17 @@ interface TileMetadata {
   fullHeight: number;
   tileSize: number;
   levels: TileLevel[];
+  /** One version for the whole tile set; absent in metadata cached before task 3.4. */
+  version?: string;
+}
+
+/**
+ * URL for one map tile. Tiles are excluded from the runtime image map, so the
+ * shared tile-set version is passed explicitly; without it the URL stays
+ * unversioned and the tile still loads.
+ */
+export function tileUrl(z: number, col: number, row: number, version?: string): string {
+  return assetUrl(`/img/map/tiles/${z}/${col}_${row}.webp`, version);
 }
 
 interface StageSize {
@@ -196,6 +208,7 @@ function getVisibleTiles(
   pos: { x: number; y: number },
   currentScale: number,
   stage: StageSize,
+  version?: string,
 ): VisibleTile[] {
   const levelScale = level.width / fullWidth;
   const levelTileInMapCoords = tileSize / levelScale;
@@ -232,7 +245,7 @@ function getVisibleTiles(
         y: mapY,
         width: mapTileW,
         height: mapTileH,
-        src: `/img/map/tiles/${level.z}/${col}_${row}.webp`,
+        src: tileUrl(level.z, col, row, version),
       });
     }
   }
@@ -369,6 +382,7 @@ export function MapIsland() {
       position.value,
       currentScale.value,
       stageSize.value,
+      meta.version,
     );
 
     const visibleKeys = new Set(visible.map((t) => t.key));

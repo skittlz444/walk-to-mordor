@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'preact/hooks';
 import { getAuthHeaders } from '../utils/auth';
+import { assetUrl } from '../utils/assetUrl';
 import { parseEncounterOffer } from '../types/encounter';
 import type { EncounterOffer } from '../types/encounter';
 
@@ -65,7 +66,7 @@ function EncounterDialog({ offer, onClose }: EncounterDialogProps) {
   const definition = offer.definition;
   const imageSlug = definition.image_slug;
   const artworkSrc = imageSlug && IMAGE_SLUG_PATTERN.test(imageSlug) && !artworkFailed
-    ? `/img/highres/${imageSlug}.webp`
+    ? assetUrl(`/img/highres/${imageSlug}.webp`)
     : null;
 
   function closeOnce(): void {

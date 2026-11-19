@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { TargetedEvent } from 'preact';
 import { getAuthHeaders } from '../utils/auth';
+import { assetUrl } from '../utils/assetUrl';
 import { sessionToken } from '../stores/appStore';
 import {
   acknowledgeError,
@@ -115,8 +116,8 @@ function BadgeArtwork({ entry, presentation }: BadgeArtworkProps) {
     : thumbState === 'base'
       ? baseSlug
       : primaryName;
-  const fullSrc = fullName ? `/img/achievements/full/${fullName}.webp` : null;
-  const thumbSrc = thumbName ? `/img/achievements/${thumbName}-thumb.webp` : null;
+  const fullSrc = fullName ? assetUrl(`/img/achievements/full/${fullName}.webp`) : null;
+  const thumbSrc = thumbName ? assetUrl(`/img/achievements/${thumbName}-thumb.webp`) : null;
 
   const handleFullError = () => {
     setFullLoaded(false);

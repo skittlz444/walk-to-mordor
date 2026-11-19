@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, cleanup, waitFor } from '@testing-library/preact';
 import { EventsIsland } from './EventsIsland';
+import { assetUrl } from '../utils/assetUrl';
 
 const mockFetch = vi.fn();
 let sessionToken: string | null = null;
@@ -179,8 +180,8 @@ describe('EventsIsland', () => {
 
     const highRes = container.querySelector('.event-card__image') as HTMLImageElement | null;
     const thumb = container.querySelector('.event-card__thumb') as HTMLImageElement | null;
-    expect(highRes?.getAttribute('src')).toBe('/img/highres/beacon-watch.webp');
-    expect(thumb?.getAttribute('src')).toBe('/img/thumbs/beacon-watch-thumb.webp');
+    expect(highRes?.getAttribute('src')).toBe(assetUrl('/img/highres/beacon-watch.webp'));
+    expect(thumb?.getAttribute('src')).toBe(assetUrl('/img/thumbs/beacon-watch-thumb.webp'));
 
     const progressBar = container.querySelector('[role="progressbar"]');
     expect(progressBar?.getAttribute('aria-valuenow')).toBe('320.5');

@@ -1,15 +1,19 @@
 #!/usr/bin/env node
+'use strict';
 
 /**
- * Generate Image Manifest
- * 
- * Scans public/img/highres/*.webp for all image files, extracts base slugs,
- * and writes a JSON manifest to public/img/image-manifest.json.
- * 
+ * Generate the deterministic image manifest.
+ *
+ * Scans public/img/highres/*.webp, strips the extension, sorts byte-wise, and
+ * writes public/img/image-manifest.json. No timestamp: two runs over the same
+ * directory produce byte-identical output.
+ *
  * Usage:
  *   node scripts/generate-image-manifest.js
+ *   node scripts/generate-image-manifest.js --check
+ *   npm run generate:image-manifest
  *   npm run build:manifest
- * 
+ *
  * The manifest is used by the admin image inventory API to cross-reference
  * goals' image_id values against deployed image assets at runtime.
  */
@@ -17,60 +21,74 @@
 const fs = require('fs');
 const path = require('path');
 
-const HIGHRES_DIR = path.join(__dirname, '..', 'public', 'img', 'highres');
-const MANIFEST_PATH = path.join(__dirname, '..', 'public', 'img', 'image-manifest.json');
+const {
+  PUBLIC_DIR,
+  byteWiseCompare,
+  formatJson,
+  listTrackedFiles,
+  requireDirectory,
+} = require('./lib/asset-manifest');
 
-function generateManifest() {
-  console.log('🖼️  Image Manifest Generator');
-  console.log('================================\n');
+const HIGHRES_DIR = path.join(PUBLIC_DIR, 'img', 'highres');
+const MANIFEST_PATH = path.join(PUBLIC_DIR, 'img', 'image-manifest.json');
 
-  // Handle missing directory gracefully
-  if (!fs.existsSync(HIGHRES_DIR)) {
-    console.log(`⚠️  High-res directory not found: ${HIGHRES_DIR}`);
-    console.log('   Writing empty manifest.\n');
-    const manifest = {
-      generated: new Date().toISOString(),
-      images: [],
-      count: 0,
-    };
-    fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n');
-    console.log(`✅ Empty manifest written to: ${MANIFEST_PATH}`);
-    return;
-  }
+function buildManifest() {
+  requireDirectory(HIGHRES_DIR, 'public/img/highres');
 
-  // Scan for .webp files in highres directory (filter to regular files only)
-  const entries = fs.readdirSync(HIGHRES_DIR, { withFileTypes: true });
-  const files = entries
-    .filter(entry => entry.isFile() && entry.name.endsWith('.webp'))
-    .map(entry => entry.name);
+  const slugs = listTrackedFiles(HIGHRES_DIR)
+    .map((absPath) => path.basename(absPath))
+    .filter((name) => name.endsWith('.webp'))
+    .map((name) => name.replace(/\.webp$/, ''))
+    .sort(byteWiseCompare);
 
-  // Extract base slugs (strip .webp extension) and sort alphabetically
-  const slugs = files
-    .map(file => file.replace(/\.webp$/, ''))
-    .sort((a, b) => a.localeCompare(b));
-
-  const manifest = {
-    generated: new Date().toISOString(),
+  return {
     images: slugs,
     count: slugs.length,
   };
-
-  // Ensure output directory exists
-  const manifestDir = path.dirname(MANIFEST_PATH);
-  if (!fs.existsSync(manifestDir)) {
-    fs.mkdirSync(manifestDir, { recursive: true });
-  }
-
-  fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n');
-
-  console.log(`Source: ${HIGHRES_DIR}`);
-  console.log(`Output: ${MANIFEST_PATH}`);
-  console.log(`\nFound ${slugs.length} image slug(s).`);
-  if (slugs.length > 0) {
-    console.log(`First: ${slugs[0]}`);
-    console.log(`Last:  ${slugs[slugs.length - 1]}`);
-  }
-  console.log(`\n✅ Manifest generated successfully!`);
 }
 
-generateManifest();
+function main() {
+  const check = process.argv.slice(2).includes('--check');
+
+  try {
+    const manifest = buildManifest();
+    const content = formatJson(manifest);
+
+    if (check) {
+      if (!fs.existsSync(MANIFEST_PATH)) {
+        console.error('❌ missing generated artifact: public/img/image-manifest.json');
+        process.exitCode = 1;
+        return;
+      }
+      const committed = fs.readFileSync(MANIFEST_PATH, 'utf8');
+      if (committed !== content) {
+        console.error(
+          '❌ public/img/image-manifest.json is stale; run `npm run generate:image-manifest`.'
+        );
+        process.exitCode = 1;
+        return;
+      }
+      console.log(`✓ public/img/image-manifest.json is current (${manifest.count} slugs).`);
+      return;
+    }
+
+    fs.writeFileSync(MANIFEST_PATH, content);
+    console.log('🖼️  Image Manifest Generator');
+    console.log('================================\n');
+    console.log(`Source: ${HIGHRES_DIR}`);
+    console.log(`Output: ${MANIFEST_PATH}`);
+    console.log(`\nFound ${manifest.count} image slug(s).`);
+    if (manifest.count > 0) {
+      console.log(`First: ${manifest.images[0]}`);
+      console.log(`Last:  ${manifest.images[manifest.count - 1]}`);
+    }
+    console.log('\n✅ Manifest generated successfully!');
+  } catch (error) {
+    console.error(`❌ ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) {
+  main();
+}

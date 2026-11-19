@@ -1,5 +1,6 @@
 import { createDbClient } from './db';
 import type { DbClient } from './db';
+import { assetUrl } from './asset-url';
 import { getOneMoreMileMessage, getReengageMessage } from './push-messages';
 import { sendPushNotification, cleanupExpiredSubscription, sendPushToUser } from './push-utils';
 import type { PushDeliveryEnv, PushPayload } from './push-utils';
@@ -149,7 +150,7 @@ export async function handleOneMoreMileCron(env: Env): Promise<void> {
           title: message.title,
           body: message.body,
           url: '/',
-          icon: '/img/icons/icon-192x192.png',
+          icon: assetUrl('/icons/icon-192x192.png'),
         };
 
         const { delivered, deleted } = await sendToUserSubscriptions(db, user.user_id, payload, env);
@@ -271,7 +272,7 @@ export async function handleReengagementCron(env: Env): Promise<void> {
           title: message.title,
           body: message.body,
           url: '/',
-          icon: '/img/icons/icon-192x192.png',
+          icon: assetUrl('/icons/icon-192x192.png'),
         };
 
         const summary = await sendPushToUser(db, user.user_id, payload, env);

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/pr
 import { BadgeAwardModal } from './BadgeAwardModal';
 import { resetBadgeAwardModalStore } from '../stores/badgeAwardModalStore';
 import type { BadgeAwardEntry, PendingAward } from '../stores/badgeAwardModalStore';
+import { assetUrl } from '../utils/assetUrl';
 import { resetAppStore, sessionToken } from '../stores/appStore';
 
 const mockFetch = vi.fn();
@@ -622,7 +623,7 @@ describe('BadgeAwardModal', () => {
       expect(within(dialog).getByText('Earned 12 times')).toBeTruthy();
       expect(within(dialog).getByText('A steady walking habit.')).toBeTruthy();
       expect(container.querySelector('.badge-award__full')?.getAttribute('src'))
-        .toBe('/img/achievements/full/habit-faithful-walker--mithril.webp');
+        .toBe(assetUrl('/img/achievements/full/habit-faithful-walker--mithril.webp'));
       expect(queryByRole('button', { name: /continue|collect badge/i })).toBeNull();
       expect(mockFetch).not.toHaveBeenCalled();
       expect(acknowledgeCalls()).toHaveLength(0);
@@ -700,19 +701,19 @@ describe('BadgeAwardModal', () => {
       await findByRole('dialog', { name: 'Faithful Walker' });
 
       expect(container.querySelector('.badge-award__full')?.getAttribute('src'))
-        .toBe('/img/achievements/full/habit-faithful-walker--silver.webp');
+        .toBe(assetUrl('/img/achievements/full/habit-faithful-walker--silver.webp'));
 
       fireEvent.click(await findByRole('button', { name: 'Continue' }));
 
       await waitFor(() => expect(container.querySelector('.badge-award__position')?.textContent).toBe('Badge 2 of 3'));
       expect(container.querySelector('.badge-award__full')?.getAttribute('src'))
-        .toBe('/img/achievements/full/habit-faithful-walker--silver.webp');
+        .toBe(assetUrl('/img/achievements/full/habit-faithful-walker--silver.webp'));
 
       fireEvent.click(await findByRole('button', { name: 'Continue' }));
 
       await waitFor(() => expect(container.querySelector('.badge-award__position')?.textContent).toBe('Badge 3 of 3'));
       expect(container.querySelector('.badge-award__full')?.getAttribute('src'))
-        .toBe('/img/achievements/full/habit-faithful-walker--gold.webp');
+        .toBe(assetUrl('/img/achievements/full/habit-faithful-walker--gold.webp'));
 
       fireEvent.click(await findByRole('button', { name: 'Collect badge' }));
       await waitFor(() => expect(queryByRole('dialog')).toBeNull());
@@ -741,13 +742,13 @@ describe('BadgeAwardModal', () => {
       const fullImage = () => container.querySelector('.badge-award__full') as HTMLImageElement | null;
 
       expect(fullImage()?.getAttribute('src'))
-        .toBe('/img/achievements/full/habit-faithful-walker--silver.webp');
+        .toBe(assetUrl('/img/achievements/full/habit-faithful-walker--silver.webp'));
 
       fireEvent.error(fullImage() as HTMLImageElement);
 
       await waitFor(() => {
         expect(fullImage()?.getAttribute('src'))
-          .toBe('/img/achievements/full/habit-faithful-walker.webp');
+          .toBe(assetUrl('/img/achievements/full/habit-faithful-walker.webp'));
       });
 
       fireEvent.error(fullImage() as HTMLImageElement);
@@ -770,9 +771,9 @@ describe('BadgeAwardModal', () => {
       const full = () => container.querySelector('.badge-award__full') as HTMLImageElement | null;
 
       expect(thumb()?.getAttribute('src'))
-        .toBe('/img/achievements/habit-faithful-walker--silver-thumb.webp');
+        .toBe(assetUrl('/img/achievements/habit-faithful-walker--silver-thumb.webp'));
       expect(full()?.getAttribute('src'))
-        .toBe('/img/achievements/full/habit-faithful-walker--silver.webp');
+        .toBe(assetUrl('/img/achievements/full/habit-faithful-walker--silver.webp'));
       expect(full()?.className).not.toContain('is-loaded');
 
       fireEvent.load(full() as HTMLImageElement);
@@ -781,7 +782,7 @@ describe('BadgeAwardModal', () => {
       fireEvent.error(thumb() as HTMLImageElement);
       await waitFor(() => {
         expect(thumb()?.getAttribute('src'))
-          .toBe('/img/achievements/habit-faithful-walker-thumb.webp');
+          .toBe(assetUrl('/img/achievements/habit-faithful-walker-thumb.webp'));
       });
 
       fireEvent.error(thumb() as HTMLImageElement);

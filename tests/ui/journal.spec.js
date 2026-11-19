@@ -137,11 +137,11 @@ test.describe('Journal - Personal Authoring', () => {
     const textarea = page.locator('.journal-textarea');
     await expect(textarea).toBeVisible({ timeout: 10000 });
     await textarea.fill('This is my test journal reflection!');
-    const putPromise = page.waitForResponse(r => r.url().includes(`/api/goals/${firstGoal.id}/journal`) && r.request().method() === 'PUT', { timeout: 10000 });
     await page.locator('button:has-text("Save")').click();
-    await putPromise;
-    // After save, the journal switches to view mode with the body text visible
-    await expect(page.locator('.journal-own-entry')).toBeVisible({ timeout: 10000 });
+    // Wait for the persisted view state instead of the transport response: once
+    // a service worker controls the page, page.waitForResponse can miss the
+    // PUT event. The view state only renders after a successful save.
+    await expect(page.locator('.journal-own-entry')).toBeVisible({ timeout: 15000 });
   });
 
   test('edits an existing journal entry', async ({ page, authToken }) => {

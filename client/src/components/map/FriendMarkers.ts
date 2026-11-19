@@ -13,6 +13,7 @@
 import Konva from 'konva';
 import type { PathNode } from '../../data/paths/fellowship-path';
 import { getUserPosition, markerScale, KM_TO_MILES, type Point } from '../../utils/map-utils';
+import { assetUrl } from '../../utils/assetUrl';
 
 /** Visual size of friend markers in screen pixels. */
 const MARKER_SIZE = 32;
@@ -125,7 +126,7 @@ function buildFriendMarkerGroup(
     group.add(border);
 
     // Async load avatar image
-    const thumbUrl = `/img/avatars/thumbs/${friend.avatar_id}.webp`;
+    const thumbUrl = assetUrl(`/img/avatars/thumbs/${friend.avatar_id}.webp`);
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
     pendingImages.add(img);

@@ -110,7 +110,7 @@ npm run deploy
 The `deploy` script automatically:
 1. Applies D1 migrations to remote (predeploy hook)
 2. Builds client islands via Vite
-3. Updates service worker cache version
+3. Regenerates the version maps and the service worker
 4. Generates image manifest
 5. Deploys Worker to Cloudflare
 
@@ -118,10 +118,10 @@ The `deploy` script automatically:
 
 | Command | Purpose |
 |---|---|
-| `npm run build` | Full build: client + SW cache + image manifest |
+| `npm run build` | Full build: client + generated maps + service worker + image manifest |
 | `npm run build:client` | Vite build of Preact islands |
 | `npm run build:manifest` | Generate image-manifest.json |
-| `npm run build:sw` | Stamp service worker cache version |
+| `npm run generate:sw` | Regenerate the service worker from its template |
 | `npm run optimize:images` | Optimize goal images + rebuild manifest |
 | `npm run tile:map` | Generate map tile pyramid (requires the local, gitignored source image `public/img/map/ctd58g7fsmyf1.webp` — not present in a clean clone) |
 

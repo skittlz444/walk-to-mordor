@@ -41,3 +41,19 @@ jobs:
 
       - name: Check Asset Count
         run: npm run check:assets
+
+      # The version checks hash the built client bundle, so build it first.
+      - name: Build Client Bundle
+        run: npm run build:client
+
+      - name: Check Asset Versions
+        run: npm run check:assets:versions
+
+      - name: Check Asset References
+        run: npm run check:assets:refs
+
+      - name: Check Service Worker
+        run: npm run check:service-worker
+
+      - name: Check Image Manifest
+        run: npm run check:image-manifest

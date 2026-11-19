@@ -35,7 +35,7 @@ client/src/
 | `npm run build:client` | One-off client build |
 | `npm run dev:client` | Watch mode rebuilds |
 | `npm run dev` | Full local app (worker + client watch + local D1 migrations) |
-| `npm run build` | Production build (client + service worker cache version update) |
+| `npm run build` | Production build: client + generated maps + service worker + image manifest |
 | `npm run lint` | Run ESLint across all configured scopes |
 | `npm run lint:fix` | Run ESLint with auto-fix for fixable rules |
 | `npm run test:client` | Client unit tests (Vitest, happy-dom) |
@@ -49,9 +49,9 @@ client/src/
 
 ### Lifecycle
 
-1. **`build:sw:reset`** — resets the service worker cache version for dev mode.
-2. **`seedLocalD1`** — applies D1 migrations to the local SQLite database.
-3. **`build:client`** — runs a one-off Vite build so `public/js/client/` exists before Wrangler starts (critical on fresh clones where the directory is `.gitignore`d).
+1. **`seedLocalD1`** — applies D1 migrations to the local SQLite database.
+2. **`build:client`** — runs a one-off Vite build so `public/js/client/` exists before Wrangler starts (critical on fresh clones where the directory is `.gitignore`d).
+3. **`generate:assets` + `generate:sw`** — regenerate the version maps and `public/sw.js` once from the built bundle (stale hashes during watch are accepted).
 4. **Concurrent processes** via `concurrently`:
    - **`[vite]`** (cyan) — `npm run dev:client` watches `client/src/` and rebuilds `public/js/client/islands.js` on change.
    - **`[wrangler]`** (yellow) — `wrangler dev` serves the Worker and static assets from `public/`, with its own file-watching for `src/` changes.
@@ -133,6 +133,14 @@ The `GoalModal` component now includes a milestone journal section for goal refl
 - Every island must be registered in `client/src/index.tsx` to be hydrated.
 - SSR renderers in `src/render*.ts` control which CSS and islands are included per page.
 - Extra stylesheets must be explicitly added in `renderLayout` config — they are **not** inherited automatically.
+
+## Client Image URLs
+
+- **Never hardcode `/img/...` in `client/src/`.** Build image URLs with `assetUrl()` from `client/src/utils/assetUrl.ts`; `npm run check:assets:refs` fails on raw literals outside the helpers, tests, and generated-artifact fetches.
+- `assetUrl(path)` appends `?v=<hash>` when the runtime map knows the path, preserves existing query parameters, and returns unknown paths unchanged. `assetUrl(path, version)` takes an explicit version (used for map tiles).
+- The runtime map is `public/img/image-versions.json`, shaped `{ "version": "<map hash>", "assets": { "/img/...": "<hash>" } }`. Images are excluded from the client bundle, so an image change never changes `islands.js`.
+- `client/src/index.tsx` loads the map with `loadAssetVersions()` in parallel with `initializeAppStore()`. Fallback chain: network (bounded at 1.5 s) → cached `localStorage` copy → unversioned path. Hydration waits no longer than the bound and still runs when the fetch fails.
+- Map tiles are not in the runtime map. They share one tile-set version from `/img/map/tiles/metadata.json`; build tile URLs with `tileUrl()` in `client/src/islands/MapIsland.tsx`, which leaves URLs unversioned when the metadata has no version.
 
 ## State Management
 

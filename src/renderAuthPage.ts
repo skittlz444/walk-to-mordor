@@ -1,5 +1,7 @@
 // Render authentication pages (login/register)
 
+import { assetUrl } from './asset-url';
+
 export function renderAuthPage() {
   return `
     <!DOCTYPE html>
@@ -18,15 +20,15 @@ export function renderAuthPage() {
         <meta name="apple-mobile-web-app-title" content="Walk to Mordor" />
         
         <!-- Web App Manifest -->
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="${assetUrl('/manifest.json')}" />
         
         <!-- Favicon and App Icons -->
-        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/svg+xml" href="${assetUrl('/icons/icon.svg')}" />
+        <link rel="apple-touch-icon" href="${assetUrl('/icons/icon-192x192.png')}" />
         
         <!-- Stylesheets -->
-        <link href="/css/main.css" rel="stylesheet" />
-        <link href="/css/auth.css" rel="stylesheet" />
+        <link href="${assetUrl('/css/main.css')}" rel="stylesheet" />
+        <link href="${assetUrl('/css/auth.css')}" rel="stylesheet" />
       </head>
       <body>
         <div class="auth-container">
@@ -40,7 +42,7 @@ export function renderAuthPage() {
         </div>
         
         <!-- Scripts -->
-        <script type="module" src="/js/client/islands.js"></script>
+        <script type="module" src="${assetUrl('/js/client/islands.js')}"></script>
       </body>
     </html>
   `;

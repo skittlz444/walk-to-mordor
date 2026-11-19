@@ -285,9 +285,9 @@ test.describe('community campaigns page', () => {
 
         if (campaign.imageSlug) {
             const image = card.locator('.event-card__image');
-            await expect(image).toHaveAttribute('src', `/img/highres/${campaign.imageSlug}.webp`);
+            await expect(image).toHaveAttribute('src', new RegExp(`^/img/highres/${campaign.imageSlug}\\.webp(\\?v=[0-9a-f]{12})?$`));
             const thumb = card.locator('.event-card__thumb');
-            await expect(thumb).toHaveAttribute('src', `/img/thumbs/${campaign.imageSlug}-thumb.webp`);
+            await expect(thumb).toHaveAttribute('src', new RegExp(`^/img/thumbs/${campaign.imageSlug}-thumb\\.webp(\\?v=[0-9a-f]{12})?$`));
         } else {
             await expect(card.locator('.event-card__art')).toHaveCount(0);
         }

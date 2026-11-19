@@ -484,8 +484,8 @@ test.describe('Goals Functionality', () => {
     // Wait for error fallback to trigger
     const thumbImage = popup.locator('#goal-thumb-image');
     
-    // Check that fallback image is loaded
-    await expect(thumbImage).toHaveAttribute('src', '/img/thumbs/0-thumb.webp');
+    // Check that fallback image is loaded (version query allowed)
+    await expect(thumbImage).toHaveAttribute('src', /^\/img\/thumbs\/0-thumb\.webp(\?v=[0-9a-f]{12})?$/);
   });
 
   test('High-res image falls back to placeholder on error', async ({ page }) => {
@@ -505,8 +505,8 @@ test.describe('Goals Functionality', () => {
     // Wait for error fallback to trigger
     const highresImage = popup.locator('#goal-highres-image');
     
-    // Check that fallback image is loaded
-    await expect(highresImage).toHaveAttribute('src', '/img/highres/0.webp');
+    // Check that fallback image is loaded (version query allowed)
+    await expect(highresImage).toHaveAttribute('src', /^\/img\/highres\/0\.webp(\?v=[0-9a-f]{12})?$/);
   });
 
   test('Image lazy loading only occurs when popup is opened', async ({ page }) => {
