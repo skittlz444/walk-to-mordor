@@ -1,17 +1,20 @@
-// Build timestamp - this should be replaced during build process
-const BUILD_TIMESTAMP = '{{BUILD_TIMESTAMP}}';
-const CACHE_NAME = `walk-to-mordor-{{BUILD_TIMESTAMP}}`;
+// Generated into public/sw.js by scripts/generate-sw.js. Edit this template,
+// not the generated file.
+// CACHE_NAME hashes the precache list plus this template; SWR_CACHE_VERSION
+// hashes the SWR endpoint list plus this template.
+const CACHE_NAME = 'walk-to-mordor-4532913b192c';
+// Filled by scripts/generate-sw.js with the versioned shell URL list.
 const urlsToCache = [
-  '/css/main.css',
-  '/css/mobiscroll.javascript.min.css',
-  '/js/main.js',
-  '/js/mobiscroll.javascript.min.js',
-  '/manifest.json'
+  '/css/main.css?v=aad92dc9572e',
+  '/js/main.js?v=9f8dd4f5bc63',
+  '/js/client/islands.js?v=9625c5295ea8',
+  '/js/client/islands.css?v=50bd28f07a0d',
+  '/manifest.json?v=5e3d974799f8'
 ];
 
 // SWR (Stale-While-Revalidate) API caching
 const SWR_CACHE_NAME = 'walk-to-mordor-api-swr';
-const SWR_CACHE_VERSION = '{{SWR_CACHE_VERSION}}';
+const SWR_CACHE_VERSION = '7a0eabf77106';
 const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
 const SWR_TTL_MS = 300000; // 5 minutes
 const PUSH_CONFIG_CACHE_NAME = 'walk-to-mordor-push-config';
