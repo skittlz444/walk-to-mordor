@@ -31,7 +31,7 @@ export const ASSET_VERSIONS: Readonly<Record<string, string>> = {
   "/icons/screenshot-mobile.png": "7d217037576b",
   "/js/calendar.js": "1ea7e4708725",
   "/js/client/islands.css": "50bd28f07a0d",
-  "/js/client/islands.js": "9f10b9144e63",
+  "/js/client/islands.js": "9b84a81d8917",
   "/js/goals.js": "08cf8560bb32",
   "/js/main.js": "9f8dd4f5bc63",
   "/js/password-reset.js": "8824fb0b4da0",
