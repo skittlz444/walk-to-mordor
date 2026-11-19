@@ -36,8 +36,6 @@ export const ASSET_VERSIONS: Readonly<Record<string, string>> = {
   "/js/main.js": "9f8dd4f5bc63",
   "/js/password-reset.js": "8824fb0b4da0",
   "/js/progress.js": "6014befa3208",
-  "/js/reset-cache-version.js": "18e4c5757032",
-  "/js/update-cache-version.js": "b7a9eea6f110",
   "/js/validators.js": "5dd168ada5c7",
   "/manifest.json": "5e3d974799f8",
 };

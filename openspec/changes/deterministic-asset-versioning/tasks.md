@@ -37,19 +37,19 @@
 
 ## 5. Service worker, dev, and test workflow
 
-- [ ] 5.1 Add the network-first runtime cache for `/img/image-versions.json` and `/img/map/tiles/metadata.json` to the SW template, and set the precache list to `main.css`, `main.js`, `islands.js`, `islands.css`, and `manifest.json`, dropping the non-existent mobiscroll CSS/JS entries that currently make `cache.addAll` fail. Keep cache-first for versioned static assets. Verify the generated SW contains both JSON paths, the cache fallback branch, and no missing precache entries.
-- [ ] 5.2 Update `package.json` `dev`, `test:ui`, and `test:ui:headed`; remove the `build:sw`/`build:sw:reset` scripts and delete `public/js/update-cache-version.js` and `public/js/reset-cache-version.js`. Verify `npm run dev` starts and `npm run test:ui` completes without module-not-found errors.
-- [ ] 5.3 Add a service-worker test that asserts the exact precache list (`main.css`, `main.js`, `islands.js`, `islands.css`, `manifest.json`), that every precache URL is versioned and exists under `public/`, that `SWR_CACHE_VERSION` is filled, and that the two JSON paths are network-first. Verify the test fails if a placeholder, missing file, or unversioned precache entry is reintroduced.
-- [ ] 5.4 Add an offline test: load a page, confirm the service worker is active, fetch a versioned asset and the runtime image map with the network disabled, and assert both resolve from cache. Document the existing HTML-navigation limitation in the test comment.
-- [ ] 5.5 Document the SW caching rules, the offline exceptions, and the new dev/test workflow in `docs/architecture.md` or `docs/asset-workflow.md`. Verify the documented commands match the scripts.
-- [ ] 5.6 Prune cached `/img/` entries outside `/img/map/tiles/**` that are not referenced by the current runtime image map on activate and after a successful map refresh, skipping pruning when the map is unavailable offline. Verify an image-only version change removes the old entry and keeps the new one.
+- [x] 5.1 Add the network-first runtime cache for `/img/image-versions.json` and `/img/map/tiles/metadata.json` to the SW template, and set the precache list to `main.css`, `main.js`, `islands.js`, `islands.css`, and `manifest.json`, dropping the non-existent mobiscroll CSS/JS entries that currently make `cache.addAll` fail. Keep cache-first for versioned static assets. Verify the generated SW contains both JSON paths, the cache fallback branch, and no missing precache entries.
+- [x] 5.2 Update `package.json` `dev`, `test:ui`, and `test:ui:headed`; remove the `build:sw`/`build:sw:reset` scripts and delete `public/js/update-cache-version.js` and `public/js/reset-cache-version.js`. Verify `npm run dev` starts and `npm run test:ui` completes without module-not-found errors.
+- [x] 5.3 Add a service-worker test that asserts the exact precache list (`main.css`, `main.js`, `islands.js`, `islands.css`, `manifest.json`), that every precache URL is versioned and exists under `public/`, that `SWR_CACHE_VERSION` is filled, and that the two JSON paths are network-first. Verify the test fails if a placeholder, missing file, or unversioned precache entry is reintroduced.
+- [x] 5.4 Add an offline test: load a page, confirm the service worker is active, fetch a versioned asset and the runtime image map with the network disabled, and assert both resolve from cache. Document the existing HTML-navigation limitation in the test comment.
+- [x] 5.5 Document the SW caching rules, the offline exceptions, and the new dev/test workflow in `docs/architecture.md` or `docs/asset-workflow.md`. Verify the documented commands match the scripts.
+- [x] 5.6 Prune cached `/img/` entries outside `/img/map/tiles/**` that are not referenced by the current runtime image map on activate and after a successful map refresh, skipping pruning when the map is unavailable offline. Verify an image-only version change removes the old entry and keeps the new one.
 
 ## 6. CI enforcement
 
-- [ ] 6.1 Add `check:assets:versions` (including the tile-set version check), `check:assets:refs`, `check:service-worker`, and `check:image-manifest` to `package.json`. Verify each passes on a clean tree and each fails on a deliberate corresponding drift or raw URL.
-- [ ] 6.2 Update `.github/workflows/lint.yml` to run `npm run build:client` before the asset-version and service-worker checks, then run all four checks. Verify the command sequence locally from a clean checkout.
-- [ ] 6.3 Update `docs/asset-workflow.md` with the CI checks, the raw-URL rule, and the “regenerate and commit maps” workflow. Verify the documented commands match the workflow file.
-- [ ] 6.4 Run `npm run lint`, `npx tsc --noEmit`, `npm run check:validators`, `npm run check:assets`, and the four new checks. Verify all pass.
+- [x] 6.1 Add `check:assets:versions` (including the tile-set version check), `check:assets:refs`, `check:service-worker`, and `check:image-manifest` to `package.json`. Verify each passes on a clean tree and each fails on a deliberate corresponding drift or raw URL.
+- [x] 6.2 Update `.github/workflows/lint.yml` to run `npm run build:client` before the asset-version and service-worker checks, then run all four checks. Verify the command sequence locally from a clean checkout.
+- [x] 6.3 Update `docs/asset-workflow.md` with the CI checks, the raw-URL rule, and the “regenerate and commit maps” workflow. Verify the documented commands match the workflow file.
+- [x] 6.4 Run `npm run lint`, `npx tsc --noEmit`, `npm run check:validators`, `npm run check:assets`, and the four new checks. Verify all pass.
 
 ## 7. Integration verification
 

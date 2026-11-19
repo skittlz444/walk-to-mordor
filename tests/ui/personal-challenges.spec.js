@@ -183,7 +183,7 @@ test.describe('Personal challenge encounter popup', () => {
 
         const artwork = page.locator('img.encounter-popup__art');
         await expect(artwork).toBeVisible();
-        await expect(artwork).toHaveAttribute('src', /\/img\/highres\/nazgul-pursuit\.webp$/);
+        await expect(artwork).toHaveAttribute('src', /\/img\/highres\/nazgul-pursuit\.webp(\?v=[0-9a-f]{12})?$/);
         await waitForArtwork(page);
 
         await page.locator(ACCEPT).click();
@@ -249,7 +249,7 @@ test.describe('Personal challenge encounter popup', () => {
         await forceOffer(request, authToken);
         await prepareForEncounter(page, request, authToken);
 
-        await page.route('**/img/highres/nazgul-pursuit.webp', (route) => route.abort());
+        await page.route(/\/img\/highres\/nazgul-pursuit\.webp(\?|$)/, (route) => route.abort());
 
         await navigateAuthenticated(page, authToken, '/journey');
 

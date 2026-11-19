@@ -179,6 +179,55 @@ Never edit `public/sw.js` directly — edit `scripts/templates/sw.js` and regene
 
 Run the four checks (and `npm run build:client` first) after changing any public asset. Do not hand-edit the generated maps.
 
+### Regenerate and commit (contributor / agent workflow)
+
+The maps are committed, so a clean checkout typechecks; CI rebuilds and diffs them. Whatever you change, regenerate in the same commit:
+
+| You changed | Run, then commit |
+|---|---|
+| An image under `public/img/**` | `npm run generate:assets` and `npm run generate:image-manifest` → `public/img/image-versions.json`, `public/img/image-manifest.json` |
+| A legacy JS/CSS, icon, or `manifest.json` | `npm run generate:assets` and `npm run generate:sw` → `src/generated/asset-versions.ts`, `public/sw.js` |
+| Client code (`client/src/**`) | `npm run build:client && npm run generate:assets && npm run generate:sw` → `src/generated/asset-versions.ts`, `public/sw.js` |
+| Map tiles | `npm run tile:map` (writes `metadata.json.version`), then `npm run generate:assets` |
+| `scripts/templates/sw.js` | `npm run generate:sw` → `public/sw.js` |
+
+The reliable catch-all is the full deterministic order:
+
+```bash
+npm run build:client
+npm run generate:assets
+npm run generate:sw
+npm run generate:image-manifest
+```
+
+Then run the four checks. If a check reports drift, the committed artifact is stale — regenerate it; never edit it by hand.
+
+### CI enforcement
+
+`.github/workflows/lint.yml` runs these after `npm ci`, ESLint, `tsc --noEmit`, generated-type/validator checks, and the asset-count budget:
+
+```bash
+npm run build:client        # the version checks hash the built bundle
+npm run check:assets:versions
+npm run check:assets:refs
+npm run check:service-worker
+npm run check:image-manifest
+```
+
+A PR fails on any drift between the tree and the generators, or on a raw asset URL outside the approved resolvers.
+
+### Service worker runtime rules
+
+- Cache-first for versioned static assets. A new `?v=` is a new Cache Storage key, so an old worker fetches the new bytes without `skipWaiting`/`clients.claim`.
+- Network-first for `/img/image-versions.json` and `/img/map/tiles/metadata.json`, with the cached copy as the offline fallback. These two paths are handled before the static cache-first branch.
+- Superseded `/img/` cache entries (outside `/img/map/tiles/**`) are pruned on activate and after a successful map refresh. Pruning is skipped when the map cannot be fetched and never fails activation.
+- HTML navigations stay network-only; offline navigation is unsupported by design.
+
+### Dev and test workflow
+
+- `npm run dev` builds the client and generates the maps + SW once, then runs Vite watch and `wrangler dev`. Hashes can go stale during watch; the asset layer serves the stable path with current bytes, so restart `npm run dev` after changing a public asset.
+- `npm run test:ui` / `npm run test:ui:headed` run `build:client`, `generate:assets`, and `generate:sw` before Playwright; the SW/offline specs need the real generated worker. There is no reset-cache script — each Playwright context starts with empty Cache Storage.
+
 ### Map tile set version
 
 `public/img/map/tiles/metadata.json` carries one `version` for the whole tile set. It is computed from the metadata (excluding the `version` field itself) plus every tile byte, via `computeTileSetVersion()` in `scripts/lib/asset-manifest.js`. `npm run tile:map` writes it as the last step, and `check:assets:versions` fails when the field is missing or stale.

@@ -117,7 +117,7 @@ walk-to-mordor/
 | `src/index.ts` | Worker entry: Hono router, auth guards, scheduled jobs |
 | `client/src/index.tsx` | Island hydration: discovers `[data-island]` mounts; triggers the encounter popup on journey/map paths |
 | `public/js/main.js` | Legacy app controller: session management, `body.authenticated` signal |
-| `public/sw.js` | Service worker: cache-first for static assets, SWR for API endpoints |
+| `public/sw.js` | Service worker: cache-first static assets, network-first runtime maps, SWR API endpoints |
 
 Feature → file discovery: search `src/` for handler modules, `client/src/islands/` for islands, `public/css/` for stylesheets.
 
@@ -261,10 +261,16 @@ Playwright tests must use API pre-configuration (e.g., `PUT /api/user/preference
 
 ## Service Worker Caching Strategy
 
-The service worker (`public/sw.js`) implements a multi-strategy caching approach:
+`public/sw.js` is generated from `scripts/templates/sw.js` by `scripts/generate-sw.js`. Never edit the generated file — edit the template and run `npm run generate:sw` (or `npm run build`, which runs the whole deterministic order).
 
 ### Static Assets — Cache-First
-Static assets (CSS, JS, images, fonts, manifest) use cache-first with a build-stamped `CACHE_NAME` (`walk-to-mordor-<BUILD_TIMESTAMP>`). Old static caches are deleted on activate.
+Precached shell: `/css/main.css`, `/js/main.js`, `/js/client/islands.js`, `/js/client/islands.css`, `/manifest.json` — each carrying `?v=<content hash>`. Other versioned static assets (CSS, JS, images, fonts, manifest) are cached on demand and served cache-first. `CACHE_NAME` is `walk-to-mordor-<hash>` where the hash covers the precache list plus the template; old static caches are deleted on activate. A changed asset gets a new `?v=` query, which is a new cache key, so an old worker misses it and fetches the new bytes — no `skipWaiting`/`clients.claim` required.
+
+### Runtime Version Maps — Network-First
+`/img/image-versions.json` and `/img/map/tiles/metadata.json` are network-first: fetch, cache a successful response, fall back to the cached copy when offline. They are carved out before the cache-first static handler so `/img/` JSON is never swallowed by the generic asset path. This is the only offline exception besides cached static assets.
+
+### Superseded Image Pruning
+On activate and after a successful runtime image map refresh, the SW deletes cached same-origin `/img/` entries that the current map does not reference (both `<path>` and `<path>?v=<hash>` count as referenced). `/img/map/tiles/**` and the two runtime map files are never pruned. Offline activation skips pruning; failures are best-effort and never break activation.
 
 ### API Endpoints — Stale-While-Revalidate (SWR)
 Six read-heavy API endpoints use SWR caching via a separate `walk-to-mordor-api-swr` cache:
@@ -282,7 +288,7 @@ Six read-heavy API endpoints use SWR caching via a separate `walk-to-mordor-api-
 
 **TTL metadata:** Each cached response stores an `x-swr-cached-at` header with a timestamp. The TTL (`SWR_TTL_MS`, default 5 minutes) is informational — stale entries are still served, and background revalidation always runs.
 
-**Cache version busting:** `SWR_CACHE_VERSION` is stamped at build time (alongside `BUILD_TIMESTAMP`). On activate, if the stored version differs from the current version, the entire SWR cache is cleared. This ensures stale API response shapes don't persist after schema migrations.
+**Cache version busting:** `SWR_CACHE_VERSION` is a deterministic hash of the SWR endpoint list plus the template (not a timestamp). On activate, if the stored version differs from the current version, the entire SWR cache is cleared. The 5-minute TTL plus background revalidation bound payload staleness when the version does not change.
 
 ### postMessage Protocol
 After a background cache update, the SW broadcasts to all clients:
@@ -292,7 +298,7 @@ After a background cache update, the SW broadcasts to all clients:
 Islands or stores can subscribe via `navigator.serviceWorker.addEventListener('message', ...)` to reactively refresh when cached data changes.
 
 ### HTML Navigations — Network-Only
-HTML navigations always go to the network with an offline fallback response.
+HTML navigations always go to the network with an offline fallback response. Pages are intentionally not precached, so offline navigation is not supported even while cached subresources remain available.
 
 ### Write Requests
 `POST`, `PUT`, `DELETE`, and `PATCH` requests are never SWR-cached and continue to use the network. Same-origin API mutations also clear the SWR cache so subsequent GETs do not reuse stale API data.

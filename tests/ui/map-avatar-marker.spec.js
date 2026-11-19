@@ -147,12 +147,12 @@ test.describe('Map User Avatar Marker', () => {
     // Register the request promise BEFORE route + navigation so we can assert
     // the 404 route was actually triggered (guards against setUserAvatar failures).
     const aragornRequestPromise = page.waitForRequest(
-      '**/img/avatars/thumbs/aragorn.webp',
+      (req) => req.url().includes('/img/avatars/thumbs/aragorn.webp'),
       { timeout: 15000 },
     );
 
     // Simulate a missing thumbnail (e.g., the image file was not served).
-    await page.route('**/img/avatars/thumbs/aragorn.webp', (route) => {
+    await page.route(/\/img\/avatars\/thumbs\/aragorn\.webp(\?|$)/, (route) => {
       route.fulfill({ status: 404 });
     });
 

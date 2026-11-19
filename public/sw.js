@@ -2,7 +2,7 @@
 // not the generated file.
 // CACHE_NAME hashes the precache list plus this template; SWR_CACHE_VERSION
 // hashes the SWR endpoint list plus this template.
-const CACHE_NAME = 'walk-to-mordor-0be63ad9d613';
+const CACHE_NAME = 'walk-to-mordor-0d1b2b67c12e';
 // Filled by scripts/generate-sw.js with the versioned shell URL list.
 const urlsToCache = [
   '/css/main.css?v=1468307260ea',
@@ -14,9 +14,16 @@ const urlsToCache = [
 
 // SWR (Stale-While-Revalidate) API caching
 const SWR_CACHE_NAME = 'walk-to-mordor-api-swr';
-const SWR_CACHE_VERSION = '7a0eabf77106';
+const SWR_CACHE_VERSION = 'e5f974423122';
 const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
 const SWR_TTL_MS = 300000; // 5 minutes
+
+// Runtime version maps are network-first so a deploy refreshes them, with the
+// cached copy as the offline fallback. Handled before cache-first static assets.
+const IMAGE_VERSIONS_PATH = '/img/image-versions.json';
+const TILE_METADATA_PATH = '/img/map/tiles/metadata.json';
+const RUNTIME_MAP_PATHS = [IMAGE_VERSIONS_PATH, TILE_METADATA_PATH];
+const TILE_CACHE_PREFIX = '/img/map/tiles/';
 const PUSH_CONFIG_CACHE_NAME = 'walk-to-mordor-push-config';
 const PUSH_CONFIG_KEY = '/__wtm_push_config__';
 const DEFAULT_PUSH_URL = '/journey';
@@ -303,6 +310,97 @@ async function fetchAndCache(request, swrCache, requestMutationVersion) {
   return response;
 }
 
+function isRuntimeMapPath(pathname) {
+  return RUNTIME_MAP_PATHS.includes(pathname);
+}
+
+/**
+ * Cache keys that count as "referenced" by the current runtime image map:
+ * both the bare path and the versioned path for every mapped image.
+ */
+function buildReferencedImageUrls(assets) {
+  var referenced = {};
+  var paths = Object.keys(assets || {});
+
+  paths.forEach(function(assetPath) {
+    var version = assets[assetPath];
+    referenced[assetPath] = true;
+    if (version) {
+      referenced[assetPath + '?v=' + version] = true;
+    }
+  });
+
+  return referenced;
+}
+
+/**
+ * Delete cached same-origin `/img/` entries that the current image map no
+ * longer references. Map tiles carry one tile-set version and are never
+ * pruned here; the runtime map files themselves are kept for offline use.
+ */
+async function pruneSupersededImages(assets) {
+  var referenced = buildReferencedImageUrls(assets);
+  var cache = await caches.open(CACHE_NAME);
+  var requests = await cache.keys();
+
+  await Promise.all(requests.map(async function(request) {
+    var url;
+    try {
+      url = new URL(request.url);
+    } catch (_error) {
+      return;
+    }
+    if (url.origin !== self.location.origin) return;
+    if (!url.pathname.startsWith('/img/')) return;
+    if (url.pathname.startsWith(TILE_CACHE_PREFIX)) return;
+    if (RUNTIME_MAP_PATHS.includes(url.pathname)) return;
+    if (referenced[url.pathname] || referenced[url.pathname + url.search]) return;
+    await cache.delete(request);
+  }));
+}
+
+async function pruneFromImageVersionsResponse(response) {
+  try {
+    var payload = await response.json();
+    if (payload && payload.assets && typeof payload.assets === 'object') {
+      await pruneSupersededImages(payload.assets);
+    }
+  } catch (_error) {
+    // Pruning is best-effort; a bad map must never fail the response.
+  }
+}
+
+/**
+ * Network-first runtime map: refresh from the network, cache a successful
+ * response, and prune superseded images after an image-map refresh. Falls back
+ * to the cached copy when the network is unavailable.
+ */
+async function refreshRuntimeMap(request) {
+  try {
+    var response = await fetch(request);
+    if (response && response.ok) {
+      var cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+      if (new URL(request.url).pathname === IMAGE_VERSIONS_PATH) {
+        await pruneFromImageVersionsResponse(response.clone());
+      }
+      return response;
+    }
+
+    var cachedFallback = await caches.match(request);
+    if (cachedFallback) {
+      return cachedFallback;
+    }
+    return response;
+  } catch (_error) {
+    var cached = await caches.match(request);
+    if (cached) {
+      return cached;
+    }
+    return Response.error();
+  }
+}
+
 // Install event - cache essential resources
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -339,6 +437,17 @@ self.addEventListener('activate', (event) => {
         if (storedVersionText !== SWR_CACHE_VERSION) {
           await caches.delete(SWR_CACHE_NAME);
           await versionCache.put('version', new Response(SWR_CACHE_VERSION));
+        }
+      })(),
+      // Prune superseded image versions against the current runtime image map.
+      // Offline activation keeps cached images; the next map refresh prunes.
+      (async () => {
+        try {
+          var response = await fetch(IMAGE_VERSIONS_PATH, { cache: 'no-store' });
+          if (!response || !response.ok) return;
+          await pruneFromImageVersionsResponse(response);
+        } catch (_error) {
+          // Offline: nothing to prune against.
         }
       })()
     ])
@@ -413,6 +522,14 @@ self.addEventListener('fetch', (event) => {
       // Non-SWR API endpoints: network-only (existing behavior)
       event.respondWith(fetch(event.request));
     }
+    return;
+  }
+
+  // Runtime version maps: network-first with the cached copy as offline fallback.
+  // Carved out before HTML and cache-first static handling so /img/ JSON is
+  // never swallowed by the generic asset path.
+  if (isRuntimeMapPath(requestUrl.pathname)) {
+    event.respondWith(refreshRuntimeMap(event.request));
     return;
   }
 

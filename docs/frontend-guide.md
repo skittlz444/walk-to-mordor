@@ -35,7 +35,7 @@ client/src/
 | `npm run build:client` | One-off client build |
 | `npm run dev:client` | Watch mode rebuilds |
 | `npm run dev` | Full local app (worker + client watch + local D1 migrations) |
-| `npm run build` | Production build (client + service worker cache version update) |
+| `npm run build` | Production build: client + generated maps + service worker + image manifest |
 | `npm run lint` | Run ESLint across all configured scopes |
 | `npm run lint:fix` | Run ESLint with auto-fix for fixable rules |
 | `npm run test:client` | Client unit tests (Vitest, happy-dom) |
@@ -49,9 +49,9 @@ client/src/
 
 ### Lifecycle
 
-1. **`build:sw:reset`** — resets the service worker cache version for dev mode.
-2. **`seedLocalD1`** — applies D1 migrations to the local SQLite database.
-3. **`build:client`** — runs a one-off Vite build so `public/js/client/` exists before Wrangler starts (critical on fresh clones where the directory is `.gitignore`d).
+1. **`seedLocalD1`** — applies D1 migrations to the local SQLite database.
+2. **`build:client`** — runs a one-off Vite build so `public/js/client/` exists before Wrangler starts (critical on fresh clones where the directory is `.gitignore`d).
+3. **`generate:assets` + `generate:sw`** — regenerate the version maps and `public/sw.js` once from the built bundle (stale hashes during watch are accepted).
 4. **Concurrent processes** via `concurrently`:
    - **`[vite]`** (cyan) — `npm run dev:client` watches `client/src/` and rebuilds `public/js/client/islands.js` on change.
    - **`[wrangler]`** (yellow) — `wrangler dev` serves the Worker and static assets from `public/`, with its own file-watching for `src/` changes.
