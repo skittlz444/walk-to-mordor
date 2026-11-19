@@ -239,6 +239,8 @@ npm run check:assets:versions
 
 The tile source image `public/img/map/ctd58g7fsmyf1.webp` is **local-only and gitignored** (like every `public/img/map/*.webp`). `tile:map` needs it on disk to re-encode the pyramid, but it is never committed and never enters the generated asset maps. If it is missing, recover it from git history first, for example `git log --all -- public/img/map/ctd58g7fsmyf1.webp` then `git show <commit>:public/img/map/ctd58g7fsmyf1.webp > public/img/map/ctd58g7fsmyf1.webp`. Tile drift can only be fixed by `npm run tile:map`; `generate:assets` does not rewrite tiles or `metadata.json.version`.
 
+The version covers only files git tracks at generation time. If `npm run tile:map` emits new tile files (e.g. a new zoom level), `git add` them and rerun `npm run tile:map` so the committed `metadata.json.version` includes them; `check:assets:versions` reports the drift if you forget.
+
 The map island appends `?v=<version>` to every tile URL and falls back to unversioned URLs when metadata has no `version`.
 
 ### Server-rendered entry assets

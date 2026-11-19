@@ -287,32 +287,36 @@ After a successful progress create or update, the system SHALL award badges whos
 
 ### Requirement: Badge artwork resolution
 
-The system SHALL resolve card artwork from `/img/achievements/<name>.webp`, thumbnails from `/img/achievements/<name>-thumb.webp`, and full artwork from `/img/achievements/full/<name>.webp`. `<name>` SHALL be `<image_slug>--<rank_label>` for repeatable badges and `<image_slug>` otherwise. This change SHALL commit the full artwork as an asset but SHALL NOT add a UI reference or click target for it.
+The system SHALL resolve card artwork from the logical path `/img/achievements/<name>.webp`, thumbnails from `/img/achievements/<name>-thumb.webp`, and full artwork from `/img/achievements/full/<name>.webp`. `<name>` SHALL be `<image_slug>--<rank_label>` for repeatable badges and `<image_slug>` otherwise. Resolved URLs MAY include a deterministic `?v=<hash>` cache-busting query. This change SHALL commit the full artwork as an asset but SHALL NOT add a UI reference or click target for it.
 
 #### Scenario: Fixed-rank image renders at all sizes
 - **GIVEN** a badge with `image_slug` `journey-frodo-sam-buckleberry-ferry`
 - **WHEN** the card, thumbnail, and full image are requested
-- **THEN** the sources are `/img/achievements/journey-frodo-sam-buckleberry-ferry.webp`, `/img/achievements/journey-frodo-sam-buckleberry-ferry-thumb.webp`, and `/img/achievements/full/journey-frodo-sam-buckleberry-ferry.webp`
+- **THEN** the sources resolve to `/img/achievements/journey-frodo-sam-buckleberry-ferry.webp`, `/img/achievements/journey-frodo-sam-buckleberry-ferry-thumb.webp`, and `/img/achievements/full/journey-frodo-sam-buckleberry-ferry.webp`
+- **AND** each source MAY include a `?v=<hash>` query
 
 #### Scenario: Repeatable badge selects its rank variant
 - **GIVEN** a repeatable badge with `image_slug` `habit-faithful-walker`, `presentation.rank` 3, and `presentation.rank_label` `gold`
 - **WHEN** the card renders
-- **THEN** the image source is `/img/achievements/habit-faithful-walker--gold.webp`
-- **AND** the full image asset is `/img/achievements/full/habit-faithful-walker--gold.webp`
+- **THEN** the image source resolves to `/img/achievements/habit-faithful-walker--gold.webp`
+- **AND** the full image asset resolves to `/img/achievements/full/habit-faithful-walker--gold.webp`
+- **AND** either source MAY include a `?v=<hash>` query
 
 #### Scenario: Thumbnail is available for compact previews
 - **GIVEN** a badge with a valid artwork name
 - **WHEN** a compact preview requests the thumbnail
-- **THEN** the source is `/img/achievements/<name>-thumb.webp`
+- **THEN** the source resolves to `/img/achievements/<name>-thumb.webp`
+- **AND** the source MAY include a `?v=<hash>` query
 
 ### Requirement: Badge artwork fallback
 
-When the image slug is null, malformed, or an image fails to load, the card SHALL render a CSS placeholder without breaking layout. A repeatable badge whose rank variant fails SHALL retry the base image before falling back.
+When the image slug is null, malformed, or an image fails to load, the card SHALL render a CSS placeholder without breaking layout. A repeatable badge whose rank variant fails SHALL retry the base image before falling back. Retried sources MAY include a deterministic `?v=<hash>` cache-busting query.
 
 #### Scenario: Missing rank variant falls back to the base image
 - **GIVEN** a repeatable badge whose rank-variant image is missing
 - **WHEN** the card image fails to load
-- **THEN** the image source is retried with `/img/achievements/<image_slug>.webp`
+- **THEN** the image source is retried with the logical path `/img/achievements/<image_slug>.webp`
+- **AND** the retry MAY include a `?v=<hash>` query
 
 #### Scenario: Null image slug uses the placeholder
 - **GIVEN** a badge with a null `image_slug`

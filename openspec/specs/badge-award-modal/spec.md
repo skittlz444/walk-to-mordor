@@ -208,12 +208,14 @@ The modal SHALL display the badge's 1024 px full image at `/img/achievements/ful
 #### Scenario: Fixed-rank badge shows its full image
 - **GIVEN** a fixed-rank badge whose `image_slug` matches the slug pattern
 - **WHEN** the modal renders that badge
-- **THEN** the image source is `/img/achievements/full/<image_slug>.webp`
+- **THEN** the image source resolves to `/img/achievements/full/<image_slug>.webp`
+- **AND** the source MAY include a `?v=<hash>` query
 
 #### Scenario: Repeatable badge shows its rank variant
 - **GIVEN** a repeatable badge with `presentation.rank_label` `gold`
 - **WHEN** the modal renders that badge
-- **THEN** the image source is `/img/achievements/full/<image_slug>--gold.webp`
+- **THEN** the image source resolves to `/img/achievements/full/<image_slug>--gold.webp`
+- **AND** the source MAY include a `?v=<hash>` query
 
 #### Scenario: Queued repeatables show their awarding ranks
 - **GIVEN** two queued instances of the same repeatable, the second crossing a rank threshold

@@ -60,7 +60,7 @@
 - [x] 7.5 Verify offline behavior for a cached versioned stylesheet, the runtime image map, and map tile metadata. Verify with a Playwright offline test or the documented manual procedure.
 - [x] 7.6 Run the full Jest, Vitest, and Playwright suites. Verify all pass.
 - [x] 7.7 Run `npm run check` and `npm run check:assets`; verify the Worker dry-run succeeds and the asset count stays under the warning threshold.
-- [ ] 7.8 Review the generated artifact diffs, the rendered HTML, and the docs for consistency. Verify no raw asset URLs remain outside the allowlist.
+- [x] 7.8 Review the generated artifact diffs, the rendered HTML, and the docs for consistency. Verify no raw asset URLs remain outside the allowlist.
 - [x] 7.9 Change one map tile without updating metadata; verify `check:assets:versions` fails, then rerun `tile:map` and verify it passes.
 
 ## Workflow follow-up
