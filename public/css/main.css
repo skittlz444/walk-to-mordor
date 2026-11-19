@@ -1,10 +1,4 @@
-/* Main application styles - imports domain-specific styles */
-@import url("./calendar.css");
-@import url("./progress.css");
-@import url("./goals.css");
-@import url("./profile.css");
-@import url("./palantir.css");
-@import url("./wrapped.css");
+/* Main application styles - domain stylesheets are linked by renderLayout */
 
 /* CSS Custom Properties - Color Palette */
 :root {

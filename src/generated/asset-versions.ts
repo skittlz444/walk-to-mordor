@@ -16,7 +16,7 @@ export const ASSET_VERSIONS: Readonly<Record<string, string>> = {
   "/css/goals.css": "0d698ceed316",
   "/css/icons_mobiscroll.ttf": "163e9ec4028e",
   "/css/icons_mobiscroll.woff": "cc2d9761b906",
-  "/css/main.css": "aad92dc9572e",
+  "/css/main.css": "1468307260ea",
   "/css/map.css": "fbe0c14024cc",
   "/css/palantir.css": "3f7c0e2a6412",
   "/css/party.css": "446b4b269063",

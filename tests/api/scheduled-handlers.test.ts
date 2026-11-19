@@ -20,6 +20,9 @@ jest.mock('../../src/push-utils', () => ({
 import { getOneMoreMileMessage } from '../../src/push-messages';
 import { sendPushNotification, cleanupExpiredSubscription, sendPushToUser } from '../../src/push-utils';
 import { getReengageMessage } from '../../src/push-messages';
+import { ASSET_VERSIONS } from '../../src/generated/asset-versions';
+
+const PUSH_ICON_URL = `/icons/icon-192x192.png?v=${ASSET_VERSIONS['/icons/icon-192x192.png']}`;
 
 function createChainableMock(overrides?: {
   first?: unknown;
@@ -99,7 +102,7 @@ describe('Scheduled Handlers - One More Mile', () => {
       expect.anything(),
       'https://push.example/sub-1',
       { p256dh: 'p256dh', auth: 'auth' },
-      expect.objectContaining({ title: 'Almost There!', body: 'You are just 1.5 km from Weathertop.', url: '/' }),
+      expect.objectContaining({ title: 'Almost There!', body: 'You are just 1.5 km from Weathertop.', url: '/', icon: PUSH_ICON_URL }),
       mockEnv,
     );
   });
@@ -311,7 +314,7 @@ describe('Scheduled Handlers - Re-engagement (Gandalf\'s Absence Arc)', () => {
     expect(sendPushToUser).toHaveBeenCalledWith(
       expect.anything(),
       1,
-      expect.objectContaining({ title: 'Gandalf Notices — Weathertop Awaits', url: '/' }),
+      expect.objectContaining({ title: 'Gandalf Notices — Weathertop Awaits', url: '/', icon: PUSH_ICON_URL }),
       mockEnv,
     );
     expect(updateTierMock.bind).toHaveBeenCalledWith(1, 1);

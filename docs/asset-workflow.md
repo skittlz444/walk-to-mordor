@@ -5,7 +5,7 @@ description: Goal and encounter image optimization pipeline, image_id/image_slug
 
 # Asset Workflow
 
-> Last updated: 2026-11-05
+> Last updated: 2026-11-19
 
 ## Architecture Decision: Static Assets over R2
 
@@ -187,11 +187,20 @@ Run the four checks (and `npm run build:client` first) after changing any public
 npm run generate:assets -- --write-tile-version
 ```
 
+### Server-rendered entry assets
+
+- `src/asset-url.ts` (`assetUrl(path)`) is the only server resolution point. It appends or replaces `?v=` from the committed entry map, keeps other query parameters, and returns unknown paths unchanged.
+- `src/renderLayout.ts` resolves everything it emits: `config.stylesheets`, `config.scripts`, the islands bundle/CSS, icons, `main.js`, and `manifest.json`. Page renderers keep passing raw paths in `stylesheets`/`scripts`; do not resolve them again in page code.
+- `src/renderAuthPage.ts` and `src/renderPasswordResetPage.ts` have standalone heads (no shared layout), so they call `assetUrl()` directly for their stylesheets, icons, manifest, and client bundle.
+- Server-generated payloads resolve through the same helper. Scheduled push payloads use `assetUrl('/icons/icon-192x192.png')` (the icon lives at `/icons/`, not `/img/icons/`).
+- CSS cascade: `renderLayout` links `calendar`, `progress`, `goals`, `profile`, `palantir`, `wrapped`, then `main`, `drawer`, `badge-award`, then page-specific stylesheets. `main.css` must not `@import` the six domain sheets — each file is versioned independently, and the explicit order preserves the old import-before-main-rules cascade.
+- Auth and password-reset pages intentionally load only `main.css` plus `auth.css`; they do not need the six domain stylesheets.
+
 ### Raw URL rule
 
 - Client code: use `client/src/utils/assetUrl.ts` (task 3.1) for `/img/**` paths.
 - Server code: use `src/asset-url.ts` (task 2.1), or pass paths through `renderLayout`'s `stylesheets`/`scripts` arrays, which resolve centrally.
-- Exempt: resolver helpers, generated files, tests, layout configuration arrays, and fetches of generated artifacts (`/img/image-manifest.json`, `/img/image-versions.json`).
+- Exempt: resolver helpers, literals passed directly to a resolver (`assetUrl('/css/main.css')`), generated files, tests, layout configuration arrays, and fetches of generated artifacts (`/img/image-manifest.json`, `/img/image-versions.json`).
 - `scripts/check-asset-refs.js` holds a file-scoped `MIGRATION_ALLOWLIST` of pre-migration raw URLs. Entries map to tasks 2.2/2.3/2.4 and 3.3/3.4 and must be deleted as those tasks migrate each file. A new raw URL in any unlisted file fails with `file:line` and the expected resolver.
 
 ## Admin Interface

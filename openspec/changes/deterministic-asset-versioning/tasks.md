@@ -14,11 +14,11 @@
 
 ## 2. Server-side entry asset resolution
 
-- [ ] 2.1 Add `src/asset-url.ts` that appends `?v=<hash>` for known entry assets, preserves existing query strings, and returns the input unchanged for unknown paths. Verify with Jest tests for clean paths, existing queries, and unknown assets.
-- [ ] 2.2 Update `src/renderLayout.ts` to resolve `config.stylesheets`, `config.scripts`, the islands bundle/CSS, icons, and `manifest.json` through the helper. Verify a Jest render test asserts versioned URLs and the existing stylesheet order.
-- [ ] 2.3 Update `src/renderAuthPage.ts` and `src/renderPasswordResetPage.ts` to resolve their standalone stylesheet, icon, manifest, and client-bundle URLs. Verify render tests assert `?v=` on each.
-- [ ] 2.4 Correct the push notification icon path in `src/scheduled-handlers.ts` to `/icons/icon-192x192.png` and route it through the helper. Verify the push payload test sees the corrected, versioned URL.
-- [ ] 2.5 Add the server asset rule to `docs/asset-workflow.md` and verify `npm run check:assets:refs` passes after the server changes.
+- [x] 2.1 Add `src/asset-url.ts` that appends `?v=<hash>` for known entry assets, preserves existing query strings, and returns the input unchanged for unknown paths. Verify with Jest tests for clean paths, existing queries, and unknown assets.
+- [x] 2.2 Update `src/renderLayout.ts` to resolve `config.stylesheets`, `config.scripts`, the islands bundle/CSS, icons, and `manifest.json` through the helper. Verify a Jest render test asserts versioned URLs and the existing stylesheet order.
+- [x] 2.3 Update `src/renderAuthPage.ts` and `src/renderPasswordResetPage.ts` to resolve their standalone stylesheet, icon, manifest, and client-bundle URLs. Verify render tests assert `?v=` on each.
+- [x] 2.4 Correct the push notification icon path in `src/scheduled-handlers.ts` to `/icons/icon-192x192.png` and route it through the helper. Verify the push payload test sees the corrected, versioned URL.
+- [x] 2.5 Add the server asset rule to `docs/asset-workflow.md` and verify `npm run check:assets:refs` passes after the server changes.
 
 ## 3. Client-side image resolution
 
@@ -31,9 +31,9 @@
 
 ## 4. CSS independent versioning
 
-- [ ] 4.1 Remove the `@import` lines from `public/css/main.css` and add the base stylesheet list to `src/renderLayout.ts` in the order `calendar`, `progress`, `goals`, `profile`, `palantir`, `wrapped`, then `main`, `drawer`, `badge-award`. Verify a Jest test asserts the emitted link order.
-- [ ] 4.2 Verify the auth and password-reset pages still render correctly with `main.css` and their page-specific CSS, without the six domain stylesheets. Verify with the existing Playwright auth smoke tests.
-- [ ] 4.3 Verify the journey, map, profile, party, and events pages visually at desktop and mobile widths after the cascade change. Verify with Playwright screenshots or the existing UI smoke suite.
+- [x] 4.1 Remove the `@import` lines from `public/css/main.css` and add the base stylesheet list to `src/renderLayout.ts` in the order `calendar`, `progress`, `goals`, `profile`, `palantir`, `wrapped`, then `main`, `drawer`, `badge-award`. Verify a Jest test asserts the emitted link order.
+- [x] 4.2 Verify the auth and password-reset pages still render correctly with `main.css` and their page-specific CSS, without the six domain stylesheets. Verify with the existing Playwright auth smoke tests.
+- [x] 4.3 Verify the journey, map, profile, party, and events pages visually at desktop and mobile widths after the cascade change. Verify with Playwright screenshots or the existing UI smoke suite.
 
 ## 5. Service worker, dev, and test workflow
 

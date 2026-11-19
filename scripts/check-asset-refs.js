@@ -7,8 +7,9 @@
  * Scans client source and server source for `/img/`, `/js/`, `/css/`, and
  * `/icons/` string literals. Generated files, resolver helpers, tests, and
  * layout configuration arrays (`stylesheets`/`scripts` passed to renderLayout)
- * are exempt. Current pre-migration call sites are listed explicitly below and
- * disappear as task groups 2 and 3 migrate them.
+ * are exempt, as are literals passed directly to a resolver (`assetUrl('/...')`).
+ * Current pre-migration call sites are listed explicitly below and disappear as
+ * task groups 2 and 3 migrate them.
  *
  * Usage:
  *   node scripts/check-asset-refs.js
@@ -66,13 +67,13 @@ const MIGRATION_ALLOWLIST = new Map([
   ['client/src/islands/GoalModal.tsx', 'task 3.3'],
   ['client/src/islands/MapIsland.tsx', 'task 3.3 / 3.4'],
   ['client/src/islands/WrappedIsland.tsx', 'task 3.3'],
-
-  // Direct server asset references -> task 2.2 / 2.3 / 2.4.
-  ['src/renderAuthPage.ts', 'task 2.3'],
-  ['src/renderLayout.ts', 'task 2.2'],
-  ['src/renderPasswordResetPage.ts', 'task 2.3'],
-  ['src/scheduled-handlers.ts', 'task 2.4'],
 ]);
+
+/**
+ * A literal passed straight into a resolver is already versioned, so it is not
+ * a raw reference. Keeps `assetUrl('/css/main.css')` legal in migrated files.
+ */
+const RESOLVER_CALL_RE = /\b\w*[aA]ssetUrl\s*\(\s*$/;
 
 /**
  * Matches a quoted path beginning with an asset prefix. The trailing boundary
@@ -105,6 +106,9 @@ function findRawAssetLiterals(line) {
       continue;
     }
     if (GENERATED_ARTIFACT_LITERALS.has(literal)) {
+      continue;
+    }
+    if (RESOLVER_CALL_RE.test(line.slice(0, match.index))) {
       continue;
     }
     if (!seen.has(literal)) {

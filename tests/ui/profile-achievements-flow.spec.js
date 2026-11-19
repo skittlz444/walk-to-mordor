@@ -351,7 +351,7 @@ test('profile achievements flow covers award queue, badge grid, settings split a
     const avatarDialog = page.locator('.picker-dialog[role="dialog"]');
     await expect(avatarDialog).toBeVisible({ timeout: 10000 });
 
-    // Regression: `profile.css` (@imported by main.css) must reach this page —
+    // Regression: `profile.css` (now linked by renderLayout) must reach this page —
     // the picker overlay is only viewport-fixed when that stylesheet applies.
     const overlay = page.locator('.profile-dialog-overlay');
     await expect

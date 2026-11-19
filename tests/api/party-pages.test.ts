@@ -2,6 +2,7 @@ import { renderPartyListPage } from '../../src/renderPartyListPage';
 import { renderPartyDetailPage } from '../../src/renderPartyDetailPage';
 import { renderPartyManagePage } from '../../src/renderPartyManagePage';
 import { renderPartyJoinPage } from '../../src/renderPartyJoinPage';
+import { ASSET_VERSIONS } from '../../src/generated/asset-versions';
 
 interface PartyPageFixture {
   renderer: () => string;
@@ -56,7 +57,9 @@ describe('Party SSR Shells', () => {
     ({ renderer, title, stylesheet, mountId }) => {
       const result = renderer();
       expect(result).toContain(`<title>${title}</title>`);
-      expect(result).toContain(`href="${stylesheet}"`);
+      expect(result).toContain(
+        `href="${stylesheet}?v=${ASSET_VERSIONS[stylesheet]}"`,
+      );
       expect(result).toContain(`data-island="${mountId}"`);
     }
   );
