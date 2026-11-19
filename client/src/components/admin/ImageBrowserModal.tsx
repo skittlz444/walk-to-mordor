@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
+import { assetUrl } from '../../utils/assetUrl';
 
 interface ImageBrowserModalProps {
   isOpen: boolean;
@@ -197,7 +198,7 @@ export function ImageBrowserModal({ isOpen, onClose, onSelect, currentImageId }:
                   title={assignedTo ? `In use by: ${assignedTo}` : slug}
                 >
                   <img
-                    src={`/img/thumbs/${slug}-thumb.webp`}
+                    src={assetUrl(`/img/thumbs/${slug}-thumb.webp`)}
                     alt={slug}
                     loading="lazy"
                     onError={(e) => {

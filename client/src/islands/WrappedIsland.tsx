@@ -2,6 +2,7 @@ import { useSignal, useComputed } from '@preact/signals';
 import { useEffect, useRef, useCallback } from 'preact/hooks';
 import type { TargetedEvent } from 'preact';
 import { isAdmin, storeInitialized, isAuthenticated } from '../stores/appStore';
+import { assetUrl } from '../utils/assetUrl';
 import { fetchWrappedStats, type WrappedData, type WrappedMilestone } from '../utils/wrapped';
 
 type WrappedState = 'idle' | 'loading' | 'loaded' | 'error';
@@ -19,15 +20,17 @@ function WrappedMilestoneImage({ m }: { m: WrappedMilestone }) {
 
   const handleThumbError = (e: TargetedEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget as HTMLImageElement;
-    if (!img.src.endsWith('0-thumb.webp')) {
-      img.src = '/img/thumbs/0-thumb.webp';
+    const placeholderSrc = assetUrl('/img/thumbs/0-thumb.webp');
+    if (img.getAttribute('src') !== placeholderSrc) {
+      img.src = placeholderSrc;
     }
   };
 
   const handleHighResError = (e: TargetedEvent<HTMLImageElement, Event>) => {
     const img = e.currentTarget as HTMLImageElement;
-    if (!img.src.endsWith('0.webp')) {
-      img.src = '/img/highres/0.webp';
+    const placeholderSrc = assetUrl('/img/highres/0.webp');
+    if (img.getAttribute('src') !== placeholderSrc) {
+      img.src = placeholderSrc;
     }
   };
 
@@ -35,7 +38,7 @@ function WrappedMilestoneImage({ m }: { m: WrappedMilestone }) {
     <div style={{ position: 'relative', margin: '0 auto 15px', overflow: 'hidden' }}>
       <img
         class="wrapped-milestone-img"
-        src={`/img/thumbs/${m.image_id}-thumb.webp`}
+        src={assetUrl(`/img/thumbs/${m.image_id}-thumb.webp`)}
         alt=""
         style={{
           width: '100%',
@@ -47,7 +50,7 @@ function WrappedMilestoneImage({ m }: { m: WrappedMilestone }) {
         loading="lazy"
       />
       <img
-        src={`/img/highres/${m.image_id}.webp`}
+        src={assetUrl(`/img/highres/${m.image_id}.webp`)}
         alt=""
         style={{
           position: 'absolute',

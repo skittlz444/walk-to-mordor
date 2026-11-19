@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, cleanup, waitFor } from '@testing-library/preact';
 import { ProfileSettingsIsland } from './ProfileSettingsIsland';
 import { clearMapCache } from '../utils/map-cache';
+import { assetUrl } from '../utils/assetUrl';
 
 vi.mock('../utils/map-cache', () => ({ clearMapCache: vi.fn() }));
 
@@ -569,7 +570,7 @@ describe('ProfileSettingsIsland', () => {
 
       await waitFor(() => {
         const preview = container.querySelector('#avatar-preview img');
-        expect(preview?.getAttribute('src')).toBe('/img/avatars/gandalf.webp');
+        expect(preview?.getAttribute('src')).toBe(assetUrl('/img/avatars/gandalf.webp'));
       });
     });
   });

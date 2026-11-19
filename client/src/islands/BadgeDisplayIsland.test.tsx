@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, waitFor } from '@testing-library/preact';
 import { BadgeDisplayIsland } from './BadgeDisplayIsland';
 import type { BadgeAchievement, BadgeCollection } from './BadgeDisplayIsland';
+import { assetUrl } from '../utils/assetUrl';
 
 const mockFetch = vi.fn();
 let awardEventSpy: ReturnType<typeof vi.fn>;
@@ -283,7 +284,7 @@ describe('BadgeDisplayIsland', () => {
       await findByText('Across the Buckleberry Ferry');
 
       const image = container.querySelector('img');
-      expect(image?.getAttribute('src')).toBe('/img/achievements/journey-frodo-sam-buckleberry-ferry.webp');
+      expect(image?.getAttribute('src')).toBe(assetUrl('/img/achievements/journey-frodo-sam-buckleberry-ferry.webp'));
     });
 
     it('uses the rank variant for repeatable badges', async () => {
@@ -302,7 +303,7 @@ describe('BadgeDisplayIsland', () => {
       await findByText('Faithful Walker');
 
       expect(container.querySelector('img')?.getAttribute('src'))
-        .toBe('/img/achievements/habit-faithful-walker--gold.webp');
+        .toBe(assetUrl('/img/achievements/habit-faithful-walker--gold.webp'));
     });
 
     it('retries the base image and then hides the image when both fail', async () => {
@@ -324,7 +325,7 @@ describe('BadgeDisplayIsland', () => {
 
       await waitFor(() => {
         expect(container.querySelector('img')?.getAttribute('src'))
-          .toBe('/img/achievements/habit-faithful-walker.webp');
+          .toBe(assetUrl('/img/achievements/habit-faithful-walker.webp'));
       });
 
       fireEvent.error(container.querySelector('img') as HTMLImageElement);

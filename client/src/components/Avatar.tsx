@@ -1,3 +1,5 @@
+import { assetUrl } from '../utils/assetUrl';
+
 /**
  * Reusable Avatar component for displaying user avatars across all islands.
  *
@@ -39,7 +41,7 @@ export function Avatar({ avatarId, username, size }: AvatarProps) {
         }}
       >
         <img
-          src={`/img/avatars/${avatarId}.webp`}
+          src={assetUrl(`/img/avatars/${avatarId}.webp`)}
           alt={username}
           width={size}
           height={size}

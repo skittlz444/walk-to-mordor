@@ -181,11 +181,14 @@ Run the four checks (and `npm run build:client` first) after changing any public
 
 ### Map tile set version
 
-`public/img/map/tiles/metadata.json` carries one `version` for the whole tile set. It is computed from the metadata (excluding the `version` field itself) plus every tile byte, via `computeTileSetVersion()` in `scripts/lib/asset-manifest.js`. `check:assets:versions` fails when the field is missing or stale. Task 3.4 makes `npm run tile:map` write it automatically; until then, a one-off maintenance command is:
+`public/img/map/tiles/metadata.json` carries one `version` for the whole tile set. It is computed from the metadata (excluding the `version` field itself) plus every tile byte, via `computeTileSetVersion()` in `scripts/lib/asset-manifest.js`. `npm run tile:map` writes it as the last step, and `check:assets:versions` fails when the field is missing or stale.
 
 ```bash
-npm run generate:assets -- --write-tile-version
+npm run tile:map        # re-encode tiles and write metadata.json + its version
+npm run check:assets:versions
 ```
+
+The map island appends `?v=<version>` to every tile URL and falls back to unversioned URLs when metadata has no `version`.
 
 ### Server-rendered entry assets
 
@@ -198,10 +201,10 @@ npm run generate:assets -- --write-tile-version
 
 ### Raw URL rule
 
-- Client code: use `client/src/utils/assetUrl.ts` (task 3.1) for `/img/**` paths.
+- Client code: use `client/src/utils/assetUrl.ts`; map tiles use `tileUrl()` with the shared tile-set version. Never hardcode `/img/**` paths in `client/src/`.
 - Server code: use `src/asset-url.ts` (task 2.1), or pass paths through `renderLayout`'s `stylesheets`/`scripts` arrays, which resolve centrally.
-- Exempt: resolver helpers, literals passed directly to a resolver (`assetUrl('/css/main.css')`), generated files, tests, layout configuration arrays, and fetches of generated artifacts (`/img/image-manifest.json`, `/img/image-versions.json`).
-- `scripts/check-asset-refs.js` holds a file-scoped `MIGRATION_ALLOWLIST` of pre-migration raw URLs. Entries map to tasks 2.2/2.3/2.4 and 3.3/3.4 and must be deleted as those tasks migrate each file. A new raw URL in any unlisted file fails with `file:line` and the expected resolver.
+- Exempt: resolver helpers, literals passed directly to a resolver (`assetUrl('/css/main.css')`), generated files, tests, layout configuration arrays, and fetches of generated artifacts (`/img/image-manifest.json`, `/img/image-versions.json`, `/img/map/tiles/metadata.json`).
+- There is no migration allowlist. A raw URL in any unlisted file fails with `file:line` and the expected resolver; add a narrow exemption only for a new generated artifact.
 
 ## Admin Interface
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import type { TargetedEvent } from 'preact';
 import { Avatar } from './Avatar';
 import { getAuthHeaders } from '../utils/auth';
+import { assetUrl } from '../utils/assetUrl';
 
 /**
  * Shared avatar picker modal used by the profile view page and the profile
@@ -356,7 +357,7 @@ export function AvatarPickerModal({
                   }}
                 >
                   <img
-                    src={`/img/avatars/${encodeURIComponent(slug)}.webp`}
+                    src={assetUrl(`/img/avatars/${encodeURIComponent(slug)}.webp`)}
                     alt=""
                     width={64}
                     height={64}

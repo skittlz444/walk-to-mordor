@@ -134,6 +134,14 @@ The `GoalModal` component now includes a milestone journal section for goal refl
 - SSR renderers in `src/render*.ts` control which CSS and islands are included per page.
 - Extra stylesheets must be explicitly added in `renderLayout` config — they are **not** inherited automatically.
 
+## Client Image URLs
+
+- **Never hardcode `/img/...` in `client/src/`.** Build image URLs with `assetUrl()` from `client/src/utils/assetUrl.ts`; `npm run check:assets:refs` fails on raw literals outside the helpers, tests, and generated-artifact fetches.
+- `assetUrl(path)` appends `?v=<hash>` when the runtime map knows the path, preserves existing query parameters, and returns unknown paths unchanged. `assetUrl(path, version)` takes an explicit version (used for map tiles).
+- The runtime map is `public/img/image-versions.json`, shaped `{ "version": "<map hash>", "assets": { "/img/...": "<hash>" } }`. Images are excluded from the client bundle, so an image change never changes `islands.js`.
+- `client/src/index.tsx` loads the map with `loadAssetVersions()` in parallel with `initializeAppStore()`. Fallback chain: network (bounded at 1.5 s) → cached `localStorage` copy → unversioned path. Hydration waits no longer than the bound and still runs when the fetch fails.
+- Map tiles are not in the runtime map. They share one tile-set version from `/img/map/tiles/metadata.json`; build tile URLs with `tileUrl()` in `client/src/islands/MapIsland.tsx`, which leaves URLs unversioned when the metadata has no version.
+
 ## State Management
 
 - **New code**: Preact Signals stores in `client/src/stores/` (e.g., `mapStore.ts`, `partyStore.ts`).

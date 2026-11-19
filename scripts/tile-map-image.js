@@ -6,11 +6,30 @@
 const fs = require('fs/promises');
 const path = require('path');
 const sharp = require('sharp');
+const { computeTileSetVersion } = require('./lib/asset-manifest');
 
 const MAP_DIR = path.join(__dirname, '..', 'public', 'img', 'map');
 const TILE_DIR = path.join(MAP_DIR, 'tiles');
 const TILE_SIZE = 512;
 const SOURCE_FILE = 'ctd58g7fsmyf1.webp';
+
+/**
+ * Write `metadata.json` for a tile set and stamp its single `version`.
+ *
+ * The version is computed by the shared helper from the metadata (minus the
+ * `version` field) plus every tile byte, so rerunning the generator after a
+ * tile change produces a new version and `check:assets:versions` stays honest.
+ *
+ * Exported so the metadata step can be verified against a fixture directory
+ * without re-encoding the map image.
+ */
+async function writeTileMetadata(tileDir, metadata) {
+  const metaPath = path.join(tileDir, 'metadata.json');
+  await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
+  const version = computeTileSetVersion(tileDir);
+  await fs.writeFile(metaPath, JSON.stringify({ ...metadata, version }, null, 2));
+  return version;
+}
 
 async function tileMapImage() {
   const inputPath = path.join(MAP_DIR, SOURCE_FILE);
@@ -114,7 +133,7 @@ async function tileMapImage() {
     console.log(`  ✅ Level ${lvl.z} complete`);
   }
 
-  // Write metadata file for the client
+  // Write metadata file for the client, including the tile-set version
   const metadata = {
     source: SOURCE_FILE,
     fullWidth,
@@ -130,11 +149,15 @@ async function tileMapImage() {
   };
 
   const metaPath = path.join(TILE_DIR, 'metadata.json');
-  await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
+  const version = await writeTileMetadata(TILE_DIR, metadata);
 
   console.log(`\n✅ Done! ${totalTiles} tiles generated across ${levels.length} zoom levels.`);
-  console.log(`Metadata written to: ${metaPath}`);
+  console.log(`Metadata written to: ${metaPath} (version ${version})`);
   console.log(`Tiles directory: ${TILE_DIR}`);
 }
 
-tileMapImage();
+if (require.main === module) {
+  tileMapImage();
+}
+
+module.exports = { writeTileMetadata };

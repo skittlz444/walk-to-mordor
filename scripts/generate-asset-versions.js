@@ -10,12 +10,10 @@
  * Usage:
  *   node scripts/generate-asset-versions.js
  *   node scripts/generate-asset-versions.js --check
- *   node scripts/generate-asset-versions.js --write-tile-version
  *
  * `--check` never writes: it verifies both maps and the committed map-tile-set
- * version, exiting non-zero on drift. `--write-tile-version` is a temporary
- * maintenance helper for the current committed metadata; task 3.4 moves this
- * into `scripts/tile-map-image.js`.
+ * version, exiting non-zero on drift. The tile-set version itself is written by
+ * `scripts/tile-map-image.js` when the tiles are regenerated.
  */
 
 const fs = require('fs');
@@ -99,7 +97,7 @@ function checkTileVersion(problems) {
   if (!metadata.version) {
     problems.push(
       `public/img/map/tiles/metadata.json has no "version" field (expected ${expectedVersion}); ` +
-        'rerun the tile generator once task 3.4 lands, or run `npm run generate:assets -- --write-tile-version`'
+        'rerun `npm run tile:map`'
     );
     return;
   }
@@ -111,24 +109,7 @@ function checkTileVersion(problems) {
   }
 }
 
-function writeTileVersion() {
-  const metadata = requireJsonFile(TILE_METADATA_PATH, 'public/img/map/tiles/metadata.json');
-  const version = computeTileSetVersion(TILE_DIR);
-  if (metadata.version === version) {
-    console.log(`✓ Tile-set version already current: ${version}`);
-    return;
-  }
-  const updated = { ...metadata, version };
-  fs.writeFileSync(TILE_METADATA_PATH, JSON.stringify(updated, null, 2));
-  console.log(`✓ Wrote tile-set version ${version} to public/img/map/tiles/metadata.json`);
-}
-
-function run({ check, writeTileVersionOnly }) {
-  if (writeTileVersionOnly) {
-    writeTileVersion();
-    return;
-  }
-
+function run({ check }) {
   // Compute everything before touching disk so a missing input never leaves a
   // partial or empty artifact behind.
   const entryAssets = buildEntryAssetMap();
@@ -198,7 +179,7 @@ function run({ check, writeTileVersionOnly }) {
   if (!metadata.version) {
     console.warn(
       `⚠️  public/img/map/tiles/metadata.json has no "version" (expected ${tileVersion}); ` +
-        'run `npm run generate:assets -- --write-tile-version` once.'
+        'run `npm run tile:map`.'
     );
   } else if (metadata.version !== tileVersion) {
     console.warn(
@@ -211,7 +192,7 @@ function run({ check, writeTileVersionOnly }) {
 function main() {
   const args = process.argv.slice(2);
   try {
-    run({ check: args.includes('--check'), writeTileVersionOnly: args.includes('--write-tile-version') });
+    run({ check: args.includes('--check') });
   } catch (error) {
     console.error(`❌ ${error.message}`);
     process.exitCode = 1;

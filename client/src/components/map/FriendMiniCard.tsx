@@ -10,6 +10,7 @@
 
 import { useEffect, useRef } from 'preact/hooks';
 import type { FriendMarkerData } from './FriendMarkers';
+import { assetUrl } from '../../utils/assetUrl';
 
 export interface FriendMiniCardProps {
   friend: FriendMarkerData;
@@ -57,7 +58,7 @@ export function FriendMiniCard({ friend, position, onClose }: FriendMiniCardProp
   }, [onClose]);
 
   const avatarSrc = friend.avatar_id
-    ? `/img/avatars/thumbs/${friend.avatar_id}.webp`
+    ? assetUrl(`/img/avatars/thumbs/${friend.avatar_id}.webp`)
     : null;
 
   const distanceDisplay = friend.total_distance.toFixed(1);

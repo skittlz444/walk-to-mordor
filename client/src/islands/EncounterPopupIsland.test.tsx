@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/preact';
 import { EncounterPopupIsland } from './EncounterPopupIsland';
+import { assetUrl } from '../utils/assetUrl';
 import type { EncounterDefinition, EncounterOffer } from '../types/encounter';
 
 const mockFetch = vi.fn();
@@ -73,7 +74,7 @@ describe('EncounterPopupIsland', () => {
     expect(getByText(/to log walks for these days/)).toBeTruthy();
     expect(getByText('2026-11-10')).toBeTruthy();
     expect(container.querySelector('img')?.getAttribute('src'))
-      .toBe('/img/highres/nazgul-pursuit.webp');
+      .toBe(assetUrl('/img/highres/nazgul-pursuit.webp'));
     expect(within(dialog).getByRole('button', { name: 'Accept' })).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: 'Decline' })).toBeTruthy();
   });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { getAuthHeaders } from '../utils/auth';
+import { assetUrl } from '../utils/assetUrl';
 
 const IMAGE_SLUG_PATTERN = /^[a-z0-9-]+(\/[a-z0-9-]+)*$/;
 const RANK_LABEL_PATTERN = /^[a-z0-9-]+$/;
@@ -162,8 +163,8 @@ function BadgeCard({ entry }: { entry: BadgeAchievement }) {
   const [imageState, setImageState] = useState<'primary' | 'base' | 'failed'>('primary');
 
   const imageName = imageNameFor(entry);
-  const primarySrc = imageName ? `/img/achievements/${imageName}.webp` : null;
-  const baseSrc = entry.image_slug ? `/img/achievements/${entry.image_slug}.webp` : null;
+  const primarySrc = imageName ? assetUrl(`/img/achievements/${imageName}.webp`) : null;
+  const baseSrc = entry.image_slug ? assetUrl(`/img/achievements/${entry.image_slug}.webp`) : null;
 
   const imageSrc = imageName === null || imageState === 'failed'
     ? null

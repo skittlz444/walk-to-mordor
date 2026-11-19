@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { getAuthHeaders, isAuthenticated } from '../utils/auth';
+import { assetUrl } from '../utils/assetUrl';
 
 /**
  * Public `/events` island.
@@ -146,7 +147,7 @@ function CampaignArtwork({ imageSlug, name }: { imageSlug: string | null; name: 
       {showThumb && (
         <img
           className="event-card__thumb"
-          src={`/img/thumbs/${imageSlug}-thumb.webp`}
+          src={assetUrl(`/img/thumbs/${imageSlug}-thumb.webp`)}
           alt={showHighRes ? '' : alt}
           aria-hidden={showHighRes ? 'true' : undefined}
           loading="lazy"
@@ -156,7 +157,7 @@ function CampaignArtwork({ imageSlug, name }: { imageSlug: string | null; name: 
       {showHighRes && (
         <img
           className="event-card__image"
-          src={`/img/highres/${imageSlug}.webp`}
+          src={assetUrl(`/img/highres/${imageSlug}.webp`)}
           alt={alt}
           loading="lazy"
           onError={() => setHighResFailed(true)}

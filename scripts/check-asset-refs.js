@@ -7,9 +7,10 @@
  * Scans client source and server source for `/img/`, `/js/`, `/css/`, and
  * `/icons/` string literals. Generated files, resolver helpers, tests, and
  * layout configuration arrays (`stylesheets`/`scripts` passed to renderLayout)
- * are exempt, as are literals passed directly to a resolver (`assetUrl('/...')`).
- * Current pre-migration call sites are listed explicitly below and disappear as
- * task groups 2 and 3 migrate them.
+ * are exempt, as are literals passed directly to a resolver (`assetUrl('/...')`)
+ * and fetches of generated artifacts (the image manifest, the runtime image
+ * map, and the map-tile metadata). All production call sites are migrated; a
+ * new raw URL anywhere else fails with `file:line` and the expected resolver.
  *
  * Usage:
  *   node scripts/check-asset-refs.js
@@ -34,39 +35,14 @@ const FILE_EXTENSIONS = ['.ts', '.tsx'];
 const GENERATED_ARTIFACT_LITERALS = new Set([
   '/img/image-manifest.json',
   '/img/image-versions.json',
+  // Tile-set metadata is fetched by MapIsland; tile URLs alone carry `?v=`.
+  '/img/map/tiles/metadata.json',
 ]);
 
 /** Resolver helpers legitimately contain the raw prefixes. */
 const RESOLVER_FILES = new Set([
   'client/src/utils/assetUrl.ts',
   'src/asset-url.ts',
-]);
-
-/**
- * Migration debt: every existing raw URL site. File-scoped so a NEW raw URL in
- * any other file fails. Delete entries as the owning task migrates the file.
- */
-const MIGRATION_ALLOWLIST = new Map([
-  // Client image construction -> task 3.3 (and tests in 3.5).
-  ['client/src/components/Avatar.tsx', 'task 3.3'],
-  ['client/src/components/AvatarPickerModal.tsx', 'task 3.3'],
-  ['client/src/components/admin/ImageBrowserModal.tsx', 'task 3.3'],
-  ['client/src/components/map/ClusterListPopup.tsx', 'task 3.3'],
-  ['client/src/components/map/ClusterListSheet.tsx', 'task 3.3'],
-  ['client/src/components/map/FellowshipMarkers.ts', 'task 3.3'],
-  ['client/src/components/map/FriendMarkers.ts', 'task 3.3'],
-  ['client/src/components/map/FriendMiniCard.tsx', 'task 3.3'],
-  ['client/src/components/map/UserMarker.ts', 'task 3.3'],
-  ['client/src/components/map/WaypointPopup.tsx', 'task 3.3'],
-  ['client/src/components/map/WaypointSheet.tsx', 'task 3.3'],
-  ['client/src/islands/AdminGoalEditIsland.tsx', 'task 3.3'],
-  ['client/src/islands/BadgeAwardModal.tsx', 'task 3.3'],
-  ['client/src/islands/BadgeDisplayIsland.tsx', 'task 3.3'],
-  ['client/src/islands/EncounterPopupIsland.tsx', 'task 3.3'],
-  ['client/src/islands/EventsIsland.tsx', 'task 3.3'],
-  ['client/src/islands/GoalModal.tsx', 'task 3.3'],
-  ['client/src/islands/MapIsland.tsx', 'task 3.3 / 3.4'],
-  ['client/src/islands/WrappedIsland.tsx', 'task 3.3'],
 ]);
 
 /**
@@ -166,13 +142,12 @@ function collectViolations() {
         continue;
       }
 
-      const migrationTask = MIGRATION_ALLOWLIST.get(relativePath);
       const lines = fs.readFileSync(absPath, 'utf8').split(/\r?\n/);
       const configLines = scanDir === 'src' ? findLayoutConfigLines(lines) : new Set();
 
       lines.forEach((line, index) => {
         const literals = findRawAssetLiterals(line);
-        if (literals.length === 0 || migrationTask || configLines.has(index)) {
+        if (literals.length === 0 || configLines.has(index)) {
           return;
         }
         const resolverHint =
@@ -201,7 +176,7 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  console.log(`✓ No raw asset references outside the approved resolvers and migration allowlist.`);
+  console.log(`✓ No raw asset references outside the approved resolvers.`);
 }
 
 if (require.main === module) {

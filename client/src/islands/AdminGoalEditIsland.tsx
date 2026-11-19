@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { ImageBrowserModal } from '../components/admin/ImageBrowserModal';
+import { assetUrl } from '../utils/assetUrl';
 
 // Configure marked for safe output
 marked.setOptions({
@@ -270,9 +271,9 @@ export function AdminGoalEditIsland() {
         const img = new Image();
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
-        img.src = `/img/thumbs/${trimmed}-thumb.webp`;
+        img.src = assetUrl(`/img/thumbs/${trimmed}-thumb.webp`);
       });
-      const highresPromise = fetch(`/img/highres/${trimmed}.webp`, { method: 'HEAD' })
+      const highresPromise = fetch(assetUrl(`/img/highres/${trimmed}.webp`), { method: 'HEAD' })
         .then(r => r.ok)
         .catch(() => false);
 
@@ -1010,14 +1011,14 @@ export function AdminGoalEditIsland() {
           {hasImage && imageStatus === 'found' && (
             <div className="admin-image-preview">
               <img
-                src={`/img/thumbs/${imageId.trim()}-thumb.webp`}
+                src={assetUrl(`/img/thumbs/${imageId.trim()}-thumb.webp`)}
                 alt={`Thumbnail for ${title}`}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
               <a
-                href={`/img/highres/${imageId.trim()}.webp`}
+                href={assetUrl(`/img/highres/${imageId.trim()}.webp`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="admin-image-preview__fullsize"

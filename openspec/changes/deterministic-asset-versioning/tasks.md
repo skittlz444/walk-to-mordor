@@ -22,12 +22,12 @@
 
 ## 3. Client-side image resolution
 
-- [ ] 3.1 Add `client/src/utils/assetUrl.ts` with a synchronous resolver, a `loadAssetVersions()` loader using a bounded timeout, and a localStorage fallback. Verify Vitest tests for success, timeout, cached fallback, and unversioned fallback.
-- [ ] 3.2 Wire `loadAssetVersions()` into `client/src/index.tsx` in parallel with `initializeAppStore()` so a slow map fetch does not block island hydration. Verify a Vitest bootstrap test covers success and timeout paths.
-- [ ] 3.3 Replace raw `/img/...` construction in client islands and components (goals, badges, campaigns, encounters, avatars, map waypoints, admin image browser) with the client resolver. Verify `npm run check:assets:refs` and the affected Vitest suites pass.
-- [ ] 3.4 Add one `version` to `public/img/map/tiles/metadata.json` in `scripts/tile-map-image.js` and append it in `client/src/islands/MapIsland.tsx` to metadata and tile URLs. Verify a Vitest test covers the tile URL and metadata fallback.
-- [ ] 3.5 Update all client tests that assert exact unversioned `src` values — badges, encounters, events, avatars, map markers, and profile settings — to resolve through the helper or assert the logical path. This includes at least `BadgeDisplayIsland.test.tsx`, `BadgeAwardModal.test.tsx`, `EncounterPopupIsland.test.tsx`, `EventsIsland.test.tsx`, `ProfileSettingsIsland.test.tsx`, `UserMarker.test.ts`, and `Avatar.test.tsx`. Verify the client Vitest suite passes.
-- [ ] 3.6 Add the client image rule to `docs/frontend-guide.md` and verify the documented command sequence runs as written.
+- [x] 3.1 Add `client/src/utils/assetUrl.ts` with a synchronous resolver, a `loadAssetVersions()` loader using a bounded timeout, and a localStorage fallback. Verify Vitest tests for success, timeout, cached fallback, and unversioned fallback.
+- [x] 3.2 Wire `loadAssetVersions()` into `client/src/index.tsx` in parallel with `initializeAppStore()` so a slow map fetch does not block island hydration. Verify a Vitest bootstrap test covers success and timeout paths.
+- [x] 3.3 Replace raw `/img/...` construction in client islands and components (goals, badges, campaigns, encounters, avatars, map waypoints, admin image browser) with the client resolver. Verify `npm run check:assets:refs` and the affected Vitest suites pass.
+- [x] 3.4 Add one `version` to `public/img/map/tiles/metadata.json` in `scripts/tile-map-image.js` and append it in `client/src/islands/MapIsland.tsx` to metadata and tile URLs. Verify a Vitest test covers the tile URL and metadata fallback.
+- [x] 3.5 Update all client tests that assert exact unversioned `src` values — badges, encounters, events, avatars, map markers, and profile settings — to resolve through the helper or assert the logical path. This includes at least `BadgeDisplayIsland.test.tsx`, `BadgeAwardModal.test.tsx`, `EncounterPopupIsland.test.tsx`, `EventsIsland.test.tsx`, `ProfileSettingsIsland.test.tsx`, `UserMarker.test.ts`, and `Avatar.test.tsx`. Verify the client Vitest suite passes.
+- [x] 3.6 Add the client image rule to `docs/frontend-guide.md` and verify the documented command sequence runs as written.
 
 ## 4. CSS independent versioning
 

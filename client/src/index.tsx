@@ -37,6 +37,7 @@ import { PalantirIsland } from './islands/PalantirIsland';
 import { StatsIsland } from './islands/StatsIsland';
 import * as partyStore from './stores/partyStore';
 import { initializeAppStore } from './stores/appStore';
+import { loadAssetVersions } from './utils/assetUrl';
 import { triggerEncounterRoll } from './utils/encounterTrigger';
 
 // Auto-hydrated islands - these are rendered from data-island attributes
@@ -165,9 +166,11 @@ function hydrateIslands() {
   });
 }
 
-// Initialize app store and hydrate islands when DOM is ready
+// Initialize the app store and the runtime image version map in parallel, then
+// hydrate islands. The map load is capped at its own timeout, so a slow fetch
+// cannot hold hydration past that bound; images fall back to unversioned paths.
 async function bootstrap() {
-  await initializeAppStore();
+  await Promise.allSettled([initializeAppStore(), loadAssetVersions()]);
   hydrateIslands();
   void triggerEncounterRoll();
 }
