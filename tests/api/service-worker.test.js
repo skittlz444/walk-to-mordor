@@ -9,6 +9,7 @@
  * - CACHE_NAME / SWR_CACHE_VERSION are filled (no `{{...}}` placeholders)
  * - the two runtime JSON maps are network-first, carved out before cache-first
  * - superseded image cache entries are pruned against the current image map
+ * - activate caches the image map it prunes against, and stays offline-safe
  */
 
 const fs = require('fs');
@@ -70,7 +71,9 @@ function loadServiceWorker() {
       const key = typeof request === 'string' ? request : request.url;
       return store.delete(key);
     }),
-    keys: jest.fn(async () => Array.from(store.keys()).map((key) => new Request(key))),
+    keys: jest.fn(async () =>
+      Array.from(store.keys()).map((key) => new Request(new URL(key, 'https://example.com')))
+    ),
     addAll: jest.fn(async () => {}),
   };
 
@@ -82,9 +85,12 @@ function loadServiceWorker() {
   };
 
   const globalFetch = jest.fn();
+  const listeners = {};
   const self = {
     location: { origin: 'https://example.com' },
-    addEventListener: jest.fn(),
+    addEventListener: jest.fn((type, handler) => {
+      listeners[type] = handler;
+    }),
     clients: { matchAll: jest.fn(async () => []) },
   };
 
@@ -102,7 +108,7 @@ function loadServiceWorker() {
 
   const exports = factory(self, caches, globalFetch, Response, Headers, URL, Date, Request);
 
-  return { store, cache, caches, globalFetch, ...exports };
+  return { store, cache, caches, globalFetch, listeners, ...exports };
 }
 
 describe('Generated service worker contract', () => {
@@ -226,6 +232,37 @@ describe('Superseded image pruning', () => {
     const response = await sw.refreshRuntimeMap(new Request(IMAGE_MAP_URL));
 
     expect(await response.text()).toBe('cached-map');
+    expect(sw.store.has(`${ORIGIN}/img/highres/drop.webp?v=old`)).toBe(true);
+  });
+
+  test('activate caches the image map it prunes against', async () => {
+    const sw = loadServiceWorker();
+    sw.store.set(`${ORIGIN}/img/highres/drop.webp?v=old`, new Response('drop'));
+    sw.globalFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ version: 'map', assets: { '/img/highres/keep.webp': 'aaaa' } }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    );
+
+    let pending;
+    sw.listeners.activate({ waitUntil: (promise) => { pending = promise; } });
+    await pending;
+
+    expect(sw.cache.put).toHaveBeenCalledWith('/img/image-versions.json', expect.anything());
+    expect(sw.store.has(`${ORIGIN}/img/highres/drop.webp?v=old`)).toBe(false);
+  });
+
+  test('offline activate neither caches the map nor throws', async () => {
+    const sw = loadServiceWorker();
+    sw.store.set(`${ORIGIN}/img/highres/drop.webp?v=old`, new Response('drop'));
+    sw.globalFetch.mockRejectedValueOnce(new Error('offline'));
+
+    let pending;
+    sw.listeners.activate({ waitUntil: (promise) => { pending = promise; } });
+    await pending;
+
+    expect(sw.cache.put).not.toHaveBeenCalledWith('/img/image-versions.json', expect.anything());
     expect(sw.store.has(`${ORIGIN}/img/highres/drop.webp?v=old`)).toBe(true);
   });
 

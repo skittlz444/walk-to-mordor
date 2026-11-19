@@ -144,6 +144,19 @@ describe('generate-asset-versions tile drift guidance', () => {
     );
   }
 
+  test('untracked stray files in the tile directory do not change the tile version', () => {
+    const dir = createGeneratorSandbox();
+    const { computeTileSetVersion } = loadLib(dir);
+    const tileDir = path.join(dir, 'public', 'img', 'map', 'tiles');
+    const before = computeTileSetVersion(tileDir);
+
+    writeFile(dir, 'public/img/map/tiles/.DS_Store', 'stray');
+    writeFile(dir, 'public/img/map/tiles/0/scratch.bin', 'stray');
+
+    expect(computeTileSetVersion(tileDir)).toBe(before);
+    expect(runCheck(dir).status).toBe(0);
+  });
+
   test('stale tile bytes point at tile:map, not generate:assets', () => {
     const dir = createGeneratorSandbox();
     expect(runCheck(dir).status).toBe(0);

@@ -263,6 +263,10 @@ function formatJson(value) {
  * One version for the whole map-tile set: metadata (minus its own `version`
  * field) plus every tile byte. `scripts/tile-map-image.js` will write this
  * value once task 3.4 lands; until then the asset-version check only verifies it.
+ *
+ * Tiles are enumerated from git like the maps: a stray ignored file in the
+ * tile directory (`.DS_Store`, a scratch file) must not change a committed
+ * version that fresh checkouts would then disagree with.
  */
 function computeTileSetVersion(tileDir) {
   const metadataPath = path.join(tileDir, 'metadata.json');
@@ -271,11 +275,12 @@ function computeTileSetVersion(tileDir) {
   delete metadataWithoutVersion.version;
 
   const parts = ['metadata\n', stableStringify(metadataWithoutVersion), '\nfiles\n'];
-  for (const absPath of listFilesRecursive(tileDir)) {
-    if (absPath === metadataPath) {
+  for (const absPath of listTrackedFiles(tileDir)) {
+    const relativePath = toPosix(path.relative(tileDir, absPath));
+    if (relativePath === 'metadata.json') {
       continue;
     }
-    parts.push(`${toPosix(path.relative(tileDir, absPath))}\0${hashFile(absPath)}\n`);
+    parts.push(`${relativePath}\0${hashFile(absPath)}\n`);
   }
   return hashString(parts.join(''));
 }

@@ -434,11 +434,15 @@ self.addEventListener('activate', (event) => {
         }
       })(),
       // Prune superseded image versions against the current runtime image map.
-      // Offline activation keeps cached images; the next map refresh prunes.
+      // The fetched map is cached so the first client bootstrap after install
+      // reuses it instead of downloading it twice. Offline activation keeps
+      // cached images; the next map refresh prunes.
       (async () => {
         try {
           var response = await fetch(IMAGE_VERSIONS_PATH, { cache: 'no-store' });
           if (!response || !response.ok) return;
+          var runtimeMapCache = await caches.open(CACHE_NAME);
+          await runtimeMapCache.put(IMAGE_VERSIONS_PATH, response.clone());
           await pruneFromImageVersionsResponse(response);
         } catch (_error) {
           // Offline: nothing to prune against.

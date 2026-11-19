@@ -2,7 +2,7 @@
 // not the generated file.
 // CACHE_NAME hashes the precache list plus this template; SWR_CACHE_VERSION
 // hashes the SWR endpoint list plus this template.
-const CACHE_NAME = 'walk-to-mordor-0d1b2b67c12e';
+const CACHE_NAME = 'walk-to-mordor-b5f042f79b40';
 // Filled by scripts/generate-sw.js with the versioned shell URL list.
 const urlsToCache = [
   '/css/main.css?v=1468307260ea',
@@ -14,7 +14,7 @@ const urlsToCache = [
 
 // SWR (Stale-While-Revalidate) API caching
 const SWR_CACHE_NAME = 'walk-to-mordor-api-swr';
-const SWR_CACHE_VERSION = 'e5f974423122';
+const SWR_CACHE_VERSION = '6c339bebc0d7';
 const SWR_VERSION_CACHE_NAME = 'walk-to-mordor-swr-version';
 const SWR_TTL_MS = 300000; // 5 minutes
 
@@ -440,11 +440,15 @@ self.addEventListener('activate', (event) => {
         }
       })(),
       // Prune superseded image versions against the current runtime image map.
-      // Offline activation keeps cached images; the next map refresh prunes.
+      // The fetched map is cached so the first client bootstrap after install
+      // reuses it instead of downloading it twice. Offline activation keeps
+      // cached images; the next map refresh prunes.
       (async () => {
         try {
           var response = await fetch(IMAGE_VERSIONS_PATH, { cache: 'no-store' });
           if (!response || !response.ok) return;
+          var runtimeMapCache = await caches.open(CACHE_NAME);
+          await runtimeMapCache.put(IMAGE_VERSIONS_PATH, response.clone());
           await pruneFromImageVersionsResponse(response);
         } catch (_error) {
           // Offline: nothing to prune against.

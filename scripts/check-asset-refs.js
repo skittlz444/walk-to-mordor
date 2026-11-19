@@ -46,10 +46,16 @@ const RESOLVER_FILES = new Set([
 ]);
 
 /**
- * A literal passed straight into a resolver is already versioned, so it is not
- * a raw reference. Keeps `assetUrl('/css/main.css')` legal in migrated files.
+ * A literal passed straight into a canonical resolver is already versioned, so
+ * it is not a raw reference. Keeps `assetUrl('/css/main.css')` legal in
+ * migrated files.
+ *
+ * Anchored to the exact helper identifiers in use (`assetUrl` in both
+ * `client/src/utils/assetUrl.ts` and `src/asset-url.ts`). A looser
+ * `\w*[aA]ssetUrl` prefix match would also exempt a passthrough wrapper such
+ * as `legacyAssetUrl(p)`, which can emit raw URLs.
  */
-const RESOLVER_CALL_RE = /\b\w*[aA]ssetUrl\s*\(\s*$/;
+const RESOLVER_CALL_RE = /\bassetUrl\s*\(\s*$/;
 
 /**
  * Matches a quoted path beginning with an asset prefix. The trailing boundary
