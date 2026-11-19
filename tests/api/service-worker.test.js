@@ -6,19 +6,24 @@
  * offline-safe:
  * - the exact precache list (no missing mobiscroll entries, no extras)
  * - every precache URL is versioned and resolves to a real file under `public/`
+ *   (client build outputs may be absent on a fresh checkout: then the version must
+ *   match the committed, drift-checked asset map instead)
  * - CACHE_NAME / SWR_CACHE_VERSION are filled (no `{{...}}` placeholders)
  * - the two runtime JSON maps are network-first, carved out before cache-first
  * - superseded image cache entries are pruned against the current image map
  * - activate caches the image map it prunes against, and stays offline-safe
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SW_PATH = path.join(ROOT, 'public', 'sw.js');
 const TEMPLATE_PATH = path.join(ROOT, 'scripts', 'templates', 'sw.js');
+const ASSET_VERSIONS_PATH = path.join(ROOT, 'src', 'generated', 'asset-versions.ts');
 const PUBLIC_DIR = path.join(ROOT, 'public');
+const CLIENT_PRECACHE_DIR = '/js/client/';
 
 const EXPECTED_PRECACHE = [
   '/css/main.css',
@@ -27,6 +32,10 @@ const EXPECTED_PRECACHE = [
   '/js/client/islands.css',
   '/manifest.json',
 ];
+
+const EXPECTED_CLIENT_PRECACHE = EXPECTED_PRECACHE.filter((pathname) =>
+  pathname.startsWith(CLIENT_PRECACHE_DIR)
+);
 
 function readGeneratedSW() {
   return fs.readFileSync(SW_PATH, 'utf8');
@@ -48,6 +57,24 @@ function splitVersionedUrl(url) {
   const [pathname, query] = url.split('?');
   const params = new URLSearchParams(query || '');
   return { pathname, version: params.get('v') };
+}
+
+/** Same version format the generators use: 12 lowercase hex chars of SHA-256. */
+function contentHash(absPath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(absPath)).digest('hex').slice(0, 12);
+}
+
+/**
+ * Reads the committed entry-asset map. Parsed as text rather than imported so the
+ * plain-JS legacy runner (no TypeScript transform) can run this suite too.
+ */
+function readCommittedAssetVersions() {
+  const source = fs.readFileSync(ASSET_VERSIONS_PATH, 'utf8');
+  const versions = {};
+  for (const match of source.matchAll(/^\s*"([^"]+)":\s*"([0-9a-f]{12})",$/gm)) {
+    versions[match[1]] = match[2];
+  }
+  return versions;
 }
 
 /**
@@ -121,9 +148,35 @@ describe('Generated service worker contract', () => {
     const urls = extractPrecacheUrls(readGeneratedSW());
     expect(urls).toHaveLength(EXPECTED_PRECACHE.length);
 
-    for (const url of urls) {
-      const { pathname, version } = splitVersionedUrl(url);
+    const entries = urls.map(splitVersionedUrl);
+
+    // Client chunks are gitignored build output: absent on a fresh checkout, present
+    // after `npm run build:client`. No other client path may ever be precached.
+    const clientPaths = entries
+      .map(({ pathname }) => pathname)
+      .filter((pathname) => pathname.startsWith(CLIENT_PRECACHE_DIR))
+      .sort();
+    expect(clientPaths).toEqual([...EXPECTED_CLIENT_PRECACHE].sort());
+
+    const committedVersions = readCommittedAssetVersions();
+
+    for (const { pathname, version } of entries) {
       expect(version).toMatch(/^[0-9a-f]{12}$/);
+
+      if (pathname.startsWith(CLIENT_PRECACHE_DIR)) {
+        const absPath = path.join(PUBLIC_DIR, pathname);
+        if (fs.existsSync(absPath)) {
+          // Built: the version must be the hash of the bytes actually shipped.
+          expect(version).toBe(contentHash(absPath));
+        } else {
+          // Not built: fall back to the committed, drift-checked version map, which
+          // `npm run check:assets:versions` re-verifies against a real build.
+          expect(committedVersions[pathname]).toMatch(/^[0-9a-f]{12}$/);
+          expect(version).toBe(committedVersions[pathname]);
+        }
+        continue;
+      }
+
       expect(fs.existsSync(path.join(PUBLIC_DIR, pathname))).toBe(true);
     }
   });
