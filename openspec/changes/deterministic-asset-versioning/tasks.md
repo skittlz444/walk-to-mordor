@@ -53,13 +53,13 @@
 
 ## 7. Integration verification
 
-- [ ] 7.1 Run `npm run build` twice and diff the generated artifacts. Verify the entry map, runtime image map, `public/sw.js`, and image manifest are byte-identical.
+- [x] 7.1 Run `npm run build` twice and diff the generated artifacts. Verify the entry map, runtime image map, `public/sw.js`, and image manifest are byte-identical.
 - [x] 7.2 Change one image only, rebuild, and verify only that image’s URL and the runtime image map change; `islands.js` and the server entry map must stay unchanged. Restore the original image afterward.
 - [x] 7.3 Change one legacy JS or CSS file only, rebuild, and verify only that file’s URL and the entry map change. Restore the original file afterward.
-- [ ] 7.4 Simulate an old service worker cache entry, request the same asset with a new version query, and verify the request goes to the network and the new response is cached. Verify with a Playwright or Node test.
-- [ ] 7.5 Verify offline behavior for a cached versioned stylesheet, the runtime image map, and map tile metadata. Verify with a Playwright offline test or the documented manual procedure.
-- [ ] 7.6 Run the full Jest, Vitest, and Playwright suites. Verify all pass.
-- [ ] 7.7 Run `npm run check` and `npm run check:assets`; verify the Worker dry-run succeeds and the asset count stays under the warning threshold.
+- [x] 7.4 Simulate an old service worker cache entry, request the same asset with a new version query, and verify the request goes to the network and the new response is cached. Verify with a Playwright or Node test.
+- [x] 7.5 Verify offline behavior for a cached versioned stylesheet, the runtime image map, and map tile metadata. Verify with a Playwright offline test or the documented manual procedure.
+- [x] 7.6 Run the full Jest, Vitest, and Playwright suites. Verify all pass.
+- [x] 7.7 Run `npm run check` and `npm run check:assets`; verify the Worker dry-run succeeds and the asset count stays under the warning threshold.
 - [ ] 7.8 Review the generated artifact diffs, the rendered HTML, and the docs for consistency. Verify no raw asset URLs remain outside the allowlist.
 - [x] 7.9 Change one map tile without updating metadata; verify `check:assets:versions` fails, then rerun `tile:map` and verify it passes.
 
