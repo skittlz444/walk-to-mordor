@@ -46,6 +46,7 @@ const EVENT_MIGRATIONS = [
   '0156_create_event_progress_ledger.sql',
   '0157_seed_nazgul_encounter.sql',
   '0158_seed_nazgul_badge.sql',
+  '0169_add_daily_roll_outcome.sql',
 ];
 
 type SqlValue = string | number | null;
@@ -190,6 +191,13 @@ describe('event-utils', () => {
        VALUES (?, ?, ?, ?, ?)`,
     ).run(userId, rollDate, encounterDefinitionId, previewTarget, status);
     return Number(result.lastInsertRowid);
+  }
+
+  function rollOutcome(userId = 1, rollDate = TODAY): string | null {
+    const row = sqlite.prepare(
+      'SELECT outcome FROM daily_rolls WHERE user_id = ? AND roll_date = ?',
+    ).get(userId, rollDate) as { outcome: string } | undefined;
+    return row?.outcome ?? null;
   }
 
   function createChallenge(options: ChallengeOptions = {}): ChallengeRowIds {
@@ -518,9 +526,17 @@ describe('event-utils', () => {
 
       expect(result).toEqual({ offer: null });
       const row = sqlite.prepare(
-        'SELECT encounter_definition_id, preview_target_distance FROM daily_rolls WHERE user_id = ?',
-      ).get(1) as { encounter_definition_id: number | null; preview_target_distance: number | null };
-      expect(row).toEqual({ encounter_definition_id: null, preview_target_distance: null });
+        'SELECT encounter_definition_id, preview_target_distance, outcome FROM daily_rolls WHERE user_id = ?',
+      ).get(1) as {
+        encounter_definition_id: number | null;
+        preview_target_distance: number | null;
+        outcome: string;
+      };
+      expect(row).toEqual({
+        encounter_definition_id: null,
+        preview_target_distance: null,
+        outcome: 'insufficient_activity',
+      });
     });
 
     it('offers an eligible encounter within the base probability branch', async () => {
@@ -534,6 +550,7 @@ describe('event-utils', () => {
       expect(result.offer?.coverageStart).toBe(TODAY);
       expect(result.offer?.coverageEnd).toBe('2026-06-12');
       expect(result.offer?.graceDeadline).toBe('2026-06-15');
+      expect(rollOutcome()).toBe('offer');
     });
 
     it('returns no offer when the base probability roll misses', async () => {
@@ -541,6 +558,34 @@ describe('event-utils', () => {
 
       const result = await rollDailyEncounter(db, 1, { today: TODAY, random: () => 0.5 });
       expect(result).toEqual({ offer: null });
+      expect(rollOutcome()).toBe('probability_miss');
+    });
+
+    it('records an active challenge as the no-offer outcome', async () => {
+      seedActivity(1);
+      createChallenge({ userId: 1 });
+
+      const result = await rollDailyEncounter(db, 1, {
+        today: TODAY,
+        random: () => 0.01,
+        forceOffer: true,
+      });
+
+      expect(result).toEqual({ offer: null });
+      expect(rollOutcome()).toBe('active_challenge');
+    });
+
+    it('records a missing definition as the no-offer outcome', async () => {
+      sqlite.exec('UPDATE personal_encounter_definitions SET enabled = 0');
+
+      const result = await rollDailyEncounter(db, 1, {
+        today: TODAY,
+        random: () => 0.01,
+        forceOffer: true,
+      });
+
+      expect(result).toEqual({ offer: null });
+      expect(rollOutcome()).toBe('no_definition');
     });
 
     it('does not re-draw after a no-offer roll on the same UTC day', async () => {
@@ -560,6 +605,67 @@ describe('event-utils', () => {
       const count = sqlite.prepare('SELECT COUNT(*) AS count FROM daily_rolls WHERE user_id = ?')
         .get(1) as { count: number };
       expect(count.count).toBe(1);
+    });
+
+    it('retries a normal roll after a failure before the insert', async () => {
+      seedActivity(1);
+
+      // Fail after eligibility succeeds but before the probability draw can
+      // finalize the roll.
+      await expect(
+        rollDailyEncounter(db, 1, {
+          today: TODAY,
+          forceOffer: false,
+          random: () => {
+            throw new Error('random failure after eligibility');
+          },
+        }),
+      ).rejects.toThrow('random failure after eligibility');
+
+      // Nothing was finalized, so the UTC day is still open for a retry.
+      const afterFailure = sqlite.prepare(
+        'SELECT COUNT(*) AS count FROM daily_rolls WHERE user_id = ?',
+      ).get(1) as { count: number };
+      expect(afterFailure.count).toBe(0);
+
+      const retry = await rollDailyEncounter(db, 1, {
+        today: TODAY,
+        random: () => 0,
+      });
+      expect(retry.offer).not.toBeNull();
+      expect(rollOutcome()).toBe('offer');
+
+      const afterRetry = sqlite.prepare(
+        'SELECT COUNT(*) AS count FROM daily_rolls WHERE user_id = ?',
+      ).get(1) as { count: number };
+      expect(afterRetry.count).toBe(1);
+    });
+
+    it('converges two concurrent first rolls on one stored result', async () => {
+      insertDefinition({ slug: 'moria-chase', isRepeatable: true });
+      seedActivity(1);
+
+      const [first, second] = await Promise.all([
+        rollDailyEncounter(db, 1, { today: TODAY, forceOffer: true, random: () => 0.2 }),
+        rollDailyEncounter(db, 1, { today: TODAY, forceOffer: true, random: () => 0.8 }),
+      ]);
+
+      expect(first).toEqual(second);
+      expect(first.offer).not.toBeNull();
+
+      const rows = sqlite.prepare(
+        `SELECT outcome, encounter_definition_id, preview_target_distance
+         FROM daily_rolls
+         WHERE user_id = ? AND roll_date = ?`,
+      ).all(1, TODAY) as Array<{
+        outcome: string;
+        encounter_definition_id: number;
+        preview_target_distance: number;
+      }>;
+      expect(rows).toHaveLength(1);
+      expect(rows[0].outcome).toBe('offer');
+      expect(rows[0].encounter_definition_id).toBe(first.offer?.definition.id);
+      expect(rows[0].preview_target_distance).toBe(first.offer?.target);
     });
 
     it('uses the 1-in-30 cooldown branch after a recent decision', async () => {
@@ -624,6 +730,22 @@ describe('event-utils', () => {
 
       expect(await rollDailyEncounter(db, 1, { today: TODAY, forceOffer: true }))
         .toEqual({ offer: null });
+    });
+
+    it('treats a legacy row with stored offer fields as an offer', async () => {
+      // A pre-migration row (or one written by the previous Worker during a
+      // rolling deploy) has outcome 'legacy_unknown' and no explicit outcome.
+      insertRoll(1, TODAY, 'offered', definition.id, 5);
+
+      const result = await rollDailyEncounter(db, 1, {
+        today: TODAY,
+        random: () => 0.99,
+        forceOffer: true,
+      });
+
+      expect(result.offer?.definition.id).toBe(definition.id);
+      expect(result.offer?.target).toBe(5);
+      expect(rollOutcome()).toBe('legacy_unknown');
     });
 
     it('does not re-draw when an existing offer has no stored preview distance', async () => {

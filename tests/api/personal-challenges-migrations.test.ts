@@ -31,6 +31,10 @@ const EVENT_MIGRATIONS = [
   '0160_update_nazgul_rank_thresholds.sql',
 ];
 
+// ALTER TABLE migrations are not re-runnable, so the outcome migration is
+// applied once after the idempotent base chain instead of inside that chain.
+const ROLL_OUTCOME_MIGRATION = '0169_add_daily_roll_outcome.sql';
+
 function readMigration(filename: string): string {
   return fs.readFileSync(path.join(MIGRATIONS_DIR, filename), 'utf-8');
 }
@@ -48,10 +52,13 @@ function applyEventMigrations(sqlite: DatabaseSync): void {
   }
 }
 
-function createDatabase(): DatabaseSync {
+function createDatabase(applyRollOutcome = true): DatabaseSync {
   const sqlite = new DatabaseSync(':memory:');
   applyPrerequisites(sqlite);
   applyEventMigrations(sqlite);
+  if (applyRollOutcome) {
+    sqlite.exec(readMigration(ROLL_OUTCOME_MIGRATION));
+  }
   return sqlite;
 }
 
@@ -146,6 +153,7 @@ describe('personal challenge migrations (0152-0160)', () => {
       'status',
       'created_at',
       'updated_at',
+      'outcome',
     ]);
 
     expect(tableColumns(sqlite, 'event_participants')).toEqual([
@@ -182,6 +190,91 @@ describe('personal challenge migrations (0152-0160)', () => {
       'idx_event_participants_user_id',
       'idx_event_progress_ledger_participant_id',
     ]));
+  });
+
+  it('adds the daily roll outcome column with a compatibility default and closed enum', () => {
+    const columns = sqlite.prepare('PRAGMA table_info(daily_rolls)').all() as Array<{
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+    }>;
+    const outcome = columns.find((column) => column.name === 'outcome');
+    expect(outcome).toMatchObject({
+      type: 'TEXT',
+      notnull: 1,
+      dflt_value: "'legacy_unknown'",
+    });
+
+    sqlite.exec("INSERT INTO users (username) VALUES ('frodo')");
+
+    // The previous Worker does not name `outcome`; the default must keep its
+    // inserts valid during the rolling deploy window.
+    sqlite.exec(
+      "INSERT INTO daily_rolls (user_id, roll_date) VALUES (1, '2026-06-10')",
+    );
+    expect(
+      sqlite.prepare("SELECT outcome FROM daily_rolls WHERE roll_date = '2026-06-10'").get(),
+    ).toMatchObject({ outcome: 'legacy_unknown' });
+
+    const allowed = [
+      'offer',
+      'probability_miss',
+      'insufficient_activity',
+      'active_challenge',
+      'no_definition',
+      'legacy_unknown',
+    ];
+    for (const [index, value] of allowed.entries()) {
+      expect(() =>
+        sqlite.exec(
+          `INSERT INTO daily_rolls (user_id, roll_date, outcome)
+           VALUES (1, '2026-07-${String(index + 1).padStart(2, '0')}', '${value}')`,
+        ),
+      ).not.toThrow();
+    }
+
+    expect(() =>
+      sqlite.exec(
+        "INSERT INTO daily_rolls (user_id, roll_date, outcome) VALUES (1, '2026-08-01', 'bogus')",
+      ),
+    ).toThrow(/CHECK constraint/);
+  });
+
+  it('backfills offer rows and leaves pre-migration null-offer rows unknown', () => {
+    const legacy = createDatabase(false);
+    try {
+      legacy.exec("INSERT INTO users (username) VALUES ('frodo')");
+      legacy.exec(
+        `INSERT INTO daily_rolls
+           (user_id, roll_date, status, encounter_definition_id, preview_target_distance)
+         VALUES (1, '2026-06-08', 'offered', 1, 5.0)`,
+      );
+      legacy.exec(
+        `INSERT INTO daily_rolls
+           (user_id, roll_date, status, encounter_definition_id, preview_target_distance)
+         VALUES (1, '2026-06-09', 'accepted', 1, 4.0)`,
+      );
+      legacy.exec(
+        "INSERT INTO daily_rolls (user_id, roll_date, status) VALUES (1, '2026-06-10', 'offered')",
+      );
+
+      legacy.exec(readMigration(ROLL_OUTCOME_MIGRATION));
+
+      const rows = (legacy.prepare(
+        'SELECT roll_date, outcome FROM daily_rolls ORDER BY roll_date',
+      ).all() as Array<{ roll_date: string; outcome: string }>).map((row) => ({
+        roll_date: row.roll_date,
+        outcome: row.outcome,
+      }));
+      expect(rows).toEqual([
+        { roll_date: '2026-06-08', outcome: 'offer' },
+        { roll_date: '2026-06-09', outcome: 'offer' },
+        { roll_date: '2026-06-10', outcome: 'legacy_unknown' },
+      ]);
+    } finally {
+      legacy.close();
+    }
   });
 
   it('is idempotent when the new migrations are applied twice', () => {
