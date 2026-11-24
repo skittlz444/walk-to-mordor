@@ -5,7 +5,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 
 # Data Models (D1 SQLite)
 
-> Last updated: 2026-11-12 · Migrations: 0001–0167 · Full DDL: `migrations/`
+> Last updated: 2026-11-25 · Migrations: 0001–0169 · Full DDL: `migrations/`
 
 ## Tables
 
@@ -36,7 +36,7 @@ description: D1 SQLite schema overview, table relationships, key constraints, an
 | `user_achievement_acknowledgements` | Per-user acknowledgement projection over earned instances (pending = instances minus acks) | 0147 |
 | `personal_encounter_definitions` | Reusable personal challenge config (copy, artwork keys, duration, target strategy) | 0152 |
 | `encounter_occurrences` | Per-user accepted challenge instance (target, coverage window, grace deadline, status) | 0153 |
-| `daily_rolls` | One personal encounter roll per user per UTC day (offer, preview target, status) | 0154 |
+| `daily_rolls` | One personal encounter roll per user per UTC day (outcome, offer, preview target, status) | 0154, 0169 |
 | `event_participants` | Participant row per occurrence with cached credited distance | 0155 |
 | `event_progress_ledger` | Idempotent credit rows linking walk progress to a participant | 0156 |
 | `campaign_definitions` | Community campaign identity (copy, artwork, badge, enabled flag) | 0161 |
@@ -152,7 +152,7 @@ These are rules the schema enforces or that the application layer must uphold �
 - Five tables form one engine: reusable definitions, per-user occurrences, per-day rolls, participants, and a progress ledger. They are deliberately separate from any future community campaign schema.
 - `personal_encounter_definitions`: `slug` is unique. Stores `name`, `description`, `image_slug`, `badge_slug`, `duration_days`, `target_stretch_multiplier`, `target_min_distance`, `target_max_distance`, `is_repeatable`, `enabled`, and timestamps. Definitions are soft-disabled via `enabled`, never hard-deleted; `encounter_occurrences.definition_id` does **not** cascade.
 - `encounter_occurrences`: one row per acceptance, linked to `definition_id` (no cascade) and `daily_roll_id` (cascades, `UNIQUE` — one daily roll produces at most one occurrence, so a repeated accept returns the existing row). `user_id` cascades. `status` is `active` / `completed` / `failed`; stores `personalized_target`, `started_at`, `coverage_end_date`, `grace_deadline`, `completed_at`, and timestamps. Indexes: `(user_id, status)` for user-scoped lookups and `(status, grace_deadline)` for settlement.
-- `daily_rolls`: `user_id` cascades. `roll_date` is a UTC date; `encounter_definition_id` and `preview_target_distance` are nullable (null = no offer). `status` is `offered` / `accepted` / `declined`. `UNIQUE(user_id, roll_date)` makes the roll idempotent — repeated calls return the stored row including its status. Index on `roll_date`.
+- `daily_rolls`: `user_id` cascades. `roll_date` is a UTC date; `encounter_definition_id` and `preview_target_distance` are nullable (null = no offer). `status` is `offered` / `accepted` / `declined` and remains the accept/decline lifecycle field. `outcome` (migration `0169`) is authoritative for diagnosing what the roll produced: `offer`, `probability_miss`, `insufficient_activity`, `active_challenge`, `no_definition`, or `legacy_unknown`. New rows are written once, only after eligibility/probability/target evaluation completes, with an explicit outcome — never `legacy_unknown`; `legacy_unknown` exists only for pre-migration rows and previous-Worker rows during a rolling deploy. A stored definition + preview target proves a historical row was an offer (backfilled to `offer`); historical null-offer rows stay `legacy_unknown` and still return no offer. `UNIQUE(user_id, roll_date)` makes the roll idempotent — concurrent first requests converge on the inserted row via `ON CONFLICT DO NOTHING` — and repeated calls return the stored row including its status. Index on `roll_date`.
 - `event_participants`: `occurrence_id` and `user_id` cascade. `progress_distance` is a **cached** total recomputed from the ledger, never the source of truth; `joined_at` is the acceptance timestamp. `UNIQUE(user_id, occurrence_id)`; index on `user_id`.
 - `event_progress_ledger`: `participant_id` cascades; `source_progress_id` cascades to `progress`, so deleting a walk removes its credit. `UNIQUE(participant_id, source_progress_id)` makes crediting idempotent. Index on `participant_id`.
 - Target is computed once at roll time (`preview_target_distance`) and copied to `personalized_target` at acceptance — the number shown in the modal is always the number the challenge uses.
@@ -226,6 +226,7 @@ These are rules the schema enforces or that the application layer must uphold �
 - Goal content tables are additive migrations: `0140` for `goal_content`, `0141` for `content_discovery_events`.
 - Personal challenge tables are additive: `0152`–`0156` create the five tables; `0157`–`0158` seed the Nazgul definition and its `challenge-nazgul-outrun` badge; `0159` repairs legacy prototype tables by dropping and recreating `event_participants` and `event_progress_ledger` with the canonical FKs/columns.
 - Community campaign tables are additive: `0161`–`0164` create definitions/runs/participants/ledger; `0165`–`0167` seed the disabled `beacon-watch` definition, run 1, and the `community-beacon-watch` badge. Seed guards (`INSERT OR IGNORE`, `NOT EXISTS`) keep re-applying them a no-op.
+- `0168` adds the per-user `community_campaigns_enabled` toggle. `0169` adds `daily_rolls.outcome` with a `legacy_unknown` default for rolling-deploy compatibility, a CHECK constraint over the outcome enum, and a backfill of stored-offer rows to `offer`.
 - Deploy: `npx wrangler d1 migrations apply walk-to-mordor-db`.
 
 ## Entity Relationship Diagram

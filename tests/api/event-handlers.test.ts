@@ -40,6 +40,7 @@ const EVENT_MIGRATIONS = [
   '0156_create_event_progress_ledger.sql',
   '0157_seed_nazgul_encounter.sql',
   '0158_seed_nazgul_badge.sql',
+  '0169_add_daily_roll_outcome.sql',
 ];
 
 type SqlValue = string | number | null;
@@ -225,6 +226,7 @@ describe('event-handlers', () => {
       const body = await response.json() as {
         offer: { status: string; target: number; definition: { id: number } } | null;
       };
+      expect(Object.keys(body)).toEqual(['offer']);
       expect(body.offer).not.toBeNull();
       expect(body.offer?.status).toBe('offered');
       expect(body.offer?.definition.id).toBe(definitionId);
@@ -247,11 +249,48 @@ describe('event-handlers', () => {
         { forceOffer: true },
       );
 
-      expect(await second.json()).toEqual(await first.json());
+      const firstBody = await first.json() as {
+        offer: { definition: { id: number }; target: number } | null;
+      };
+      const secondBody = await second.json() as {
+        offer: { definition: { id: number }; target: number } | null;
+      };
+      expect(secondBody).toEqual(firstBody);
+      expect(secondBody.offer?.definition.id).toBe(definitionId);
+      expect(secondBody.offer?.target).toBe(firstBody.offer?.target);
       const count = sqlite.prepare(
         'SELECT COUNT(*) AS count FROM daily_rolls WHERE user_id = ?',
       ).get(userId) as { count: number };
       expect(count.count).toBe(1);
+    });
+
+    it('keeps a stored no-offer roll terminal for the UTC day', async () => {
+      const first = await handleDailyRoll(
+        new Request('http://localhost/api/events/daily-roll', { method: 'POST' }),
+        db,
+        userId,
+        { forceOffer: true },
+      );
+      expect(await first.json()).toEqual({ offer: null });
+
+      const firstRow = sqlite.prepare(
+        'SELECT outcome FROM daily_rolls WHERE user_id = ? AND roll_date = ?',
+      ).get(userId, TODAY) as { outcome: string };
+      expect(firstRow.outcome).toBe('insufficient_activity');
+
+      const second = await handleDailyRoll(
+        new Request('http://localhost/api/events/daily-roll', { method: 'POST' }),
+        db,
+        userId,
+        { forceOffer: true },
+      );
+      expect(await second.json()).toEqual({ offer: null });
+
+      const rows = sqlite.prepare(
+        'SELECT outcome FROM daily_rolls WHERE user_id = ? AND roll_date = ?',
+      ).all(userId, TODAY) as Array<{ outcome: string }>;
+      expect(rows).toHaveLength(1);
+      expect(rows[0].outcome).toBe('insufficient_activity');
     });
 
     it.each(['accepted', 'declined'] as const)(

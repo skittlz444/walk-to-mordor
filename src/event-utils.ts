@@ -43,6 +43,19 @@ export interface EncounterOccurrence {
 
 export type DailyRollStatus = 'offered' | 'accepted' | 'declined';
 
+/**
+ * Explicit result of a finalized daily roll. Persisted for operations;
+ * `legacy_unknown` only applies to pre-migration rows or rows written by the
+ * previous Worker during a rolling deploy.
+ */
+export type DailyRollOutcome =
+  | 'offer'
+  | 'probability_miss'
+  | 'insufficient_activity'
+  | 'active_challenge'
+  | 'no_definition'
+  | 'legacy_unknown';
+
 export interface DailyRoll {
   id: number;
   user_id: number;
@@ -50,6 +63,7 @@ export interface DailyRoll {
   encounter_definition_id: number | null;
   preview_target_distance: number | null;
   status: DailyRollStatus;
+  outcome: DailyRollOutcome;
   created_at: string;
   updated_at: string;
 }
@@ -185,6 +199,7 @@ interface DailyRollRow {
   encounter_definition_id: number | null;
   preview_target_distance: number | null;
   status: DailyRollStatus;
+  outcome: DailyRollOutcome;
   created_at: string;
   updated_at: string;
 }
@@ -451,9 +466,64 @@ export async function calculatePreviewTarget(
 
 // ── Daily roll ─────────────────────────────────────────────────────────────
 
+/** Read the user's stored roll for a UTC date, including its outcome. */
+async function getDailyRoll(
+  db: DbClient,
+  userId: number,
+  rollDate: string,
+): Promise<DailyRollRow | null> {
+  return db.read.prepare(
+    `SELECT id, user_id, roll_date, encounter_definition_id, preview_target_distance,
+            status, outcome, created_at, updated_at
+     FROM daily_rolls
+     WHERE user_id = ? AND roll_date = ?`,
+  ).bind(userId, rollDate).first<DailyRollRow>();
+}
+
+/** A fully evaluated roll waiting for its single terminal insert. */
+interface FinalizedRoll {
+  outcome: DailyRollOutcome;
+  definitionId: number | null;
+  target: number | null;
+}
+
+/**
+ * Insert the finalized roll. The unique `(user_id, roll_date)` constraint is
+ * the concurrency claim: a loser inserts nothing and reads the winner's row.
+ */
+async function persistFinalizedRoll(
+  db: DbClient,
+  userId: number,
+  rollDate: string,
+  finalized: FinalizedRoll,
+): Promise<RollResult> {
+  await db.write.prepare(
+    `INSERT INTO daily_rolls
+       (user_id, roll_date, status, outcome, encounter_definition_id, preview_target_distance)
+     VALUES (?, ?, 'offered', ?, ?, ?)
+     ON CONFLICT(user_id, roll_date) DO NOTHING`,
+  ).bind(
+    userId,
+    rollDate,
+    finalized.outcome,
+    finalized.definitionId,
+    finalized.target,
+  ).run();
+
+  const stored = await getDailyRoll(db, userId, rollDate);
+  if (!stored) {
+    throw new Error('Daily roll insert did not produce a stored row');
+  }
+
+  return { offer: await storedOffer(db, stored) };
+}
+
 /**
  * Roll (or return) today's encounter offer. Idempotent per (user, UTC date):
- * the first call records the row, later calls return the stored outcome.
+ * the first successful call stores the finalized roll, later calls return the
+ * stored outcome. Nothing is written until eligibility, probability, definition
+ * selection, and target calculation have all completed, so a failure before the
+ * insert leaves the day open for a retry.
  */
 export async function rollDailyEncounter(
   db: DbClient,
@@ -464,66 +534,61 @@ export async function rollDailyEncounter(
   const random = options.random ?? Math.random;
   const forceOffer = options.forceOffer ?? false;
 
-  const insertResult = await db.write.prepare(
-    `INSERT OR IGNORE INTO daily_rolls (user_id, roll_date, status)
-     VALUES (?, ?, 'offered')`,
-  ).bind(userId, today).run();
-
-  const roll = (await db.read.prepare(
-    `SELECT id, user_id, roll_date, encounter_definition_id, preview_target_distance,
-            status, created_at, updated_at
-     FROM daily_rolls
-     WHERE user_id = ? AND roll_date = ?`,
-  ).bind(userId, today).first<DailyRollRow>()) as DailyRollRow;
-
-  // A row created by an earlier call is terminal: this is at most one roll per
-  // UTC day, including a no-offer roll. Only the insert that actually created
-  // the row is allowed to evaluate eligibility and draw.
-  if (insertResult.meta.changes === 0) {
-    return { offer: await storedOffer(db, roll) };
+  const existing = await getDailyRoll(db, userId, today);
+  if (existing) {
+    return { offer: await storedOffer(db, existing) };
   }
 
   const eligibility = await evaluateEncounterEligibility(db, userId, today);
-  if (!eligibility.eligible) {
-    return { offer: null };
+  if (eligibility.reason !== 'eligible') {
+    return persistFinalizedRoll(db, userId, today, {
+      outcome: eligibility.reason,
+      definitionId: null,
+      target: null,
+    });
   }
 
   const probability = eligibility.useCooldownBranch ? 1 / 30 : 1 / 10;
   if (!forceOffer && random() >= probability) {
-    return { offer: null };
+    return persistFinalizedRoll(db, userId, today, {
+      outcome: 'probability_miss',
+      definitionId: null,
+      target: null,
+    });
   }
 
   const definitions = await listEligibleDefinitions(db, userId);
+  if (definitions.length === 0) {
+    return persistFinalizedRoll(db, userId, today, {
+      outcome: 'no_definition',
+      definitionId: null,
+      target: null,
+    });
+  }
+
   const index = definitions.length === 1
     ? 0
     : Math.min(Math.floor(random() * definitions.length), definitions.length - 1);
   const definition = definitions[index];
   const target = await calculatePreviewTarget(db, definition, userId, today);
 
-  await db.write.prepare(
-    `UPDATE daily_rolls
-     SET encounter_definition_id = ?, preview_target_distance = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ? AND encounter_definition_id IS NULL`,
-  ).bind(definition.id, target, roll.id).run();
-
-  // Re-read so a concurrent first roll wins: every caller for the same UTC day
-  // must see the same stored definition and target.
-  const stored = (await db.read.prepare(
-    `SELECT id, user_id, roll_date, encounter_definition_id, preview_target_distance,
-            status, created_at, updated_at
-     FROM daily_rolls
-     WHERE id = ?`,
-  ).bind(roll.id).first<DailyRollRow>()) as DailyRollRow;
-
-  return { offer: await storedOffer(db, stored) };
+  return persistFinalizedRoll(db, userId, today, {
+    outcome: 'offer',
+    definitionId: definition.id,
+    target,
+  });
 }
 
 /**
  * Build the offer from a stored roll, or null when that roll did not offer an
  * encounter. Used for every repeat call so the stored outcome never changes.
+ * Legacy rows are judged by their stored fields because `legacy_unknown` cannot
+ * distinguish a probability miss from an eligibility rejection.
  */
 async function storedOffer(db: DbClient, roll: DailyRollRow): Promise<EncounterOffer | null> {
-  if (roll.encounter_definition_id === null || roll.preview_target_distance === null || roll.status !== 'offered') {
+  if (roll.status !== 'offered') return null;
+  if (roll.outcome !== 'offer' && roll.outcome !== 'legacy_unknown') return null;
+  if (roll.encounter_definition_id === null || roll.preview_target_distance === null) {
     return null;
   }
 
@@ -565,12 +630,7 @@ export async function acceptEncounter(
   }
 
   const today = options.today ?? utcToday();
-  const roll = await db.read.prepare(
-    `SELECT id, user_id, roll_date, encounter_definition_id, preview_target_distance,
-            status, created_at, updated_at
-     FROM daily_rolls
-     WHERE user_id = ? AND roll_date = ?`,
-  ).bind(userId, today).first<DailyRollRow>();
+  const roll = await getDailyRoll(db, userId, today);
 
   if (!roll) {
     throw new EncounterNotFoundError('No encounter roll exists for today');
@@ -675,12 +735,7 @@ export async function declineEncounter(
   options: { today?: string } = {},
 ): Promise<DeclineEncounterResult> {
   const today = options.today ?? utcToday();
-  const roll = await db.read.prepare(
-    `SELECT id, user_id, roll_date, encounter_definition_id, preview_target_distance,
-            status, created_at, updated_at
-     FROM daily_rolls
-     WHERE user_id = ? AND roll_date = ?`,
-  ).bind(userId, today).first<DailyRollRow>();
+  const roll = await getDailyRoll(db, userId, today);
 
   if (!roll) {
     throw new EncounterNotFoundError('No encounter roll exists for today');
