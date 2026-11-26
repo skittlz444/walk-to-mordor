@@ -2,12 +2,12 @@
 // not the generated file.
 // CACHE_NAME hashes the precache list plus this template; SWR_CACHE_VERSION
 // hashes the SWR endpoint list plus this template.
-const CACHE_NAME = 'walk-to-mordor-79330be1c998';
+const CACHE_NAME = 'walk-to-mordor-56e0443269bb';
 // Filled by scripts/generate-sw.js with the versioned shell URL list.
 const urlsToCache = [
   '/css/main.css?v=1468307260ea',
   '/js/main.js?v=9f8dd4f5bc63',
-  '/js/client/islands.js?v=9b84a81d8917',
+  '/js/client/islands.js?v=80fb3c804ee1',
   '/js/client/islands.css?v=50bd28f07a0d',
   '/manifest.json?v=5e3d974799f8'
 ];
