@@ -28,17 +28,17 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@playwright/test": "^1.65.0",
+    "@playwright/test": "^1.65.1",
     "@preact/preset-vite": "^2.10.6",
     "@testing-library/preact": "^3.2.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.6",
-    "@typescript-eslint/eslint-plugin": "^8.72.2",
-    "@typescript-eslint/parser": "^8.72.2",
-    "@vitest/coverage-v8": "^5.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.73.0",
+    "@typescript-eslint/parser": "^8.73.0",
+    "@vitest/coverage-v8": "^5.1.1",
     "concurrently": "^10.0.7",
     "esbuild": "^0.28.2",
-    "eslint": "^10.14.0",
+    "eslint": "^10.15.0",
     "globals": "^17.14.0",
     "happy-dom": "^21.0.4",
     "jest": "^30.5.2",
@@ -47,8 +47,8 @@
     "ts-jest": "^29.4.15",
     "typescript": "6.0.3",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0",
-    "wrangler": "^4.161.0"
+    "vitest": "^5.1.1",
+    "wrangler": "^4.165.0"
   },
   "scripts": {
     "cf-typegen": "wrangler types --strict-vars=false",
