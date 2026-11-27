@@ -94,6 +94,8 @@ Machine-readable picks are in `scripts/badge-art/final-selections.json`. Rebuild
 
 **Emblem masters are tracked as of 2026-11-12.** Each badge's processed emblem layer is retained at `assets/badge-art/emblems/<slug>.png`, recovered from the committed `public/img/achievements/full/<slug>.webp` by cropping the center disc (r=410 — the emblem sits at r=400 inside the uniform dark well; the frame ring and the 6 o'clock boss never enter that disc). These masters are derived from lossy WebP, so a rebuild from them reproduces the committed set within WebP re-encode tolerance (RMS ≤ ~4.5/255, worst on 200 px thumbnails; visually identical) rather than byte-identically; rebuilds after recovery are deterministic from the tracked files. A new badge's emblem master is created by its normal generation pipeline and committed alongside the finals.
 
+On 2026-11-27 the Nazgûl badge was reworked: the surviving master had its lower-left base corner clipped by the original 800 px emblem mask, and the raw `b-112358` candidate was no longer on disk. The crown was regenerated with FLUX.3 Klein at the 5 Nov 2026 ComfyUI commit (seed 112358), keeping the smoke, dropping the generated outer gold ring, and fitting the composition on a 425 px emblem disc so the full base corners stay inside the mask. The five `challenge-nazgul-outrun` composites were rebuilt. All other emblem masters were checked and are centred.
+
 ## Standing decisions
 
 - Circle badges only; no hexagon silhouette.
